@@ -1,0 +1,22 @@
+{
+  "App/ExploreView.swift": "e82f84d6ea11fe5248167fd258b3a0846fb1e342d6c4e4eaef2b1a3539e4a265",
+  "App/MapLibre-LICENSE.md": "554cff8b6f6d2e77629e8c6eab769844ab86adc610ca2d60401ba2e0dce3c229",
+  "App/PeoplemapsApp.swift": "aee4b0ed6427ff6899140cbfd1ef30c75950fa53d6a79b7ed13b034afb416944",
+  "App/PlacePicker.swift": "10aa89a84c38d8bcddf631ce14cad88ba55e3c38c1a9a4fe7b1c5e803a57366c",
+  "App/RouteDetails.swift": "face4c0cf7ccbd8f3e815cd23a9cada9402ae440f9de64f77b140fdf06dc7599",
+  "App/SeattleMap.swift": "dea71eabfb5d592bf69366c30a2877e88f8f4fa74b793f6d29a99a802c7cd781",
+  "App/offline-style.json": "1159c090edf537b26e48d7368fa75b8f92c37c7dd5b46c61ce3a01a19567a721",
+  "Core/Models.swift": "54d8819adc8c0e474e81816c87614bad4d4eab44a48595747452e7eca8259548",
+  "Core/Resources/seattle-graph.json": "4377c9d5c20136155b956ecd0ef3542c4fddf1e008ec1050cc5f9747dda673c0",
+  "Core/Resources/seattle-map.geojson": "6487ef57d70a11ca6df4000d6c9ca311c3d15ef8d677a1d6bb833b94e225430a",
+  "Core/RouteSession.swift": "846b1ceb4aa9a34ee312d1869ceafe14080c0c66238366638c190df4dfb0e4c6",
+  "Core/RoutingEngine.swift": "62c6fa2c90bee545007d09d9fb8720f56009632717aa47e76da56c81b4d40d3e",
+  "Scripts/generate_project.py": "770495edfdec7bf45944fef276d68fc2ed5c6866b82301f637f182eda9ac19c9",
+  "Scripts/import_osm.py": "6ae2727c8906d3cec7963c5b2e30194f5bd7265535d91fdeb69fcba689d17ebb",
+  "Scripts/run-simulator.sh": "f018baa36c2158107aa057500c96d073a760744c0a70ae2ddc5e90cb1bfbeab5",
+  "Scripts/test.sh": "e6a15bdac0637509e949b116ce9b47e577bd28af9c8dc3d3fb8a7a7a04d0f767",
+  "Scripts/test_importer.py": "27e3718eb89096fb7569df8d72940dade9e9c23c16b20c57f349a18d7f53ef1b",
+  "Tests/RoutingTests.swift": "1cf5124b9012490fc615bd4315779c15ce40ff11468c197bd1606b782e6fd120",
+  "UITests/PeoplemapsUITests.swift": "8338e2cadbcf192a2e2d4ec046cd99411b8e1424e1c48628924c0ade91ade991",
+  "Tools/main.swift": "c167d71e100c54225932ab94039c44af821aa31d29ebc3e9649dbc7e14053633"
+}

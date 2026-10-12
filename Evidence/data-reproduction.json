@@ -1,0 +1,7 @@
+{
+  "result": "Passed",
+  "derivedSHA256": {
+    "seattle-graph.json": "4377c9d5c20136155b956ecd0ef3542c4fddf1e008ec1050cc5f9747dda673c0",
+    "seattle-map.geojson": "6487ef57d70a11ca6df4000d6c9ca311c3d15ef8d677a1d6bb833b94e225430a"
+  }
+}
