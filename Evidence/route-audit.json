@@ -1,0 +1,458 @@
+[
+  {
+    "budgetMinutes" : 0,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "candidates" : 1,
+    "computeSeconds" : 0.016992926597595215,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 0,
+    "fastestMeters" : 5153.0599999999986,
+    "fastestSeconds" : 794.36018506493519,
+    "mode" : "drive",
+    "origin" : "Ballard Library",
+    "originSnapMeters" : 43.868584351487677,
+    "reasons" : [
+      "No distinct route with a lower comfort cost was found within your time budget."
+    ]
+  },
+  {
+    "budgetMinutes" : 2,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "candidates" : 1,
+    "computeSeconds" : 0.072979927062988281,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 0,
+    "fastestMeters" : 5153.0599999999986,
+    "fastestSeconds" : 794.36018506493519,
+    "mode" : "drive",
+    "origin" : "Ballard Library",
+    "originSnapMeters" : 43.868584351487677,
+    "reasons" : [
+      "No distinct route with a lower comfort cost was found within your time budget."
+    ]
+  },
+  {
+    "budgetMinutes" : 5,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "candidates" : 1,
+    "computeSeconds" : 0.073035001754760742,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 0,
+    "fastestMeters" : 5153.0599999999986,
+    "fastestSeconds" : 794.36018506493519,
+    "mode" : "drive",
+    "origin" : "Ballard Library",
+    "originSnapMeters" : 43.868584351487677,
+    "reasons" : [
+      "No distinct route with a lower comfort cost was found within your time budget."
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "candidates" : 1,
+    "computeSeconds" : 0.072777986526489258,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 0,
+    "fastestMeters" : 5153.0599999999986,
+    "fastestSeconds" : 794.36018506493519,
+    "mode" : "drive",
+    "origin" : "Ballard Library",
+    "originSnapMeters" : 43.868584351487677,
+    "reasons" : [
+      "No distinct route with a lower comfort cost was found within your time budget."
+    ]
+  },
+  {
+    "budgetMinutes" : 0,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "candidates" : 1,
+    "computeSeconds" : 0.0057109594345092773,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 46.23022507267796,
+    "extraSeconds" : 0,
+    "fastestMeters" : 5191.8199999999988,
+    "fastestSeconds" : 1098.1594285714289,
+    "mode" : "bike",
+    "origin" : "Ballard Library",
+    "originSnapMeters" : 43.868584351487677,
+    "reasons" : [
+      "No distinct route with a lower comfort cost was found within your time budget."
+    ]
+  },
+  {
+    "budgetMinutes" : 2,
+    "calmerMeters" : 5331.659999999998,
+    "calmerSeconds" : 1124.1274285714292,
+    "candidates" : 5,
+    "computeSeconds" : 0.030875086784362793,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 46.23022507267796,
+    "extraSeconds" : 25.968000000000302,
+    "fastestMeters" : 5191.8199999999988,
+    "fastestSeconds" : 1098.1594285714289,
+    "mode" : "bike",
+    "origin" : "Ballard Library",
+    "originSnapMeters" : 43.868584351487677,
+    "reasons" : [
+      "0.5 km more with cycleway or track tags",
+      "0.4 km less on arterial roads",
+      "Tradeoff: 3 more turns"
+    ]
+  },
+  {
+    "budgetMinutes" : 5,
+    "calmerMeters" : 5659.5599999999995,
+    "calmerSeconds" : 1223.7074285714286,
+    "candidates" : 5,
+    "computeSeconds" : 0.036725997924804688,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 46.23022507267796,
+    "extraSeconds" : 125.54799999999977,
+    "fastestMeters" : 5191.8199999999988,
+    "fastestSeconds" : 1098.1594285714289,
+    "mode" : "bike",
+    "origin" : "Ballard Library",
+    "originSnapMeters" : 43.868584351487677,
+    "reasons" : [
+      "1.0 km more with cycleway or track tags",
+      "0.2 km less on arterial roads",
+      "Tradeoff: 4 more turns"
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerMeters" : 5659.5599999999995,
+    "calmerSeconds" : 1223.7074285714286,
+    "candidates" : 5,
+    "computeSeconds" : 0.039726018905639648,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 46.23022507267796,
+    "extraSeconds" : 125.54799999999977,
+    "fastestMeters" : 5191.8199999999988,
+    "fastestSeconds" : 1098.1594285714289,
+    "mode" : "bike",
+    "origin" : "Ballard Library",
+    "originSnapMeters" : 43.868584351487677,
+    "reasons" : [
+      "1.0 km more with cycleway or track tags",
+      "0.2 km less on arterial roads",
+      "Tradeoff: 4 more turns"
+    ]
+  },
+  {
+    "budgetMinutes" : 0,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "candidates" : 1,
+    "computeSeconds" : 0.022820949554443359,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 62.107927266287184,
+    "extraSeconds" : 0,
+    "fastestMeters" : 3803.0999999999995,
+    "fastestSeconds" : 607.0611683070864,
+    "mode" : "drive",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 26.769035872678163,
+    "reasons" : [
+      "No distinct route with a lower comfort cost was found within your time budget."
+    ]
+  },
+  {
+    "budgetMinutes" : 2,
+    "calmerMeters" : 4226.7399999999989,
+    "calmerSeconds" : 717.41792565702031,
+    "candidates" : 4,
+    "computeSeconds" : 0.10869503021240234,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 62.107927266287184,
+    "extraSeconds" : 110.3567573499339,
+    "fastestMeters" : 3803.0999999999995,
+    "fastestSeconds" : 607.0611683070864,
+    "mode" : "drive",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 26.769035872678163,
+    "reasons" : [
+      "7 fewer turns across the route",
+      "4 fewer left turns at arterial junctions; turn protection unknown",
+      "0.1 km less on residential streets"
+    ]
+  },
+  {
+    "budgetMinutes" : 5,
+    "calmerMeters" : 4226.7399999999989,
+    "calmerSeconds" : 717.41792565702031,
+    "candidates" : 4,
+    "computeSeconds" : 0.11588799953460693,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 62.107927266287184,
+    "extraSeconds" : 110.3567573499339,
+    "fastestMeters" : 3803.0999999999995,
+    "fastestSeconds" : 607.0611683070864,
+    "mode" : "drive",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 26.769035872678163,
+    "reasons" : [
+      "7 fewer turns across the route",
+      "4 fewer left turns at arterial junctions; turn protection unknown",
+      "0.1 km less on residential streets"
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerMeters" : 4226.7399999999989,
+    "calmerSeconds" : 717.41792565702031,
+    "candidates" : 4,
+    "computeSeconds" : 0.11321306228637695,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 62.107927266287184,
+    "extraSeconds" : 110.3567573499339,
+    "fastestMeters" : 3803.0999999999995,
+    "fastestSeconds" : 607.0611683070864,
+    "mode" : "drive",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 26.769035872678163,
+    "reasons" : [
+      "7 fewer turns across the route",
+      "4 fewer left turns at arterial junctions; turn protection unknown",
+      "0.1 km less on residential streets"
+    ]
+  },
+  {
+    "budgetMinutes" : 0,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "candidates" : 1,
+    "computeSeconds" : 0.0097670555114746094,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 31.63541933376851,
+    "extraSeconds" : 0,
+    "fastestMeters" : 4214.4400000000005,
+    "fastestSeconds" : 940.88799999999992,
+    "mode" : "bike",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 14.006930237699915,
+    "reasons" : [
+      "No distinct route with a lower comfort cost was found within your time budget."
+    ]
+  },
+  {
+    "budgetMinutes" : 2,
+    "calmerMeters" : 4627.3799999999974,
+    "calmerSeconds" : 1021.4759999999999,
+    "candidates" : 5,
+    "computeSeconds" : 0.069540023803710938,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 31.63541933376851,
+    "extraSeconds" : 80.587999999999965,
+    "fastestMeters" : 4214.4400000000005,
+    "fastestSeconds" : 940.88799999999992,
+    "mode" : "bike",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 14.006930237699915,
+    "reasons" : [
+      "0.4 km more with cycleway or track tags",
+      "1.7 km less on arterial roads"
+    ]
+  },
+  {
+    "budgetMinutes" : 5,
+    "calmerMeters" : 5029.6899999999978,
+    "calmerSeconds" : 1093.9380000000001,
+    "candidates" : 5,
+    "computeSeconds" : 0.063780069351196289,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 31.63541933376851,
+    "extraSeconds" : 153.05000000000018,
+    "fastestMeters" : 4214.4400000000005,
+    "fastestSeconds" : 940.88799999999992,
+    "mode" : "bike",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 14.006930237699915,
+    "reasons" : [
+      "0.6 km more with cycleway or track tags",
+      "2.0 km less on arterial roads"
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerMeters" : 5029.6899999999978,
+    "calmerSeconds" : 1093.9380000000001,
+    "candidates" : 5,
+    "computeSeconds" : 0.069334030151367188,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 31.63541933376851,
+    "extraSeconds" : 153.05000000000018,
+    "fastestMeters" : 4214.4400000000005,
+    "fastestSeconds" : 940.88799999999992,
+    "mode" : "bike",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 14.006930237699915,
+    "reasons" : [
+      "0.6 km more with cycleway or track tags",
+      "2.0 km less on arterial roads"
+    ]
+  },
+  {
+    "budgetMinutes" : 0,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "candidates" : 1,
+    "computeSeconds" : 0.016340970993041992,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 0,
+    "fastestMeters" : 5204.3999999999996,
+    "fastestSeconds" : 654.41499480519451,
+    "mode" : "drive",
+    "origin" : "Kerry Park",
+    "originSnapMeters" : 49.52809487808517,
+    "reasons" : [
+      "No distinct route with a lower comfort cost was found within your time budget."
+    ]
+  },
+  {
+    "budgetMinutes" : 2,
+    "calmerMeters" : 5012.25,
+    "calmerSeconds" : 741.70470379384392,
+    "candidates" : 5,
+    "computeSeconds" : 0.095602035522460938,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 87.289708988649409,
+    "fastestMeters" : 5204.3999999999996,
+    "fastestSeconds" : 654.41499480519451,
+    "mode" : "drive",
+    "origin" : "Kerry Park",
+    "originSnapMeters" : 49.52809487808517,
+    "reasons" : [
+      "1 fewer highway entry",
+      "1 fewer left turn at arterial junctions; turn protection unknown",
+      "Tradeoff: 2 more turns",
+      "Tradeoff: 0.1 km more on residential streets"
+    ]
+  },
+  {
+    "budgetMinutes" : 5,
+    "calmerMeters" : 5587.5,
+    "calmerSeconds" : 816.08757545761341,
+    "candidates" : 5,
+    "computeSeconds" : 0.091753959655761719,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 161.6725806524189,
+    "fastestMeters" : 5204.3999999999996,
+    "fastestSeconds" : 654.41499480519451,
+    "mode" : "drive",
+    "origin" : "Kerry Park",
+    "originSnapMeters" : 49.52809487808517,
+    "reasons" : [
+      "1 fewer highway entry",
+      "1 fewer left turn at arterial junctions; turn protection unknown",
+      "Tradeoff: 1 more turn"
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerMeters" : 5587.5,
+    "calmerSeconds" : 816.08757545761341,
+    "candidates" : 5,
+    "computeSeconds" : 0.08629298210144043,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 161.6725806524189,
+    "fastestMeters" : 5204.3999999999996,
+    "fastestSeconds" : 654.41499480519451,
+    "mode" : "drive",
+    "origin" : "Kerry Park",
+    "originSnapMeters" : 49.52809487808517,
+    "reasons" : [
+      "1 fewer highway entry",
+      "1 fewer left turn at arterial junctions; turn protection unknown",
+      "Tradeoff: 1 more turn"
+    ]
+  },
+  {
+    "budgetMinutes" : 0,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "candidates" : 1,
+    "computeSeconds" : 0.0057240724563598633,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 46.23022507267796,
+    "extraSeconds" : 0,
+    "fastestMeters" : 4391.8400000000011,
+    "fastestSeconds" : 964.77633766233737,
+    "mode" : "bike",
+    "origin" : "Kerry Park",
+    "originSnapMeters" : 43.489352068282621,
+    "reasons" : [
+      "No distinct route with a lower comfort cost was found within your time budget."
+    ]
+  },
+  {
+    "budgetMinutes" : 2,
+    "calmerMeters" : 4677.0699999999988,
+    "calmerSeconds" : 1001.1636103896104,
+    "candidates" : 4,
+    "computeSeconds" : 0.025510072708129883,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 46.23022507267796,
+    "extraSeconds" : 36.387272727273057,
+    "fastestMeters" : 4391.8400000000011,
+    "fastestSeconds" : 964.77633766233737,
+    "mode" : "bike",
+    "origin" : "Kerry Park",
+    "originSnapMeters" : 43.489352068282621,
+    "reasons" : [
+      "1.1 km less on arterial roads"
+    ]
+  },
+  {
+    "budgetMinutes" : 5,
+    "calmerMeters" : 5106.0499999999993,
+    "calmerSeconds" : 1098.7651948051953,
+    "candidates" : 4,
+    "computeSeconds" : 0.025674104690551758,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 46.23022507267796,
+    "extraSeconds" : 133.98885714285791,
+    "fastestMeters" : 4391.8400000000011,
+    "fastestSeconds" : 964.77633766233737,
+    "mode" : "bike",
+    "origin" : "Kerry Park",
+    "originSnapMeters" : 43.489352068282621,
+    "reasons" : [
+      "0.5 km more with cycleway or track tags",
+      "1.7 km less on arterial roads"
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerMeters" : 5106.0499999999993,
+    "calmerSeconds" : 1098.7651948051953,
+    "candidates" : 4,
+    "computeSeconds" : 0.026247024536132812,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 46.23022507267796,
+    "extraSeconds" : 133.98885714285791,
+    "fastestMeters" : 4391.8400000000011,
+    "fastestSeconds" : 964.77633766233737,
+    "mode" : "bike",
+    "origin" : "Kerry Park",
+    "originSnapMeters" : 43.489352068282621,
+    "reasons" : [
+      "0.5 km more with cycleway or track tags",
+      "1.7 km less on arterial roads"
+    ]
+  }
+]

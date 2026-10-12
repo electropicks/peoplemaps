@@ -1,0 +1,325 @@
+{
+  "sources": [
+    {
+      "file": "Data/seattle-osm.json.gz",
+      "sha256": "fe5b8b44bde7f913886b4d6a20c59837eb556623760925a4912f670de8397259",
+      "osmBaseTimestamp": "2026-10-11T23:38:20Z"
+    },
+    {
+      "file": "Data/seattle-parks.json.gz",
+      "sha256": "0f3acbca14740a78a0710a278d1b020f92b6785ccf80fe580b36ac21e18ca55f",
+      "osmBaseTimestamp": "2026-10-11T23:41:18Z"
+    }
+  ],
+  "bounds": [
+    47.615,
+    -122.39,
+    47.678,
+    -122.3
+  ],
+  "nodes": 16988,
+  "directedEdges": 37609,
+  "places": 519,
+  "supportedRestrictions": 1357,
+  "unsupportedRestrictionsConservativelyExcluded": [
+    {
+      "osmID": 4510872,
+      "mode": "drive"
+    },
+    {
+      "osmID": 4510872,
+      "mode": "bike"
+    },
+    {
+      "osmID": 4655998,
+      "mode": "drive"
+    },
+    {
+      "osmID": 4655998,
+      "mode": "bike"
+    },
+    {
+      "osmID": 4656368,
+      "mode": "drive"
+    },
+    {
+      "osmID": 4656368,
+      "mode": "bike"
+    },
+    {
+      "osmID": 4656370,
+      "mode": "drive"
+    },
+    {
+      "osmID": 4656370,
+      "mode": "bike"
+    },
+    {
+      "osmID": 4656387,
+      "mode": "drive"
+    },
+    {
+      "osmID": 4656387,
+      "mode": "bike"
+    },
+    {
+      "osmID": 4656388,
+      "mode": "drive"
+    },
+    {
+      "osmID": 4656388,
+      "mode": "bike"
+    },
+    {
+      "osmID": 4658650,
+      "mode": "drive"
+    },
+    {
+      "osmID": 4658650,
+      "mode": "bike"
+    },
+    {
+      "osmID": 4661067,
+      "mode": "drive"
+    },
+    {
+      "osmID": 4661067,
+      "mode": "bike"
+    },
+    {
+      "osmID": 4661072,
+      "mode": "drive"
+    },
+    {
+      "osmID": 4661072,
+      "mode": "bike"
+    },
+    {
+      "osmID": 4661073,
+      "mode": "drive"
+    },
+    {
+      "osmID": 4661073,
+      "mode": "bike"
+    },
+    {
+      "osmID": 4661074,
+      "mode": "drive"
+    },
+    {
+      "osmID": 4661074,
+      "mode": "bike"
+    },
+    {
+      "osmID": 4661078,
+      "mode": "drive"
+    },
+    {
+      "osmID": 4661078,
+      "mode": "bike"
+    },
+    {
+      "osmID": 5927726,
+      "mode": "drive"
+    },
+    {
+      "osmID": 5927726,
+      "mode": "bike"
+    },
+    {
+      "osmID": 6269005,
+      "mode": "drive"
+    },
+    {
+      "osmID": 6269005,
+      "mode": "bike"
+    },
+    {
+      "osmID": 6269018,
+      "mode": "drive"
+    },
+    {
+      "osmID": 6269018,
+      "mode": "bike"
+    },
+    {
+      "osmID": 6897007,
+      "mode": "drive"
+    },
+    {
+      "osmID": 6897007,
+      "mode": "bike"
+    },
+    {
+      "osmID": 7644876,
+      "mode": "drive"
+    },
+    {
+      "osmID": 7644876,
+      "mode": "bike"
+    },
+    {
+      "osmID": 7655569,
+      "mode": "drive"
+    },
+    {
+      "osmID": 7655569,
+      "mode": "bike"
+    },
+    {
+      "osmID": 7663499,
+      "mode": "drive"
+    },
+    {
+      "osmID": 7663499,
+      "mode": "bike"
+    },
+    {
+      "osmID": 7703088,
+      "mode": "drive"
+    },
+    {
+      "osmID": 7703088,
+      "mode": "bike"
+    },
+    {
+      "osmID": 9602075,
+      "mode": "drive"
+    },
+    {
+      "osmID": 9602075,
+      "mode": "bike"
+    },
+    {
+      "osmID": 10963770,
+      "mode": "drive"
+    },
+    {
+      "osmID": 10963770,
+      "mode": "bike"
+    },
+    {
+      "osmID": 10964994,
+      "mode": "drive"
+    },
+    {
+      "osmID": 10964994,
+      "mode": "bike"
+    },
+    {
+      "osmID": 11122765,
+      "mode": "drive"
+    },
+    {
+      "osmID": 11122765,
+      "mode": "bike"
+    },
+    {
+      "osmID": 11324885,
+      "mode": "drive"
+    },
+    {
+      "osmID": 11324885,
+      "mode": "bike"
+    },
+    {
+      "osmID": 11642894,
+      "mode": "drive"
+    },
+    {
+      "osmID": 11642894,
+      "mode": "bike"
+    },
+    {
+      "osmID": 12954090,
+      "mode": "drive"
+    },
+    {
+      "osmID": 12954090,
+      "mode": "bike"
+    },
+    {
+      "osmID": 13210352,
+      "mode": "drive"
+    },
+    {
+      "osmID": 13210352,
+      "mode": "bike"
+    },
+    {
+      "osmID": 13490611,
+      "mode": "drive"
+    },
+    {
+      "osmID": 13490611,
+      "mode": "bike"
+    },
+    {
+      "osmID": 13503181,
+      "mode": "drive"
+    },
+    {
+      "osmID": 13503181,
+      "mode": "bike"
+    },
+    {
+      "osmID": 14635486,
+      "mode": "drive"
+    },
+    {
+      "osmID": 14635486,
+      "mode": "bike"
+    },
+    {
+      "osmID": 14635487,
+      "mode": "drive"
+    },
+    {
+      "osmID": 14635487,
+      "mode": "bike"
+    },
+    {
+      "osmID": 16135827,
+      "mode": "drive"
+    },
+    {
+      "osmID": 16135827,
+      "mode": "bike"
+    },
+    {
+      "osmID": 18097434,
+      "mode": "drive"
+    },
+    {
+      "osmID": 18097434,
+      "mode": "bike"
+    },
+    {
+      "osmID": 18624886,
+      "mode": "drive"
+    },
+    {
+      "osmID": 18624886,
+      "mode": "bike"
+    },
+    {
+      "osmID": 18777202,
+      "mode": "drive"
+    },
+    {
+      "osmID": 18777202,
+      "mode": "bike"
+    },
+    {
+      "osmID": 19740652,
+      "mode": "drive"
+    },
+    {
+      "osmID": 19740652,
+      "mode": "bike"
+    }
+  ],
+  "surfaceTaggedEdges": 21115,
+  "inclineTaggedEdges": 262,
+  "motorwayEdges": 220
+}

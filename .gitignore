@@ -1,0 +1,14 @@
+.DS_Store
+.build/
+.swiftpm/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+Data/raw/*.json
+*.xcresult/
+Evidence/*.log
+Evidence/*.mov
+Evidence/*.mp4
+Evidence/ui-attachments*/
+Evidence/ui-test-results.json
+__pycache__/
