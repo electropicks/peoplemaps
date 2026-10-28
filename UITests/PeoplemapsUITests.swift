@@ -1,10 +1,11 @@
 import XCTest
+import CoreLocation
 
 final class PeoplemapsUITests: XCTestCase {
-    @MainActor private func launch(slow: Bool = false, simulateRoute: Bool = false, fast: Bool = false) -> XCUIApplication {
+    @MainActor private func launch(slow: Bool = false, simulateRoute: Bool = false, fast: Bool = false, realLocation: Bool = false) -> XCUIApplication {
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
-        app.launchArguments = (slow ? ["--ui-testing", "--slow-routing"] : ["--ui-testing"]) + (simulateRoute ? ["--simulate-route"] : []) + (fast ? ["--fast-simulation"] : [])
+        app.launchArguments = (slow ? ["--ui-testing", "--slow-routing"] : ["--ui-testing"]) + (simulateRoute ? ["--simulate-route"] : []) + (fast ? ["--fast-simulation"] : []) + (realLocation ? ["--real-location"] : [])
         app.launch()
         XCTAssertTrue(app.buttons["featured-relation/1047789"].waitForExistence(timeout: 20))
         app.buttons["featured-relation/1047789"].tap()
@@ -44,6 +45,163 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["close-details"].tap()
         app.buttons["Drive"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
+    }
+    // MARK: Real location (Simulator location injection and the system permission alert)
+
+    private static let kerryPark = CLLocationCoordinate2D(latitude: 47.6295, longitude: -122.3599)
+
+    @MainActor private func setDevice(_ c: CLLocationCoordinate2D, course: Double = -1) {
+        XCUIDevice.shared.location = XCUILocation(location: CLLocation(coordinate: c, altitude: 50, horizontalAccuracy: 5, verticalAccuracy: 5,
+                                                                         course: course, speed: course < 0 ? 0 : 8, timestamp: Date()))
+    }
+
+    /// Fresh permission state, device parked at Kerry Park, real location provider, route preview open.
+    @MainActor private func launchReal(resetPermission: Bool = true) -> XCUIApplication {
+        let app = XCUIApplication()
+        if resetPermission { app.resetAuthorizationStatus(for: .location) }
+        setDevice(Self.kerryPark)
+        return launch(realLocation: true)
+    }
+
+    @MainActor private func answerLocationAlert(_ button: String) {
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let choice = springboard.alerts.buttons[button]
+        XCTAssertTrue(choice.waitForExistence(timeout: 15), "No system location alert with '\(button)'")
+        choice.tap()
+    }
+
+    @MainActor private func probe(_ app: XCUIApplication, _ id: String) -> String {
+        (app.descendants(matching: .any)[id].value as? String) ?? "<missing>"
+    }
+
+    @MainActor private func startGuidanceReal(_ app: XCUIApplication) {
+        app.buttons["start-navigation"].tap()
+        answerLocationAlert("Allow While Using App")
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 20))
+    }
+
+    /// Points of the route from the app's debug readout.
+    @MainActor private func routePoints(_ app: XCUIApplication) -> [CLLocationCoordinate2D] {
+        let text = probe(app, "debug-route")
+        return text.split(separator: ";").compactMap { pair in
+            let p = pair.split(separator: ",").compactMap { Double($0) }
+            return p.count == 2 ? CLLocationCoordinate2D(latitude: p[0], longitude: p[1]) : nil
+        }
+    }
+
+    private static func metres(_ a: CLLocationCoordinate2D, _ b: CLLocationCoordinate2D) -> Double {
+        CLLocation(latitude: a.latitude, longitude: a.longitude).distance(from: CLLocation(latitude: b.latitude, longitude: b.longitude))
+    }
+
+    /// Positions every `step` metres along the polyline, up to `limit` metres, with the course of each segment.
+    private static func samples(_ line: [CLLocationCoordinate2D], step: Double, limit: Double) -> [(CLLocationCoordinate2D, Double)] {
+        var out: [(CLLocationCoordinate2D, Double)] = []
+        var carried = 0.0, travelled = 0.0
+        for (a, b) in zip(line, line.dropFirst()) {
+            let length = metres(a, b)
+            guard length > 0 else { continue }
+            let course = (atan2(b.longitude - a.longitude, b.latitude - a.latitude) * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
+            var d = step - carried
+            while d <= length {
+                let t = d / length
+                out.append((CLLocationCoordinate2D(latitude: a.latitude + (b.latitude - a.latitude) * t, longitude: a.longitude + (b.longitude - a.longitude) * t), course))
+                d += step
+            }
+            carried = length - (d - step)
+            travelled += length
+            if travelled > limit { break }
+        }
+        return out
+    }
+
+    @MainActor func testRealLocationPermissionAllowedStartsAndEndsGuidance() {
+        let app = launchReal()
+        startGuidanceReal(app)
+        XCTAssertEqual(probe(app, "debug-nav-state"), "guiding")
+        XCTAssertEqual(probe(app, "debug-idle-disabled"), "1")
+        app.buttons["end-navigation"].tap()
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
+        XCTAssertEqual(probe(app, "debug-idle-disabled"), "0")
+    }
+
+    @MainActor func testRealLocationPermissionDeniedKeepsPreview() {
+        let app = launchReal()
+        app.buttons["start-navigation"].tap()
+        answerLocationAlert("Don\u{2019}t Allow")
+        let alert = app.alerts["Location is off for PeopleMaps"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 10))
+        alert.buttons["Not Now"].tap()
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["guidance-instruction"].exists)
+        XCTAssertEqual(probe(app, "debug-idle-disabled"), "0")
+    }
+
+    @MainActor func testRealGPSAlongTheRouteAdvancesInstruction() {
+        let app = launchReal()
+        startGuidanceReal(app)
+        let instruction = app.staticTexts["guidance-instruction"]
+        let first = instruction.label
+        let line = routePoints(app)
+        XCTAssertGreaterThan(line.count, 3, "Route readout missing")
+        var changed = false
+        for (point, course) in Self.samples(line, step: 20, limit: 600) {
+            setDevice(point, course: course)
+            Thread.sleep(forTimeInterval: 0.4)
+            if instruction.label != first { changed = true }
+        }
+        Thread.sleep(forTimeInterval: 1)
+        XCTAssertTrue(changed || instruction.label != first, "Instruction stayed '\(first)' after 600 m")
+        XCTAssertFalse(probe(app, "debug-last-spoken").isEmpty)
+        XCTAssertEqual(probe(app, "debug-nav-state"), "guiding")
+        capture("09-real-gps-guidance", app: app)
+    }
+
+    @MainActor func testForcedRerouteRecoversWithNewRoute() {
+        let app = launchReal()
+        startGuidanceReal(app)
+        let line = routePoints(app)
+        XCTAssertGreaterThan(line.count, 3, "Route readout missing")
+        let before = probe(app, "debug-route")
+        let walk = Self.samples(line, step: 20, limit: 300)
+        for (point, course) in walk { setDevice(point, course: course); Thread.sleep(forTimeInterval: 0.3) }
+        guard let (last, course) = walk.last else { return XCTFail("No samples") }
+        // 150 m to the side of the road (perpendicular to the travel direction).
+        let side = (course + 90) * .pi / 180
+        let off = CLLocationCoordinate2D(latitude: last.latitude + cos(side) * 150 / 111_000,
+                                         longitude: last.longitude + sin(side) * 150 / 75_500)
+        var sawRerouting = false
+        let deadline = Date().addingTimeInterval(10)
+        var jitter = 0.0
+        while Date() < deadline {
+            jitter += 0.00002
+            setDevice(CLLocationCoordinate2D(latitude: off.latitude + jitter, longitude: off.longitude), course: course)
+            if probe(app, "debug-nav-state") == "rerouting" || app.otherElements["guidance-rerouting"].exists { sawRerouting = true }
+            Thread.sleep(forTimeInterval: 0.25)
+        }
+        capture("10-after-forced-reroute", app: app)
+        let rerouted = probe(app, "debug-route") != before
+        XCTAssertTrue(sawRerouting || rerouted, "Neither a rerouting state nor a new route appeared")
+        let guiding = NSPredicate { _, _ in self.probe(app, "debug-nav-state") == "guiding" }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: guiding, object: nil)], timeout: 20), .completed, "Guidance never resumed")
+        XCTAssertTrue(rerouted, "Route was not replaced")
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].exists)
+        XCTAssertFalse(app.staticTexts["guidance-instruction"].label.isEmpty)
+    }
+
+    @MainActor func testBackgroundAndForegroundKeepsGuidance() {
+        let app = launchReal()
+        startGuidanceReal(app)
+        let instruction = app.staticTexts["guidance-instruction"]
+        let before = instruction.label
+        XCUIDevice.shared.press(.home)
+        Thread.sleep(forTimeInterval: 2)
+        app.activate()
+        XCTAssertTrue(instruction.waitForExistence(timeout: 10))
+        let guiding = NSPredicate { _, _ in self.probe(app, "debug-nav-state") == "guiding" }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: guiding, object: nil)], timeout: 10), .completed)
+        XCTAssertFalse(instruction.label.isEmpty)
+        XCTAssertEqual(instruction.label, before)
+        XCTAssertEqual(probe(app, "debug-idle-disabled"), "1")
     }
     @MainActor func testSimulatedGuidanceStartsAdvancesAndEnds() {
         let app = launch(simulateRoute: true)
