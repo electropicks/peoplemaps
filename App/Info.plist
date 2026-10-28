@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Merged with the generated Info.plist. Only keys without an INFOPLIST_KEY build setting live here. -->
+	<key>UILaunchScreen</key>
+	<dict>
+		<!-- The map's land colour (UIColor.mapLand), so launch flows into the map without a white or black flash. -->
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
+</dict>
+</plist>
