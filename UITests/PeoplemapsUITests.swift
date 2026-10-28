@@ -1,10 +1,10 @@
 import XCTest
 
 final class PeoplemapsUITests: XCTestCase {
-    @MainActor private func launch(slow: Bool = false, simulateRoute: Bool = false) -> XCUIApplication {
+    @MainActor private func launch(slow: Bool = false, simulateRoute: Bool = false, fast: Bool = false) -> XCUIApplication {
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
-        app.launchArguments = (slow ? ["--ui-testing", "--slow-routing"] : ["--ui-testing"]) + (simulateRoute ? ["--simulate-route"] : [])
+        app.launchArguments = (slow ? ["--ui-testing", "--slow-routing"] : ["--ui-testing"]) + (simulateRoute ? ["--simulate-route"] : []) + (fast ? ["--fast-simulation"] : [])
         app.launch()
         XCTAssertTrue(app.buttons["featured-relation/1047789"].waitForExistence(timeout: 20))
         app.buttons["featured-relation/1047789"].tap()
@@ -53,6 +53,10 @@ final class PeoplemapsUITests: XCTestCase {
         let first = instruction.label
         XCTAssertTrue(first.contains("Turn") || first.contains("Head"), first)
         XCTAssertFalse(app.buttons["route-fastest"].exists)
+        XCTAssertTrue(app.staticTexts["guidance-distance"].exists)
+        XCTAssertTrue(app.staticTexts["trip-minutes"].exists)
+        XCTAssertTrue(app.staticTexts["trip-arrival"].exists)
+        XCTAssertTrue(app.buttons["guidance-overview"].exists)
         capture("06-guidance", app: app)
         let changed = NSPredicate { _, _ in instruction.exists && instruction.label != first }
         let expectation = XCTNSPredicateExpectation(predicate: changed, object: nil)
@@ -60,6 +64,19 @@ final class PeoplemapsUITests: XCTestCase {
         capture("07-guidance-next-step", app: app)
         app.buttons["end-navigation"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
+    }
+    @MainActor func testSimulatedGuidanceArrivesAndDoneReturnsHome() {
+        let app = launch(simulateRoute: true, fast: true)
+        app.buttons["start-navigation"].tap()
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 10))
+        let arrived = app.staticTexts["guidance-arrived"]
+        XCTAssertTrue(arrived.waitForExistence(timeout: 150), "Never arrived")
+        XCTAssertTrue(arrived.label.contains("You've arrived at"), arrived.label)
+        XCTAssertTrue(app.staticTexts["arrival-summary"].exists)
+        XCTAssertFalse(app.buttons["end-navigation"].exists)
+        capture("08-arrived", app: app)
+        app.buttons["done-navigation"].tap()
+        XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 10))
     }
     @MainActor func testSearchEmptyCancelAndSelection() {
         let app = launch()

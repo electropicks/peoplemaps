@@ -29,6 +29,12 @@ final class NavigationController {
     private(set) var mode = TravelMode.drive
     private(set) var calmerRoute = false
     private(set) var destination: Place?
+    /// The maneuver after the one the card shows ("Then: right onto Halladay St"), nil when the card shows the last one.
+    private(set) var thenStep: NavigationStep?
+    /// What the arrival summary shows: whole-trip distance and time, and the main differences from the fastest route.
+    private(set) var tripMeters = 0.0
+    private(set) var tripSeconds = 0.0
+    private(set) var tripNotes: [String] = []
 
     /// The note for the step the card is showing.
     var calmNote: String? { currentStep?.calmNote }
@@ -36,6 +42,14 @@ final class NavigationController {
         guard let step = currentStep else { return "" }
         if step.maneuver == .arrive, let destination { return "Arrive at \(destination.shortName)" }
         return step.instruction
+    }
+
+    /// "right onto Halladay St": the next maneuver in lower case, for the "Then:" row.
+    var thenText: String {
+        guard let step = thenStep else { return "" }
+        if step.maneuver == .arrive, let destination { return "arrive at \(destination.shortName)" }
+        let text = step.instruction.hasPrefix("Turn ") ? String(step.instruction.dropFirst(5)) : step.instruction
+        return text.prefix(1).lowercased() + text.dropFirst()
     }
 
     @ObservationIgnored private let router: NativeRouter
@@ -78,7 +92,7 @@ final class NavigationController {
             let first = adapted.route.geometry[0]
             sim.lastLocation = UserLocation(coordinates: first, horizontalAccuracy: 5, courseOverGround: nil, timestamp: Date(), speed: nil)
             // One tick a second at the route's own average speed is real time; replay four times faster.
-            sim.warpFactor = 4
+            sim.warpFactor = ProcessInfo.processInfo.arguments.contains("--fast-simulation") ? 40 : 4
             try? sim.setSimulatedRoute(adapted.route, resampleDistance: max(1, adapted.plan.meters / max(1, adapted.plan.seconds)))
             location = sim
         } else {
@@ -93,6 +107,8 @@ final class NavigationController {
                                  spokenInstructionObserver: SpokenInstructionObserver(synthesizer: AVSpeechSynthesizer(), isMuted: true)) // Voice is stage 4.
         self.core = core
         mode = request.mode; calmerRoute = usingCalmer; destination = request.destination
+        tripMeters = adapted.plan.meters; tripSeconds = adapted.plan.seconds
+        tripNotes = Self.notes(comparison, calmer: usingCalmer)
         hasArrived = false; isRerouting = false; isActive = true
         subscription = core.$state.receive(on: DispatchQueue.main).sink { [weak self] state in
             MainActor.assumeIsolated { self?.apply(state) }
@@ -101,13 +117,24 @@ final class NavigationController {
         do { try core.startNavigation(route: adapted.route) } catch { stop() }
     }
 
+    /// Up to three facts for the arrival summary: what the calmer route avoided, then what it cost in time.
+    private static func notes(_ comparison: RouteComparison, calmer: Bool) -> [String] {
+        guard calmer else { return [] }
+        let gains = comparison.reasons.filter { !$0.hasPrefix("Tradeoff") && !$0.hasPrefix("No calmer") }.prefix(2)
+        let extra = comparison.extraTimeLabel
+        let cost = extra == "No extra time" ? "No extra time compared with the fastest route"
+            : extra.hasPrefix("<1") ? "Under a minute longer than the fastest route"
+            : "\(extra.dropFirst()) longer than the fastest route"
+        return Array(gains) + [cost]
+    }
+
     func stop() {
         subscription = nil
         core?.stopNavigation()
         core = nil
         active = nil; known = [:]
         isActive = false; hasArrived = false; isRerouting = false
-        currentStep = nil; coordinate = nil; course = nil; routeGeometry = []; stepIndex = 0
+        currentStep = nil; thenStep = nil; tripNotes = []; coordinate = nil; course = nil; routeGeometry = []; stepIndex = 0
         distanceToManeuver = 0; remainingMeters = 0; remainingSeconds = 0
     }
 
@@ -153,7 +180,7 @@ final class NavigationController {
         case .complete:
             hasArrived = true
             remainingMeters = 0; remainingSeconds = 0; distanceToManeuver = 0
-            if let plan = active?.plan { stepIndex = plan.steps.count - 1; currentStep = plan.steps.last }
+            if let plan = active?.plan { stepIndex = plan.steps.count - 1; currentStep = plan.steps.last; thenStep = nil }
         case .idle:
             break
         case let .navigating(_, _, _, remaining, _, progress, _, _, _, _, _):
@@ -165,7 +192,9 @@ final class NavigationController {
             stepIndex = min(max(0, plan.steps.count - remaining.count), plan.steps.count - 1)
             let travelled = plan.steps[stepIndex].meters - progress.distanceToNextManeuver
             let heading = stepIndex == 0 && travelled < Self.setOffMeters && plan.steps.count > 1
-            currentStep = heading ? plan.steps[0] : plan.steps[min(stepIndex + 1, plan.steps.count - 1)]
+            let shown = heading ? 0 : min(stepIndex + 1, plan.steps.count - 1)
+            currentStep = plan.steps[shown]
+            thenStep = shown + 1 < plan.steps.count ? plan.steps[shown + 1] : nil
         }
     }
 }

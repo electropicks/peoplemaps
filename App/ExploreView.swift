@@ -27,6 +27,8 @@ struct ExploreView: View {
     @State private var recenter = 0
     @State private var panelHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
+    @State private var overview = false
+    @State private var guidanceInset = UIEdgeInsets.zero
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     init(graph: StreetGraph, router: NativeRouter) {
@@ -50,10 +52,11 @@ struct ExploreView: View {
     private var guidance: Guidance? {
         guard guiding, !navigator.routeGeometry.isEmpty else { return nil }
         return Guidance(version: navigator.routeVersion, coordinates: navigator.routeGeometry, calmer: navigator.calmerRoute,
-                        destination: navigator.routeGeometry.last!, user: navigator.coordinate)
+                        destination: navigator.routeGeometry.last!, user: navigator.coordinate, overview: overview, inset: guidanceInset)
     }
 
     private func startNavigation(_ comparison: RouteComparison) {
+        overview = false; guidanceInset = .zero
         navigator.start(comparison: comparison, useCalmer: selectedCalmer && comparison.calmer != nil)
         if navigator.isActive { screen = .navigating }
     }
@@ -84,7 +87,8 @@ struct ExploreView: View {
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(screen == .preview ? "Seattle offline map. Routes are also described in the panel." : "Seattle offline map")
                 if screen == .navigating {
-                    GuidanceOverlay(navigator: navigator, landscape: landscape, attribution: AnyView(attribution), onEnd: endNavigation, onDone: finishNavigation)
+                    GuidanceOverlay(navigator: navigator, landscape: landscape, cardWidth: cardWidth, attribution: AnyView(attribution), overview: $overview,
+                                    onInsets: { guidanceInset = $0 }, onEnd: endNavigation, onDone: finishNavigation)
                 } else if landscape { landscapeLayout(geo) } else { portraitLayout(geo) }
             }
         }

@@ -9,6 +9,10 @@ struct Guidance: Equatable {
     let calmer: Bool
     let destination: Coordinate
     let user: Coordinate?
+    /// Show the whole route instead of following the user.
+    var overview = false
+    /// Space the guidance chrome covers; the puck is centred in the rest.
+    var inset = UIEdgeInsets.zero
 }
 
 struct SeattleMap: UIViewRepresentable {
@@ -62,6 +66,7 @@ struct SeattleMap: UIViewRepresentable {
         private var focusKey = ""
         private var guiding = false
         private var guidanceKey = ""
+        private var guidanceMode = ""
         private var lastUser: Coordinate?
         private var guidanceAnnotations: [MLNPointAnnotation] = []
         private var puck: MapPuck?
@@ -179,6 +184,21 @@ struct SeattleMap: UIViewRepresentable {
                 map.setCenter(CLLocationCoordinate2D(latitude: (g.user ?? g.coordinates[0]).lat, longitude: (g.user ?? g.coordinates[0]).lon), zoomLevel: 16, animated: false)
             }
             let key = "\(g.version)|\(g.calmer)"
+            let mode = "\(g.overview)|\(Int(g.inset.top))|\(Int(g.inset.left))|\(Int(g.inset.bottom))|\(Int(g.inset.right))|\(g.version)"
+            if mode != guidanceMode {
+                guidanceMode = mode
+                lastUser = nil
+                if g.overview {
+                    map.contentInset = .zero
+                    let lats = g.coordinates.map(\.lat), lons = g.coordinates.map(\.lon)
+                    let sw = CLLocationCoordinate2D(latitude: lats.min()!, longitude: lons.min()!)
+                    let ne = CLLocationCoordinate2D(latitude: lats.max()!, longitude: lons.max()!)
+                    let pad = UIEdgeInsets(top: g.inset.top + 24, left: g.inset.left + 32, bottom: g.inset.bottom + 24, right: max(g.inset.right, 16) + 32)
+                    map.setVisibleCoordinateBounds(MLNCoordinateBounds(sw: sw, ne: ne), edgePadding: fitting(pad, in: map.bounds.size), animated: false, completionHandler: nil)
+                } else {
+                    map.contentInset = g.inset
+                }
+            }
             if key != guidanceKey {
                 clearRoutes(style)
                 let prefix = g.calmer ? "calmer" : "fastest"
@@ -192,7 +212,7 @@ struct SeattleMap: UIViewRepresentable {
                 map.addAnnotations(guidanceAnnotations)
                 guidanceKey = key
             }
-            if let user = g.user, user != lastUser {
+            if !g.overview, let user = g.user, user != lastUser {
                 let point = CLLocationCoordinate2D(latitude: user.lat, longitude: user.lon)
                 if let puck { puck.coordinate = point } else {
                     let new = MapPuck(); new.coordinate = point; puck = new; map.addAnnotation(new)
@@ -205,7 +225,8 @@ struct SeattleMap: UIViewRepresentable {
         private func endGuidance(map: MLNMapView, style: MLNStyle) {
             guiding = false
             map.removeAnnotations(guidanceAnnotations + (puck.map { [$0] } ?? []))
-            guidanceAnnotations = []; puck = nil; lastUser = nil; guidanceKey = ""
+            guidanceAnnotations = []; puck = nil; lastUser = nil; guidanceKey = ""; guidanceMode = ""
+            map.contentInset = .zero
             clearRoutes(style)
             routeKey = ""; focusKey = ""; pinKey = ""
         }
