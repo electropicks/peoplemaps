@@ -10,6 +10,7 @@ struct GuidanceOverlay: View {
     let cardWidth: CGFloat
     let attribution: AnyView
     @Binding var overview: Bool
+    @Binding var muted: Bool
     /// Space the chrome covers, in screen points, so the map can centre the puck in what is left.
     let onInsets: (UIEdgeInsets) -> Void
     let onEnd: () -> Void
@@ -52,13 +53,13 @@ struct GuidanceOverlay: View {
                     HStack(alignment: .top) {
                         if !navigator.isRerouting, let note = navigator.calmNote { chip(note) }
                         Spacer(minLength: 0)
-                        overviewButton
+                        mapButtons
                     }
                 }
                 .padding(.horizontal, 8).padding(.top, 4)
                 .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { topEdge = $0 }
             } else {
-                HStack { Spacer(); overviewButton }.padding(.horizontal, 16).padding(.top, 8)
+                HStack { Spacer(); mapButtons }.padding(.horizontal, 16).padding(.top, 8)
                     .onAppear { topEdge = 52 }
             }
             Spacer(minLength: 0)
@@ -94,7 +95,7 @@ struct GuidanceOverlay: View {
                 .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxX } action: { leadingEdge = $0 }
                 Spacer(minLength: 16)
                 VStack(alignment: .trailing) {
-                    overviewButton
+                    mapButtons
                     Spacer()
                     attribution
                 }.padding(.vertical, 12).padding(.trailing, 16)
@@ -249,6 +250,24 @@ struct GuidanceOverlay: View {
     }
 
     // MARK: Map button
+
+    private var mapButtons: some View {
+        Group {
+            if landscape { VStack(spacing: 8) { muteButton; overviewButton } }
+            else { HStack(spacing: 8) { muteButton; overviewButton } }
+        }
+    }
+
+    private var muteButton: some View {
+        Button { muted.toggle() } label: {
+            Image(systemName: muted ? "speaker.slash.fill" : "speaker.wave.2.fill").font(.system(size: 19))
+                .frame(width: 44, height: 44).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain).foregroundStyle(.primary)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .shadow(color: .black.opacity(0.12), radius: 8, y: 1)
+        .accessibilityLabel(muted ? "Unmute voice" : "Mute voice").accessibilityIdentifier("guidance-mute")
+    }
 
     private var overviewButton: some View {
         Button { overview.toggle() } label: {

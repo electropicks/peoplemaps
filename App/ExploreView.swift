@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import PeoplemapsCore
 
 private enum Sheet: String, Identifiable { case origin, destination, details, about; var id: String { rawValue } }
@@ -29,7 +30,23 @@ struct ExploreView: View {
     @State private var contentHeight: CGFloat = 0
     @State private var overview = false
     @State private var guidanceInset = UIEdgeInsets.zero
+    @State private var permission = LocationPermission()
+    @State private var asking = false
+    @State private var locationOff = false
+    @AppStorage("voiceMuted", store: ExploreView.voiceStore) private var voiceMuted = false
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+
+    /// UI tests start muted and in their own defaults, so they never change the real preference.
+    static let voiceStore: UserDefaults = {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-testing"), let store = UserDefaults(suiteName: "peoplemaps.uitests") {
+            store.set(true, forKey: "voiceMuted")
+            return store
+        }
+        #endif
+        return .standard
+    }()
 
     init(graph: StreetGraph, router: NativeRouter) {
         self.graph = graph
@@ -55,9 +72,29 @@ struct ExploreView: View {
                         destination: navigator.routeGeometry.last!, user: navigator.coordinate, overview: overview, inset: guidanceInset)
     }
 
+    /// Guidance needs location, so Start is where permission is asked (never while browsing or comparing).
+    /// The simulated provider path needs none.
     private func startNavigation(_ comparison: RouteComparison) {
+        guard !asking else { return }
+        #if DEBUG
+        if NavigationController.simulating { beginNavigation(comparison); return }
+        #endif
+        switch permission.access {
+        case .granted: beginNavigation(comparison)
+        case .denied: locationOff = true
+        case .undecided:
+            asking = true
+            Task {
+                let answer = await permission.request()
+                asking = false
+                if answer == .granted { beginNavigation(comparison) } else { locationOff = true }
+            }
+        }
+    }
+
+    private func beginNavigation(_ comparison: RouteComparison) {
         overview = false; guidanceInset = .zero
-        navigator.start(comparison: comparison, useCalmer: selectedCalmer && comparison.calmer != nil)
+        navigator.start(comparison: comparison, useCalmer: selectedCalmer && comparison.calmer != nil, muted: voiceMuted)
         if navigator.isActive { screen = .navigating }
     }
     private func endNavigation() { navigator.stop(); screen = .preview }
@@ -87,7 +124,7 @@ struct ExploreView: View {
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(screen == .preview ? "Seattle offline map. Routes are also described in the panel." : "Seattle offline map")
                 if screen == .navigating {
-                    GuidanceOverlay(navigator: navigator, landscape: landscape, cardWidth: cardWidth, attribution: AnyView(attribution), overview: $overview,
+                    GuidanceOverlay(navigator: navigator, landscape: landscape, cardWidth: cardWidth, attribution: AnyView(attribution), overview: $overview, muted: $voiceMuted,
                                     onInsets: { guidanceInset = $0 }, onEnd: endNavigation, onDone: finishNavigation)
                 } else if landscape { landscapeLayout(geo) } else { portraitLayout(geo) }
             }
@@ -96,6 +133,16 @@ struct ExploreView: View {
             if let previewRequest { selectedCalmer = true; session.start(previewRequest) } else { session.cancel() }
         }
         .onDisappear { session.cancel(); navigator.stop() }
+        .onChange(of: voiceMuted) { navigator.setMuted(voiceMuted) }
+        .onChange(of: scenePhase) {
+            if scenePhase == .background { navigator.pause() } else if scenePhase == .active { navigator.resume() }
+        }
+        .alert("Location is off for PeopleMaps", isPresented: $locationOff) {
+            Button("Open Settings") { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } }
+            Button("Not Now", role: .cancel) {}
+        } message: {
+            Text("Turn on location in Settings to start guidance. You can still compare routes without it.")
+        }
         .sheet(item: $sheet) { item in
             switch item {
             case .origin:

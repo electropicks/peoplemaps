@@ -3,6 +3,7 @@ import CoreLocation
 import Combine
 import Foundation
 import Observation
+import UIKit
 import PeoplemapsCore
 @preconcurrency import FerrostarCore
 @preconcurrency import FerrostarCoreFFI
@@ -56,6 +57,10 @@ final class NavigationController {
     @ObservationIgnored private var core: FerrostarCore?
     @ObservationIgnored private var subscription: AnyCancellable?
     @ObservationIgnored private var active: AdaptedRoute?
+    @ObservationIgnored private var location: LocationProviding?
+    @ObservationIgnored private var observer: SpokenInstructionObserver?
+    @ObservationIgnored private var paused = false
+    @ObservationIgnored private var arrivalHandled = false
     /// Routes handed to Ferrostar, by token, so a reroute's plan can be found when the engine switches to it.
     @ObservationIgnored private var known: [UUID: AdaptedRoute] = [:]
 
@@ -74,7 +79,7 @@ final class NavigationController {
     }
     #endif
 
-    func start(comparison: RouteComparison, useCalmer: Bool) {
+    func start(comparison: RouteComparison, useCalmer: Bool, muted: Bool) {
         stop()
         let request = comparison.request
         let chosen = (useCalmer ? comparison.calmer : nil) ?? comparison.fastest
@@ -102,14 +107,19 @@ final class NavigationController {
         location = CoreLocationProvider(activityType: Self.activity(request.mode), allowBackgroundLocationUpdates: false)
         #endif
 
+        self.location = location
+        let observer = SpokenInstructionObserver(synthesizer: AVSpeechSynthesizer(), isMuted: muted)
+        self.observer = observer
         let core = FerrostarCore(customRouteProvider: provider, locationProvider: location,
                                  navigationControllerConfig: Self.config(for: request.mode),
-                                 spokenInstructionObserver: SpokenInstructionObserver(synthesizer: AVSpeechSynthesizer(), isMuted: true)) // Voice is stage 4.
+                                 spokenInstructionObserver: observer)
         self.core = core
         mode = request.mode; calmerRoute = usingCalmer; destination = request.destination
         tripMeters = adapted.plan.meters; tripSeconds = adapted.plan.seconds
         tripNotes = Self.notes(comparison, calmer: usingCalmer)
         hasArrived = false; isRerouting = false; isActive = true
+        arrivalHandled = false; paused = false
+        Self.keepAwake(true)
         subscription = core.$state.receive(on: DispatchQueue.main).sink { [weak self] state in
             MainActor.assumeIsolated { self?.apply(state) }
         }
@@ -128,10 +138,44 @@ final class NavigationController {
         return Array(gains) + [cost]
     }
 
+    /// Follows the stored preference; muting stops anything being said at once.
+    func setMuted(_ muted: Bool) {
+        if let observer, observer.isMuted != muted { observer.toggleMute() }
+    }
+
+    /// Version 1 guides in the foreground only: in the background nothing is said and location updates stop.
+    func pause() {
+        guard isActive, !paused else { return }
+        paused = true
+        observer?.stopAndClearQueue()
+        location?.stopUpdating()
+    }
+
+    func resume() {
+        guard isActive, paused else { return }
+        paused = false
+        if !hasArrived { location?.startUpdating() }
+    }
+
+    private static func keepAwake(_ on: Bool) { UIApplication.shared.isIdleTimerDisabled = on }
+
+    /// Arrival: stop location, let the screen sleep again, and say it once.
+    private func arrive() {
+        guard !arrivalHandled else { return }
+        arrivalHandled = true
+        location?.stopUpdating()
+        Self.keepAwake(false)
+        guard let observer, let name = destination?.shortName else { return }
+        observer.spokenInstructionTriggered(SpokenInstruction(text: "You've arrived at \(name)", ssml: nil, triggerDistanceBeforeManeuver: 0, utteranceId: UUID()))
+    }
+
     func stop() {
         subscription = nil
         core?.stopNavigation()
-        core = nil
+        location?.stopUpdating()
+        observer?.stopAndClearQueue()
+        Self.keepAwake(false)
+        core = nil; location = nil; observer = nil; paused = false; arrivalHandled = false
         active = nil; known = [:]
         isActive = false; hasArrived = false; isRerouting = false
         currentStep = nil; thenStep = nil; tripNotes = []; coordinate = nil; course = nil; routeGeometry = []; stepIndex = 0
@@ -179,6 +223,7 @@ final class NavigationController {
         switch state.tripState {
         case .complete:
             hasArrived = true
+            arrive()
             remainingMeters = 0; remainingSeconds = 0; distanceToManeuver = 0
             if let plan = active?.plan { stepIndex = plan.steps.count - 1; currentStep = plan.steps.last; thenStep = nil }
         case .idle:

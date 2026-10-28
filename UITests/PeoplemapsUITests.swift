@@ -65,6 +65,17 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["end-navigation"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
     }
+    @MainActor func testMuteButtonFlipsItsLabel() {
+        let app = launch(simulateRoute: true)
+        app.buttons["start-navigation"].tap()
+        let mute = app.buttons["guidance-mute"]
+        XCTAssertTrue(mute.waitForExistence(timeout: 10))
+        XCTAssertEqual(mute.label, "Unmute voice", "UI tests start muted")
+        mute.tap()
+        XCTAssertEqual(mute.label, "Mute voice")
+        mute.tap()
+        XCTAssertEqual(mute.label, "Unmute voice")
+    }
     @MainActor func testSimulatedGuidanceArrivesAndDoneReturnsHome() {
         let app = launch(simulateRoute: true, fast: true)
         app.buttons["start-navigation"].tap()
