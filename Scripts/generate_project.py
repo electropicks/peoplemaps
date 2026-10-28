@@ -12,10 +12,10 @@ def files(folder):
     def group(directory):
         refs=[]
         for p in sorted(directory.glob('*')):
-            if p.is_dir():
+            if p.is_dir() and p.suffix!='.xcassets':
                 refs.append(group(p));continue
-            if p.suffix not in {'.swift','.json','.md'}:continue
-            kind={'swift':'sourcecode.swift','json':'text.json','md':'net.daringfireball.markdown'}[p.suffix[1:]]
+            if p.suffix not in {'.swift','.json','.md','.xcassets'}:continue
+            kind={'swift':'sourcecode.swift','json':'text.json','md':'net.daringfireball.markdown','xcassets':'folder.assetcatalog'}[p.suffix[1:]]
             key=obj(str(p.relative_to(root)),f'isa = PBXFileReference; lastKnownFileType = {kind}; path = "{p.name}"; sourceTree = "<group>";')
             build=obj('build:'+str(p.relative_to(root)),f'isa = PBXBuildFile; fileRef = {key};')
             refs.append(key);(builds if p.suffix=='.swift' else resources).append(build)
@@ -49,7 +49,7 @@ for name,sources,resources in [('app',app_sources,app_resources),('test',test_so
                   'SWIFT_ACTIVE_COMPILATION_CONDITIONS':'"DEBUG $(inherited)"' if config=='Debug' else '"$(inherited)"',
                   'PRODUCT_BUNDLE_IDENTIFIER':'org.peoplemaps.prototype' if name=='app' else 'org.peoplemaps.prototype.uitests',
                   'LD_RUNPATH_SEARCH_PATHS':'"$(inherited) @executable_path/Frameworks"'}
-        if name=='app':settings.update({'INFOPLIST_KEY_UILaunchScreen_Generation':'YES','INFOPLIST_KEY_UIApplicationSceneManifest_Generation':'YES','INFOPLIST_KEY_UISupportedInterfaceOrientations':'"UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"','INFOPLIST_KEY_CFBundleDisplayName':'Peoplemaps','INFOPLIST_KEY_NSLocationWhenInUseUsageDescription':'"PeopleMaps uses your location only while guiding you, to show where you are and announce the next turn."','MARKETING_VERSION':'0.1.0','CURRENT_PROJECT_VERSION':'1'})
+        if name=='app':settings.update({'INFOPLIST_KEY_UILaunchScreen_Generation':'YES','INFOPLIST_KEY_UIApplicationSceneManifest_Generation':'YES','INFOPLIST_KEY_UISupportedInterfaceOrientations':'"UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"','INFOPLIST_KEY_CFBundleDisplayName':'Peoplemaps','INFOPLIST_KEY_NSLocationWhenInUseUsageDescription':'"PeopleMaps uses your location only while guiding you, to show where you are and announce the next turn."','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME':'AccentColor','MARKETING_VERSION':'0.1.0','CURRENT_PROJECT_VERSION':'1'})
         else:settings['TEST_TARGET_NAME']='Peoplemaps'
         obj(name+'-'+config,f'isa = XCBuildConfiguration; name = {config}; buildSettings = {{'+''.join(f'{k} = {v};' for k,v in settings.items())+'};')
     obj(name+'-config',f'isa = XCConfigurationList; buildConfigurations = ({ref(name+"-Debug")},{ref(name+"-Release")}); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')
