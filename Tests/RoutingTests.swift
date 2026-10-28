@@ -259,3 +259,23 @@ final class SeattleTests: XCTestCase {
         catch { XCTAssertTrue(error is CancellationError) }
     }
 }
+
+final class GzipTests: XCTestCase {
+    /// Python's gzip with a file name in the header (FNAME flag), so the header walk is exercised.
+    private static let sample = Data(hexString: "1f8b08080000000000ff63616c6d2e747874004b4eccc94d2d52282e294a4d2d29e64ac6cb05009f3bb6342d000000")
+    func testInflatesGzipWithFileName() {
+        XCTAssertEqual(Self.sample.gunzipped(), Data(String(repeating: "calmer streets\n", count: 3).utf8))
+    }
+    func testRejectsTruncatedOrPlainData() {
+        XCTAssertNil(Self.sample.dropLast(12).gunzipped())
+        XCTAssertNil(Data("{\"schemaVersion\":2}".utf8).gunzipped())
+    }
+}
+
+private extension Data {
+    init(hexString: String) {
+        var bytes = [UInt8](), chars = Array(hexString)
+        for i in stride(from: 0, to: chars.count, by: 2) { bytes.append(UInt8(String(chars[i...i + 1]), radix: 16)!) }
+        self.init(bytes)
+    }
+}

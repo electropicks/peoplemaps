@@ -10,7 +10,12 @@ struct PeoplemapsApp: App {
             Group {
                 if let loaded { ExploreView(graph: loaded.graph, router: loaded.router) }
                 else if let error { ContentUnavailableView("Seattle data unavailable", systemImage: "map", description: Text(error)) }
-                else { ProgressView("Opening Seattle…").task { await load() } }
+                else {
+                    ProgressView("Opening Seattle…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color(uiColor: .mapLand), ignoresSafeAreaEdges: .all)
+                        .task { await load() }
+                }
             }
             .tint(.calmer)
         }

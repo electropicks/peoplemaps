@@ -99,10 +99,10 @@ struct AboutView: View {
                     Text("Peoplemaps is a working name for a Seattle proof of concept.").font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("Open foundations") {
-                    Text("Native SwiftUI · MapLibre Native · OpenStreetMap")
-                    Text("\(graph.places.count) places and \(graph.edges.count.formatted()) directed street and path segments are bundled, with USGS elevation. Routing runs entirely on this device. No account or location permission is needed.")
+                    Text("Native SwiftUI · MapLibre Native · Ferrostar · OpenStreetMap")
+                    Text("\(graph.places.count) places and \(graph.edges.count.formatted()) directed street and path segments are bundled, with USGS elevation. Routing runs entirely on this device. No account is needed. Location is asked for only when you start guidance, and it stays on this iPhone.")
                     Link("OpenStreetMap contributors · ODbL 1.0", destination: URL(string: "https://www.openstreetmap.org/copyright")!)
-                    Link("MapLibre Native · BSD 2-Clause", destination: URL(string: "https://github.com/maplibre/maplibre-native")!)
+                    NavigationLink("Acknowledgements") { AcknowledgementsView() }.accessibilityIdentifier("acknowledgements")
                 }
                 Section("Seattle, with boundaries") {
                     Text("Snapshot: 11 October 2026. Coverage: north of Denny Way through southern Green Lake, from east Ballard to the University District. Map detail stops at the extract boundary.")
