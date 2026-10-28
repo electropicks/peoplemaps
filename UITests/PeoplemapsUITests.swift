@@ -201,4 +201,16 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["search-field"].isHittable)
         capture("06-home-landscape", app: app)
     }
+    @MainActor func testAboutShowsAcknowledgementsAndLicences() {
+        let app = launchHome()
+        app.buttons["about"].tap()
+        let acknowledgements = app.buttons["acknowledgements"]
+        for _ in 0..<3 where !acknowledgements.isHittable { app.collectionViews.firstMatch.swipeUp() }
+        acknowledgements.tap()
+        XCTAssertTrue(app.navigationBars["Acknowledgements"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["USGS 3D Elevation Program"].exists)
+        app.buttons["licence-Ferrostar-LICENSE"].tap()
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Stadia Maps'")).firstMatch.waitForExistence(timeout: 5))
+        capture("07-acknowledgements-ferrostar", app: app)
+    }
 }
