@@ -4,6 +4,101 @@ public protocol RouteComputing: Sendable {
     func compare(_ request: RouteRequest) async throws -> RouteComparison
 }
 
+public struct RouteMetrics: Sendable {
+    public var meters = 0.0
+    public var seconds = 0.0
+    public var breakdown = Breakdown()
+    public var stress: Double { breakdown.stress }
+    public init() {}
+}
+
+public struct Route: Sendable, Identifiable {
+    public let edgeIDs: [Int]
+    public let edgeMeters: [Double]
+    public let coordinates: [Coordinate]
+    public let metrics: RouteMetrics
+    public let streetNames: [String]
+    /// Parallel to `edgeIDs`: the factors (amount > 0) recorded on arriving at each edge; empty for the first.
+    public let junctionFactors: [[Factor]]
+    /// The directed edges travelled, parallel to `edgeIDs`.
+    public let edges: [GraphEdge]
+    public init(edgeIDs: [Int], edgeMeters: [Double] = [], coordinates: [Coordinate], metrics: RouteMetrics, streetNames: [String],
+                junctionFactors: [[Factor]] = [], edges: [GraphEdge] = []) {
+        self.edgeIDs = edgeIDs; self.edgeMeters = edgeMeters; self.coordinates = coordinates; self.metrics = metrics; self.streetNames = streetNames
+        self.junctionFactors = junctionFactors; self.edges = edges
+    }
+    public var id: String { edgeIDs.map(String.init).joined(separator: "-") }
+    public var minutes: Int { max(1, Int(ceil(metrics.seconds / 60))) }
+    public var duration: String { "\(minutes) min" }
+    public var distance: String { String(format: "%.1f km", metrics.meters / 1000) }
+
+    /// Share of this route's length that also lies on `other`.
+    func overlap(with other: Route) -> Double {
+        guard metrics.meters > 0, edgeMeters.count == edgeIDs.count else { return 0 }
+        let shared = Set(other.edgeIDs)
+        return zip(edgeIDs, edgeMeters).filter { shared.contains($0.0) }.reduce(0) { $0 + $1.1 } / metrics.meters
+    }
+}
+
+public struct RouteComparison: Sendable {
+    public let request: RouteRequest
+    public let fastest: Route
+    public let calmer: Route?
+    public let candidateCount: Int
+    public let originSnapMeters: Double
+    public let destinationSnapMeters: Double
+    public let snappedOrigin: Coordinate
+    public let snappedDestination: Coordinate
+    public init(request: RouteRequest, fastest: Route, calmer: Route?, candidateCount: Int, originSnapMeters: Double,
+                destinationSnapMeters: Double, snappedOrigin: Coordinate, snappedDestination: Coordinate) {
+        self.request = request; self.fastest = fastest; self.calmer = calmer; self.candidateCount = candidateCount
+        self.originSnapMeters = originSnapMeters; self.destinationSnapMeters = destinationSnapMeters
+        self.snappedOrigin = snappedOrigin; self.snappedDestination = snappedDestination
+    }
+
+    public var extraSeconds: Double { max(0, (calmer?.metrics.seconds ?? fastest.metrics.seconds) - fastest.metrics.seconds) }
+    /// Worked out from the displayed minutes, so the cards always add up.
+    public var extraTimeLabel: String {
+        guard let calmer, extraSeconds >= 1 else { return "No extra time" }
+        let shown = calmer.minutes - fastest.minutes
+        return shown <= 0 ? "<1 min extra" : "+\(shown) min"
+    }
+
+    /// The biggest differences between the two routes, benefits first, then what the calmer route costs you.
+    public var reasons: [String] {
+        guard let calmer else { return ["No calmer route was found within your extra time. This one is already the easiest the map can see."] }
+        let f = fastest.metrics.breakdown, c = calmer.metrics.breakdown
+        let diffs = Factor.allCases.filter { !$0.isUnknown }.map { (factor: $0, cost: f[$0].cost - c[$0].cost, amount: f[$0].amount - c[$0].amount) }
+            .filter { $0.factor.isNoticeable(abs($0.amount)) }
+        let gains = diffs.filter { $0.cost > 0 }.sorted { $0.cost > $1.cost }.prefix(3).map { $0.factor.change(abs($0.amount), more: false) }
+        let costs = diffs.filter { $0.cost < 0 }.sorted { $0.cost < $1.cost }.prefix(2).map { "Tradeoff: " + $0.factor.change(abs($0.amount), more: true) }
+        return (gains.isEmpty ? ["Fewer small hassles spread across the whole route"] : gains) + costs
+    }
+
+    /// Gaps in the map data large enough to mention.
+    public var caveats: [String] {
+        [fastest, calmer].compactMap { $0 }.flatMap { route in
+            [Factor.unknownSurface, .unknownSidewalk].compactMap { factor -> String? in
+                let meters = route.metrics.breakdown[factor].amount
+                return meters > route.metrics.meters * 0.1 ? factor.describe(meters) : nil
+            }.map { "\(route.edgeIDs == fastest.edgeIDs ? "Fastest" : "Calmer") route: \($0)." }
+        }
+    }
+}
+
+extension Factor {
+    func isNoticeable(_ amount: Double) -> Bool {
+        self == .climb ? amount >= 5 : isExposure ? amount >= 100 : amount >= 0.5
+    }
+    func change(_ amount: Double, more: Bool) -> String {
+        let text = describe(amount)
+        if self == .climb { return text.replacingOccurrences(of: " of climbing", with: more ? " more climbing" : " less climbing") }
+        if isExposure { return text.replacingOccurrences(of: " km ", with: more ? " km more " : " km less ") }
+        let n = text.prefix { $0 != " " }
+        return "\(n) \(more ? "more" : "fewer")\(text.dropFirst(n.count))"
+    }
+}
+
 /// Owned, offline edge-state Dijkstra router. Small enough to audit; intentionally not navigation software.
 public final class NativeRouter: RouteComputing, Sendable {
     public let graph: StreetGraph
@@ -11,6 +106,14 @@ public final class NativeRouter: RouteComputing, Sendable {
     private let incoming: [[Int]]
     private let restrictions: [Int: [TurnRestriction]]
     private let connectedNodes: [TravelMode: Set<Int>]
+    private let signalized: [Bool]
+    private let legs: [Int]
+    private let arterialsAt: [Int: [(way: Int64, road: RoadClass)]]
+    private let edgeSeconds: [TravelMode: [Double]]
+    private let edgeStress: [TravelMode: [Double]]
+
+    /// Searches trading time against stress; each extra weight finds another point on the time/stress curve.
+    static let weights = [0.25, 0.5, 1, 2, 4, 8]
 
     public init(graph: StreetGraph) {
         self.graph = graph
@@ -22,6 +125,27 @@ public final class NativeRouter: RouteComputing, Sendable {
         connectedNodes = Dictionary(uniqueKeysWithValues: TravelMode.allCases.map { mode in
             (mode, Self.largestStrongComponent(graph: graph, outgoing: out, incoming: inc, mode: mode))
         })
+        var neighbours = Array(repeating: Set<Int>(), count: graph.nodes.count)
+        var arterials: [Int: [(way: Int64, road: RoadClass)]] = [:]
+        var lit = graph.nodes.map(\.signal)
+        for e in graph.edges where e.isRoad {
+            neighbours[e.from].insert(e.to); neighbours[e.to].insert(e.from)
+            if let road = e.roadClass, road >= .arterial {
+                for n in [e.from, e.to] where !(arterials[n]?.contains { $0.way == e.wayID } ?? false) { arterials[n, default: []].append((e.wayID, road)) }
+            }
+            if e.meters < 30, graph.nodes[e.from].signal { lit[e.to] = true }  // signal mapped just before the junction
+        }
+        signalized = lit
+        legs = neighbours.map(\.count)
+        arterialsAt = arterials
+        let onRoad = (0..<graph.nodes.count).map { !neighbours[$0].isEmpty }
+        var seconds: [TravelMode: [Double]] = [:], stress: [TravelMode: [Double]] = [:]
+        for mode in TravelMode.allCases {
+            var none = NoRecord()
+            seconds[mode] = graph.edges.map { StressModel.seconds($0, mode: mode) }
+            stress[mode] = graph.edges.map { StressModel.exposure($0, mode: mode, arrivesAtRoad: onRoad[$0.to], into: &none) }
+        }
+        edgeSeconds = seconds; edgeStress = stress
     }
 
     public func compare(_ request: RouteRequest) async throws -> RouteComparison {
@@ -39,7 +163,7 @@ public final class NativeRouter: RouteComputing, Sendable {
         let fastest = try shortest(from: start.node, to: end.node, mode: request.mode, weight: 0)
         var candidates = [fastest]
         if request.extraMinutes > 0 {
-            for weight in [0.15, 0.4, 1.0, 2.5, 6.0, 15.0] {
+            for weight in Self.weights {
                 try Task.checkCancellation()
                 let candidate = try shortest(from: start.node, to: end.node, mode: request.mode, weight: weight)
                 if !candidates.contains(where: { $0.edgeIDs == candidate.edgeIDs }) { candidates.append(candidate) }
@@ -51,31 +175,38 @@ public final class NativeRouter: RouteComputing, Sendable {
                                snappedOrigin: graph.nodes[start.node].coordinate, snappedDestination: graph.nodes[end.node].coordinate)
     }
 
+    /// The least stressful candidate within the time budget, if it is meaningfully calmer and meaningfully different.
     public static func selectCalmer(candidates: [Route], fastest: Route, extraMinutes: Int) -> Route? {
         let limit = fastest.metrics.seconds + Double(max(0, extraMinutes)) * 60
+        let base = fastest.metrics.stress
         return candidates.filter {
             $0.edgeIDs != fastest.edgeIDs && $0.metrics.seconds <= limit + 0.000_001
-            && $0.metrics.discomfort < fastest.metrics.discomfort * 0.98
+            && $0.metrics.stress < base * 0.95 && base - $0.metrics.stress >= 30 && $0.overlap(with: fastest) < 0.9
         }.min {
-            if abs($0.metrics.discomfort - $1.metrics.discomfort) > 0.001 { return $0.metrics.discomfort < $1.metrics.discomfort }
+            if abs($0.metrics.stress - $1.metrics.stress) > 0.001 { return $0.metrics.stress < $1.metrics.stress }
             return $0.metrics.seconds < $1.metrics.seconds
         }
     }
 
+    func junction(at node: Int, previous: GraphEdge, next: GraphEdge) -> Junction {
+        Junction(signalized: signalized[node], pedestrianSignal: graph.nodes[node].pedestrianSignal, legs: legs[node],
+                 crossedArterial: arterialsAt[node]?.filter { $0.way != previous.wayID && $0.way != next.wayID }.map(\.road).max())
+    }
+
     private func snap(_ point: Coordinate, mode: TravelMode, departing: Bool) throws -> (node: Int, distance: Double) {
+        guard let connected = connectedNodes[mode] else { throw RoutingError.noConnection }
         var best: (Int, Double)?
-        for i in graph.nodes.indices {
-            guard connectedNodes[mode]?.contains(i) == true else { continue }
-            let usable = departing ? outgoing[i] : incoming[i]
-            guard usable.contains(where: { graph.edges[$0].modes.contains(mode) && !graph.edges[$0].isHighway }) else { continue }
+        for i in graph.nodes.indices where connected.contains(i) {
             let d = point.distance(to: graph.nodes[i].coordinate)
-            if d <= 400, best == nil || d < best!.1 { best = (i, d) }
+            guard d <= 400, best == nil || d < best!.1 else { continue }
+            let usable = departing ? outgoing[i] : incoming[i]
+            if usable.contains(where: { graph.edges[$0].modes.contains(mode) && !graph.edges[$0].isHighway }) { best = (i, d) }
         }
         guard let best else { throw RoutingError.noConnection }
         return best
     }
 
-    /// Snap to the main connected street network, rather than an isolated mapped driveway or campus loop.
+    /// Snap to the main connected network, rather than an isolated mapped driveway or campus loop.
     /// Kosaraju, iterative to avoid stack overflow. Turn restrictions are still enforced during search.
     private static func largestStrongComponent(graph: StreetGraph, outgoing: [[Int]], incoming: [[Int]], mode: TravelMode) -> Set<Int> {
         var visited = Set<Int>(), order: [Int] = []
@@ -108,16 +239,28 @@ public final class NativeRouter: RouteComputing, Sendable {
         return largest
     }
 
-    /// State includes incoming directed edge, so a turn restriction cannot be lost by visiting a node first.
+    /// Fastest plausible travel speed per mode in m/s, for the A* lower bound on remaining time.
+    private static func topSpeed(_ mode: TravelMode) -> Double {
+        switch mode { case .walk: 1.4; case .bike: 32 / 3.6; case .drive: 70 / 3.6 }
+    }
+
+    /// A* over edge states: the state includes the incoming directed edge, so a turn restriction cannot be lost
+    /// by visiting a node first. Minimizes seconds + weight × stress; weight 0 is the fastest route.
+    /// Straight-line distance at top speed never overestimates, and stress is never negative, so results are exact.
     private func shortest(from start: Int, to destination: Int, mode: TravelMode, weight: Double) throws -> Route {
         let source = graph.edges.count
+        let seconds = edgeSeconds[mode]!, stress = edgeStress[mode]!
+        let target = graph.nodes[destination].coordinate, speed = Self.topSpeed(mode)
+        func remaining(_ node: Int) -> Double { graph.nodes[node].coordinate.distance(to: target) / speed }
         var costs = Array(repeating: Double.infinity, count: source + 1)
         var parents = Array(repeating: -1, count: source + 1)
+        var closed = Array(repeating: false, count: source + 1)
         costs[source] = 0
-        var heap = MinHeap(); heap.push(.init(cost: 0, state: source))
-        var visits = 0
+        var heap = MinHeap(); heap.push(.init(cost: remaining(start), state: source))
+        var visits = 0, none = NoRecord()
         while let item = heap.pop() {
-            if item.cost > costs[item.state] { continue }
+            if closed[item.state] { continue }
+            closed[item.state] = true
             visits += 1
             if visits % 256 == 0 { try Task.checkCancellation() }
             let previous: GraphEdge? = item.state == source ? nil : graph.edges[item.state]
@@ -130,12 +273,15 @@ public final class NativeRouter: RouteComputing, Sendable {
             for edgeID in outgoing[node] {
                 let edge = graph.edges[edgeID]
                 guard edge.modes.contains(mode), allowed(previous: previous, next: edge, mode: mode) else { continue }
-                let turn = turnMetrics(previous: previous, next: edge, mode: mode)
-                let cost = item.cost + Self.seconds(edge, mode: mode) + turn.seconds
-                    + weight * (Self.discomfort(edge, mode: mode) + turn.discomfort)
+                var cost = costs[item.state] + seconds[edgeID] + weight * stress[edgeID]
+                if let previous {
+                    let j = junction(at: node, previous: previous, next: edge)
+                    cost += StressModel.transitionSeconds(previous: previous, next: edge, turned: StressModel.isTurn(previous: previous, next: edge), junction: j, mode: mode)
+                    if weight > 0 { cost += weight * StressModel.transition(previous: previous, next: edge, junction: j, mode: mode, into: &none) }
+                }
                 if cost < costs[edgeID] {
                     costs[edgeID] = cost; parents[edgeID] = item.state
-                    heap.push(.init(cost: cost, state: edgeID))
+                    heap.push(.init(cost: cost + remaining(edge.to), state: edgeID))
                 }
             }
         }
@@ -157,70 +303,45 @@ public final class NativeRouter: RouteComputing, Sendable {
         return true
     }
 
-    public static func seconds(_ edge: GraphEdge, mode: TravelMode) -> Double {
-        let kph: Double
-        if mode == .bike {
-            kph = edge.isRough ? 11 : edge.facility == "sharedPath" ? 14 : 18
-        } else {
-            let defaults: [String: Double] = ["motorway":70, "motorway_link":32, "trunk":50, "trunk_link":28,
-                "primary":35, "primary_link":22, "secondary":32, "secondary_link":20, "tertiary":28,
-                "tertiary_link":18, "residential":22, "unclassified":22, "living_street":12, "service":12]
-            let assumed = defaults[edge.highway] ?? 18
-            var tagged: Double?
-            if let s = edge.maxspeed, let value = Double(s.components(separatedBy: " ")[0]), value > 0 {
-                tagged = s.contains("mph") ? value * 1.609344 : value
-            }
-            kph = max(5, min(assumed, (tagged ?? 160) * 0.8))
-        }
-        return edge.meters / (kph / 3.6)
-    }
-
-    public static func discomfort(_ edge: GraphEdge, mode: TravelMode) -> Double {
-        let km = edge.meters / 1000
-        if mode == .drive {
-            // Residential distance discourages shortcutting. Highway entries are handled at transitions.
-            return km * (edge.isResidential ? 65 : edge.highway == "service" ? 100 : edge.isHighway ? 35 : 12)
-        }
-        let base: Double = edge.hasCycleTrackTag ? 8 : edge.facility == "sharedPath" ? 20 : edge.facility == "lane" ? 32 : edge.isArterial ? 140 : edge.isResidential ? 35 : 65
-        return km * (base + (edge.isRough ? 55 : 0) + (edge.surface == nil ? 8 : 0))
-    }
-
-    func turnMetrics(previous: GraphEdge?, next: GraphEdge, mode: TravelMode) -> RouteMetrics {
-        var result = RouteMetrics()
-        guard let previous else { return result }
-        let a = previous.geometry[previous.geometry.count - 2], b = previous.geometry.last!, c = next.geometry[1]
-        let scale = cos(b[1] * .pi / 180)
-        let ux = (b[0] - a[0]) * scale, uy = b[1] - a[1]
-        let vx = (c[0] - b[0]) * scale, vy = c[1] - b[1]
-        let angle = atan2(ux * vy - uy * vx, ux * vx + uy * vy) * 180 / .pi
-        let turn = abs(angle) > 35 && previous.wayID != next.wayID
-        result.turns = turn ? 1 : 0
-        result.arterialLefts = turn && angle > 35 && (previous.isArterial || next.isArterial) ? 1 : 0
-        result.highwayEntries = !previous.isHighway && next.isHighway ? 1 : 0
-        result.seconds = (turn ? (mode == .drive ? 5 : 2) : 0) + (graph.nodes[next.from].signal ? (mode == .drive ? 12 : 8) : 0)
-        result.discomfort = mode == .drive ? Double(result.turns * 22 + result.arterialLefts * 65 + result.highwayEntries * 180) : Double(result.turns * 6 + result.arterialLefts * 25)
-        return result
-    }
-
-    private func route(ids: [Int], mode: TravelMode) -> Route {
-        var metrics = RouteMetrics(), coordinates: [Coordinate] = [], streets: [String] = []
+    /// Full accounting for a found route: time, every stress factor, and whole-route factors.
+    func route(ids: [Int], mode: TravelMode) -> Route {
+        var metrics = RouteMetrics(), coordinates: [Coordinate] = [], streets: [String] = [], stops: [Double] = []
         var previous: GraphEdge?
+        var events: [[Factor]] = []
+        let onRoad = { (node: Int) in self.legs[node] > 0 }
         for id in ids {
-            let e = graph.edges[id], t = turnMetrics(previous: previous, next: e, mode: mode)
-            metrics.meters += e.meters; metrics.seconds += Self.seconds(e, mode: mode) + t.seconds
-            metrics.discomfort += Self.discomfort(e, mode: mode) + t.discomfort
-            metrics.turns += t.turns; metrics.arterialLefts += t.arterialLefts; metrics.highwayEntries += t.highwayEntries
-            if e.isResidential { metrics.residentialMeters += e.meters }
-            if e.isArterial { metrics.arterialMeters += e.meters }
-            if e.hasCycleTrackTag { metrics.cycleTrackMeters += e.meters }
-            if e.surface == nil { metrics.unknownSurfaceMeters += e.meters }
-            if e.incline == nil { metrics.unknownGradeMeters += e.meters }
-            if e.isRough { metrics.roughMeters += e.meters }
+            let e = graph.edges[id]
+            var arrival: [Factor] = []
+            defer { events.append(arrival) }
+            if let previous {
+                let j = junction(at: e.from, previous: previous, next: e)
+                var here = Breakdown()
+                _ = StressModel.transition(previous: previous, next: e, junction: j, mode: mode, into: &here)
+                metrics.seconds += StressModel.transitionSeconds(previous: previous, next: e, turned: StressModel.isTurn(previous: previous, next: e), junction: j, mode: mode)
+                let stopping: [Factor] = [.stopSign, .allWayStop, .signal, .unsignalledLeft, .unsignalledCrossing, .unsignalledRight]
+                if stopping.contains(where: { here[$0].amount > 0 }) { stops.append(metrics.meters) }
+                arrival = Factor.allCases.filter { here[$0].amount > 0 }
+                metrics.breakdown.merge(here)
+            }
+            var along = Breakdown()
+            _ = StressModel.exposure(e, mode: mode, arrivesAtRoad: onRoad(e.to), into: &along)
+            // A marked crossing edge carries its own crossing cost; record it so navigation can name the crossing.
+            arrival += [Factor.signalCrossing, .markedCrossing, .unmarkedCrossing, .sideStreetCrossing].filter { along[$0].amount > 0 && !arrival.contains($0) }
+            metrics.breakdown.merge(along)
+            metrics.meters += e.meters; metrics.seconds += StressModel.seconds(e, mode: mode)
             coordinates.append(contentsOf: previous == nil ? e.coordinates : Array(e.coordinates.dropFirst()))
             if !e.name.isEmpty && streets.last != e.name { streets.append(e.name) }
             previous = e
         }
-        return Route(edgeIDs: ids, coordinates: coordinates, metrics: metrics, streetNames: streets)
+        StressModel.pathFactors(edges: ids.map { graph.edges[$0] }, stops: stops, mode: mode, into: &metrics.breakdown)
+        return Route(edgeIDs: ids, edgeMeters: ids.map { graph.edges[$0].meters }, coordinates: coordinates, metrics: metrics, streetNames: streets,
+                     junctionFactors: events, edges: ids.map { graph.edges[$0] })
+    }
+}
+
+extension Breakdown {
+    mutating func merge(_ other: Breakdown) {
+        for (factor, tally) in other.tallies { add(factor, amount: tally.amount, cost: tally.cost) }
     }
 }
 
