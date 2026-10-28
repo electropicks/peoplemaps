@@ -3,7 +3,7 @@ import PeoplemapsCore
 
 private enum Sheet: String, Identifiable { case origin, destination, details, about; var id: String { rawValue } }
 
-private enum Screen: Equatable { case home, search, place(Place), preview }
+private enum Screen: Equatable { case home, search, place(Place), preview, navigating }
 
 struct ExploreView: View {
     static let gasWorks = "relation/1047789", kerryPark = "node/693337509"
@@ -12,6 +12,7 @@ struct ExploreView: View {
 
     let graph: StreetGraph
     @State private var session: RouteSession
+    @State private var navigator: NavigationController
     @State private var origin: Place
     @State private var destination: Place
     @State private var mode: TravelMode = .drive
@@ -36,13 +37,28 @@ struct ExploreView: View {
         let computing: any RouteComputing = router
         #endif
         _session = State(initialValue: RouteSession(router: computing))
+        _navigator = State(initialValue: NavigationController(router: router))
         _origin = State(initialValue: graph.places.first { $0.id == Self.kerryPark } ?? graph.places[0])
         _destination = State(initialValue: graph.places.first { $0.id == Self.gasWorks } ?? graph.places[1])
     }
 
     private var featured: [Place] { Self.featuredIDs.compactMap { id in graph.places.first { $0.id == id } } }
     private var selectedPlace: Place? { if case let .place(place) = screen { place } else { nil } }
-    private var previewRequest: RouteRequest? { screen == .preview ? request : nil }
+    /// Stays set while guiding, so the comparison survives and End returns to the same routes.
+    private var previewRequest: RouteRequest? { screen == .preview || screen == .navigating ? request : nil }
+    private var guiding: Bool { screen == .navigating && navigator.isActive }
+    private var guidance: Guidance? {
+        guard guiding, !navigator.routeGeometry.isEmpty else { return nil }
+        return Guidance(version: navigator.routeVersion, coordinates: navigator.routeGeometry, calmer: navigator.calmerRoute,
+                        destination: navigator.routeGeometry.last!, user: navigator.coordinate)
+    }
+
+    private func startNavigation(_ comparison: RouteComparison) {
+        navigator.start(comparison: comparison, useCalmer: selectedCalmer && comparison.calmer != nil)
+        if navigator.isActive { screen = .navigating }
+    }
+    private func endNavigation() { navigator.stop(); screen = .preview }
+    private func finishNavigation() { navigator.stop(); screen = .home }
 
     private func open(_ place: Place) { query = ""; screen = .place(place) }
     private func openPin(_ id: String) { if let place = graph.places.first(where: { $0.id == id }) { open(place) } }
@@ -63,17 +79,19 @@ struct ExploreView: View {
         GeometryReader { geo in
             ZStack {
                 SeattleMap(comparison: screen == .preview ? session.comparison : nil, selectedCalmer: selectedCalmer, recenter: recenter, pins: screen == .preview ? [] : featured,
-                           selected: selectedPlace, onPin: openPin, padding: mapPadding(geo))
+                           selected: selectedPlace, onPin: openPin, guidance: guidance, padding: mapPadding(geo))
                     .ignoresSafeArea()
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(screen == .preview ? "Seattle offline map. Routes are also described in the panel." : "Seattle offline map")
-                if landscape { landscapeLayout(geo) } else { portraitLayout(geo) }
+                if screen == .navigating {
+                    GuidanceOverlay(navigator: navigator, landscape: landscape, attribution: AnyView(attribution), onEnd: endNavigation, onDone: finishNavigation)
+                } else if landscape { landscapeLayout(geo) } else { portraitLayout(geo) }
             }
         }
         .task(id: previewRequest) {
             if let previewRequest { selectedCalmer = true; session.start(previewRequest) } else { session.cancel() }
         }
-        .onDisappear { session.cancel() }
+        .onDisappear { session.cancel(); navigator.stop() }
         .sheet(item: $sheet) { item in
             switch item {
             case .origin:
@@ -183,6 +201,7 @@ struct ExploreView: View {
         case .search: EmptyView()
         case let .place(place): placeContent(place)
         case .preview: previewContent
+        case .navigating: EmptyView()
         }
     }
 
@@ -352,6 +371,12 @@ struct ExploreView: View {
                 Divider().padding(.leading, 30)
                 routeRow(comparison.fastest, title: "Fastest", detail: "Estimate, no live traffic", selected: !selectedCalmer || comparison.calmer == nil, calmer: false)
             }
+            Button { startNavigation(comparison) } label: {
+                Text("Start").font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity).frame(height: 50)
+                    .foregroundStyle(.directionsText).background(.directionsFill, in: RoundedRectangle(cornerRadius: 12))
+                    .contentShape(Rectangle())
+            }.buttonStyle(.plain).accessibilityIdentifier("start-navigation")
             Button { sheet = .details } label: {
                 HStack {
                     Text("Why this route").font(.subheadline).foregroundStyle(.calmerText)
