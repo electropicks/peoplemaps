@@ -1,458 +1,3861 @@
 [
   {
     "budgetMinutes" : 0,
+    "calmerFactors" : null,
     "calmerMeters" : null,
     "calmerSeconds" : null,
+    "calmerStress" : null,
     "candidates" : 1,
-    "computeSeconds" : 0.016992926597595215,
+    "caveats" : [
+      "Fastest route: 0.6 km where sidewalks aren't mapped."
+    ],
+    "computeSeconds" : 0.0075910091400146484,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 124.2113009563556,
+    "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 0,
-    "fastestMeters" : 5153.0599999999986,
-    "fastestSeconds" : 794.36018506493519,
-    "mode" : "drive",
+    "fastestFactors" : [
+      [
+        "unmarkedCrossing",
+        3,
+        360
+      ],
+      [
+        "markedCrossing",
+        2,
+        135
+      ],
+      [
+        "besideTraffic",
+        847.89999999999998,
+        51
+      ],
+      [
+        "climb",
+        17.300000000000001,
+        35
+      ],
+      [
+        "noSidewalk",
+        95.5,
+        27
+      ],
+      [
+        "sideStreetCrossing",
+        7,
+        21
+      ],
+      [
+        "unknownSidewalk",
+        588.70000000000005,
+        12
+      ],
+      [
+        "stairs",
+        10,
+        10
+      ]
+    ],
+    "fastestMeters" : 5127.6100000000006,
+    "fastestSeconds" : 3708.0595238095229,
+    "fastestStress" : 649.99630000000002,
+    "mode" : "walk",
     "origin" : "Ballard Library",
-    "originSnapMeters" : 43.868584351487677,
+    "originSnapMeters" : 35.41240797439108,
     "reasons" : [
-      "No distinct route with a lower comfort cost was found within your time budget."
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
   },
   {
     "budgetMinutes" : 2,
-    "calmerMeters" : null,
-    "calmerSeconds" : null,
-    "candidates" : 1,
-    "computeSeconds" : 0.072979927062988281,
+    "calmerFactors" : [
+      [
+        "unmarkedCrossing",
+        1,
+        90
+      ],
+      [
+        "markedCrossing",
+        2,
+        90
+      ],
+      [
+        "besideTraffic",
+        1016.1,
+        61
+      ],
+      [
+        "climb",
+        15.699999999999999,
+        31
+      ],
+      [
+        "noSidewalk",
+        95.5,
+        27
+      ],
+      [
+        "sideStreetCrossing",
+        7,
+        21
+      ],
+      [
+        "unknownSidewalk",
+        561.70000000000005,
+        11
+      ],
+      [
+        "stairs",
+        10,
+        10
+      ],
+      [
+        "signalCrossing",
+        1,
+        10
+      ]
+    ],
+    "calmerMeters" : 5127.4300000000003,
+    "calmerSeconds" : 3753.9309523809507,
+    "calmerStress" : 351.34949999999998,
+    "candidates" : 5,
+    "caveats" : [
+      "Fastest route: 0.6 km where sidewalks aren't mapped.",
+      "Calmer route: 0.6 km where sidewalks aren't mapped."
+    ],
+    "computeSeconds" : 0.19010698795318604,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 124.2113009563556,
-    "extraSeconds" : 0,
-    "fastestMeters" : 5153.0599999999986,
-    "fastestSeconds" : 794.36018506493519,
-    "mode" : "drive",
+    "destinationSnapMeters" : 42.832338807867949,
+    "extraSeconds" : 45.871428571427714,
+    "fastestFactors" : [
+      [
+        "unmarkedCrossing",
+        3,
+        360
+      ],
+      [
+        "markedCrossing",
+        2,
+        135
+      ],
+      [
+        "besideTraffic",
+        847.89999999999998,
+        51
+      ],
+      [
+        "climb",
+        17.300000000000001,
+        35
+      ],
+      [
+        "noSidewalk",
+        95.5,
+        27
+      ],
+      [
+        "sideStreetCrossing",
+        7,
+        21
+      ],
+      [
+        "unknownSidewalk",
+        588.70000000000005,
+        12
+      ],
+      [
+        "stairs",
+        10,
+        10
+      ]
+    ],
+    "fastestMeters" : 5127.6100000000006,
+    "fastestSeconds" : 3708.0595238095229,
+    "fastestStress" : 649.99630000000002,
+    "mode" : "walk",
     "origin" : "Ballard Library",
-    "originSnapMeters" : 43.868584351487677,
+    "originSnapMeters" : 35.41240797439108,
     "reasons" : [
-      "No distinct route with a lower comfort cost was found within your time budget."
+      "2 fewer unmarked crossings of busy streets",
+      "Tradeoff: 0.2 km more walking beside arterial traffic",
+      "Tradeoff: 1 more signalled crossing"
     ]
   },
   {
     "budgetMinutes" : 5,
-    "calmerMeters" : null,
-    "calmerSeconds" : null,
-    "candidates" : 1,
-    "computeSeconds" : 0.073035001754760742,
+    "calmerFactors" : [
+      [
+        "markedCrossing",
+        1,
+        45
+      ],
+      [
+        "signalCrossing",
+        4,
+        40
+      ],
+      [
+        "besideTraffic",
+        639.29999999999995,
+        38
+      ],
+      [
+        "climb",
+        18.100000000000001,
+        36
+      ],
+      [
+        "noSidewalk",
+        95.5,
+        27
+      ],
+      [
+        "sideStreetCrossing",
+        8,
+        24
+      ],
+      [
+        "unknownSidewalk",
+        586,
+        12
+      ],
+      [
+        "stairs",
+        10,
+        10
+      ]
+    ],
+    "calmerMeters" : 5267.0000000000018,
+    "calmerSeconds" : 3984.6238095238082,
+    "calmerStress" : 232.02510000000001,
+    "candidates" : 5,
+    "caveats" : [
+      "Fastest route: 0.6 km where sidewalks aren't mapped.",
+      "Calmer route: 0.6 km where sidewalks aren't mapped."
+    ],
+    "computeSeconds" : 0.19536995887756348,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 124.2113009563556,
-    "extraSeconds" : 0,
-    "fastestMeters" : 5153.0599999999986,
-    "fastestSeconds" : 794.36018506493519,
-    "mode" : "drive",
+    "destinationSnapMeters" : 42.832338807867949,
+    "extraSeconds" : 276.56428571428523,
+    "fastestFactors" : [
+      [
+        "unmarkedCrossing",
+        3,
+        360
+      ],
+      [
+        "markedCrossing",
+        2,
+        135
+      ],
+      [
+        "besideTraffic",
+        847.89999999999998,
+        51
+      ],
+      [
+        "climb",
+        17.300000000000001,
+        35
+      ],
+      [
+        "noSidewalk",
+        95.5,
+        27
+      ],
+      [
+        "sideStreetCrossing",
+        7,
+        21
+      ],
+      [
+        "unknownSidewalk",
+        588.70000000000005,
+        12
+      ],
+      [
+        "stairs",
+        10,
+        10
+      ]
+    ],
+    "fastestMeters" : 5127.6100000000006,
+    "fastestSeconds" : 3708.0595238095229,
+    "fastestStress" : 649.99630000000002,
+    "mode" : "walk",
     "origin" : "Ballard Library",
-    "originSnapMeters" : 43.868584351487677,
+    "originSnapMeters" : 35.41240797439108,
     "reasons" : [
-      "No distinct route with a lower comfort cost was found within your time budget."
+      "3 fewer unmarked crossings of busy streets",
+      "1 fewer marked crossing without a signal",
+      "0.2 km less walking beside arterial traffic",
+      "Tradeoff: 4 more signalled crossings",
+      "Tradeoff: 1 more side-street crossing"
     ]
   },
   {
     "budgetMinutes" : 10,
-    "calmerMeters" : null,
-    "calmerSeconds" : null,
-    "candidates" : 1,
-    "computeSeconds" : 0.072777986526489258,
+    "calmerFactors" : [
+      [
+        "markedCrossing",
+        1,
+        45
+      ],
+      [
+        "signalCrossing",
+        4,
+        40
+      ],
+      [
+        "besideTraffic",
+        639.29999999999995,
+        38
+      ],
+      [
+        "climb",
+        18.100000000000001,
+        36
+      ],
+      [
+        "noSidewalk",
+        95.5,
+        27
+      ],
+      [
+        "sideStreetCrossing",
+        8,
+        24
+      ],
+      [
+        "unknownSidewalk",
+        586,
+        12
+      ],
+      [
+        "stairs",
+        10,
+        10
+      ]
+    ],
+    "calmerMeters" : 5267.0000000000018,
+    "calmerSeconds" : 3984.6238095238082,
+    "calmerStress" : 232.02510000000001,
+    "candidates" : 5,
+    "caveats" : [
+      "Fastest route: 0.6 km where sidewalks aren't mapped.",
+      "Calmer route: 0.6 km where sidewalks aren't mapped."
+    ],
+    "computeSeconds" : 0.19249606132507324,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 124.2113009563556,
-    "extraSeconds" : 0,
-    "fastestMeters" : 5153.0599999999986,
-    "fastestSeconds" : 794.36018506493519,
-    "mode" : "drive",
+    "destinationSnapMeters" : 42.832338807867949,
+    "extraSeconds" : 276.56428571428523,
+    "fastestFactors" : [
+      [
+        "unmarkedCrossing",
+        3,
+        360
+      ],
+      [
+        "markedCrossing",
+        2,
+        135
+      ],
+      [
+        "besideTraffic",
+        847.89999999999998,
+        51
+      ],
+      [
+        "climb",
+        17.300000000000001,
+        35
+      ],
+      [
+        "noSidewalk",
+        95.5,
+        27
+      ],
+      [
+        "sideStreetCrossing",
+        7,
+        21
+      ],
+      [
+        "unknownSidewalk",
+        588.70000000000005,
+        12
+      ],
+      [
+        "stairs",
+        10,
+        10
+      ]
+    ],
+    "fastestMeters" : 5127.6100000000006,
+    "fastestSeconds" : 3708.0595238095229,
+    "fastestStress" : 649.99630000000002,
+    "mode" : "walk",
     "origin" : "Ballard Library",
-    "originSnapMeters" : 43.868584351487677,
+    "originSnapMeters" : 35.41240797439108,
     "reasons" : [
-      "No distinct route with a lower comfort cost was found within your time budget."
+      "3 fewer unmarked crossings of busy streets",
+      "1 fewer marked crossing without a signal",
+      "0.2 km less walking beside arterial traffic",
+      "Tradeoff: 4 more signalled crossings",
+      "Tradeoff: 1 more side-street crossing"
     ]
   },
   {
     "budgetMinutes" : 0,
+    "calmerFactors" : null,
     "calmerMeters" : null,
     "calmerSeconds" : null,
+    "calmerStress" : null,
     "candidates" : 1,
-    "computeSeconds" : 0.0057109594345092773,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.0063359737396240234,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 0,
-    "fastestMeters" : 5191.8199999999988,
-    "fastestSeconds" : 1098.1594285714289,
+    "fastestFactors" : [
+      [
+        "arterialRiding",
+        1088.3,
+        261
+      ],
+      [
+        "unsignalledLeft",
+        1,
+        90
+      ],
+      [
+        "climb",
+        15.699999999999999,
+        63
+      ],
+      [
+        "unsignalledCrossing",
+        1,
+        60
+      ],
+      [
+        "quietStreet",
+        898.70000000000005,
+        54
+      ],
+      [
+        "turn",
+        13,
+        52
+      ],
+      [
+        "stopSign",
+        3,
+        30
+      ],
+      [
+        "stopAndGo",
+        4,
+        20
+      ],
+      [
+        "allWayStop",
+        1,
+        10
+      ],
+      [
+        "signal",
+        1,
+        8
+      ]
+    ],
+    "fastestMeters" : 5230.0000000000009,
+    "fastestSeconds" : 1132.8954285714285,
+    "fastestStress" : 647.90200000000004,
     "mode" : "bike",
     "origin" : "Ballard Library",
-    "originSnapMeters" : 43.868584351487677,
+    "originSnapMeters" : 35.41240797439108,
     "reasons" : [
-      "No distinct route with a lower comfort cost was found within your time budget."
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
   },
   {
     "budgetMinutes" : 2,
-    "calmerMeters" : 5331.659999999998,
-    "calmerSeconds" : 1124.1274285714292,
-    "candidates" : 5,
-    "computeSeconds" : 0.030875086784362793,
+    "calmerFactors" : [
+      [
+        "arterialRiding",
+        784.60000000000002,
+        188
+      ],
+      [
+        "climb",
+        19,
+        76
+      ],
+      [
+        "quietStreet",
+        1087.8,
+        65
+      ],
+      [
+        "turn",
+        16,
+        64
+      ],
+      [
+        "unsignalledCrossing",
+        1,
+        60
+      ],
+      [
+        "bikeRouteGap",
+        2,
+        40
+      ],
+      [
+        "stopSign",
+        4,
+        40
+      ],
+      [
+        "signal",
+        2,
+        16
+      ],
+      [
+        "stopAndGo",
+        3,
+        15
+      ],
+      [
+        "yield",
+        1,
+        4
+      ]
+    ],
+    "calmerMeters" : 5500.6900000000023,
+    "calmerSeconds" : 1210.6334285714283,
+    "calmerStress" : 568.5791999999999,
+    "candidates" : 3,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.13044095039367676,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
-    "extraSeconds" : 25.968000000000302,
-    "fastestMeters" : 5191.8199999999988,
-    "fastestSeconds" : 1098.1594285714289,
+    "extraSeconds" : 77.737999999999829,
+    "fastestFactors" : [
+      [
+        "arterialRiding",
+        1088.3,
+        261
+      ],
+      [
+        "unsignalledLeft",
+        1,
+        90
+      ],
+      [
+        "climb",
+        15.699999999999999,
+        63
+      ],
+      [
+        "unsignalledCrossing",
+        1,
+        60
+      ],
+      [
+        "quietStreet",
+        898.70000000000005,
+        54
+      ],
+      [
+        "turn",
+        13,
+        52
+      ],
+      [
+        "stopSign",
+        3,
+        30
+      ],
+      [
+        "stopAndGo",
+        4,
+        20
+      ],
+      [
+        "allWayStop",
+        1,
+        10
+      ],
+      [
+        "signal",
+        1,
+        8
+      ]
+    ],
+    "fastestMeters" : 5230.0000000000009,
+    "fastestSeconds" : 1132.8954285714285,
+    "fastestStress" : 647.90200000000004,
     "mode" : "bike",
     "origin" : "Ballard Library",
-    "originSnapMeters" : 43.868584351487677,
+    "originSnapMeters" : 35.41240797439108,
     "reasons" : [
-      "0.5 km more with cycleway or track tags",
-      "0.4 km less on arterial roads",
+      "1 fewer left turn across traffic without a signal",
+      "0.3 km less riding on arterials",
+      "1 fewer all-way stop",
+      "Tradeoff: 2 more places where the bike route drops you into traffic",
       "Tradeoff: 3 more turns"
     ]
   },
   {
     "budgetMinutes" : 5,
-    "calmerMeters" : 5659.5599999999995,
-    "calmerSeconds" : 1223.7074285714286,
-    "candidates" : 5,
-    "computeSeconds" : 0.036725997924804688,
+    "calmerFactors" : [
+      [
+        "arterialRiding",
+        784.60000000000002,
+        188
+      ],
+      [
+        "climb",
+        19,
+        76
+      ],
+      [
+        "quietStreet",
+        1087.8,
+        65
+      ],
+      [
+        "turn",
+        16,
+        64
+      ],
+      [
+        "unsignalledCrossing",
+        1,
+        60
+      ],
+      [
+        "bikeRouteGap",
+        2,
+        40
+      ],
+      [
+        "stopSign",
+        4,
+        40
+      ],
+      [
+        "signal",
+        2,
+        16
+      ],
+      [
+        "stopAndGo",
+        3,
+        15
+      ],
+      [
+        "yield",
+        1,
+        4
+      ]
+    ],
+    "calmerMeters" : 5500.6900000000023,
+    "calmerSeconds" : 1210.6334285714283,
+    "calmerStress" : 568.5791999999999,
+    "candidates" : 3,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.12754809856414795,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
-    "extraSeconds" : 125.54799999999977,
-    "fastestMeters" : 5191.8199999999988,
-    "fastestSeconds" : 1098.1594285714289,
+    "extraSeconds" : 77.737999999999829,
+    "fastestFactors" : [
+      [
+        "arterialRiding",
+        1088.3,
+        261
+      ],
+      [
+        "unsignalledLeft",
+        1,
+        90
+      ],
+      [
+        "climb",
+        15.699999999999999,
+        63
+      ],
+      [
+        "unsignalledCrossing",
+        1,
+        60
+      ],
+      [
+        "quietStreet",
+        898.70000000000005,
+        54
+      ],
+      [
+        "turn",
+        13,
+        52
+      ],
+      [
+        "stopSign",
+        3,
+        30
+      ],
+      [
+        "stopAndGo",
+        4,
+        20
+      ],
+      [
+        "allWayStop",
+        1,
+        10
+      ],
+      [
+        "signal",
+        1,
+        8
+      ]
+    ],
+    "fastestMeters" : 5230.0000000000009,
+    "fastestSeconds" : 1132.8954285714285,
+    "fastestStress" : 647.90200000000004,
     "mode" : "bike",
+    "origin" : "Ballard Library",
+    "originSnapMeters" : 35.41240797439108,
+    "reasons" : [
+      "1 fewer left turn across traffic without a signal",
+      "0.3 km less riding on arterials",
+      "1 fewer all-way stop",
+      "Tradeoff: 2 more places where the bike route drops you into traffic",
+      "Tradeoff: 3 more turns"
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerFactors" : [
+      [
+        "arterialRiding",
+        784.60000000000002,
+        188
+      ],
+      [
+        "climb",
+        19,
+        76
+      ],
+      [
+        "quietStreet",
+        1087.8,
+        65
+      ],
+      [
+        "turn",
+        16,
+        64
+      ],
+      [
+        "unsignalledCrossing",
+        1,
+        60
+      ],
+      [
+        "bikeRouteGap",
+        2,
+        40
+      ],
+      [
+        "stopSign",
+        4,
+        40
+      ],
+      [
+        "signal",
+        2,
+        16
+      ],
+      [
+        "stopAndGo",
+        3,
+        15
+      ],
+      [
+        "yield",
+        1,
+        4
+      ]
+    ],
+    "calmerMeters" : 5500.6900000000023,
+    "calmerSeconds" : 1210.6334285714283,
+    "calmerStress" : 568.5791999999999,
+    "candidates" : 3,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.12685298919677734,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 46.23022507267796,
+    "extraSeconds" : 77.737999999999829,
+    "fastestFactors" : [
+      [
+        "arterialRiding",
+        1088.3,
+        261
+      ],
+      [
+        "unsignalledLeft",
+        1,
+        90
+      ],
+      [
+        "climb",
+        15.699999999999999,
+        63
+      ],
+      [
+        "unsignalledCrossing",
+        1,
+        60
+      ],
+      [
+        "quietStreet",
+        898.70000000000005,
+        54
+      ],
+      [
+        "turn",
+        13,
+        52
+      ],
+      [
+        "stopSign",
+        3,
+        30
+      ],
+      [
+        "stopAndGo",
+        4,
+        20
+      ],
+      [
+        "allWayStop",
+        1,
+        10
+      ],
+      [
+        "signal",
+        1,
+        8
+      ]
+    ],
+    "fastestMeters" : 5230.0000000000009,
+    "fastestSeconds" : 1132.8954285714285,
+    "fastestStress" : 647.90200000000004,
+    "mode" : "bike",
+    "origin" : "Ballard Library",
+    "originSnapMeters" : 35.41240797439108,
+    "reasons" : [
+      "1 fewer left turn across traffic without a signal",
+      "0.3 km less riding on arterials",
+      "1 fewer all-way stop",
+      "Tradeoff: 2 more places where the bike route drops you into traffic",
+      "Tradeoff: 3 more turns"
+    ]
+  },
+  {
+    "budgetMinutes" : 0,
+    "calmerFactors" : null,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "calmerStress" : null,
+    "candidates" : 1,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.0084019899368286133,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 0,
+    "fastestFactors" : [
+      [
+        "signal",
+        16,
+        160
+      ],
+      [
+        "stopAndGo",
+        8,
+        80
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "turn",
+        3,
+        24
+      ],
+      [
+        "leftAtSignal",
+        1,
+        20
+      ],
+      [
+        "allWayStop",
+        1,
+        20
+      ],
+      [
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
+      ],
+      [
+        "residential",
+        146.19999999999999,
+        4
+      ],
+      [
+        "narrowWithParking",
+        86.700000000000003,
+        3
+      ]
+    ],
+    "fastestMeters" : 5066.9799999999987,
+    "fastestSeconds" : 819.16882954545486,
+    "fastestStress" : 381.85329999999999,
+    "mode" : "drive",
     "origin" : "Ballard Library",
     "originSnapMeters" : 43.868584351487677,
     "reasons" : [
-      "1.0 km more with cycleway or track tags",
-      "0.2 km less on arterial roads",
-      "Tradeoff: 4 more turns"
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
   },
   {
-    "budgetMinutes" : 10,
-    "calmerMeters" : 5659.5599999999995,
-    "calmerSeconds" : 1223.7074285714286,
-    "candidates" : 5,
-    "computeSeconds" : 0.039726018905639648,
+    "budgetMinutes" : 2,
+    "calmerFactors" : [
+      [
+        "signal",
+        12,
+        120
+      ],
+      [
+        "stopAndGo",
+        4,
+        40
+      ],
+      [
+        "allWayStop",
+        2,
+        40
+      ],
+      [
+        "turn",
+        5,
+        40
+      ],
+      [
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "leftAtSignal",
+        1,
+        10
+      ],
+      [
+        "residential",
+        134.69999999999999,
+        4
+      ]
+    ],
+    "calmerMeters" : 5452.7699999999986,
+    "calmerSeconds" : 853.20525649350657,
+    "calmerStress" : 269.04219999999998,
+    "candidates" : 2,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.15643095970153809,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 46.23022507267796,
-    "extraSeconds" : 125.54799999999977,
-    "fastestMeters" : 5191.8199999999988,
-    "fastestSeconds" : 1098.1594285714289,
-    "mode" : "bike",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 34.036426948051712,
+    "fastestFactors" : [
+      [
+        "signal",
+        16,
+        160
+      ],
+      [
+        "stopAndGo",
+        8,
+        80
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "turn",
+        3,
+        24
+      ],
+      [
+        "leftAtSignal",
+        1,
+        20
+      ],
+      [
+        "allWayStop",
+        1,
+        20
+      ],
+      [
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
+      ],
+      [
+        "residential",
+        146.19999999999999,
+        4
+      ],
+      [
+        "narrowWithParking",
+        86.700000000000003,
+        3
+      ]
+    ],
+    "fastestMeters" : 5066.9799999999987,
+    "fastestSeconds" : 819.16882954545486,
+    "fastestStress" : 381.85329999999999,
+    "mode" : "drive",
     "origin" : "Ballard Library",
     "originSnapMeters" : 43.868584351487677,
     "reasons" : [
-      "1.0 km more with cycleway or track tags",
-      "0.2 km less on arterial roads",
-      "Tradeoff: 4 more turns"
-    ]
-  },
-  {
-    "budgetMinutes" : 0,
-    "calmerMeters" : null,
-    "calmerSeconds" : null,
-    "candidates" : 1,
-    "computeSeconds" : 0.022820949554443359,
-    "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 62.107927266287184,
-    "extraSeconds" : 0,
-    "fastestMeters" : 3803.0999999999995,
-    "fastestSeconds" : 607.0611683070864,
-    "mode" : "drive",
-    "origin" : "Fremont Library",
-    "originSnapMeters" : 26.769035872678163,
-    "reasons" : [
-      "No distinct route with a lower comfort cost was found within your time budget."
-    ]
-  },
-  {
-    "budgetMinutes" : 2,
-    "calmerMeters" : 4226.7399999999989,
-    "calmerSeconds" : 717.41792565702031,
-    "candidates" : 4,
-    "computeSeconds" : 0.10869503021240234,
-    "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 62.107927266287184,
-    "extraSeconds" : 110.3567573499339,
-    "fastestMeters" : 3803.0999999999995,
-    "fastestSeconds" : 607.0611683070864,
-    "mode" : "drive",
-    "origin" : "Fremont Library",
-    "originSnapMeters" : 26.769035872678163,
-    "reasons" : [
-      "7 fewer turns across the route",
-      "4 fewer left turns at arterial junctions; turn protection unknown",
-      "0.1 km less on residential streets"
+      "4 fewer traffic signals",
+      "4 fewer stop-and-go stops",
+      "1 fewer intersection of five or more streets",
+      "Tradeoff: 1 more all-way stop",
+      "Tradeoff: 2 more turns"
     ]
   },
   {
     "budgetMinutes" : 5,
-    "calmerMeters" : 4226.7399999999989,
-    "calmerSeconds" : 717.41792565702031,
-    "candidates" : 4,
-    "computeSeconds" : 0.11588799953460693,
+    "calmerFactors" : [
+      [
+        "signal",
+        12,
+        120
+      ],
+      [
+        "stopAndGo",
+        4,
+        40
+      ],
+      [
+        "allWayStop",
+        2,
+        40
+      ],
+      [
+        "turn",
+        5,
+        40
+      ],
+      [
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "leftAtSignal",
+        1,
+        10
+      ],
+      [
+        "residential",
+        134.69999999999999,
+        4
+      ]
+    ],
+    "calmerMeters" : 5452.7699999999986,
+    "calmerSeconds" : 853.20525649350657,
+    "calmerStress" : 269.04219999999998,
+    "candidates" : 2,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.15649998188018799,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 34.036426948051712,
+    "fastestFactors" : [
+      [
+        "signal",
+        16,
+        160
+      ],
+      [
+        "stopAndGo",
+        8,
+        80
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "turn",
+        3,
+        24
+      ],
+      [
+        "leftAtSignal",
+        1,
+        20
+      ],
+      [
+        "allWayStop",
+        1,
+        20
+      ],
+      [
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
+      ],
+      [
+        "residential",
+        146.19999999999999,
+        4
+      ],
+      [
+        "narrowWithParking",
+        86.700000000000003,
+        3
+      ]
+    ],
+    "fastestMeters" : 5066.9799999999987,
+    "fastestSeconds" : 819.16882954545486,
+    "fastestStress" : 381.85329999999999,
+    "mode" : "drive",
+    "origin" : "Ballard Library",
+    "originSnapMeters" : 43.868584351487677,
+    "reasons" : [
+      "4 fewer traffic signals",
+      "4 fewer stop-and-go stops",
+      "1 fewer intersection of five or more streets",
+      "Tradeoff: 1 more all-way stop",
+      "Tradeoff: 2 more turns"
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerFactors" : [
+      [
+        "signal",
+        12,
+        120
+      ],
+      [
+        "stopAndGo",
+        4,
+        40
+      ],
+      [
+        "allWayStop",
+        2,
+        40
+      ],
+      [
+        "turn",
+        5,
+        40
+      ],
+      [
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "leftAtSignal",
+        1,
+        10
+      ],
+      [
+        "residential",
+        134.69999999999999,
+        4
+      ]
+    ],
+    "calmerMeters" : 5452.7699999999986,
+    "calmerSeconds" : 853.20525649350657,
+    "calmerStress" : 269.04219999999998,
+    "candidates" : 2,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.16438794136047363,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 34.036426948051712,
+    "fastestFactors" : [
+      [
+        "signal",
+        16,
+        160
+      ],
+      [
+        "stopAndGo",
+        8,
+        80
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "turn",
+        3,
+        24
+      ],
+      [
+        "leftAtSignal",
+        1,
+        20
+      ],
+      [
+        "allWayStop",
+        1,
+        20
+      ],
+      [
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
+      ],
+      [
+        "residential",
+        146.19999999999999,
+        4
+      ],
+      [
+        "narrowWithParking",
+        86.700000000000003,
+        3
+      ]
+    ],
+    "fastestMeters" : 5066.9799999999987,
+    "fastestSeconds" : 819.16882954545486,
+    "fastestStress" : 381.85329999999999,
+    "mode" : "drive",
+    "origin" : "Ballard Library",
+    "originSnapMeters" : 43.868584351487677,
+    "reasons" : [
+      "4 fewer traffic signals",
+      "4 fewer stop-and-go stops",
+      "1 fewer intersection of five or more streets",
+      "Tradeoff: 1 more all-way stop",
+      "Tradeoff: 2 more turns"
+    ]
+  },
+  {
+    "budgetMinutes" : 0,
+    "calmerFactors" : null,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "calmerStress" : null,
+    "candidates" : 1,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.0093330144882202148,
     "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 62.107927266287184,
-    "extraSeconds" : 110.3567573499339,
-    "fastestMeters" : 3803.0999999999995,
-    "fastestSeconds" : 607.0611683070864,
+    "destinationSnapMeters" : 14.770704209858819,
+    "extraSeconds" : 0,
+    "fastestFactors" : [
+      [
+        "markedCrossing",
+        5,
+        225
+      ],
+      [
+        "unmarkedCrossing",
+        2,
+        180
+      ],
+      [
+        "climb",
+        87.400000000000006,
+        175
+      ],
+      [
+        "besideTraffic",
+        1381.9000000000001,
+        83
+      ],
+      [
+        "sideStreetCrossing",
+        15,
+        45
+      ],
+      [
+        "signalCrossing",
+        2,
+        20
+      ],
+      [
+        "stairs",
+        18,
+        18
+      ],
+      [
+        "unknownSidewalk",
+        8.0999999999999996,
+        0
+      ]
+    ],
+    "fastestMeters" : 3687.3200000000002,
+    "fastestSeconds" : 2959.6619047619038,
+    "fastestStress" : 745.87800000000004,
+    "mode" : "walk",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 14.006930237699915,
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "budgetMinutes" : 2,
+    "calmerFactors" : [
+      [
+        "markedCrossing",
+        3,
+        180
+      ],
+      [
+        "climb",
+        78.200000000000003,
+        156
+      ],
+      [
+        "besideTraffic",
+        1946.5999999999999,
+        117
+      ],
+      [
+        "sideStreetCrossing",
+        10,
+        30
+      ],
+      [
+        "stairs",
+        18,
+        18
+      ],
+      [
+        "signalCrossing",
+        1,
+        10
+      ],
+      [
+        "unknownSidewalk",
+        8.0999999999999996,
+        0
+      ]
+    ],
+    "calmerMeters" : 3906.6999999999998,
+    "calmerSeconds" : 3043.3619047619054,
+    "calmerStress" : 511.35820000000001,
+    "candidates" : 7,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.31548893451690674,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 14.770704209858819,
+    "extraSeconds" : 83.700000000001637,
+    "fastestFactors" : [
+      [
+        "markedCrossing",
+        5,
+        225
+      ],
+      [
+        "unmarkedCrossing",
+        2,
+        180
+      ],
+      [
+        "climb",
+        87.400000000000006,
+        175
+      ],
+      [
+        "besideTraffic",
+        1381.9000000000001,
+        83
+      ],
+      [
+        "sideStreetCrossing",
+        15,
+        45
+      ],
+      [
+        "signalCrossing",
+        2,
+        20
+      ],
+      [
+        "stairs",
+        18,
+        18
+      ],
+      [
+        "unknownSidewalk",
+        8.0999999999999996,
+        0
+      ]
+    ],
+    "fastestMeters" : 3687.3200000000002,
+    "fastestSeconds" : 2959.6619047619038,
+    "fastestStress" : 745.87800000000004,
+    "mode" : "walk",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 14.006930237699915,
+    "reasons" : [
+      "2 fewer unmarked crossings of busy streets",
+      "2 fewer marked crossings without a signal",
+      "9 m less climbing",
+      "Tradeoff: 0.6 km more walking beside arterial traffic"
+    ]
+  },
+  {
+    "budgetMinutes" : 5,
+    "calmerFactors" : [
+      [
+        "climb",
+        78.299999999999997,
+        157
+      ],
+      [
+        "besideTraffic",
+        1749,
+        105
+      ],
+      [
+        "sideStreetCrossing",
+        8,
+        24
+      ],
+      [
+        "signalCrossing",
+        2,
+        20
+      ],
+      [
+        "stairs",
+        18,
+        18
+      ],
+      [
+        "unknownSidewalk",
+        8.0999999999999996,
+        0
+      ]
+    ],
+    "calmerMeters" : 4136.2100000000009,
+    "calmerSeconds" : 3257.5476190476193,
+    "calmerStress" : 323.70040000000006,
+    "candidates" : 7,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.30226302146911621,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 14.770704209858819,
+    "extraSeconds" : 297.88571428571549,
+    "fastestFactors" : [
+      [
+        "markedCrossing",
+        5,
+        225
+      ],
+      [
+        "unmarkedCrossing",
+        2,
+        180
+      ],
+      [
+        "climb",
+        87.400000000000006,
+        175
+      ],
+      [
+        "besideTraffic",
+        1381.9000000000001,
+        83
+      ],
+      [
+        "sideStreetCrossing",
+        15,
+        45
+      ],
+      [
+        "signalCrossing",
+        2,
+        20
+      ],
+      [
+        "stairs",
+        18,
+        18
+      ],
+      [
+        "unknownSidewalk",
+        8.0999999999999996,
+        0
+      ]
+    ],
+    "fastestMeters" : 3687.3200000000002,
+    "fastestSeconds" : 2959.6619047619038,
+    "fastestStress" : 745.87800000000004,
+    "mode" : "walk",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 14.006930237699915,
+    "reasons" : [
+      "5 fewer marked crossings without a signal",
+      "2 fewer unmarked crossings of busy streets",
+      "7 fewer side-street crossings",
+      "Tradeoff: 0.4 km more walking beside arterial traffic"
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerFactors" : [
+      [
+        "climb",
+        82.900000000000006,
+        166
+      ],
+      [
+        "besideTraffic",
+        701.39999999999998,
+        42
+      ],
+      [
+        "signalCrossing",
+        2,
+        20
+      ],
+      [
+        "sideStreetCrossing",
+        5,
+        15
+      ],
+      [
+        "unknownSidewalk",
+        8.0999999999999996,
+        0
+      ]
+    ],
+    "calmerMeters" : 4526.4200000000001,
+    "calmerSeconds" : 3540.4071428571428,
+    "calmerStress" : 243.04380000000006,
+    "candidates" : 7,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.28603994846343994,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 14.770704209858819,
+    "extraSeconds" : 580.74523809523907,
+    "fastestFactors" : [
+      [
+        "markedCrossing",
+        5,
+        225
+      ],
+      [
+        "unmarkedCrossing",
+        2,
+        180
+      ],
+      [
+        "climb",
+        87.400000000000006,
+        175
+      ],
+      [
+        "besideTraffic",
+        1381.9000000000001,
+        83
+      ],
+      [
+        "sideStreetCrossing",
+        15,
+        45
+      ],
+      [
+        "signalCrossing",
+        2,
+        20
+      ],
+      [
+        "stairs",
+        18,
+        18
+      ],
+      [
+        "unknownSidewalk",
+        8.0999999999999996,
+        0
+      ]
+    ],
+    "fastestMeters" : 3687.3200000000002,
+    "fastestSeconds" : 2959.6619047619038,
+    "fastestStress" : 745.87800000000004,
+    "mode" : "walk",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 14.006930237699915,
+    "reasons" : [
+      "5 fewer marked crossings without a signal",
+      "2 fewer unmarked crossings of busy streets",
+      "0.7 km less walking beside arterial traffic"
+    ]
+  },
+  {
+    "budgetMinutes" : 0,
+    "calmerFactors" : null,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "calmerStress" : null,
+    "candidates" : 1,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.0092470645904541016,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 29.967064593337788,
+    "extraSeconds" : 0,
+    "fastestFactors" : [
+      [
+        "climb",
+        84.099999999999994,
+        336
+      ],
+      [
+        "arterialRiding",
+        1319.5999999999999,
+        317
+      ],
+      [
+        "unsignalledLeft",
+        2,
+        180
+      ],
+      [
+        "busyArterialRiding",
+        158.80000000000001,
+        95
+      ],
+      [
+        "turn",
+        17,
+        68
+      ],
+      [
+        "quietStreet",
+        818.79999999999995,
+        49
+      ],
+      [
+        "allWayStop",
+        4,
+        40
+      ],
+      [
+        "signal",
+        5,
+        40
+      ],
+      [
+        "stopAndGo",
+        7,
+        35
+      ],
+      [
+        "stopSign",
+        3,
+        30
+      ],
+      [
+        "bikeRouteGap",
+        1,
+        20
+      ],
+      [
+        "steepDescent",
+        94.200000000000003,
+        19
+      ],
+      [
+        "leftAtSignal",
+        1,
+        15
+      ],
+      [
+        "unknownSurface",
+        18.5,
+        0
+      ]
+    ],
+    "fastestMeters" : 3845.0299999999993,
+    "fastestSeconds" : 1102.5905714285709,
+    "fastestStress" : 1244.4549999999997,
+    "mode" : "bike",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 14.006930237699915,
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "budgetMinutes" : 2,
+    "calmerFactors" : [
+      [
+        "climb",
+        80.700000000000003,
+        323
+      ],
+      [
+        "arterialRiding",
+        609.20000000000005,
+        146
+      ],
+      [
+        "busyArterialRiding",
+        158.80000000000001,
+        95
+      ],
+      [
+        "turn",
+        19,
+        76
+      ],
+      [
+        "quietStreet",
+        851.89999999999998,
+        51
+      ],
+      [
+        "signal",
+        6,
+        48
+      ],
+      [
+        "steepDescent",
+        208.59999999999999,
+        42
+      ],
+      [
+        "leftAtSignal",
+        2,
+        30
+      ],
+      [
+        "hillStop",
+        1,
+        20
+      ],
+      [
+        "bikeRouteGap",
+        1,
+        20
+      ],
+      [
+        "stopAndGo",
+        2,
+        10
+      ],
+      [
+        "stopSign",
+        1,
+        10
+      ],
+      [
+        "unknownSurface",
+        18.5,
+        0
+      ]
+    ],
+    "calmerMeters" : 4226.4099999999999,
+    "calmerSeconds" : 1168.4065714285707,
+    "calmerStress" : 871.23339999999996,
+    "candidates" : 4,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.34324800968170166,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 29.967064593337788,
+    "extraSeconds" : 65.815999999999804,
+    "fastestFactors" : [
+      [
+        "climb",
+        84.099999999999994,
+        336
+      ],
+      [
+        "arterialRiding",
+        1319.5999999999999,
+        317
+      ],
+      [
+        "unsignalledLeft",
+        2,
+        180
+      ],
+      [
+        "busyArterialRiding",
+        158.80000000000001,
+        95
+      ],
+      [
+        "turn",
+        17,
+        68
+      ],
+      [
+        "quietStreet",
+        818.79999999999995,
+        49
+      ],
+      [
+        "allWayStop",
+        4,
+        40
+      ],
+      [
+        "signal",
+        5,
+        40
+      ],
+      [
+        "stopAndGo",
+        7,
+        35
+      ],
+      [
+        "stopSign",
+        3,
+        30
+      ],
+      [
+        "bikeRouteGap",
+        1,
+        20
+      ],
+      [
+        "steepDescent",
+        94.200000000000003,
+        19
+      ],
+      [
+        "leftAtSignal",
+        1,
+        15
+      ],
+      [
+        "unknownSurface",
+        18.5,
+        0
+      ]
+    ],
+    "fastestMeters" : 3845.0299999999993,
+    "fastestSeconds" : 1102.5905714285709,
+    "fastestStress" : 1244.4549999999997,
+    "mode" : "bike",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 14.006930237699915,
+    "reasons" : [
+      "2 fewer left turns across traffic without a signal",
+      "0.7 km less riding on arterials",
+      "4 fewer all-way stops",
+      "Tradeoff: 0.1 km more of steep downhill in traffic",
+      "Tradeoff: 1 more stop on a steep hill"
+    ]
+  },
+  {
+    "budgetMinutes" : 5,
+    "calmerFactors" : [
+      [
+        "climb",
+        82.799999999999997,
+        331
+      ],
+      [
+        "arterialRiding",
+        425.19999999999999,
+        102
+      ],
+      [
+        "turn",
+        25,
+        100
+      ],
+      [
+        "busyArterialRiding",
+        158.80000000000001,
+        95
+      ],
+      [
+        "quietStreet",
+        895,
+        54
+      ],
+      [
+        "signal",
+        6,
+        48
+      ],
+      [
+        "steepDescent",
+        208.59999999999999,
+        42
+      ],
+      [
+        "leftAtSignal",
+        2,
+        30
+      ],
+      [
+        "hillStop",
+        1,
+        20
+      ],
+      [
+        "stopAndGo",
+        2,
+        10
+      ],
+      [
+        "stopSign",
+        1,
+        10
+      ],
+      [
+        "unknownSurface",
+        174.90000000000001,
+        1
+      ]
+    ],
+    "calmerMeters" : 4486.8100000000004,
+    "calmerSeconds" : 1237.7865714285706,
+    "calmerStress" : 842.83805000000007,
+    "candidates" : 4,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.34101295471191406,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 29.967064593337788,
+    "extraSeconds" : 135.19599999999969,
+    "fastestFactors" : [
+      [
+        "climb",
+        84.099999999999994,
+        336
+      ],
+      [
+        "arterialRiding",
+        1319.5999999999999,
+        317
+      ],
+      [
+        "unsignalledLeft",
+        2,
+        180
+      ],
+      [
+        "busyArterialRiding",
+        158.80000000000001,
+        95
+      ],
+      [
+        "turn",
+        17,
+        68
+      ],
+      [
+        "quietStreet",
+        818.79999999999995,
+        49
+      ],
+      [
+        "allWayStop",
+        4,
+        40
+      ],
+      [
+        "signal",
+        5,
+        40
+      ],
+      [
+        "stopAndGo",
+        7,
+        35
+      ],
+      [
+        "stopSign",
+        3,
+        30
+      ],
+      [
+        "bikeRouteGap",
+        1,
+        20
+      ],
+      [
+        "steepDescent",
+        94.200000000000003,
+        19
+      ],
+      [
+        "leftAtSignal",
+        1,
+        15
+      ],
+      [
+        "unknownSurface",
+        18.5,
+        0
+      ]
+    ],
+    "fastestMeters" : 3845.0299999999993,
+    "fastestSeconds" : 1102.5905714285709,
+    "fastestStress" : 1244.4549999999997,
+    "mode" : "bike",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 14.006930237699915,
+    "reasons" : [
+      "0.9 km less riding on arterials",
+      "2 fewer left turns across traffic without a signal",
+      "4 fewer all-way stops",
+      "Tradeoff: 8 more turns",
+      "Tradeoff: 0.1 km more of steep downhill in traffic"
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerFactors" : [
+      [
+        "climb",
+        82.799999999999997,
+        331
+      ],
+      [
+        "arterialRiding",
+        425.19999999999999,
+        102
+      ],
+      [
+        "turn",
+        25,
+        100
+      ],
+      [
+        "busyArterialRiding",
+        158.80000000000001,
+        95
+      ],
+      [
+        "quietStreet",
+        895,
+        54
+      ],
+      [
+        "signal",
+        6,
+        48
+      ],
+      [
+        "steepDescent",
+        208.59999999999999,
+        42
+      ],
+      [
+        "leftAtSignal",
+        2,
+        30
+      ],
+      [
+        "hillStop",
+        1,
+        20
+      ],
+      [
+        "stopAndGo",
+        2,
+        10
+      ],
+      [
+        "stopSign",
+        1,
+        10
+      ],
+      [
+        "unknownSurface",
+        174.90000000000001,
+        1
+      ]
+    ],
+    "calmerMeters" : 4486.8100000000004,
+    "calmerSeconds" : 1237.7865714285706,
+    "calmerStress" : 842.83805000000007,
+    "candidates" : 4,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.35250592231750488,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 29.967064593337788,
+    "extraSeconds" : 135.19599999999969,
+    "fastestFactors" : [
+      [
+        "climb",
+        84.099999999999994,
+        336
+      ],
+      [
+        "arterialRiding",
+        1319.5999999999999,
+        317
+      ],
+      [
+        "unsignalledLeft",
+        2,
+        180
+      ],
+      [
+        "busyArterialRiding",
+        158.80000000000001,
+        95
+      ],
+      [
+        "turn",
+        17,
+        68
+      ],
+      [
+        "quietStreet",
+        818.79999999999995,
+        49
+      ],
+      [
+        "allWayStop",
+        4,
+        40
+      ],
+      [
+        "signal",
+        5,
+        40
+      ],
+      [
+        "stopAndGo",
+        7,
+        35
+      ],
+      [
+        "stopSign",
+        3,
+        30
+      ],
+      [
+        "bikeRouteGap",
+        1,
+        20
+      ],
+      [
+        "steepDescent",
+        94.200000000000003,
+        19
+      ],
+      [
+        "leftAtSignal",
+        1,
+        15
+      ],
+      [
+        "unknownSurface",
+        18.5,
+        0
+      ]
+    ],
+    "fastestMeters" : 3845.0299999999993,
+    "fastestSeconds" : 1102.5905714285709,
+    "fastestStress" : 1244.4549999999999,
+    "mode" : "bike",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 14.006930237699915,
+    "reasons" : [
+      "0.9 km less riding on arterials",
+      "2 fewer left turns across traffic without a signal",
+      "4 fewer all-way stops",
+      "Tradeoff: 8 more turns",
+      "Tradeoff: 0.1 km more of steep downhill in traffic"
+    ]
+  },
+  {
+    "budgetMinutes" : 0,
+    "calmerFactors" : null,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "calmerStress" : null,
+    "candidates" : 1,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.0085300207138061523,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 59.647793777290069,
+    "extraSeconds" : 0,
+    "fastestFactors" : [
+      [
+        "unsignalledLeft",
+        1,
+        120
+      ],
+      [
+        "signal",
+        10,
+        100
+      ],
+      [
+        "stopAndGo",
+        7,
+        70
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "allWayStop",
+        2,
+        40
+      ],
+      [
+        "turn",
+        4,
+        32
+      ],
+      [
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "residential",
+        102.5,
+        3
+      ]
+    ],
+    "fastestMeters" : 4005.9599999999982,
+    "fastestSeconds" : 614.56119094488179,
+    "fastestStress" : 420.07349999999997,
     "mode" : "drive",
     "origin" : "Fremont Library",
     "originSnapMeters" : 26.769035872678163,
     "reasons" : [
-      "7 fewer turns across the route",
-      "4 fewer left turns at arterial junctions; turn protection unknown",
-      "0.1 km less on residential streets"
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
   },
   {
-    "budgetMinutes" : 10,
-    "calmerMeters" : 4226.7399999999989,
-    "calmerSeconds" : 717.41792565702031,
-    "candidates" : 4,
-    "computeSeconds" : 0.11321306228637695,
+    "budgetMinutes" : 2,
+    "calmerFactors" : null,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "calmerStress" : null,
+    "candidates" : 2,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.21597599983215332,
     "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 62.107927266287184,
-    "extraSeconds" : 110.3567573499339,
-    "fastestMeters" : 3803.0999999999995,
-    "fastestSeconds" : 607.0611683070864,
+    "destinationSnapMeters" : 59.647793777290069,
+    "extraSeconds" : 0,
+    "fastestFactors" : [
+      [
+        "unsignalledLeft",
+        1,
+        120
+      ],
+      [
+        "signal",
+        10,
+        100
+      ],
+      [
+        "stopAndGo",
+        7,
+        70
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "allWayStop",
+        2,
+        40
+      ],
+      [
+        "turn",
+        4,
+        32
+      ],
+      [
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "residential",
+        102.5,
+        3
+      ]
+    ],
+    "fastestMeters" : 4005.9599999999982,
+    "fastestSeconds" : 614.56119094488179,
+    "fastestStress" : 420.07349999999997,
     "mode" : "drive",
     "origin" : "Fremont Library",
     "originSnapMeters" : 26.769035872678163,
     "reasons" : [
-      "7 fewer turns across the route",
-      "4 fewer left turns at arterial junctions; turn protection unknown",
-      "0.1 km less on residential streets"
-    ]
-  },
-  {
-    "budgetMinutes" : 0,
-    "calmerMeters" : null,
-    "calmerSeconds" : null,
-    "candidates" : 1,
-    "computeSeconds" : 0.0097670555114746094,
-    "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 31.63541933376851,
-    "extraSeconds" : 0,
-    "fastestMeters" : 4214.4400000000005,
-    "fastestSeconds" : 940.88799999999992,
-    "mode" : "bike",
-    "origin" : "Fremont Library",
-    "originSnapMeters" : 14.006930237699915,
-    "reasons" : [
-      "No distinct route with a lower comfort cost was found within your time budget."
-    ]
-  },
-  {
-    "budgetMinutes" : 2,
-    "calmerMeters" : 4627.3799999999974,
-    "calmerSeconds" : 1021.4759999999999,
-    "candidates" : 5,
-    "computeSeconds" : 0.069540023803710938,
-    "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 31.63541933376851,
-    "extraSeconds" : 80.587999999999965,
-    "fastestMeters" : 4214.4400000000005,
-    "fastestSeconds" : 940.88799999999992,
-    "mode" : "bike",
-    "origin" : "Fremont Library",
-    "originSnapMeters" : 14.006930237699915,
-    "reasons" : [
-      "0.4 km more with cycleway or track tags",
-      "1.7 km less on arterial roads"
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
   },
   {
     "budgetMinutes" : 5,
-    "calmerMeters" : 5029.6899999999978,
-    "calmerSeconds" : 1093.9380000000001,
-    "candidates" : 5,
-    "computeSeconds" : 0.063780069351196289,
+    "calmerFactors" : null,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "calmerStress" : null,
+    "candidates" : 2,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.20789599418640137,
     "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 31.63541933376851,
-    "extraSeconds" : 153.05000000000018,
-    "fastestMeters" : 4214.4400000000005,
-    "fastestSeconds" : 940.88799999999992,
-    "mode" : "bike",
+    "destinationSnapMeters" : 59.647793777290069,
+    "extraSeconds" : 0,
+    "fastestFactors" : [
+      [
+        "unsignalledLeft",
+        1,
+        120
+      ],
+      [
+        "signal",
+        10,
+        100
+      ],
+      [
+        "stopAndGo",
+        7,
+        70
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "allWayStop",
+        2,
+        40
+      ],
+      [
+        "turn",
+        4,
+        32
+      ],
+      [
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "residential",
+        102.5,
+        3
+      ]
+    ],
+    "fastestMeters" : 4005.9599999999982,
+    "fastestSeconds" : 614.56119094488179,
+    "fastestStress" : 420.07349999999997,
+    "mode" : "drive",
     "origin" : "Fremont Library",
-    "originSnapMeters" : 14.006930237699915,
+    "originSnapMeters" : 26.769035872678163,
     "reasons" : [
-      "0.6 km more with cycleway or track tags",
-      "2.0 km less on arterial roads"
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
   },
   {
     "budgetMinutes" : 10,
-    "calmerMeters" : 5029.6899999999978,
-    "calmerSeconds" : 1093.9380000000001,
-    "candidates" : 5,
-    "computeSeconds" : 0.069334030151367188,
+    "calmerFactors" : null,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "calmerStress" : null,
+    "candidates" : 2,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.20632195472717285,
     "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 31.63541933376851,
-    "extraSeconds" : 153.05000000000018,
-    "fastestMeters" : 4214.4400000000005,
-    "fastestSeconds" : 940.88799999999992,
-    "mode" : "bike",
+    "destinationSnapMeters" : 59.647793777290069,
+    "extraSeconds" : 0,
+    "fastestFactors" : [
+      [
+        "unsignalledLeft",
+        1,
+        120
+      ],
+      [
+        "signal",
+        10,
+        100
+      ],
+      [
+        "stopAndGo",
+        7,
+        70
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "allWayStop",
+        2,
+        40
+      ],
+      [
+        "turn",
+        4,
+        32
+      ],
+      [
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "residential",
+        102.5,
+        3
+      ]
+    ],
+    "fastestMeters" : 4005.9599999999982,
+    "fastestSeconds" : 614.56119094488179,
+    "fastestStress" : 420.07349999999997,
+    "mode" : "drive",
     "origin" : "Fremont Library",
-    "originSnapMeters" : 14.006930237699915,
+    "originSnapMeters" : 26.769035872678163,
     "reasons" : [
-      "0.6 km more with cycleway or track tags",
-      "2.0 km less on arterial roads"
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
   },
   {
     "budgetMinutes" : 0,
+    "calmerFactors" : null,
     "calmerMeters" : null,
     "calmerSeconds" : null,
+    "calmerStress" : null,
     "candidates" : 1,
-    "computeSeconds" : 0.016340970993041992,
+    "caveats" : [
+      "Fastest route: 1.0 km where sidewalks aren't mapped."
+    ],
+    "computeSeconds" : 0.0093410015106201172,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 124.2113009563556,
+    "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 0,
-    "fastestMeters" : 5204.3999999999996,
-    "fastestSeconds" : 654.41499480519451,
-    "mode" : "drive",
+    "fastestFactors" : [
+      [
+        "unmarkedCrossing",
+        6,
+        540
+      ],
+      [
+        "markedCrossing",
+        3,
+        135
+      ],
+      [
+        "besideTraffic",
+        1361.5,
+        82
+      ],
+      [
+        "stairs",
+        58,
+        58
+      ],
+      [
+        "climb",
+        25.399999999999999,
+        51
+      ],
+      [
+        "sideStreetCrossing",
+        10,
+        30
+      ],
+      [
+        "noSidewalk",
+        95.5,
+        27
+      ],
+      [
+        "unknownSidewalk",
+        1019.3,
+        20
+      ],
+      [
+        "signalCrossing",
+        1,
+        10
+      ]
+    ],
+    "fastestMeters" : 4068.3699999999985,
+    "fastestSeconds" : 3006.3261904761894,
+    "fastestStress" : 952.62750000000005,
+    "mode" : "walk",
     "origin" : "Kerry Park",
-    "originSnapMeters" : 49.52809487808517,
+    "originSnapMeters" : 2.2992778781403174,
     "reasons" : [
-      "No distinct route with a lower comfort cost was found within your time budget."
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
   },
   {
     "budgetMinutes" : 2,
-    "calmerMeters" : 5012.25,
-    "calmerSeconds" : 741.70470379384392,
-    "candidates" : 5,
-    "computeSeconds" : 0.095602035522460938,
+    "calmerFactors" : [
+      [
+        "markedCrossing",
+        3,
+        135
+      ],
+      [
+        "stairs",
+        58,
+        58
+      ],
+      [
+        "besideTraffic",
+        895.29999999999995,
+        54
+      ],
+      [
+        "climb",
+        25.5,
+        51
+      ],
+      [
+        "sideStreetCrossing",
+        15,
+        45
+      ],
+      [
+        "noSidewalk",
+        95.5,
+        27
+      ],
+      [
+        "signalCrossing",
+        2,
+        20
+      ],
+      [
+        "unknownSidewalk",
+        553,
+        11
+      ]
+    ],
+    "calmerMeters" : 4129.7800000000007,
+    "calmerSeconds" : 3125.4404761904761,
+    "calmerStress" : 400.52470000000005,
+    "candidates" : 6,
+    "caveats" : [
+      "Fastest route: 1.0 km where sidewalks aren't mapped.",
+      "Calmer route: 0.6 km where sidewalks aren't mapped."
+    ],
+    "computeSeconds" : 0.37375903129577637,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 124.2113009563556,
-    "extraSeconds" : 87.289708988649409,
-    "fastestMeters" : 5204.3999999999996,
-    "fastestSeconds" : 654.41499480519451,
-    "mode" : "drive",
+    "destinationSnapMeters" : 42.832338807867949,
+    "extraSeconds" : 119.11428571428678,
+    "fastestFactors" : [
+      [
+        "unmarkedCrossing",
+        6,
+        540
+      ],
+      [
+        "markedCrossing",
+        3,
+        135
+      ],
+      [
+        "besideTraffic",
+        1361.5,
+        82
+      ],
+      [
+        "stairs",
+        58,
+        58
+      ],
+      [
+        "climb",
+        25.399999999999999,
+        51
+      ],
+      [
+        "sideStreetCrossing",
+        10,
+        30
+      ],
+      [
+        "noSidewalk",
+        95.5,
+        27
+      ],
+      [
+        "unknownSidewalk",
+        1019.3,
+        20
+      ],
+      [
+        "signalCrossing",
+        1,
+        10
+      ]
+    ],
+    "fastestMeters" : 4068.3699999999985,
+    "fastestSeconds" : 3006.3261904761894,
+    "fastestStress" : 952.62750000000005,
+    "mode" : "walk",
     "origin" : "Kerry Park",
-    "originSnapMeters" : 49.52809487808517,
+    "originSnapMeters" : 2.2992778781403174,
     "reasons" : [
-      "1 fewer highway entry",
-      "1 fewer left turn at arterial junctions; turn protection unknown",
-      "Tradeoff: 2 more turns",
-      "Tradeoff: 0.1 km more on residential streets"
+      "6 fewer unmarked crossings of busy streets",
+      "0.5 km less walking beside arterial traffic",
+      "Tradeoff: 5 more side-street crossings",
+      "Tradeoff: 1 more signalled crossing"
     ]
   },
   {
     "budgetMinutes" : 5,
-    "calmerMeters" : 5587.5,
-    "calmerSeconds" : 816.08757545761341,
-    "candidates" : 5,
-    "computeSeconds" : 0.091753959655761719,
+    "calmerFactors" : [
+      [
+        "markedCrossing",
+        2,
+        90
+      ],
+      [
+        "besideTraffic",
+        1195.7,
+        72
+      ],
+      [
+        "climb",
+        29.100000000000001,
+        58
+      ],
+      [
+        "stairs",
+        53,
+        53
+      ],
+      [
+        "sideStreetCrossing",
+        13,
+        39
+      ],
+      [
+        "noSidewalk",
+        95.5,
+        27
+      ],
+      [
+        "unknownSidewalk",
+        542.5,
+        11
+      ],
+      [
+        "signalCrossing",
+        1,
+        10
+      ]
+    ],
+    "calmerMeters" : 4303.8199999999988,
+    "calmerSeconds" : 3211.7833333333315,
+    "calmerStress" : 359.53890000000007,
+    "candidates" : 6,
+    "caveats" : [
+      "Fastest route: 1.0 km where sidewalks aren't mapped.",
+      "Calmer route: 0.5 km where sidewalks aren't mapped."
+    ],
+    "computeSeconds" : 0.37085795402526855,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 124.2113009563556,
-    "extraSeconds" : 161.6725806524189,
-    "fastestMeters" : 5204.3999999999996,
-    "fastestSeconds" : 654.41499480519451,
-    "mode" : "drive",
+    "destinationSnapMeters" : 42.832338807867949,
+    "extraSeconds" : 205.45714285714212,
+    "fastestFactors" : [
+      [
+        "unmarkedCrossing",
+        6,
+        540
+      ],
+      [
+        "markedCrossing",
+        3,
+        135
+      ],
+      [
+        "besideTraffic",
+        1361.5,
+        82
+      ],
+      [
+        "stairs",
+        58,
+        58
+      ],
+      [
+        "climb",
+        25.399999999999999,
+        51
+      ],
+      [
+        "sideStreetCrossing",
+        10,
+        30
+      ],
+      [
+        "noSidewalk",
+        95.5,
+        27
+      ],
+      [
+        "unknownSidewalk",
+        1019.3,
+        20
+      ],
+      [
+        "signalCrossing",
+        1,
+        10
+      ]
+    ],
+    "fastestMeters" : 4068.3699999999985,
+    "fastestSeconds" : 3006.3261904761894,
+    "fastestStress" : 952.62750000000005,
+    "mode" : "walk",
     "origin" : "Kerry Park",
-    "originSnapMeters" : 49.52809487808517,
+    "originSnapMeters" : 2.2992778781403174,
     "reasons" : [
-      "1 fewer highway entry",
-      "1 fewer left turn at arterial junctions; turn protection unknown",
-      "Tradeoff: 1 more turn"
+      "6 fewer unmarked crossings of busy streets",
+      "1 fewer marked crossing without a signal",
+      "0.2 km less walking beside arterial traffic",
+      "Tradeoff: 3 more side-street crossings"
     ]
   },
   {
     "budgetMinutes" : 10,
-    "calmerMeters" : 5587.5,
-    "calmerSeconds" : 816.08757545761341,
-    "candidates" : 5,
-    "computeSeconds" : 0.08629298210144043,
+    "calmerFactors" : [
+      [
+        "markedCrossing",
+        2,
+        90
+      ],
+      [
+        "climb",
+        34.799999999999997,
+        70
+      ],
+      [
+        "besideTraffic",
+        1154.8,
+        69
+      ],
+      [
+        "sideStreetCrossing",
+        13,
+        39
+      ],
+      [
+        "noSidewalk",
+        95.5,
+        27
+      ],
+      [
+        "unknownSidewalk",
+        973.10000000000002,
+        19
+      ],
+      [
+        "signalCrossing",
+        1,
+        10
+      ],
+      [
+        "stairs",
+        10,
+        10
+      ]
+    ],
+    "calmerMeters" : 4465.0099999999984,
+    "calmerSeconds" : 3328.5238095238078,
+    "calmerStress" : 334.10169999999999,
+    "candidates" : 6,
+    "caveats" : [
+      "Fastest route: 1.0 km where sidewalks aren't mapped.",
+      "Calmer route: 1.0 km where sidewalks aren't mapped."
+    ],
+    "computeSeconds" : 0.37352299690246582,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 124.2113009563556,
-    "extraSeconds" : 161.6725806524189,
-    "fastestMeters" : 5204.3999999999996,
-    "fastestSeconds" : 654.41499480519451,
-    "mode" : "drive",
+    "destinationSnapMeters" : 42.832338807867949,
+    "extraSeconds" : 322.19761904761845,
+    "fastestFactors" : [
+      [
+        "unmarkedCrossing",
+        6,
+        540
+      ],
+      [
+        "markedCrossing",
+        3,
+        135
+      ],
+      [
+        "besideTraffic",
+        1361.5,
+        82
+      ],
+      [
+        "stairs",
+        58,
+        58
+      ],
+      [
+        "climb",
+        25.399999999999999,
+        51
+      ],
+      [
+        "sideStreetCrossing",
+        10,
+        30
+      ],
+      [
+        "noSidewalk",
+        95.5,
+        27
+      ],
+      [
+        "unknownSidewalk",
+        1019.3,
+        20
+      ],
+      [
+        "signalCrossing",
+        1,
+        10
+      ]
+    ],
+    "fastestMeters" : 4068.3699999999985,
+    "fastestSeconds" : 3006.3261904761894,
+    "fastestStress" : 952.62750000000005,
+    "mode" : "walk",
     "origin" : "Kerry Park",
-    "originSnapMeters" : 49.52809487808517,
+    "originSnapMeters" : 2.2992778781403174,
     "reasons" : [
-      "1 fewer highway entry",
-      "1 fewer left turn at arterial junctions; turn protection unknown",
-      "Tradeoff: 1 more turn"
+      "6 fewer unmarked crossings of busy streets",
+      "48 fewer steps",
+      "1 fewer marked crossing without a signal",
+      "Tradeoff: 9 m more climbing",
+      "Tradeoff: 3 more side-street crossings"
     ]
   },
   {
     "budgetMinutes" : 0,
+    "calmerFactors" : null,
     "calmerMeters" : null,
     "calmerSeconds" : null,
+    "calmerStress" : null,
     "candidates" : 1,
-    "computeSeconds" : 0.0057240724563598633,
+    "caveats" : [
+      "Fastest route: 1.6 km with unknown surface."
+    ],
+    "computeSeconds" : 0.0079259872436523438,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 0,
-    "fastestMeters" : 4391.8400000000011,
-    "fastestSeconds" : 964.77633766233737,
+    "fastestFactors" : [
+      [
+        "arterialRiding",
+        1345.3,
+        323
+      ],
+      [
+        "busyArterialRiding",
+        384.89999999999998,
+        231
+      ],
+      [
+        "climb",
+        48.399999999999999,
+        194
+      ],
+      [
+        "quietStreet",
+        2076,
+        125
+      ],
+      [
+        "steepDescent",
+        519.10000000000002,
+        104
+      ],
+      [
+        "unsignalledLeft",
+        1,
+        90
+      ],
+      [
+        "turn",
+        22,
+        88
+      ],
+      [
+        "stopSign",
+        6,
+        60
+      ],
+      [
+        "signal",
+        4,
+        32
+      ],
+      [
+        "bikeRouteGap",
+        1,
+        20
+      ],
+      [
+        "movableBridge",
+        1,
+        15
+      ],
+      [
+        "leftAtSignal",
+        1,
+        15
+      ],
+      [
+        "stopAndGo",
+        2,
+        10
+      ],
+      [
+        "unknownSurface",
+        1568.5,
+        8
+      ],
+      [
+        "roughSurface",
+        20.5,
+        1
+      ]
+    ],
+    "fastestMeters" : 4391.880000000001,
+    "fastestSeconds" : 1063.869337662338,
+    "fastestStress" : 1314.8177500000002,
     "mode" : "bike",
     "origin" : "Kerry Park",
     "originSnapMeters" : 43.489352068282621,
     "reasons" : [
-      "No distinct route with a lower comfort cost was found within your time budget."
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
   },
   {
     "budgetMinutes" : 2,
-    "calmerMeters" : 4677.0699999999988,
-    "calmerSeconds" : 1001.1636103896104,
+    "calmerFactors" : null,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "calmerStress" : null,
     "candidates" : 4,
-    "computeSeconds" : 0.025510072708129883,
+    "caveats" : [
+      "Fastest route: 1.6 km with unknown surface."
+    ],
+    "computeSeconds" : 0.23288905620574951,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
-    "extraSeconds" : 36.387272727273057,
-    "fastestMeters" : 4391.8400000000011,
-    "fastestSeconds" : 964.77633766233737,
+    "extraSeconds" : 0,
+    "fastestFactors" : [
+      [
+        "arterialRiding",
+        1345.3,
+        323
+      ],
+      [
+        "busyArterialRiding",
+        384.89999999999998,
+        231
+      ],
+      [
+        "climb",
+        48.399999999999999,
+        194
+      ],
+      [
+        "quietStreet",
+        2076,
+        125
+      ],
+      [
+        "steepDescent",
+        519.10000000000002,
+        104
+      ],
+      [
+        "unsignalledLeft",
+        1,
+        90
+      ],
+      [
+        "turn",
+        22,
+        88
+      ],
+      [
+        "stopSign",
+        6,
+        60
+      ],
+      [
+        "signal",
+        4,
+        32
+      ],
+      [
+        "bikeRouteGap",
+        1,
+        20
+      ],
+      [
+        "movableBridge",
+        1,
+        15
+      ],
+      [
+        "leftAtSignal",
+        1,
+        15
+      ],
+      [
+        "stopAndGo",
+        2,
+        10
+      ],
+      [
+        "unknownSurface",
+        1568.5,
+        8
+      ],
+      [
+        "roughSurface",
+        20.5,
+        1
+      ]
+    ],
+    "fastestMeters" : 4391.880000000001,
+    "fastestSeconds" : 1063.869337662338,
+    "fastestStress" : 1314.8177500000002,
     "mode" : "bike",
     "origin" : "Kerry Park",
     "originSnapMeters" : 43.489352068282621,
     "reasons" : [
-      "1.1 km less on arterial roads"
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
   },
   {
     "budgetMinutes" : 5,
-    "calmerMeters" : 5106.0499999999993,
-    "calmerSeconds" : 1098.7651948051953,
+    "calmerFactors" : null,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "calmerStress" : null,
     "candidates" : 4,
-    "computeSeconds" : 0.025674104690551758,
+    "caveats" : [
+      "Fastest route: 1.6 km with unknown surface."
+    ],
+    "computeSeconds" : 0.2314450740814209,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
-    "extraSeconds" : 133.98885714285791,
-    "fastestMeters" : 4391.8400000000011,
-    "fastestSeconds" : 964.77633766233737,
+    "extraSeconds" : 0,
+    "fastestFactors" : [
+      [
+        "arterialRiding",
+        1345.3,
+        323
+      ],
+      [
+        "busyArterialRiding",
+        384.89999999999998,
+        231
+      ],
+      [
+        "climb",
+        48.399999999999999,
+        194
+      ],
+      [
+        "quietStreet",
+        2076,
+        125
+      ],
+      [
+        "steepDescent",
+        519.10000000000002,
+        104
+      ],
+      [
+        "unsignalledLeft",
+        1,
+        90
+      ],
+      [
+        "turn",
+        22,
+        88
+      ],
+      [
+        "stopSign",
+        6,
+        60
+      ],
+      [
+        "signal",
+        4,
+        32
+      ],
+      [
+        "bikeRouteGap",
+        1,
+        20
+      ],
+      [
+        "movableBridge",
+        1,
+        15
+      ],
+      [
+        "leftAtSignal",
+        1,
+        15
+      ],
+      [
+        "stopAndGo",
+        2,
+        10
+      ],
+      [
+        "unknownSurface",
+        1568.5,
+        8
+      ],
+      [
+        "roughSurface",
+        20.5,
+        1
+      ]
+    ],
+    "fastestMeters" : 4391.880000000001,
+    "fastestSeconds" : 1063.869337662338,
+    "fastestStress" : 1314.8177500000002,
     "mode" : "bike",
     "origin" : "Kerry Park",
     "originSnapMeters" : 43.489352068282621,
     "reasons" : [
-      "0.5 km more with cycleway or track tags",
-      "1.7 km less on arterial roads"
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
   },
   {
     "budgetMinutes" : 10,
-    "calmerMeters" : 5106.0499999999993,
-    "calmerSeconds" : 1098.7651948051953,
+    "calmerFactors" : [
+      [
+        "climb",
+        44.299999999999997,
+        177
+      ],
+      [
+        "arterialRiding",
+        647.29999999999995,
+        155
+      ],
+      [
+        "quietStreet",
+        1741,
+        104
+      ],
+      [
+        "signal",
+        13,
+        104
+      ],
+      [
+        "turn",
+        20,
+        80
+      ],
+      [
+        "steepDescent",
+        334,
+        67
+      ],
+      [
+        "unsignalledCrossing",
+        1,
+        60
+      ],
+      [
+        "stopAndGo",
+        6,
+        30
+      ],
+      [
+        "bikeRouteGap",
+        1,
+        20
+      ],
+      [
+        "movableBridge",
+        1,
+        15
+      ],
+      [
+        "stopSign",
+        1,
+        10
+      ],
+      [
+        "roughSurface",
+        20.5,
+        1
+      ],
+      [
+        "unknownSurface",
+        52,
+        0
+      ]
+    ],
+    "calmerMeters" : 6766.1100000000024,
+    "calmerSeconds" : 1590.682944805194,
+    "calmerStress" : 824.29999999999995,
     "candidates" : 4,
-    "computeSeconds" : 0.026247024536132812,
+    "caveats" : [
+      "Fastest route: 1.6 km with unknown surface."
+    ],
+    "computeSeconds" : 0.23049497604370117,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
-    "extraSeconds" : 133.98885714285791,
-    "fastestMeters" : 4391.8400000000011,
-    "fastestSeconds" : 964.77633766233737,
+    "extraSeconds" : 526.81360714285597,
+    "fastestFactors" : [
+      [
+        "arterialRiding",
+        1345.3,
+        323
+      ],
+      [
+        "busyArterialRiding",
+        384.89999999999998,
+        231
+      ],
+      [
+        "climb",
+        48.399999999999999,
+        194
+      ],
+      [
+        "quietStreet",
+        2076,
+        125
+      ],
+      [
+        "steepDescent",
+        519.10000000000002,
+        104
+      ],
+      [
+        "unsignalledLeft",
+        1,
+        90
+      ],
+      [
+        "turn",
+        22,
+        88
+      ],
+      [
+        "stopSign",
+        6,
+        60
+      ],
+      [
+        "signal",
+        4,
+        32
+      ],
+      [
+        "bikeRouteGap",
+        1,
+        20
+      ],
+      [
+        "movableBridge",
+        1,
+        15
+      ],
+      [
+        "leftAtSignal",
+        1,
+        15
+      ],
+      [
+        "stopAndGo",
+        2,
+        10
+      ],
+      [
+        "unknownSurface",
+        1568.5,
+        8
+      ],
+      [
+        "roughSurface",
+        20.5,
+        1
+      ]
+    ],
+    "fastestMeters" : 4391.880000000001,
+    "fastestSeconds" : 1063.869337662338,
+    "fastestStress" : 1314.8177500000002,
     "mode" : "bike",
     "origin" : "Kerry Park",
     "originSnapMeters" : 43.489352068282621,
     "reasons" : [
-      "0.5 km more with cycleway or track tags",
-      "1.7 km less on arterial roads"
+      "0.4 km less riding in traffic on busy arterials",
+      "0.7 km less riding on arterials",
+      "1 fewer left turn across traffic without a signal",
+      "Tradeoff: 9 more traffic signals",
+      "Tradeoff: 1 more crossing of a busy street without a signal"
+    ]
+  },
+  {
+    "budgetMinutes" : 0,
+    "calmerFactors" : null,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "calmerStress" : null,
+    "candidates" : 1,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.0069080591201782227,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 0,
+    "fastestFactors" : [
+      [
+        "unsignalledLeft",
+        2,
+        240
+      ],
+      [
+        "stopSign",
+        7,
+        105
+      ],
+      [
+        "shortFreewayHop",
+        1,
+        90
+      ],
+      [
+        "turn",
+        8,
+        64
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "freewayEntry",
+        1,
+        30
+      ],
+      [
+        "signal",
+        3,
+        30
+      ],
+      [
+        "stopAndGo",
+        3,
+        30
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
+      ],
+      [
+        "residential",
+        310.80000000000001,
+        9
+      ]
+    ],
+    "fastestMeters" : 5210.2999999999984,
+    "fastestSeconds" : 695.37945584415593,
+    "fastestStress" : 653.3252,
+    "mode" : "drive",
+    "origin" : "Kerry Park",
+    "originSnapMeters" : 44.153415073483508,
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "budgetMinutes" : 2,
+    "calmerFactors" : [
+      [
+        "stopSign",
+        7,
+        105
+      ],
+      [
+        "shortFreewayHop",
+        1,
+        90
+      ],
+      [
+        "turn",
+        7,
+        56
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "signal",
+        4,
+        40
+      ],
+      [
+        "freewayEntry",
+        1,
+        30
+      ],
+      [
+        "leftAtSignal",
+        1,
+        20
+      ],
+      [
+        "residential",
+        590.5,
+        18
+      ],
+      [
+        "stopAndGo",
+        1,
+        10
+      ]
+    ],
+    "calmerMeters" : 5241.0599999999986,
+    "calmerSeconds" : 715.90163441558457,
+    "calmerStress" : 408.71379999999999,
+    "candidates" : 2,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.15505897998809814,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 20.52217857142864,
+    "fastestFactors" : [
+      [
+        "unsignalledLeft",
+        2,
+        240
+      ],
+      [
+        "stopSign",
+        7,
+        105
+      ],
+      [
+        "shortFreewayHop",
+        1,
+        90
+      ],
+      [
+        "turn",
+        8,
+        64
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "freewayEntry",
+        1,
+        30
+      ],
+      [
+        "signal",
+        3,
+        30
+      ],
+      [
+        "stopAndGo",
+        3,
+        30
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
+      ],
+      [
+        "residential",
+        310.80000000000001,
+        9
+      ]
+    ],
+    "fastestMeters" : 5210.2999999999984,
+    "fastestSeconds" : 695.37945584415593,
+    "fastestStress" : 653.3252,
+    "mode" : "drive",
+    "origin" : "Kerry Park",
+    "originSnapMeters" : 44.153415073483508,
+    "reasons" : [
+      "2 fewer left turns across traffic without a signal",
+      "2 fewer stop-and-go stops",
+      "1 fewer right turn into arterial traffic without a signal",
+      "Tradeoff: 1 more left turn at a signal",
+      "Tradeoff: 1 more traffic signal"
+    ]
+  },
+  {
+    "budgetMinutes" : 5,
+    "calmerFactors" : [
+      [
+        "stopSign",
+        7,
+        105
+      ],
+      [
+        "shortFreewayHop",
+        1,
+        90
+      ],
+      [
+        "turn",
+        7,
+        56
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "signal",
+        4,
+        40
+      ],
+      [
+        "freewayEntry",
+        1,
+        30
+      ],
+      [
+        "leftAtSignal",
+        1,
+        20
+      ],
+      [
+        "residential",
+        590.5,
+        18
+      ],
+      [
+        "stopAndGo",
+        1,
+        10
+      ]
+    ],
+    "calmerMeters" : 5241.0599999999986,
+    "calmerSeconds" : 715.90163441558457,
+    "calmerStress" : 408.71379999999999,
+    "candidates" : 2,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.15344703197479248,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 20.52217857142864,
+    "fastestFactors" : [
+      [
+        "unsignalledLeft",
+        2,
+        240
+      ],
+      [
+        "stopSign",
+        7,
+        105
+      ],
+      [
+        "shortFreewayHop",
+        1,
+        90
+      ],
+      [
+        "turn",
+        8,
+        64
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "freewayEntry",
+        1,
+        30
+      ],
+      [
+        "signal",
+        3,
+        30
+      ],
+      [
+        "stopAndGo",
+        3,
+        30
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
+      ],
+      [
+        "residential",
+        310.80000000000001,
+        9
+      ]
+    ],
+    "fastestMeters" : 5210.2999999999984,
+    "fastestSeconds" : 695.37945584415593,
+    "fastestStress" : 653.3252,
+    "mode" : "drive",
+    "origin" : "Kerry Park",
+    "originSnapMeters" : 44.153415073483508,
+    "reasons" : [
+      "2 fewer left turns across traffic without a signal",
+      "2 fewer stop-and-go stops",
+      "1 fewer right turn into arterial traffic without a signal",
+      "Tradeoff: 1 more left turn at a signal",
+      "Tradeoff: 1 more traffic signal"
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerFactors" : [
+      [
+        "stopSign",
+        7,
+        105
+      ],
+      [
+        "shortFreewayHop",
+        1,
+        90
+      ],
+      [
+        "turn",
+        7,
+        56
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "signal",
+        4,
+        40
+      ],
+      [
+        "freewayEntry",
+        1,
+        30
+      ],
+      [
+        "leftAtSignal",
+        1,
+        20
+      ],
+      [
+        "residential",
+        590.5,
+        18
+      ],
+      [
+        "stopAndGo",
+        1,
+        10
+      ]
+    ],
+    "calmerMeters" : 5241.0599999999986,
+    "calmerSeconds" : 715.90163441558457,
+    "calmerStress" : 408.71379999999999,
+    "candidates" : 2,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.15441298484802246,
+    "destination" : "Gas Works Park",
+    "destinationSnapMeters" : 124.2113009563556,
+    "extraSeconds" : 20.52217857142864,
+    "fastestFactors" : [
+      [
+        "unsignalledLeft",
+        2,
+        240
+      ],
+      [
+        "stopSign",
+        7,
+        105
+      ],
+      [
+        "shortFreewayHop",
+        1,
+        90
+      ],
+      [
+        "turn",
+        8,
+        64
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "freewayEntry",
+        1,
+        30
+      ],
+      [
+        "signal",
+        3,
+        30
+      ],
+      [
+        "stopAndGo",
+        3,
+        30
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
+      ],
+      [
+        "residential",
+        310.80000000000001,
+        9
+      ]
+    ],
+    "fastestMeters" : 5210.2999999999984,
+    "fastestSeconds" : 695.37945584415593,
+    "fastestStress" : 653.3252,
+    "mode" : "drive",
+    "origin" : "Kerry Park",
+    "originSnapMeters" : 44.153415073483508,
+    "reasons" : [
+      "2 fewer left turns across traffic without a signal",
+      "2 fewer stop-and-go stops",
+      "1 fewer right turn into arterial traffic without a signal",
+      "Tradeoff: 1 more left turn at a signal",
+      "Tradeoff: 1 more traffic signal"
     ]
   }
 ]
