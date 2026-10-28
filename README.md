@@ -44,14 +44,15 @@ global Xcode selection. Override `PEOPLEMAPS_XCODE` if Xcode is installed elsewh
 ## Try the experience
 
 The opening example is **Kerry Park → Gas Works Park**. With a five-minute budget,
-the bundled driving model finds an approximately 11-minute fastest estimate and
-a 14-minute calmer candidate: one fewer highway entry and one fewer arterial
-left, with one more turn. These are model outputs, not measured travel times.
+the driving model finds a calmer route at about the same modeled time: two fewer
+left turns across traffic without a signal and fewer stop-and-go stops, for one
+more left turn at a signal. These are model outputs, not measured travel times.
+What "calmer" means for each mode is in [the stress model](Docs/STRESS_MODEL.md).
 
 - Tap either place to search the 519-place offline catalog or select a featured
   public place. No results are sponsored. Search is alphabetical and capped at
   60 visible matches; narrow the query for more specific results.
-- Switch Drive/Cycle. Their preference criteria differ.
+- Switch Walk / Cycle / Drive. Each mode has its own idea of stress.
 - Set No extra / +2 / +5 / +10 minutes. The limit applies to exact modeled
   seconds before display rounding. Sometimes one route is the honest result.
 - Tap either route card to highlight it; tap the reason to inspect evidence,
@@ -70,7 +71,7 @@ left, with one more turn. These are model outputs, not measured travel times.
 # Add the actual-app XCTest UI suite on a booted dedicated Simulator
 ./Scripts/test.sh D4304B61-4C72-414B-A592-0CC38A9DC2AC
 
-# Audit three public place pairs × two modes × four budgets
+# Audit three public place pairs × three modes × four budgets
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   swift run -c release --jobs 4 peoplemaps-audit > Evidence/route-audit.json
 
@@ -101,19 +102,21 @@ route quality, physical-device behavior, accessibility at all text sizes, and
 real-world feasibility have not been field validated.
 
 Coverage is a bounded north-central Seattle rectangle: 47.615–47.678 N,
-122.390–122.300 W. The 2026-10-11 snapshot contains 16,988 routing nodes, 37,609
-directed segments, and 519 places. A coverage boundary can exclude routes that
+122.390–122.300 W. The 2026-10-11 snapshot compiles to 73,363 nodes and
+101,811 street and path segments (162,294 directed walking edges, 64,268 cycling,
+47,989 driving) and 519 places. Elevation comes from a bundled ~5 m USGS 3DEP
+ground model (public domain); bridges and tunnels are interpolated between their ends. A coverage boundary can exclude routes that
 leave and re-enter it. Place positions may be feature centroids, not entrances.
 Routes snap to the main connected graph within 400 m. Unrouted endpoint gaps
 are disclosed and excluded from times.
 
-Estimates use assumed speeds and delays. No live traffic, closures, parking,
-signal phases, turn-lane details, reliable grade model, or measured ETA accuracy
-is available. Arterial-left and highway-entry counts are limited proxies: they
-do not establish unprotected turns, awkward merges, or one-exit detours.
-Cycling distinguishes track/cycleway, lane, shared-path, road-class, and surface
-tags. Tags do not verify physical separation. Grade coverage is displayed but
-grade is not scored. Surface and access data are incomplete.
+Estimates use assumed speeds, hills and junction delays. No live traffic,
+closures, parking, signal phases or measured ETA accuracy is available. Signals,
+stop signs, turn lanes, crossings and sidewalks come from OSM tags; missing tags
+get a small default cost and are disclosed, never treated as facts. Cycle-facility
+tags do not verify physical separation. Stop-and-go counts signs and signals,
+not traffic queues. Stop-and-go clusters, short freeway hops and side-street
+shortcuts are scored on candidate routes but not steered by the search.
 
 The router handles common one-way/access rules and simple via-node restrictions.
 It excludes unsupported conditional/via-way restrictions conservatively, but
