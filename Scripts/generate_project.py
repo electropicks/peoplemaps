@@ -14,8 +14,8 @@ def files(folder):
         for p in sorted(directory.glob('*')):
             if p.is_dir() and p.suffix!='.xcassets':
                 refs.append(group(p));continue
-            if p.suffix not in {'.swift','.json','.md','.xcassets'}:continue
-            kind={'swift':'sourcecode.swift','json':'text.json','md':'net.daringfireball.markdown','xcassets':'folder.assetcatalog'}[p.suffix[1:]]
+            if p.suffix not in {'.swift','.json','.md','.xcassets','.xcprivacy'}:continue
+            kind={'swift':'sourcecode.swift','json':'text.json','md':'net.daringfireball.markdown','xcassets':'folder.assetcatalog','xcprivacy':'text.xml'}[p.suffix[1:]]
             key=obj(str(p.relative_to(root)),f'isa = PBXFileReference; lastKnownFileType = {kind}; path = "{p.name}"; sourceTree = "<group>";')
             build=obj('build:'+str(p.relative_to(root)),f'isa = PBXBuildFile; fileRef = {key};')
             refs.append(key);(builds if p.suffix=='.swift' else resources).append(build)
