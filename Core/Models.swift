@@ -157,8 +157,9 @@ public struct StreetGraph: Sendable {
     }
 
     public static func bundled() throws -> StreetGraph {
-        guard let url = Bundle.module.url(forResource: "seattle-graph", withExtension: "json") else { throw RoutingError.missingData }
-        let file = try JSONDecoder().decode(GraphFile.self, from: Data(contentsOf: url))
+        guard let url = Bundle.module.url(forResource: "seattle-graph.json", withExtension: "gz"),
+              let json = try Data(contentsOf: url).gunzipped() else { throw RoutingError.missingData }
+        let file = try JSONDecoder().decode(GraphFile.self, from: json)
         guard file.schemaVersion == 2 else { throw RoutingError.missingData }
         let graph = file.graph()
         try graph.validate()
