@@ -42,7 +42,7 @@ for name,sources,resources in [('app',app_sources,app_resources),('test',test_so
     frameworks=','.join([ref('core-link'),ref('map-link'),ref('ferrostar-link')]) if name=='app' else ''
     obj(name+'-frameworks',f'isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = ({frameworks}); runOnlyForDeploymentPostprocessing = 0;')
     for config in ['Debug','Release']:
-        settings={'SDKROOT':'iphoneos','IPHONEOS_DEPLOYMENT_TARGET':'17.0','SWIFT_VERSION':'6.0','TARGETED_DEVICE_FAMILY':'"1,2"',
+        settings={'SDKROOT':'iphoneos','IPHONEOS_DEPLOYMENT_TARGET':'17.0','SWIFT_VERSION':'6.0','TARGETED_DEVICE_FAMILY':'1',
                   'GENERATE_INFOPLIST_FILE':'YES','CODE_SIGNING_ALLOWED':'NO','PRODUCT_NAME':'"$(TARGET_NAME)"',
                   'ONLY_ACTIVE_ARCH':'YES' if config=='Debug' else 'NO',
                   'SWIFT_OPTIMIZATION_LEVEL':'"-Onone"' if config=='Debug' else '"-O"',
