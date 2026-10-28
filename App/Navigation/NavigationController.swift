@@ -59,10 +59,15 @@ final class NavigationController {
     @ObservationIgnored private var active: AdaptedRoute?
     @ObservationIgnored private var location: LocationProviding?
     @ObservationIgnored private var observer: SpokenInstructionObserver?
-    @ObservationIgnored private var paused = false
+    private var paused = false
     @ObservationIgnored private var arrivalHandled = false
     /// Routes handed to Ferrostar, by token, so a reroute's plan can be found when the engine switches to it.
     @ObservationIgnored private var known: [UUID: AdaptedRoute] = [:]
+
+    /// Last instruction the engine asked to be spoken, recorded even when muted. Read by the UI-test probe only.
+    private(set) var lastSpoken = ""
+    private(set) var keepingAwake = false
+    var isPaused: Bool { paused }
 
     init(router: NativeRouter) { self.router = router }
 
@@ -72,7 +77,7 @@ final class NavigationController {
     #if DEBUG
     static var simulating: Bool {
         #if targetEnvironment(simulator)
-        true
+        !ProcessInfo.processInfo.arguments.contains("--real-location")
         #else
         ProcessInfo.processInfo.arguments.contains("--simulate-route")
         #endif
@@ -118,8 +123,8 @@ final class NavigationController {
         tripMeters = adapted.plan.meters; tripSeconds = adapted.plan.seconds
         tripNotes = Self.notes(comparison, calmer: usingCalmer)
         hasArrived = false; isRerouting = false; isActive = true
-        arrivalHandled = false; paused = false
-        Self.keepAwake(true)
+        arrivalHandled = false; paused = false; lastSpoken = ""
+        keepAwake(true)
         subscription = core.$state.receive(on: DispatchQueue.main).sink { [weak self] state in
             MainActor.assumeIsolated { self?.apply(state) }
         }
@@ -157,15 +162,16 @@ final class NavigationController {
         if !hasArrived { location?.startUpdating() }
     }
 
-    private static func keepAwake(_ on: Bool) { UIApplication.shared.isIdleTimerDisabled = on }
+    private func keepAwake(_ on: Bool) { UIApplication.shared.isIdleTimerDisabled = on; keepingAwake = on }
 
     /// Arrival: stop location, let the screen sleep again, and say it once.
     private func arrive() {
         guard !arrivalHandled else { return }
         arrivalHandled = true
         location?.stopUpdating()
-        Self.keepAwake(false)
+        keepAwake(false)
         guard let observer, let name = destination?.shortName else { return }
+        lastSpoken = "You've arrived at \(name)"
         observer.spokenInstructionTriggered(SpokenInstruction(text: "You've arrived at \(name)", ssml: nil, triggerDistanceBeforeManeuver: 0, utteranceId: UUID()))
     }
 
@@ -174,7 +180,7 @@ final class NavigationController {
         core?.stopNavigation()
         location?.stopUpdating()
         observer?.stopAndClearQueue()
-        Self.keepAwake(false)
+        keepAwake(false)
         core = nil; location = nil; observer = nil; paused = false; arrivalHandled = false
         active = nil; known = [:]
         isActive = false; hasArrived = false; isRerouting = false
@@ -228,8 +234,9 @@ final class NavigationController {
             if let plan = active?.plan { stepIndex = plan.steps.count - 1; currentStep = plan.steps.last; thenStep = nil }
         case .idle:
             break
-        case let .navigating(_, _, _, remaining, _, progress, _, _, _, _, _):
+        case let .navigating(_, _, _, remaining, _, progress, _, _, _, spoken, _):
             guard let plan = active?.plan else { return }
+            if let spoken, !spoken.text.isEmpty { lastSpoken = spoken.text }
             hasArrived = false
             distanceToManeuver = progress.distanceToNextManeuver
             remainingMeters = progress.distanceRemaining

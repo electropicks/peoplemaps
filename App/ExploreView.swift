@@ -127,6 +127,9 @@ struct ExploreView: View {
                     GuidanceOverlay(navigator: navigator, landscape: landscape, cardWidth: cardWidth, attribution: AnyView(attribution), overview: $overview, muted: $voiceMuted,
                                     onInsets: { guidanceInset = $0 }, onEnd: endNavigation, onDone: finishNavigation)
                 } else if landscape { landscapeLayout(geo) } else { portraitLayout(geo) }
+                #if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("--ui-testing") { NavigationDebugProbe(navigator: navigator) }
+                #endif
             }
         }
         .task(id: previewRequest) {
