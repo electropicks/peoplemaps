@@ -2,6 +2,15 @@ import SwiftUI
 import MapLibre
 import PeoplemapsCore
 
+/// What the map shows while guiding: only the route being followed, its destination and the user's puck.
+struct Guidance: Equatable {
+    let version: Int
+    let coordinates: [Coordinate]
+    let calmer: Bool
+    let destination: Coordinate
+    let user: Coordinate?
+}
+
 struct SeattleMap: UIViewRepresentable {
     let comparison: RouteComparison?
     let selectedCalmer: Bool
@@ -11,6 +20,7 @@ struct SeattleMap: UIViewRepresentable {
     /// The selected place: the only green pin, centred in the visible map.
     var selected: Place?
     var onPin: (String) -> Void = { _ in }
+    var guidance: Guidance?
     /// Space covered by the panel and map buttons, kept clear when fitting routes.
     let padding: UIEdgeInsets
     @Environment(\.colorScheme) private var colorScheme
@@ -50,6 +60,11 @@ struct SeattleMap: UIViewRepresentable {
         private var pinAnnotations: [MLNPointAnnotation] = []
         private var pinKey = ""
         private var focusKey = ""
+        private var guiding = false
+        private var guidanceKey = ""
+        private var lastUser: Coordinate?
+        private var guidanceAnnotations: [MLNPointAnnotation] = []
+        private var puck: MapPuck?
 
         private static let baseLayers: [(id: String, color: UIColor)] = [
             ("water", .mapWater), ("parks", .mapPark), ("roads", .mapStreet), ("arterials", .mapArterial), ("paths", .mapPath),
@@ -95,6 +110,8 @@ struct SeattleMap: UIViewRepresentable {
             if appliedScheme != latest.colorScheme {
                 applyColors(latest.colorScheme, map: map, style: style)
             }
+            if let guidance = latest.guidance { updateGuidance(guidance, map: map, style: style); return }
+            if guiding { endGuidance(map: map, style: style) }
             let key = "\(c?.fastest.id ?? "none")|\(c?.calmer?.id ?? "none")|\(latest.selectedCalmer)"
             let changed = key != routeKey
             if changed {
@@ -145,6 +162,54 @@ struct SeattleMap: UIViewRepresentable {
             routeKey = key; recenterID = latest.recenter
         }
 
+        private func clearRoutes(_ style: MLNStyle) {
+            for id in ["fastest-casing", "fastest", "calmer-casing", "calmer"] {
+                (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = nil
+                (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineOpacity = NSExpression(forConstantValue: 1.0)
+            }
+        }
+
+        /// Guidance draws the followed route, the destination and the puck, and keeps the map centred on the puck, north-up.
+        private func updateGuidance(_ g: Guidance, map: MLNMapView, style: MLNStyle) {
+            if !guiding {
+                guiding = true
+                map.removeAnnotations(endpoints + pinAnnotations)
+                endpoints = []; pinAnnotations = []; pinKey = ""; guidanceKey = ""; lastUser = nil
+                clearRoutes(style)
+                map.setCenter(CLLocationCoordinate2D(latitude: (g.user ?? g.coordinates[0]).lat, longitude: (g.user ?? g.coordinates[0]).lon), zoomLevel: 16, animated: false)
+            }
+            let key = "\(g.version)|\(g.calmer)"
+            if key != guidanceKey {
+                clearRoutes(style)
+                let prefix = g.calmer ? "calmer" : "fastest"
+                var coords = g.coordinates.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+                let line = coords.count > 1 ? MLNPolyline(coordinates: &coords, count: UInt(coords.count)) : nil
+                for id in [prefix, prefix + "-casing"] { (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = line }
+                map.removeAnnotations(guidanceAnnotations)
+                let end = MapDestination()
+                end.coordinate = CLLocationCoordinate2D(latitude: g.destination.lat, longitude: g.destination.lon)
+                guidanceAnnotations = [end]
+                map.addAnnotations(guidanceAnnotations)
+                guidanceKey = key
+            }
+            if let user = g.user, user != lastUser {
+                let point = CLLocationCoordinate2D(latitude: user.lat, longitude: user.lon)
+                if let puck { puck.coordinate = point } else {
+                    let new = MapPuck(); new.coordinate = point; puck = new; map.addAnnotation(new)
+                }
+                map.setCenter(point, animated: false)
+                lastUser = user
+            }
+        }
+
+        private func endGuidance(map: MLNMapView, style: MLNStyle) {
+            guiding = false
+            map.removeAnnotations(guidanceAnnotations + (puck.map { [$0] } ?? []))
+            guidanceAnnotations = []; puck = nil; lastUser = nil; guidanceKey = ""
+            clearRoutes(style)
+            routeKey = ""; focusKey = ""; pinKey = ""
+        }
+
         private func pinKey(_ s: SeattleMap) -> String { s.pins.map(\.id).joined(separator: ",") + "|" + (s.selected?.id ?? "") }
 
         func mapView(_ mapView: MLNMapView, didSelect annotation: MLNAnnotation) {
@@ -165,8 +230,9 @@ struct SeattleMap: UIViewRepresentable {
                 (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineColor = constant(color)
             }
             // Annotation views are drawn once, so re-add them to pick up the new colours.
-            map.removeAnnotations(labels + endpoints + pinAnnotations)
-            map.addAnnotations(labels + endpoints + pinAnnotations)
+            let extras: [MLNPointAnnotation] = guidanceAnnotations + (puck.map { [$0] } ?? [])
+            map.removeAnnotations(labels + endpoints + pinAnnotations + extras)
+            map.addAnnotations(labels + endpoints + pinAnnotations + extras)
         }
         private func constant(_ color: UIColor) -> NSExpression { NSExpression(forConstantValue: color.resolvedColor(with: traits)) }
 
@@ -196,6 +262,15 @@ struct SeattleMap: UIViewRepresentable {
                 view.layer.borderColor = UIColor.label.resolvedColor(with: traits).cgColor
                 view.layer.borderWidth = 4
                 view.layer.cornerRadius = 9
+            case is MapPuck:
+                view = MLNAnnotationView(reuseIdentifier: nil)
+                view.frame = CGRect(x: 0, y: 0, width: 22, height: 22)
+                view.backgroundColor = UIColor.systemBlue.resolvedColor(with: traits)
+                view.layer.borderColor = UIColor.white.cgColor
+                view.layer.borderWidth = 3.5
+                view.layer.cornerRadius = 11
+                view.layer.shadowColor = UIColor.black.cgColor
+                view.layer.shadowOpacity = 0.3; view.layer.shadowRadius = 3; view.layer.shadowOffset = CGSize(width: 0, height: 1)
             case is MapDestination:
                 view = MLNAnnotationView(reuseIdentifier: nil)
                 view.frame = CGRect(x: 0, y: 0, width: 22, height: 22)
@@ -243,4 +318,5 @@ private final class MapPin: MLNPointAnnotation {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 }
 private final class MapOrigin: MLNPointAnnotation {}
+private final class MapPuck: MLNPointAnnotation {}
 private final class MapDestination: MLNPointAnnotation {}

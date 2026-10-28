@@ -1,10 +1,10 @@
 import XCTest
 
 final class PeoplemapsUITests: XCTestCase {
-    @MainActor private func launch(slow: Bool = false) -> XCUIApplication {
+    @MainActor private func launch(slow: Bool = false, simulateRoute: Bool = false) -> XCUIApplication {
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
-        app.launchArguments = slow ? ["--ui-testing", "--slow-routing"] : ["--ui-testing"]
+        app.launchArguments = (slow ? ["--ui-testing", "--slow-routing"] : ["--ui-testing"]) + (simulateRoute ? ["--simulate-route"] : [])
         app.launch()
         XCTAssertTrue(app.buttons["featured-relation/1047789"].waitForExistence(timeout: 20))
         app.buttons["featured-relation/1047789"].tap()
@@ -43,6 +43,22 @@ final class PeoplemapsUITests: XCTestCase {
         capture("03-route-evidence", app: app)
         app.buttons["close-details"].tap()
         app.buttons["Drive"].tap()
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
+    }
+    @MainActor func testSimulatedGuidanceStartsAdvancesAndEnds() {
+        let app = launch(simulateRoute: true)
+        app.buttons["start-navigation"].tap()
+        let instruction = app.staticTexts["guidance-instruction"]
+        XCTAssertTrue(instruction.waitForExistence(timeout: 10))
+        let first = instruction.label
+        XCTAssertTrue(first.contains("Turn") || first.contains("Head"), first)
+        XCTAssertFalse(app.buttons["route-fastest"].exists)
+        capture("06-guidance", app: app)
+        let changed = NSPredicate { _, _ in instruction.exists && instruction.label != first }
+        let expectation = XCTNSPredicateExpectation(predicate: changed, object: nil)
+        XCTAssertEqual(XCTWaiter().wait(for: [expectation], timeout: 60), .completed, "Step text stayed '\(first)'")
+        capture("07-guidance-next-step", app: app)
+        app.buttons["end-navigation"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
     }
     @MainActor func testSearchEmptyCancelAndSelection() {
