@@ -3,7 +3,13 @@ import PeoplemapsCore
 
 private enum Sheet: String, Identifiable { case origin, destination, details, about; var id: String { rawValue } }
 
+private enum Screen: Equatable { case home, search, place(Place), preview }
+
 struct ExploreView: View {
+    static let gasWorks = "relation/1047789", kerryPark = "node/693337509"
+    /// Shown on Home and on the map, in this order.
+    static let featuredIDs = [gasWorks, "way/37058377", "way/160545994", kerryPark]
+
     let graph: StreetGraph
     @State private var session: RouteSession
     @State private var origin: Place
@@ -12,56 +18,66 @@ struct ExploreView: View {
     @State private var budget = 5
     @State private var selectedCalmer = true
     @State private var sheet: Sheet?
+    @State private var screen = Screen.home
+    @State private var query = ""
+    /// The origin the user chose last; a later Directions reuses it unless it is the new destination.
+    @State private var lastOrigin: Place?
+    @FocusState private var searchFocused: Bool
     @State private var recenter = 0
+    @State private var panelHeight: CGFloat = 0
+    @State private var contentHeight: CGFloat = 0
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
-    init(graph: StreetGraph) {
+    init(graph: StreetGraph, router: NativeRouter) {
         self.graph = graph
-        let router = NativeRouter(graph: graph)
         #if DEBUG
         let computing: any RouteComputing = ProcessInfo.processInfo.arguments.contains("--ui-testing") ? SlowTestRouter(base: router) : router
         #else
         let computing: any RouteComputing = router
         #endif
         _session = State(initialValue: RouteSession(router: computing))
-        _origin = State(initialValue: graph.places.first { $0.id == "node/693337509" } ?? graph.places[0])
-        _destination = State(initialValue: graph.places.first { $0.id == "relation/1047789" } ?? graph.places[1])
+        _origin = State(initialValue: graph.places.first { $0.id == Self.kerryPark } ?? graph.places[0])
+        _destination = State(initialValue: graph.places.first { $0.id == Self.gasWorks } ?? graph.places[1])
+    }
+
+    private var featured: [Place] { Self.featuredIDs.compactMap { id in graph.places.first { $0.id == id } } }
+    private var selectedPlace: Place? { if case let .place(place) = screen { place } else { nil } }
+    private var previewRequest: RouteRequest? { screen == .preview ? request : nil }
+
+    private func open(_ place: Place) { query = ""; screen = .place(place) }
+    private func openPin(_ id: String) { if let place = graph.places.first(where: { $0.id == id }) { open(place) } }
+
+    private func startDirections(to place: Place) {
+        let fallbackID = place.id == Self.kerryPark ? Self.gasWorks : Self.kerryPark
+        let from = lastOrigin.flatMap { $0.id == place.id ? nil : $0 } ?? graph.places.first { $0.id == fallbackID } ?? origin
+        origin = from; lastOrigin = from; destination = place
+        screen = .preview
     }
 
     private var request: RouteRequest { .init(origin: origin, destination: destination, mode: mode, extraMinutes: budget) }
+    /// Landscape on a phone: the panel becomes a floating card at the leading edge.
+    private var landscape: Bool { verticalSizeClass == .compact }
+    private let cardWidth: CGFloat = 330
+
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            ZStack(alignment: .bottom) {
-                SeattleMap(comparison: session.comparison, selectedCalmer: selectedCalmer, recenter: recenter)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Seattle offline map. Routes are also described below.")
-                VStack {
-                    HStack {
-                        Label("SEATTLE · OFFLINE", systemImage: "leaf")
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1)
-                            .padding(.horizontal, 12).padding(.vertical, 9).background(Palette.paper.opacity(0.94), in: Capsule())
-                        Spacer()
-                        Button { recenter += 1 } label: { Image(systemName: "viewfinder").font(.system(size: 18)).frame(width: 44, height: 44).background(Palette.paper, in: Circle()) }
-                            .accessibilityLabel("Fit routes on map").accessibilityIdentifier("recenter")
-                    }
-                    Spacer()
-                    HStack {
-                        Link("© OpenStreetMap contributors · ODbL", destination: URL(string: "https://www.openstreetmap.org/copyright")!)
-                            .font(.system(size: 10)).foregroundStyle(Palette.ink)
-                            .padding(6).background(Palette.paper.opacity(0.95), in: RoundedRectangle(cornerRadius: 5))
-                        Spacer()
-                    }
-                }.padding(12)
-            }.frame(minHeight: 150)
-            comparisonPanel
+        GeometryReader { geo in
+            ZStack {
+                SeattleMap(comparison: screen == .preview ? session.comparison : nil, selectedCalmer: selectedCalmer, recenter: recenter, pins: screen == .preview ? [] : featured,
+                           selected: selectedPlace, onPin: openPin, padding: mapPadding(geo))
+                    .ignoresSafeArea()
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel(screen == .preview ? "Seattle offline map. Routes are also described in the panel." : "Seattle offline map")
+                if landscape { landscapeLayout(geo) } else { portraitLayout(geo) }
+            }
         }
-        .background(Palette.paper).foregroundStyle(Palette.ink)
-        .task(id: request) { selectedCalmer = true; session.start(request) }
+        .task(id: previewRequest) {
+            if let previewRequest { selectedCalmer = true; session.start(previewRequest) } else { session.cancel() }
+        }
         .onDisappear { session.cancel() }
         .sheet(item: $sheet) { item in
             switch item {
             case .origin:
-                PlacePicker(title: "Starting from", graph: graph, selected: origin) { origin = $0 }
+                PlacePicker(title: "Starting from", graph: graph, selected: origin) { origin = $0; lastOrigin = $0 }
             case .destination:
                 PlacePicker(title: "Going to", graph: graph, selected: destination) { destination = $0 }
             case .details:
@@ -72,147 +88,330 @@ struct ExploreView: View {
         }
     }
 
-    private var header: some View {
-        VStack(spacing: 14) {
-            HStack(alignment: .center) {
+    /// Keeps fitted routes clear of the panel, the map buttons and the attribution.
+    private func mapPadding(_ geo: GeometryProxy) -> UIEdgeInsets {
+        let safe = geo.safeAreaInsets
+        if screen == .home {
+            // Home frames the featured places: clear of the panel and the map buttons, 48 pt elsewhere.
+            if landscape { return UIEdgeInsets(top: safe.top + 48, left: safe.leading + 12 + cardWidth + 24, bottom: safe.bottom + 48, right: safe.trailing + 16 + 44 + 24) }
+            return UIEdgeInsets(top: safe.top + 48, left: 48, bottom: safe.bottom + panelHeight + 24, right: 16 + 44 + 24)
+        }
+        if landscape {
+            return UIEdgeInsets(top: safe.top + 24, left: safe.leading + 12 + cardWidth + 32, bottom: safe.bottom + 36, right: safe.trailing + 16 + 44 + 24)
+        }
+        return UIEdgeInsets(top: safe.top + 24, left: 32, bottom: safe.bottom + panelHeight + 40, right: 16 + 44 + 16)
+    }
+
+    private func portraitLayout(_ geo: GeometryProxy) -> some View {
+        VStack(spacing: 0) {
+            HStack { Spacer(); if screen != .search { mapButtons } }.padding(.horizontal, 16).padding(.top, 8)
+            Spacer(minLength: 0)
+            if screen != .search { HStack { attribution; Spacer() }.padding(.horizontal, 12).padding(.bottom, 8) }
+            VStack(spacing: 0) {
+                Capsule().fill(Color(uiColor: .systemGray3)).frame(width: 36, height: 5).padding(.top, 6).padding(.bottom, 8)
+                    .accessibilityHidden(true)
+                if screen == .search {
+                    searchPanel.frame(height: geo.size.height * 0.9 - 19)
+                } else {
+                    scrollingContent(maxHeight: geo.size.height * 0.6)
+                }
+            }
+            .background {
+                UnevenRoundedRectangle(topLeadingRadius: 14, topTrailingRadius: 14).fill(.panel)
+                    .shadow(color: .black.opacity(0.08), radius: 12, y: -1).ignoresSafeArea(edges: .bottom)
+            }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if screen != .search { panelHeight = $0 } }
+        }
+    }
+
+    private func landscapeLayout(_ geo: GeometryProxy) -> some View {
+        HStack(alignment: .top, spacing: 0) {
+            // The card may run into the bottom safe area: the home indicator sits clear of it, at the screen's centre.
+            Group {
+                if screen == .search { searchPanel.frame(height: geo.size.height + geo.safeAreaInsets.bottom - 24) }
+                else { scrollingContent(maxHeight: geo.size.height + geo.safeAreaInsets.bottom - 24) }
+            }
+                .background(.panel, in: RoundedRectangle(cornerRadius: 14))
+                .shadow(color: .black.opacity(0.14), radius: 16, y: 2)
+                .frame(width: cardWidth)
+                .padding(.vertical, 12).padding(.leading, 12)
+            Spacer(minLength: 16)
+            VStack(alignment: .trailing) {
+                mapButtons
+                Spacer()
+                attribution
+            }.padding(.vertical, 12).padding(.trailing, 16)
+        }.ignoresSafeArea(.container, edges: .bottom)
+    }
+
+    /// Sizes itself to the content and scrolls only once the content is taller than `maxHeight`.
+    private func scrollingContent(maxHeight: CGFloat) -> some View {
+        ScrollView {
+            panelContent
+                .padding(.horizontal, landscape ? 12 : 16)
+                .padding(.top, landscape ? 12 : 0).padding(.bottom, 4)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .frame(height: min(contentHeight, maxHeight))
+    }
+
+    private var mapButtons: some View {
+        VStack(spacing: 0) {
+            Button { sheet = .about } label: { Image(systemName: "info.circle").frame(width: 44, height: 44) }
+                .accessibilityLabel("About Peoplemaps").accessibilityIdentifier("about")
+            Divider().frame(width: 44)
+            Button { recenter += 1 } label: { Image(systemName: "viewfinder").frame(width: 44, height: 44) }
+                .accessibilityLabel(screen == .preview ? "Fit routes on map" : "Fit map to Seattle").accessibilityIdentifier("recenter")
+        }
+        .font(.system(size: 19)).foregroundStyle(.primary)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .shadow(color: .black.opacity(0.12), radius: 8, y: 1)
+    }
+
+    private var attribution: some View {
+        Link("© OpenStreetMap", destination: URL(string: "https://www.openstreetmap.org/copyright")!)
+            .font(.caption2).foregroundStyle(.secondary)
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 4))
+            .accessibilityLabel("Map data © OpenStreetMap contributors")
+    }
+
+    @ViewBuilder private var panelContent: some View {
+        switch screen {
+        case .home: homeContent
+        case .search: EmptyView()
+        case let .place(place): placeContent(place)
+        case .preview: previewContent
+        }
+    }
+
+    // MARK: Home
+
+    private var homeContent: some View {
+        VStack(alignment: .leading, spacing: landscape ? 10 : 14) {
+            Button { screen = .search } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "point.topleft.down.to.point.bottomright.curvepath").font(.system(size: 25, weight: .medium)).foregroundStyle(Palette.forest)
-                    Text("Peoplemaps").font(.system(size: 27, weight: .semibold, design: .rounded)).tracking(-1)
+                    Image(systemName: "magnifyingglass")
+                    Text("Search places")
+                    Spacer(minLength: 0)
                 }
-                Spacer()
-                Button { sheet = .about } label: { Image(systemName: "info.circle").font(.system(size: 21)).frame(width: 44, height: 44) }
-                    .accessibilityLabel("About this prototype").accessibilityIdentifier("about")
+                .font(.body).foregroundStyle(.secondary).padding(.horizontal, 12).frame(height: 44)
+                .background(.panelFill, in: RoundedRectangle(cornerRadius: 12)).contentShape(Rectangle())
+            }.buttonStyle(.plain).accessibilityLabel("Search places").accessibilityIdentifier("search-field")
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Featured places").font(.footnote).textCase(.uppercase).foregroundStyle(.secondary).padding(.leading, 16)
+                PlaceList(places: featured, minHeight: landscape ? 46 : 52, identifier: { "featured-\($0.id)" }, action: open)
             }
-            HStack(spacing: 12) {
-                VStack(spacing: 0) {
-                    placeButton(place: origin, label: "FROM", symbol: "circle", target: .origin)
-                    Rectangle().fill(Palette.line).frame(height: 1).padding(.leading, 30)
-                    placeButton(place: destination, label: "TO", symbol: "mappin", target: .destination)
-                }
-                Button {
-                    let previous = origin; origin = destination; destination = previous
-                } label: { Image(systemName: "arrow.up.arrow.down").font(.system(size: 18, weight: .medium)).frame(width: 44, height: 64) }
-                    .accessibilityLabel("Swap start and destination").accessibilityIdentifier("swap")
-            }.padding(.horizontal, 12).background(.white.opacity(0.76), in: RoundedRectangle(cornerRadius: 18))
-            HStack {
-                ForEach(TravelMode.allCases) { travelMode in
-                    Button { mode = travelMode } label: {
-                        Label(travelMode.title, systemImage: travelMode.icon).font(.subheadline.weight(.semibold))
-                            .frame(maxWidth: .infinity).padding(.vertical, 10)
-                            .background(mode == travelMode ? Palette.forest : Color.clear, in: Capsule())
-                            .foregroundStyle(mode == travelMode ? .white : Palette.muted)
-                    }.accessibilityIdentifier("mode-\(travelMode.rawValue)")
-                        .accessibilityAddTraits(mode == travelMode ? .isSelected : [])
-                }
-            }.padding(3).background(Palette.line.opacity(0.5), in: Capsule())
-        }.padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 14)
+        }
     }
 
-    private func placeButton(place: Place, label: String, symbol: String, target: Sheet) -> some View {
-        Button { sheet = target } label: {
+    // MARK: Search
+
+    private var results: [Place] { query.isEmpty ? featured : Array(graph.search(query).prefix(60)) }
+
+    private var searchPanel: some View {
+        VStack(spacing: 0) {
             HStack(spacing: 12) {
-                Image(systemName: symbol).font(.system(size: 16, weight: .medium)).frame(width: 18)
+                SearchField(text: $query, focused: $searchFocused)
+                Button("Cancel") { query = ""; screen = .home }.font(.body).accessibilityIdentifier("cancel-search-home")
+            }.padding(.horizontal, landscape ? 12 : 16).padding(.top, landscape ? 12 : 4).padding(.bottom, 12)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    if results.isEmpty {
+                        EmptySearch(count: graph.places.count).padding(.top, 48)
+                    } else {
+                        resultGroup(query.isEmpty ? "Featured places" : "Top match", Array(results.prefix(query.isEmpty ? results.count : 1)))
+                        if !query.isEmpty && results.count > 1 { resultGroup("Other matches", Array(results.dropFirst())) }
+                    }
+                }.padding(.horizontal, landscape ? 12 : 16).padding(.bottom, 16)
+            }
+            .scrollDismissesKeyboard(.interactively).scrollBounceBehavior(.basedOnSize)
+        }
+        .task { searchFocused = true }
+    }
+
+    private func resultGroup(_ title: String, _ places: [Place]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.footnote).textCase(.uppercase).foregroundStyle(.secondary).padding(.leading, 16)
+            PlaceList(places: places, query: query, identifier: { "result-\($0.id)" }, action: open)
+        }
+    }
+
+    // MARK: Place card
+
+    private func placeContent(_ place: Place) -> some View {
+        VStack(alignment: .leading, spacing: landscape ? 10 : 16) {
+            HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(label).font(.system(size: 9, weight: .bold, design: .monospaced)).foregroundStyle(Palette.muted).tracking(1)
-                    Text(place.shortName).font(.system(size: 15, weight: .medium)).lineLimit(1)
-                }
+                    Text(place.shortName).font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
+                    Text(place.subtitle).font(.subheadline).foregroundStyle(.secondary)
+                }.padding(.top, 4)
                 Spacer(minLength: 0)
-            }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 11).contentShape(Rectangle())
-        }.buttonStyle(.plain).accessibilityLabel("\(label == "FROM" ? "Starting from" : "Going to"), \(place.shortName)")
-            .accessibilityIdentifier("choose-\(target.rawValue)")
+                closeButton(label: "Close", id: "close-place") { screen = .home }
+            }
+            Button { startDirections(to: place) } label: {
+                Label("Directions", systemImage: "arrow.right").font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity).frame(height: 50)
+                    .foregroundStyle(.directionsText).background(.directionsFill, in: RoundedRectangle(cornerRadius: 12))
+                    .contentShape(Rectangle())
+            }.buttonStyle(.plain).accessibilityIdentifier("directions")
+            Text("Compares the fastest route with a calmer one. Works offline.").font(.footnote).foregroundStyle(.secondary).padding(.horizontal, 4)
+        }
     }
 
-    private var comparisonPanel: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("A little less rush.").font(.system(size: 21, weight: .semibold, design: .rounded))
-                    Text("How much extra time feels right?").font(.system(size: 12)).foregroundStyle(Palette.muted)
-                }
-                Spacer()
-                Text("UP TO +\(budget) MIN").font(.system(size: 10, weight: .bold, design: .monospaced)).foregroundStyle(Palette.forest)
-                    .accessibilityIdentifier("budget-label")
-            }
-            HStack(spacing: 8) {
-                ForEach([0, 2, 5, 10], id: \.self) { value in
-                    Button { budget = value } label: {
-                        Text(value == 0 ? "No extra" : "+\(value) min").font(.system(size: 13, weight: .medium))
-                            .frame(maxWidth: .infinity).padding(.vertical, 10)
-                            .background(budget == value ? Palette.forest.opacity(0.12) : .white, in: Capsule())
-                            .overlay(Capsule().stroke(budget == value ? Palette.forest : Palette.line, lineWidth: 1))
-                    }.accessibilityIdentifier("budget-\(value)").accessibilityAddTraits(budget == value ? .isSelected : [])
-                }
+    private func closeButton(label: String, id: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: "xmark").font(.system(size: 12, weight: .bold)).foregroundStyle(.secondary)
+                .frame(width: 30, height: 30).background(Color(uiColor: .tertiarySystemFill), in: Circle())
+                .frame(width: 44, height: 44).contentShape(Rectangle())
+        }.buttonStyle(.plain).accessibilityLabel(label).accessibilityIdentifier(id)
+    }
+
+    // MARK: Route preview
+
+    private var previewContent: some View {
+        VStack(alignment: .leading, spacing: landscape ? 8 : 14) {
+            HStack { Spacer(); closeButton(label: "Close routes", id: "close-preview") { screen = .home } }.frame(height: 30)
+            places
+            Picker("Travel mode", selection: $mode) {
+                ForEach(TravelMode.allCases) { Text($0.title).tag($0) }
+            }.pickerStyle(.segmented)
+            VStack(alignment: .leading, spacing: landscape ? 4 : 6) {
+                Text("Extra time you'd spend for an easier route").font(.footnote).foregroundStyle(.secondary)
+                Picker("Extra time", selection: $budget) {
+                    ForEach([0, 2, 5, 10], id: \.self) { Text($0 == 0 ? "None" : "\($0) min").tag($0) }
+                }.pickerStyle(.segmented)
             }
             stateContent
-            Text("Estimates only · no live traffic · route comparison, not navigation")
-                .font(.system(size: 10)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
-        }.padding(.horizontal, 20).padding(.top, 18).padding(.bottom, 8)
-            .background(Palette.paper)
+        }
+    }
+
+    private var places: some View {
+        HStack(spacing: 4) {
+            VStack(spacing: 0) {
+                placeButton(place: origin, target: .origin)
+                Divider().padding(.leading, 26)
+                placeButton(place: destination, target: .destination)
+            }
+            Button {
+                let previous = origin; origin = destination; destination = previous
+            } label: { Image(systemName: "arrow.up.arrow.down").font(.body).foregroundStyle(.secondary).frame(width: 44, height: 44).contentShape(Rectangle()) }
+                .buttonStyle(.plain).accessibilityLabel("Swap start and destination").accessibilityIdentifier("swap")
+        }
+        .padding(.leading, 14).padding(.trailing, 4)
+        .background(.panelFill, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func placeButton(place: Place, target: Sheet) -> some View {
+        let origin = target == .origin
+        return Button { sheet = target } label: {
+            HStack(spacing: 12) {
+                Group {
+                    if origin { Circle().strokeBorder(.primary, lineWidth: 2.5) } else { Circle().fill(.calmer) }
+                }.frame(width: 14, height: 14)
+                Text(place.shortName).font(.body).foregroundStyle(.primary).lineLimit(1)
+                Spacer(minLength: 0)
+            }.frame(minHeight: landscape ? 40 : 44).contentShape(Rectangle())
+        }.buttonStyle(.plain)
+            .accessibilityLabel("\(origin ? "Starting from" : "Going to"), \(place.shortName)")
+            .accessibilityIdentifier("choose-\(target.rawValue)")
     }
 
     @ViewBuilder private var stateContent: some View {
         switch session.state {
         case .idle, .loading:
-            HStack {
-                ProgressView().padding(.trailing, 8)
-                Text("Comparing Seattle streets…").font(.subheadline)
-                Spacer()
-                Button("Cancel") { session.cancel() }.font(.subheadline).accessibilityIdentifier("cancel-route")
-            }.frame(height: 112)
+            card {
+                HStack(spacing: 12) {
+                    ProgressView()
+                    Text("Comparing Seattle streets…").font(.subheadline).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Cancel") { session.cancel() }.font(.subheadline).accessibilityIdentifier("cancel-route")
+                }.padding(.horizontal, 14).frame(minHeight: routeListHeight)
+            }
         case .cancelled:
             status(title: "Comparison paused", message: "Your places are still here.", button: "Compare routes")
         case let .failed(message):
             status(title: "Try another route", message: message, button: "Try again")
         case let .ready(comparison):
-            HStack(spacing: 10) {
-                routeCard(comparison.fastest, title: "Fastest estimate", detail: "Baseline", selected: !selectedCalmer || comparison.calmer == nil, calmer: false)
+            card {
                 if let calmer = comparison.calmer {
-                    routeCard(calmer, title: "Calmer candidate", detail: comparison.extraTimeLabel, selected: selectedCalmer, calmer: true)
+                    routeRow(calmer, title: "Calmer", detail: summary(comparison), selected: selectedCalmer, calmer: true)
                 } else {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Image(systemName: "equal.circle").font(.title3)
-                        Text("One good option").font(.system(size: 14, weight: .semibold))
-                        Text("No lower-cost alternative\nwithin this budget.").font(.system(size: 11)).foregroundStyle(Palette.muted)
-                    }.frame(maxWidth: .infinity, alignment: .leading).padding(12).frame(minHeight: 105)
-                        .background(.white.opacity(0.5), in: RoundedRectangle(cornerRadius: 16)).accessibilityIdentifier("no-alternative")
+                    HStack(spacing: 12) {
+                        Image(systemName: "equal.circle").font(.title3).foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("No calmer route").font(.headline)
+                            Text("Nothing easier within this extra time.").font(.footnote).foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                    }.padding(.horizontal, 14).padding(.vertical, 10).frame(minHeight: rowHeight)
+                        .accessibilityElement(children: .combine).accessibilityIdentifier("no-alternative")
                 }
+                Divider().padding(.leading, 30)
+                routeRow(comparison.fastest, title: "Fastest", detail: "Estimate, no live traffic", selected: !selectedCalmer || comparison.calmer == nil, calmer: false)
             }
             Button { sheet = .details } label: {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "text.bubble").font(.system(size: 14)).padding(.top, 1)
-                    Text(comparison.reasons.first ?? "See what changed").font(.system(size: 12)).multilineTextAlignment(.leading).lineLimit(2)
-                    Spacer(minLength: 0)
-                    Image(systemName: "arrow.up.right").font(.system(size: 13)).padding(.top, 2)
-                }.frame(maxWidth: .infinity, alignment: .leading).frame(minHeight: 35)
-            }.buttonStyle(.plain).accessibilityLabel("Why these routes. \(comparison.reasons.first ?? "")").accessibilityIdentifier("route-details")
+                HStack {
+                    Text("Why this route").font(.subheadline).foregroundStyle(.calmerText)
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                }.frame(minHeight: landscape ? 32 : 44).contentShape(Rectangle())
+            }.buttonStyle(.plain)
+                .accessibilityLabel("Why this route")
+                .accessibilityHint(summary(comparison))
+                .accessibilityIdentifier("route-details")
         }
     }
 
-    private func routeCard(_ route: Route, title: String, detail: String, selected: Bool, calmer: Bool) -> some View {
+    private var rowHeight: CGFloat { landscape ? 50 : 60 }
+    private var routeListHeight: CGFloat { rowHeight * 2 + 1 }
+
+    /// The main benefit, then what it costs in time.
+    private func summary(_ comparison: RouteComparison) -> String {
+        [comparison.reasons.first, comparison.extraTimeLabel].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(spacing: 0, content: content)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.panelFill, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func routeRow(_ route: Route, title: String, detail: String, selected: Bool, calmer: Bool) -> some View {
         Button { selectedCalmer = calmer } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 5) {
-                    Circle().fill(calmer ? Palette.forest : Color.gray).frame(width: 6, height: 6)
-                    Text(title).font(.system(size: 11, weight: .semibold))
-                    Spacer(minLength: 0)
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 2).fill(calmer ? Color.calmer : Color.fastest).frame(width: 4)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(title).font(.headline).foregroundStyle(.primary)
+                        Text("\(route.duration) · \(route.distance)").font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    Text(detail).font(.footnote).foregroundStyle(calmer ? Color.calmerText : Color.secondary)
+                        .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
                 }
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(route.duration).font(.system(size: 25, weight: .semibold, design: .rounded)).tracking(-0.5)
-                    Text(route.distance).font(.system(size: 10)).foregroundStyle(Palette.muted)
+                Spacer(minLength: 0)
+                if selected {
+                    Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(calmer ? Color.calmer : Color.fastest)
                 }
-                Text(detail).font(.system(size: 11, weight: .medium)).foregroundStyle(Palette.muted)
-            }.frame(maxWidth: .infinity, alignment: .leading).padding(12).frame(minHeight: 105)
-                .background(selected ? Palette.forest.opacity(0.07) : .white, in: RoundedRectangle(cornerRadius: 16))
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(selected ? Palette.forest : Palette.line, lineWidth: selected ? 1.5 : 1))
-        }.buttonStyle(.plain).accessibilityIdentifier(calmer ? "route-calmer" : "route-fastest")
+            }
+            .padding(.horizontal, 14).padding(.vertical, landscape ? 6 : 10)
+            .frame(minHeight: rowHeight).contentShape(Rectangle())
+        }.buttonStyle(.plain)
+            .accessibilityLabel("\(title) route, \(route.duration), \(route.distance). \(detail)")
+            .accessibilityIdentifier(calmer ? "route-calmer" : "route-fastest")
             .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private func status(title: String, message: String, button: String) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text(title).font(.headline)
-            Text(message).font(.system(size: 12)).foregroundStyle(Palette.muted)
-            Button(button) { session.start(request) }.font(.subheadline.weight(.semibold)).accessibilityIdentifier("retry-route")
-        }.frame(maxWidth: .infinity, alignment: .leading).frame(minHeight: 112)
+        card {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title).font(.headline)
+                Text(message).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Button(button) { session.start(request) }.font(.subheadline.weight(.semibold)).padding(.top, 2)
+                    .accessibilityIdentifier("retry-route")
+            }.padding(14).frame(maxWidth: .infinity, minHeight: routeListHeight, alignment: .leading)
+        }
     }
 }

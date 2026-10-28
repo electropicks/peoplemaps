@@ -4,51 +4,87 @@ import PeoplemapsCore
 struct RouteDetails: View {
     let comparison: RouteComparison
     @Environment(\.dismiss) private var dismiss
+    private var rows: [Factor] {
+        let routes = [comparison.fastest, comparison.calmer].compactMap { $0 }
+        return Factor.allCases.filter { f in !f.isUnknown && routes.contains { $0.metrics.breakdown[f].amount > 0 } }
+            .sorted { comparison.fastest.metrics.breakdown[$0].cost > comparison.fastest.metrics.breakdown[$1].cost }
+    }
     var body: some View {
         NavigationStack {
             List {
-                Section("Why this choice") {
-                    ForEach(comparison.reasons, id: \.self) { Text($0).font(.subheadline) }
-                    Text("The extra-time limit is applied to unrounded estimates. \(comparison.candidateCount) distinct candidates were found; the search does not guarantee the best possible calmer route.")
-                        .font(.caption).foregroundStyle(Palette.muted)
+                Section {
+                    ForEach(comparison.reasons, id: \.self) { reason in
+                        let tradeoff = reason.hasPrefix("Tradeoff: ")
+                        Label {
+                            Text(tradeoff ? "Costs you " + reason.dropFirst("Tradeoff: ".count) : reason)
+                                .foregroundStyle(tradeoff ? .secondary : .primary)
+                        } icon: {
+                            Image(systemName: tradeoff ? "minus" : "checkmark").fontWeight(.semibold)
+                                .foregroundStyle(tradeoff ? Color.secondary : Color.calmer)
+                        }
+                    }
+                } header: {
+                    Text(comparison.calmer == nil ? "Why one route" : "Why the calmer route")
+                } footer: {
+                    Text("The extra-time limit is applied to unrounded estimates. \(comparison.candidateCount) distinct candidates were compared; the search does not guarantee the calmest possible route.")
                 }
-                Section("What the data says") {
-                    metricsRow("Estimated time", comparison.fastest.duration, comparison.calmer?.duration)
+                Section {
+                    metricsRow("Time", comparison.fastest.duration, comparison.calmer?.duration)
                     metricsRow("Distance", comparison.fastest.distance, comparison.calmer?.distance)
-                    metricsRow("Turns", "\(comparison.fastest.metrics.turns)", comparison.calmer.map { "\($0.metrics.turns)" })
-                    if comparison.request.mode == .drive {
-                        metricsRow("Arterial left turns", "\(comparison.fastest.metrics.arterialLefts)", comparison.calmer.map { "\($0.metrics.arterialLefts)" })
-                        metricsRow("Highway entries", "\(comparison.fastest.metrics.highwayEntries)", comparison.calmer.map { "\($0.metrics.highwayEntries)" })
-                    } else {
-                        metricsRow("Cycleway / track tags", percent(comparison.fastest.metrics.cycleTrackMeters, of: comparison.fastest), comparison.calmer.map { percent($0.metrics.cycleTrackMeters, of: $0) })
-                        metricsRow("Surface unknown", percent(comparison.fastest.metrics.unknownSurfaceMeters, of: comparison.fastest), comparison.calmer.map { percent($0.metrics.unknownSurfaceMeters, of: $0) })
-                        metricsRow("Grade unknown", percent(comparison.fastest.metrics.unknownGradeMeters, of: comparison.fastest), comparison.calmer.map { percent($0.metrics.unknownGradeMeters, of: $0) })
+                    ForEach(rows, id: \.self) { f in
+                        metricsRow(f.title, f.formatted(comparison.fastest.metrics.breakdown[f].amount),
+                                   comparison.calmer.map { f.formatted($0.metrics.breakdown[f].amount) })
                     }
-                    Text("Left column: fastest estimate. Right column: calmer candidate.").font(.caption).foregroundStyle(Palette.muted)
-                }
-                Section("Read this before relying on a route") {
-                    Text("This is a route-comparison prototype, not turn-by-turn navigation. No route is labeled safe.")
-                    Text("Times use assumed speeds and junction delays. They do not include live traffic, closures, parking, signal timing, or verified travel times.")
-                    Text(comparison.request.mode == .drive ? "Left-turn protection, merge difficulty, and the length of a highway visit are not verified. Highway-entry and turn counts are limited proxies." : "Cycleway/track tags are not a physical inspection of separation. Surface tags are incomplete. Grade is reported as coverage only and is not scored; no elevation model is bundled.")
-                    Text("Routes begin and end at nearby nodes on the main connected network: \(Int(comparison.originSnapMeters.rounded())) m from the start place and \(Int(comparison.destinationSnapMeters.rounded())) m from the destination. These gaps are not routed or included in time. Pins mark the route endpoints, not verified entrances.")
-                    Text("There is no background location tracking or automatic rerouting. Comparisons change only when you edit the places, mode, or time budget.")
-                }.font(.subheadline)
-                Section("Streets in the selected candidates") {
-                    Text("FASTEST").font(.caption.weight(.bold)).foregroundStyle(Palette.muted)
-                    Text(comparison.fastest.streetNames.joined(separator: " → ")).font(.subheadline)
-                    if let calmer = comparison.calmer {
-                        Text("CALMER").font(.caption.weight(.bold)).foregroundStyle(Palette.forest)
-                        Text(calmer.streetNames.joined(separator: " → ")).font(.subheadline)
+                } header: {
+                    HStack {
+                        Text("What each route asks")
+                        Spacer()
+                        Text("Fastest").frame(minWidth: 64, alignment: .trailing)
+                        Text("Calmer").frame(minWidth: 64, alignment: .trailing)
                     }
+                } footer: {
+                    Text("Ordered by how much each adds to the fastest route's stress.")
                 }
-            }.scrollContentBackground(.hidden).background(Palette.paper)
+                Section("Good to know") {
+                    Text("This is a route-comparison prototype, not turn-by-turn navigation. No route is labeled safe; \"calmer\" means fewer of the things listed above.")
+                    Text("Times use assumed speeds, hills and junction delays. They do not include live traffic, closures, parking, signal timing, or verified travel times.")
+                    Text(modeNote)
+                    Text("Hills come from a 5 m USGS ground model; bridges and tunnels are interpolated between their ends.")
+                    ForEach(comparison.caveats, id: \.self) { Text("Unknown in the map: \($0)") }
+                    Text("Routes begin and end at nearby points on the main connected network: \(Int(comparison.originSnapMeters.rounded())) m from the start place and \(Int(comparison.destinationSnapMeters.rounded())) m from the destination. These gaps are not routed or included in time.")
+                }.font(.subheadline).foregroundStyle(.secondary)
+                Section("Streets") {
+                    streets("Fastest", comparison.fastest, color: .fastest)
+                    if let calmer = comparison.calmer { streets("Calmer", calmer, color: .calmer) }
+                }
+            }.listStyle(.insetGrouped)
                 .navigationTitle("Behind the routes").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.accessibilityIdentifier("close-details") } }
+        }.presentationDetents([.medium, .large])
+    }
+    private var modeNote: String {
+        switch comparison.request.mode {
+        case .drive: "Signals, stop signs and turn lanes come from the map; turn-arrow phases and merge difficulty do not. Stop-and-go counts signs and signals only, not traffic queues."
+        case .bike: "Bike lane and track tags are not a physical inspection of separation. Traffic stress is estimated from lanes, speed limits and bike facilities."
+        case .walk: "Crossings use their mapped markings and signals. Sidewalk condition, lighting and curb ramps are not checked."
         }
     }
-    private func percent(_ value: Double, of route: Route) -> String { "\(Int((value / max(1, route.metrics.meters) * 100).rounded()))%" }
     private func metricsRow(_ name: String, _ fastest: String, _ calmer: String?) -> some View {
-        HStack { Text(name).font(.subheadline); Spacer(); Text(fastest).font(.subheadline.monospacedDigit()).foregroundStyle(Palette.muted); Text(calmer ?? "—").font(.subheadline.monospacedDigit()).foregroundStyle(Palette.forest).frame(minWidth: 70, alignment: .trailing) }
+        HStack {
+            Text(name)
+            Spacer()
+            Text(fastest).foregroundStyle(.secondary).frame(minWidth: 64, alignment: .trailing)
+            Text(calmer ?? "—").fontWeight(.semibold).foregroundStyle(.calmerText).frame(minWidth: 64, alignment: .trailing)
+        }.font(.subheadline.monospacedDigit())
+    }
+    private func streets(_ title: String, _ route: Route, color: Color) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 4)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.subheadline.weight(.semibold))
+                Text(route.streetNames.joined(separator: " → ")).font(.subheadline).foregroundStyle(.secondary)
+            }
+        }
     }
 }
 
@@ -60,22 +96,22 @@ struct AboutView: View {
             List {
                 Section("A map with room for people") {
                     Text("Choose a little more time when a route asks less of you. No sponsored ranking. Clear reasons. Your time budget.")
-                    Text("Peoplemaps is a working name for a Seattle proof of concept.").font(.caption).foregroundStyle(Palette.muted)
+                    Text("Peoplemaps is a working name for a Seattle proof of concept.").font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("Open foundations") {
                     Text("Native SwiftUI · MapLibre Native · OpenStreetMap")
-                    Text("\(graph.places.count) places and \(graph.edges.count.formatted()) directed road segments are bundled. Routing and comfort costs run entirely on this device. No account or location permission is needed.")
+                    Text("\(graph.places.count) places and \(graph.edges.count.formatted()) directed street and path segments are bundled, with USGS elevation. Routing runs entirely on this device. No account or location permission is needed.")
                     Link("OpenStreetMap contributors · ODbL 1.0", destination: URL(string: "https://www.openstreetmap.org/copyright")!)
                     Link("MapLibre Native · BSD 2-Clause", destination: URL(string: "https://github.com/maplibre/maplibre-native")!)
                 }
                 Section("Seattle, with boundaries") {
                     Text("Snapshot: 11 October 2026. Coverage: north of Denny Way through southern Green Lake, from east Ballard to the University District. Map detail stops at the extract boundary.")
                     Text("Missing restrictions, conditional access, temporary closures, and entrances can affect feasibility. Unsupported turn-restriction forms are conservatively excluded. This prototype has not been field validated.")
-                    Text("Driving favors fewer turns, fewer arterial lefts, fewer highway entries, and less residential shortcutting. Cycling favors cycleway/track tags and quieter road classes. These are transparent preferences, not safety ratings.")
+                    Text("Driving avoids lefts and crossings without a signal, stop-and-go, confusing junctions and hill starts. Cycling avoids riding in traffic, busy crossings and climbs. Walking avoids unmarked crossings of busy streets, missing sidewalks and hills. These are transparent preferences, not safety ratings.")
                 }
-            }.scrollContentBackground(.hidden).background(Palette.paper)
+            }.listStyle(.insetGrouped)
                 .navigationTitle("About Peoplemaps").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-        }
+        }.presentationDetents([.medium, .large])
     }
 }
