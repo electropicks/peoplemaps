@@ -12,3 +12,4 @@ Evidence/*.mp4
 Evidence/ui-attachments*/
 Evidence/ui-test-results.json
 __pycache__/
+Spikes/
