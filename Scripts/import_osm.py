@@ -452,7 +452,8 @@ def main():
         places.append({'id':f'{typ}/{i}','name':name,'lat':round(c[1],7),'lon':round(c[0],7),'category':category})
     places.sort(key=lambda p:p['name'].casefold())
     graph={'schemaVersion':2,'bounds':BBOX,'names':list(names),'nodes':nodes,'segments':segments,'restrictions':mapped,'places':places}
-    (OUT/'seattle-graph.json').write_text(json.dumps(graph,separators=(',',':'))+'\n')
+    # Shipped gzipped (39 MB -> ~5 MB installed); mtime=0 keeps the archive byte-for-byte reproducible.
+    (OUT/'seattle-graph.json.gz').write_bytes(gzip.compress((json.dumps(graph,separators=(',',':'))+'\n').encode(),compresslevel=9,mtime=0))
     (OUT/'seattle-map.geojson').write_text(json.dumps({'type':'FeatureCollection','features':features},separators=(',',':'))+'\n')
     directed={mode:sum(mode in s.get(k,{}).get('modes',[]) for s in segments for k in 'fr') for mode in MODES}
     report={'sources':sources,'bounds':BBOX,'nodes':len(nodes),'segments':len(segments),'directedEdgesByMode':directed,
