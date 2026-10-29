@@ -94,7 +94,7 @@ class SearchIndexTests(unittest.TestCase):
     def test_dedupe_within_50m_and_graph_places_win(self):
         graph = [{'id':'way/1','name':'Gas Works Park','lat':47.6456,'lon':-122.3344,'category':'park'}]
         elements = [
-            {'type':'way','id':1,'center':{'lat':47.6460,'lon':-122.3340},'tags':{'name':'Gas Works Park','leisure':'park','addr:housenumber':'2101','addr:street':'North Northlake Way'}},
+            {'type':'way','id':1,'center':{'lat':47.6460,'lon':-122.3340},'tags':{'name':'Gas Works Park','leisure':'park','wikidata':'Q5526323','addr:housenumber':'2101','addr:street':'North Northlake Way'}},
             self.node(2, 47.6500, -122.3500, name='Cafe Ladro', amenity='cafe'),
             self.node(3, 47.6502, -122.3501, name='Café Ladro', amenity='cafe'),     # ~25 m: same place
             self.node(4, 47.6600, -122.3500, name='Cafe Ladro', amenity='cafe'),     # ~1 km: another branch
@@ -107,6 +107,7 @@ class SearchIndexTests(unittest.TestCase):
         places = [(e['osm'], e['name']) for e in entries if e['kind']=='place']
         self.assertEqual(places[0], ('way/1','Gas Works Park'))
         self.assertEqual(entries[0]['address'], '2101 North Northlake Way')
+        self.assertEqual(entries[0]['weight'], 95)  # park, plus the notability bonus from the newer extract
         self.assertEqual(sum(n.startswith('Caf') for _, n in places), 2)
         self.assertNotIn('Outside', [n for _, n in places])
         self.assertEqual(sorted(e['name'] for e in entries if e['kind']=='address'),
