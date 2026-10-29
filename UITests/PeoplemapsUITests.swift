@@ -487,4 +487,21 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["cancel-search-home"].tap()
         XCTAssertFalse(lookup.exists)
     }
+
+    @MainActor func testFavouritesAndDroppedPinInLandscape() {
+        let app = launchHome()
+        app.buttons["featured-way/37058377"].tap()
+        XCTAssertTrue(app.buttons["favourite"].waitForExistence(timeout: 5))
+        app.buttons["favourite"].tap()
+        app.buttons["close-place"].tap()
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let row = app.buttons["favourite-way/37058377"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        XCTAssertTrue(row.isHittable)
+        capture("15-home-favourites-landscape", app: app)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.5)).press(forDuration: 1.2)
+        XCTAssertTrue(app.staticTexts["Dropped pin"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["directions-from"].isHittable)
+        capture("16-dropped-pin-landscape", app: app)
+    }
 }
