@@ -3,12 +3,12 @@ import PeoplemapsCore
 
 @main
 struct PeoplemapsApp: App {
-    @State private var loaded: (graph: StreetGraph, router: NativeRouter)?
+    @State private var loaded: (graph: StreetGraph, router: NativeRouter, search: SearchIndex)?
     @State private var error: String?
     var body: some Scene {
         WindowGroup {
             Group {
-                if let loaded { ExploreView(graph: loaded.graph, router: loaded.router) }
+                if let loaded { ExploreView(graph: loaded.graph, router: loaded.router, search: loaded.search) }
                 else if let error { ContentUnavailableView("Seattle data unavailable", systemImage: "map", description: Text(error)) }
                 else {
                     ProgressView("Opening Seattle…")
@@ -24,7 +24,7 @@ struct PeoplemapsApp: App {
         do {
             loaded = try await Task.detached {
                 let graph = try StreetGraph.bundled()
-                return (graph, NativeRouter(graph: graph))
+                return (graph, NativeRouter(graph: graph), try SearchIndex.bundled(graph: graph))
             }.value
         }
         catch { self.error = error.localizedDescription }
