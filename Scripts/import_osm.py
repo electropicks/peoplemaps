@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Deterministic, deliberately conservative OSM + elevation to routing-graph compiler. No network."""
-import array, collections, gzip, hashlib, json, math, pathlib, struct
+import array, collections, gzip, hashlib, json, math, os, pathlib, struct
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-OUT = ROOT / 'Core/Resources'
-BBOX = [47.615, -122.390, 47.678, -122.300]  # S,W,N,E
+# PEOPLEMAPS_BBOX="S,W,N,E", PEOPLEMAPS_DATA and PEOPLEMAPS_OUT redirect an import (coverage spikes) without touching the shipped data.
+OUT = pathlib.Path(os.environ.get('PEOPLEMAPS_OUT', ROOT / 'Core/Resources'))
+DATA = pathlib.Path(os.environ.get('PEOPLEMAPS_DATA', ROOT / 'Data'))
+def shown(path):
+    return str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else path.name
+BBOX = [float(x) for x in os.environ['PEOPLEMAPS_BBOX'].split(',')] if os.environ.get('PEOPLEMAPS_BBOX') else [47.615, -122.390, 47.678, -122.300]  # S,W,N,E
 MODES = ['drive', 'bike', 'walk']
 ROAD = {'motorway','motorway_link','trunk','trunk_link','primary','primary_link',
         'secondary','secondary_link','tertiary','tertiary_link','residential',
@@ -279,13 +283,13 @@ def control(nt, way_direction):
 def read_sources():
     elements = {}; sources = []
     for basename in ['seattle-osm','seattle-parks']:
-        raw = ROOT/'Data/raw'/f'{basename}.json'
-        archive = ROOT/'Data'/f'{basename}.json.gz'
+        raw = DATA/'raw'/f'{basename}.json'
+        archive = DATA/f'{basename}.json.gz'
         data = raw.read_bytes() if raw.exists() else gzip.decompress(archive.read_bytes())
         p = json.loads(data)
         if p.get('remark'): raise ValueError(p['remark'])
         if raw.exists(): archive.write_bytes(gzip.compress(data,mtime=0))  # archive a fresh download
-        sources.append({'file':str(archive.relative_to(ROOT)),'sha256':hashlib.sha256(data).hexdigest(),
+        sources.append({'file':shown(archive),'sha256':hashlib.sha256(data).hexdigest(),
                         'osmBaseTimestamp':p['osm3s']['timestamp_osm_base']})
         for e in p['elements']: elements[(e['type'],e['id'])] = e
     return elements, sources
@@ -312,9 +316,9 @@ def compile_restrictions(relations):
 def main():
     OUT.mkdir(parents=True,exist_ok=True)
     elements, sources = read_sources()
-    dem_path = ROOT/'Data/seattle-dem.tif.gz'
+    dem_path = DATA/'seattle-dem.tif.gz'
     z, dem_sha = load_dem(dem_path)
-    sources.append({'file':str(dem_path.relative_to(ROOT)),'sha256':dem_sha,
+    sources.append({'file':shown(dem_path),'sha256':dem_sha,
                     'source':'USGS 3DEP 3DEPElevation ImageServer exportImage, ~5 m bilinear, public domain'})
     allnodes={i:e for (typ,i),e in elements.items() if typ=='node'}
     allways={i:e for (typ,i),e in elements.items() if typ=='way'}
@@ -465,7 +469,7 @@ def main():
             'crossingSegments':collections.Counter(str(s['crossing']['control']) for s in segments if 'crossing' in s),
             'signalNodes':sum('signal' in n for n in nodes),
             'structureNodesInterpolated':len(lifted)}
-    (ROOT/'Data/provenance.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
+    (DATA/'provenance.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
     print(json.dumps({k:v for k,v in report.items() if k!='unsupportedRestrictionsConservativelyExcluded'},indent=2,sort_keys=True))
     print('Conservative restriction exclusions:',len(unsupported))
 
