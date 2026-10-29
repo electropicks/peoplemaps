@@ -152,7 +152,10 @@ final class PeoplemapsUITests: XCTestCase {
         }
         Thread.sleep(forTimeInterval: 1)
         XCTAssertTrue(changed || instruction.label != first, "Instruction stayed '\(first)' after 600 m")
-        XCTAssertFalse(probe(app, "debug-last-spoken").isEmpty)
+        let spoken = probe(app, "debug-last-spoken")
+        XCTAssertFalse(spoken.isEmpty)
+        // The probe reports the normalised text: no street-type or compass abbreviations are left to be misread.
+        XCTAssertNil(spoken.range(of: #"\b(St|Ave|Pl|Blvd|Dr|Ct|Ln|N|S|E|W|NE|NW|SE|SW)\b"#, options: .regularExpression), "Abbreviation in spoken text: \(spoken)")
         XCTAssertEqual(probe(app, "debug-nav-state"), "guiding")
         capture("09-real-gps-guidance", app: app)
     }

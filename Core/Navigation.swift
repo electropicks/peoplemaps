@@ -36,7 +36,7 @@ extension Route {
     }
 }
 
-private struct NavigationBuilder {
+struct NavigationBuilder {
     let route: Route
     let mode: TravelMode
 
