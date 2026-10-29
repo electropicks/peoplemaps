@@ -22,12 +22,16 @@ extension Place {
     var categoryLabel: String {
         switch category { case "cafe": "Café"; default: category.prefix(1).uppercased() + category.dropFirst() }
     }
-    /// "Category · Neighbourhood", or just the category outside every neighbourhood.
-    var subtitle: String { [categoryLabel, Neighbourhoods.nearest(to: coordinate)].compactMap { $0 }.joined(separator: " · ") }
+    /// "Category · Neighbourhood", or just the category outside every neighbourhood; coordinates for a dropped pin.
+    var subtitle: String {
+        if isDroppedPin { return coordinateLabel }
+        return [categoryLabel, Neighbourhoods.nearest(to: coordinate)].compactMap { $0 }.joined(separator: " · ")
+    }
     var symbol: String {
         switch category {
         case "park": "tree"; case "library": "books.vertical"; case "museum": "building.columns"
-        case "cafe": "cup.and.saucer"; case "viewpoint": "eye"; default: "star"
+        case "cafe": "cup.and.saucer"; case "viewpoint": "eye"; case Place.pinCategory: "mappin"
+        case Place.locationCategory: "location.fill"; default: "star"
         }
     }
 }
