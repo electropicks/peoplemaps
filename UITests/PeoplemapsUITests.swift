@@ -22,8 +22,9 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 20))
         return app
     }
+    /// The screen, not the app: an app screenshot in landscape comes out rotated and cropped.
     @MainActor private func capture(_ name: String, app: XCUIApplication) {
-        let attachment = XCTAttachment(screenshot: app.screenshot())
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
     @MainActor func testDrivingCyclingBudgetAndExplanation() {
