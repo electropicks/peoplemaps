@@ -21,7 +21,7 @@
   "places": 519,
   "search": {
     "addresses": 50026,
-    "gzippedBytes": 3397926,
+    "gzippedBytes": 3398686,
     "inflatedBytes": 11702272,
     "places": 6742,
     "sqlite": "3.54.1",

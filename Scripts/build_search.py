@@ -8,6 +8,7 @@ import collections, gzip, hashlib, json, math, os, pathlib, re, sqlite3, tempfil
 SCHEMA_VERSION = 1
 DEDUPE_METERS = 50
 SNAP_METERS = 400  # the router's own snap radius
+NOTABLE = 5  # weight bonus: ranks well-known places above others of their kind, never above a better category
 
 # Both spellings are indexed, so "ave", "av" and "avenue" all prefix-match a street called "... Avenue".
 ALIASES = {
@@ -101,8 +102,10 @@ def entries_from(elements, graph_places, inside):
         address, unit = address_of(tags)
         name, category = tags.get('name', '').strip(), category_of(tags)
         if name and category:
+            # A Wikidata or Wikipedia link marks a place people know by name: a small, open signal, never paid.
+            notable = NOTABLE if 'wikidata' in tags or 'wikipedia' in tags else 0
             candidates.append({'osm': f"{e['type']}/{e['id']}", 'kind': 'place', 'name': name, 'category': category[0],
-                               'lat': round(c[0], 7), 'lon': round(c[1], 7), 'weight': category[1],
+                               'lat': round(c[0], 7), 'lon': round(c[1], 7), 'weight': category[1] + notable,
                                'address': address, 'unit': unit, 'number': tags.get('addr:housenumber') if address else None})
         if address:
             candidates.append({'osm': f"{e['type']}/{e['id']}", 'kind': 'address', 'name': address + (f', Unit {unit}' if unit else ''),
@@ -123,8 +126,11 @@ def entries_from(elements, graph_places, inside):
     # Graph places come from the older routing extract: fill in their address from the search extract.
     by_id = {x['osm']: x for x in candidates if x['kind'] == 'place'}
     for x in kept[:len(graph_places)]:
-        if x['osm'] in by_id and by_id[x['osm']]['address']:
-            x['address'], x['unit'], x['number'] = by_id[x['osm']]['address'], by_id[x['osm']]['unit'], by_id[x['osm']]['number']
+        newer = by_id.get(x['osm'])
+        if newer and newer['address']:
+            x['address'], x['unit'], x['number'] = newer['address'], newer['unit'], newer['number']
+        if newer:
+            x['weight'] = max(x['weight'], newer['weight'])
     return kept
 
 
