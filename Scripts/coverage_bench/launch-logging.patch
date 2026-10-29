@@ -1,0 +1,52 @@
+diff --git a/App/PeoplemapsApp.swift b/App/PeoplemapsApp.swift
+index c5d6369..f7aea6f 100644
+--- a/App/PeoplemapsApp.swift
++++ b/App/PeoplemapsApp.swift
+@@ -1,5 +1,16 @@
+ import SwiftUI
+ import PeoplemapsCore
++import Darwin
++
++func pmLog(_ what: String) {  // SPIKE-ONLY launch timing: ms since process start, resident MB now and peak
++    var kp = kinfo_proc(); var size = MemoryLayout<kinfo_proc>.stride; var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
++    sysctl(&mib, 4, &kp, &size, nil, 0)
++    let start = Double(kp.kp_proc.p_un.__p_starttime.tv_sec) + Double(kp.kp_proc.p_un.__p_starttime.tv_usec) / 1e6
++    var info = task_vm_info_data_t(); var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
++    _ = withUnsafeMutablePointer(to: &info) { $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count) } }
++    var u = rusage(); getrusage(RUSAGE_SELF, &u)
++    NSLog("PMTIME %@ ms=%d footprintMB=%d peakRSSMB=%d", what, Int((Date().timeIntervalSince1970 - start) * 1000), Int(info.phys_footprint >> 20), Int(u.ru_maxrss >> 20))
++}
+ 
+ @main
+ struct PeoplemapsApp: App {
+@@ -23,8 +34,12 @@ struct PeoplemapsApp: App {
+     private func load() async {
+         do {
+             loaded = try await Task.detached {
++                pmLog("load-start")
+                 let graph = try StreetGraph.bundled()
+-                return (graph, NativeRouter(graph: graph))
++                pmLog("graph-decoded")
++                let router = NativeRouter(graph: graph)
++                pmLog("router-ready")
++                return (graph, router)
+             }.value
+         }
+         catch { self.error = error.localizedDescription }
+diff --git a/App/SeattleMap.swift b/App/SeattleMap.swift
+index e5b3dfa..b454e84 100644
+--- a/App/SeattleMap.swift
++++ b/App/SeattleMap.swift
+@@ -75,7 +75,12 @@ struct SeattleMap: UIViewRepresentable {
+             ("water", .mapWater), ("parks", .mapPark), ("roads", .mapStreet), ("arterials", .mapArterial), ("paths", .mapPath),
+         ]
+ 
++        private var loggedRender = false
++        func mapViewDidFinishRenderingFrame(_ mapView: MLNMapView, fullyRendered: Bool) {
++            if fullyRendered, !loggedRender { loggedRender = true; pmLog("map-fully-rendered") }
++        }
+         func mapView(_ map: MLNMapView, didFinishLoading style: MLNStyle) {
++            pmLog("style-loaded")
+             guard let url = StreetGraph.mapURL else { return }
+             let source = MLNShapeSource(identifier: "seattle", url: url, options: [.simplificationTolerance: 0.3])
+             style.addSource(source)

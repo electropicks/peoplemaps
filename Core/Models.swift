@@ -177,7 +177,9 @@ public struct StreetGraph: Sendable {
     }
 
     public static func bundled() throws -> StreetGraph {
-        guard let url = Bundle.module.url(forResource: "seattle-graph.json", withExtension: "gz"),
+        // Coverage spike: PEOPLEMAPS_GRAPH points the benchmark at an alternative graph file.
+        let override = ProcessInfo.processInfo.environment["PEOPLEMAPS_GRAPH"].map { URL(fileURLWithPath: $0) }
+        guard let url = override ?? Bundle.module.url(forResource: "seattle-graph.json", withExtension: "gz"),
               let json = try Data(contentsOf: url).gunzipped() else { throw RoutingError.missingData }
         let file = try JSONDecoder().decode(GraphFile.self, from: json)
         guard file.schemaVersion == 2 else { throw RoutingError.missingData }
