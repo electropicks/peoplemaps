@@ -4,6 +4,7 @@ import PeoplemapsCore
 struct PlacePicker: View {
     let title: String
     let graph: StreetGraph
+    let search: SearchIndex
     let selected: Place
     let saved: SavedPlacesStore
     /// Set for the origin: offers "Current location" unless location is denied.
@@ -15,13 +16,13 @@ struct PlacePicker: View {
     @State private var locating = false
     @State private var locationFailed = false
 
-    init(title: String, graph: StreetGraph, selected: Place, saved: SavedPlacesStore, location: LocationPermission? = nil, onSelect: @escaping (Place) -> Void) {
-        self.title = title; self.graph = graph; self.selected = selected; self.saved = saved; self.location = location; self.onSelect = onSelect
+    init(title: String, graph: StreetGraph, search: SearchIndex, selected: Place, saved: SavedPlacesStore, location: LocationPermission? = nil, onSelect: @escaping (Place) -> Void) {
+        self.title = title; self.graph = graph; self.search = search; self.selected = selected; self.saved = saved; self.location = location; self.onSelect = onSelect
         _access = State(initialValue: location?.access ?? .denied)
     }
 
     private var featured: [Place] { ExploreView.featuredIDs.compactMap { id in graph.places.first { $0.id == id } } }
-    private var results: [Place] { Array(graph.search(query).prefix(60)) }
+    private var results: [Place] { search.search(query, near: selected.coordinate) }
 
     var body: some View {
         NavigationStack {
@@ -36,7 +37,7 @@ struct PlacePicker: View {
                         section("Featured places", featured, prefix: "place-")
                         if !saved.recents.isEmpty { section("Recents", saved.recents, prefix: "place-recent-") }
                     } else if results.isEmpty {
-                        EmptySearch(count: graph.places.count).padding(.top, 40)
+                        EmptySearch(count: search.count).padding(.top, 40)
                         AppleMapsLookup(query: query)
                     } else {
                         section("Matches", results, prefix: "place-")
@@ -137,7 +138,7 @@ struct EmptySearch: View {
         VStack(spacing: 8) {
             Image(systemName: "magnifyingglass").font(.system(size: 36, weight: .light)).foregroundStyle(.secondary)
             Text("No places match in this Seattle area").font(.headline).multilineTextAlignment(.center)
-            Text("PeopleMaps searches \(count) places in this offline area.").font(.subheadline).foregroundStyle(.secondary)
+            Text("PeopleMaps searches \(count.formatted()) places and addresses in this offline area.").font(.subheadline).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity).padding(.horizontal, 24)

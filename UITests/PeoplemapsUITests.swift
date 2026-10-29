@@ -340,6 +340,22 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["close-place"].tap()
         XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
     }
+    @MainActor func testSearchAddressAndRouteToIt() {
+        let app = launchHome()
+        app.buttons["search-field"].tap()
+        let field = app.textFields["search-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("3400 Fremont Ave N")
+        let result = app.buttons["result-node/2652117839"]
+        XCTAssertTrue(result.waitForExistence(timeout: 5))
+        XCTAssertTrue(result.label.hasPrefix("3400 Fremont Avenue North, Address"), result.label)
+        capture("04b-search-address", app: app)
+        result.tap()
+        XCTAssertTrue(app.buttons["directions"].waitForExistence(timeout: 5))
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["choose-destination"].label.contains("3400 Fremont"), app.buttons["choose-destination"].label)
+    }
     @MainActor func testSearchWithNoMatchesAndCancel() {
         let app = launchHome()
         app.buttons["search-field"].tap()
