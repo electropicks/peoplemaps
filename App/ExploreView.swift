@@ -33,6 +33,8 @@ struct ExploreView: View {
     @State private var permission = LocationPermission()
     @State private var asking = false
     @State private var locationOff = false
+    @State private var saved = SavedPlacesStore()
+    @ScaledMetric(relativeTo: .body) private var favouriteRowHeight: CGFloat = 52
     @AppStorage("voiceMuted", store: ExploreView.voiceStore) private var voiceMuted = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -102,12 +104,27 @@ struct ExploreView: View {
 
     private func open(_ place: Place) { query = ""; screen = .place(place) }
     private func openPin(_ id: String) { if let place = graph.places.first(where: { $0.id == id }) { open(place) } }
+    /// Long-press drops a pin while browsing, never over a route or guidance.
+    private func dropPin(_ c: Coordinate) {
+        guard screen == .home || selectedPlace != nil else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        open(.droppedPin(at: c))
+    }
 
     private func startDirections(to place: Place) {
         let fallbackID = place.id == Self.kerryPark ? Self.gasWorks : Self.kerryPark
         let from = lastOrigin.flatMap { $0.id == place.id ? nil : $0 } ?? graph.places.first { $0.id == fallbackID } ?? origin
         origin = from; lastOrigin = from; destination = place
+        saved.addRecent(place)
         screen = .preview
+    }
+
+    /// Starts from the place and asks where to, keeping the last destination underneath unless it is this place.
+    private func startDirections(from place: Place) {
+        let fallbackID = place.id == Self.gasWorks ? Self.kerryPark : Self.gasWorks
+        if destination.id == place.id, let other = graph.places.first(where: { $0.id == fallbackID }) { destination = other }
+        origin = place; lastOrigin = place
+        screen = .preview; sheet = .destination
     }
 
     private var request: RouteRequest { .init(origin: origin, destination: destination, mode: mode, extraMinutes: budget) }
@@ -119,7 +136,7 @@ struct ExploreView: View {
         GeometryReader { geo in
             ZStack {
                 SeattleMap(comparison: screen == .preview ? session.comparison : nil, selectedCalmer: selectedCalmer, recenter: recenter, pins: screen == .preview ? [] : featured,
-                           selected: selectedPlace, onPin: openPin, guidance: guidance, padding: mapPadding(geo))
+                           selected: selectedPlace, onPin: openPin, onLongPress: dropPin, guidance: guidance, padding: mapPadding(geo))
                     .ignoresSafeArea()
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(screen == .preview ? "Seattle offline map. Routes are also described in the panel." : "Seattle offline map")
@@ -149,9 +166,9 @@ struct ExploreView: View {
         .sheet(item: $sheet) { item in
             switch item {
             case .origin:
-                PlacePicker(title: "Starting from", graph: graph, selected: origin) { origin = $0; lastOrigin = $0 }
+                PlacePicker(title: "Starting from", graph: graph, selected: origin, saved: saved, location: permission) { origin = $0; lastOrigin = $0 }
             case .destination:
-                PlacePicker(title: "Going to", graph: graph, selected: destination) { destination = $0 }
+                PlacePicker(title: "Going to", graph: graph, selected: destination, saved: saved) { destination = $0; saved.addRecent($0) }
             case .details:
                 if let comparison = session.comparison { RouteDetails(comparison: comparison) }
             case .about:
@@ -272,11 +289,38 @@ struct ExploreView: View {
                 .font(.body).foregroundStyle(.secondary).padding(.horizontal, 12).frame(height: 44)
                 .background(.panelFill, in: RoundedRectangle(cornerRadius: 12)).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityLabel("Search places").accessibilityIdentifier("search-field")
+            if !saved.favourites.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Favourites").font(.footnote).textCase(.uppercase).foregroundStyle(.secondary).padding(.leading, 16)
+                    favouritesList
+                }
+            }
             VStack(alignment: .leading, spacing: 6) {
                 Text("Featured places").font(.footnote).textCase(.uppercase).foregroundStyle(.secondary).padding(.leading, 16)
                 PlaceList(places: featured, minHeight: landscape ? 46 : 52, identifier: { "featured-\($0.id)" }, action: open)
             }
         }
+    }
+
+    /// A List only for its swipe-to-remove; sized to its rows so the panel's own scroll view does the scrolling.
+    private var favouritesList: some View {
+        let height = landscape ? favouriteRowHeight - 6 : favouriteRowHeight
+        return List {
+            ForEach(saved.favourites, id: \.self) { place in
+                PlaceRow(place: place, minHeight: height) { open(place) }
+                    .accessibilityIdentifier("favourite-\(place.id)")
+                    .listRowInsets(EdgeInsets()).listRowBackground(Color.panelFill)
+                    .listRowSeparator(place == saved.favourites.last ? .hidden : .visible, edges: .bottom)
+                    .alignmentGuide(.listRowSeparatorLeading) { _ in 58 }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) { saved.removeFavourite(place) } label: { Label("Remove", systemImage: "star.slash") }
+                    }
+            }
+        }
+        .listStyle(.plain).scrollDisabled(true).scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, height)
+        .frame(height: CGFloat(saved.favourites.count) * height)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: Search
@@ -293,9 +337,11 @@ struct ExploreView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     if results.isEmpty {
                         EmptySearch(count: graph.places.count).padding(.top, 48)
+                        AppleMapsLookup(query: query)
                     } else {
                         resultGroup(query.isEmpty ? "Featured places" : "Top match", Array(results.prefix(query.isEmpty ? results.count : 1)))
                         if !query.isEmpty && results.count > 1 { resultGroup("Other matches", Array(results.dropFirst())) }
+                        if query.isEmpty && !saved.recents.isEmpty { resultGroup("Recents", saved.recents, prefix: "recent-") }
                     }
                 }.padding(.horizontal, landscape ? 12 : 16).padding(.bottom, 16)
             }
@@ -304,10 +350,10 @@ struct ExploreView: View {
         .task { searchFocused = true }
     }
 
-    private func resultGroup(_ title: String, _ places: [Place]) -> some View {
+    private func resultGroup(_ title: String, _ places: [Place], prefix: String = "result-") -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(.footnote).textCase(.uppercase).foregroundStyle(.secondary).padding(.leading, 16)
-            PlaceList(places: places, query: query, identifier: { "result-\($0.id)" }, action: open)
+            PlaceList(places: places, query: query, identifier: { prefix + $0.id }, action: open)
         }
     }
 
@@ -322,16 +368,48 @@ struct ExploreView: View {
                     Text(place.subtitle).font(.subheadline).foregroundStyle(.secondary)
                 }.padding(.top, 4)
                 Spacer(minLength: 0)
+                favouriteButton(place)
                 closeButton(label: "Close", id: "close-place") { screen = .home }
             }
-            Button { startDirections(to: place) } label: {
-                Label("Directions", systemImage: "arrow.right").font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity).frame(height: 50)
-                    .foregroundStyle(.directionsText).background(.directionsFill, in: RoundedRectangle(cornerRadius: 12))
-                    .contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityIdentifier("directions")
-            Text("Compares the fastest route with a calmer one. Works offline.").font(.footnote).foregroundStyle(.secondary).padding(.horizontal, 4)
+            if graph.contains(place.coordinate) {
+                HStack(spacing: 10) {
+                    Button { startDirections(to: place) } label: {
+                        Label("Directions", systemImage: "arrow.right").font(.body.weight(.semibold))
+                            .frame(maxWidth: .infinity).frame(height: 50)
+                            .foregroundStyle(.directionsText).background(.directionsFill, in: RoundedRectangle(cornerRadius: 12))
+                            .contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityIdentifier("directions")
+                    Button { startDirections(from: place) } label: {
+                        Text("From here").font(.body.weight(.semibold)).padding(.horizontal, 18)
+                            .frame(height: 50).foregroundStyle(.calmerText)
+                            .background(Color(uiColor: .tertiarySystemFill), in: RoundedRectangle(cornerRadius: 12))
+                            .contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityLabel("Directions from here").accessibilityIdentifier("directions-from")
+                }
+                Text("Compares the fastest route with a calmer one. Works offline.").font(.footnote).foregroundStyle(.secondary).padding(.horizontal, 4)
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Outside the area we cover yet").font(.headline)
+                    Text("PeopleMaps can route only inside its offline Seattle area for now.").font(.footnote).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+                .background(.panelFill, in: RoundedRectangle(cornerRadius: 12))
+                .accessibilityElement(children: .combine).accessibilityIdentifier("outside-coverage")
+            }
         }
+    }
+
+    private func favouriteButton(_ place: Place) -> some View {
+        let on = saved.isFavourite(place)
+        return Button { saved.toggleFavourite(place) } label: {
+            Image(systemName: on ? "star.fill" : "star").font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(on ? Color.calmer : Color.secondary)
+                .frame(width: 30, height: 30).background(Color(uiColor: .tertiarySystemFill), in: Circle())
+                .frame(width: 44, height: 44).contentShape(Rectangle())
+        }.buttonStyle(.plain)
+            .accessibilityLabel(on ? "Remove from Favourites" : "Add to Favourites")
+            .accessibilityIdentifier("favourite")
     }
 
     private func closeButton(label: String, id: String, action: @escaping () -> Void) -> some View {
