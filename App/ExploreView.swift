@@ -328,7 +328,7 @@ struct ExploreView: View {
                     .listRowSeparator(place == saved.favourites.last ? .hidden : .visible, edges: .bottom)
                     .alignmentGuide(.listRowSeparatorLeading) { _ in 58 }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) { saved.removeFavourite(place) } label: { Label("Remove", systemImage: "star.slash") }
+                        Button(role: .destructive) { withAnimation(Motion.panel(reduceMotion)) { saved.removeFavourite(place) } } label: { Label("Remove", systemImage: "star.slash") }
                     }
             }
         }
@@ -417,8 +417,9 @@ struct ExploreView: View {
 
     private func favouriteButton(_ place: Place) -> some View {
         let on = saved.isFavourite(place)
-        return Button { saved.toggleFavourite(place) } label: {
+        return Button { withAnimation(Motion.content(reduceMotion)) { saved.toggleFavourite(place) } } label: {
             Image(systemName: on ? "star.fill" : "star").font(.system(size: 14, weight: .semibold))
+                .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
                 .foregroundStyle(on ? Color.calmer : Color.secondary)
                 .frame(width: 30, height: 30).background(Color(uiColor: .tertiarySystemFill), in: Circle())
                 .frame(width: 44, height: 44).contentShape(Rectangle())
