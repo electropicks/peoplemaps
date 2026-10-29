@@ -4,7 +4,11 @@ import PeoplemapsCore
 
 private enum Sheet: String, Identifiable { case origin, destination, details, about; var id: String { rawValue } }
 
-private enum Screen: Equatable { case home, search, place(Place), preview, navigating }
+private enum Screen: Equatable {
+    case home, search, place(Place), preview, navigating
+    /// Identity of the panel content, so a new screen crossfades in place.
+    var panelID: String { if case let .place(place) = self { "place-\(place.id)" } else { "\(self)" } }
+}
 
 struct ExploreView: View {
     static let gasWorks = "relation/1047789", kerryPark = "node/693337509"
@@ -39,6 +43,7 @@ struct ExploreView: View {
     @AppStorage("voiceMuted", store: ExploreView.voiceStore) private var voiceMuted = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// UI tests start muted and in their own defaults, so they never change the real preference.
     static let voiceStore: UserDefaults = {
@@ -144,11 +149,13 @@ struct ExploreView: View {
                 if screen == .navigating {
                     GuidanceOverlay(navigator: navigator, landscape: landscape, cardWidth: cardWidth, attribution: AnyView(attribution), overview: $overview, muted: $voiceMuted,
                                     onInsets: { guidanceInset = $0 }, onEnd: endNavigation, onDone: finishNavigation)
-                } else if landscape { landscapeLayout(geo) } else { portraitLayout(geo) }
+                        .transition(.opacity)
+                } else if landscape { landscapeLayout(geo).transition(.opacity) } else { portraitLayout(geo).transition(.opacity) }
                 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("--ui-testing") { NavigationDebugProbe(navigator: navigator) }
                 #endif
             }
+            .animation(Motion.panel(reduceMotion), value: screen)
         }
         .task(id: previewRequest) {
             if let previewRequest { selectedCalmer = true; session.start(previewRequest) } else { session.cancel() }
@@ -200,10 +207,12 @@ struct ExploreView: View {
             VStack(spacing: 0) {
                 Capsule().fill(Color(uiColor: .systemGray3)).frame(width: 36, height: 5).padding(.top, 6).padding(.bottom, 8)
                     .accessibilityHidden(true)
-                if screen == .search {
-                    searchPanel.frame(height: geo.size.height * 0.9 - 19)
-                } else {
-                    scrollingContent(maxHeight: geo.size.height * 0.6)
+                ZStack(alignment: .top) {
+                    if screen == .search {
+                        searchPanel.frame(height: geo.size.height * 0.9 - 19).transition(.opacity)
+                    } else {
+                        scrollingContent(maxHeight: geo.size.height * 0.6).transition(.opacity)
+                    }
                 }
             }
             .background {
@@ -217,9 +226,9 @@ struct ExploreView: View {
     private func landscapeLayout(_ geo: GeometryProxy) -> some View {
         HStack(alignment: .top, spacing: 0) {
             // The card may run into the bottom safe area: the home indicator sits clear of it, at the screen's centre.
-            Group {
-                if screen == .search { searchPanel.frame(height: geo.size.height + geo.safeAreaInsets.bottom - 24) }
-                else { scrollingContent(maxHeight: geo.size.height + geo.safeAreaInsets.bottom - 24) }
+            ZStack(alignment: .top) {
+                if screen == .search { searchPanel.frame(height: geo.size.height + geo.safeAreaInsets.bottom - 24).transition(.opacity) }
+                else { scrollingContent(maxHeight: geo.size.height + geo.safeAreaInsets.bottom - 24).transition(.opacity) }
             }
                 .background(.panel, in: RoundedRectangle(cornerRadius: 14))
                 .shadow(color: .black.opacity(0.14), radius: 16, y: 2)
@@ -237,13 +246,19 @@ struct ExploreView: View {
     /// Sizes itself to the content and scrolls only once the content is taller than `maxHeight`.
     private func scrollingContent(maxHeight: CGFloat) -> some View {
         ScrollView {
-            panelContent
+            // Old and new content overlap while they crossfade; the panel then eases to the new height.
+            ZStack(alignment: .top) { panelContent.id(screen.panelID).transition(.opacity) }
                 .padding(.horizontal, landscape ? 12 : 16)
                 .padding(.top, landscape ? 12 : 0).padding(.bottom, 4)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                    // The first measurement sizes the panel at launch without animating it open.
+                    var launch = Transaction(); launch.disablesAnimations = contentHeight == 0
+                    withTransaction(launch) { contentHeight = height }
+                }
         }
         .scrollBounceBehavior(.basedOnSize)
         .frame(height: min(contentHeight, maxHeight))
+        .animation(Motion.panel(reduceMotion), value: contentHeight)
     }
 
     private var mapButtons: some View {
@@ -314,7 +329,7 @@ struct ExploreView: View {
                     .listRowSeparator(place == saved.favourites.last ? .hidden : .visible, edges: .bottom)
                     .alignmentGuide(.listRowSeparatorLeading) { _ in 58 }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) { saved.removeFavourite(place) } label: { Label("Remove", systemImage: "star.slash") }
+                        Button(role: .destructive) { withAnimation(Motion.panel(reduceMotion)) { saved.removeFavourite(place) } } label: { Label("Remove", systemImage: "star.slash") }
                     }
             }
         }
@@ -403,8 +418,9 @@ struct ExploreView: View {
 
     private func favouriteButton(_ place: Place) -> some View {
         let on = saved.isFavourite(place)
-        return Button { saved.toggleFavourite(place) } label: {
+        return Button { withAnimation(Motion.content(reduceMotion)) { saved.toggleFavourite(place) } } label: {
             Image(systemName: on ? "star.fill" : "star").font(.system(size: 14, weight: .semibold))
+                .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
                 .foregroundStyle(on ? Color.calmer : Color.secondary)
                 .frame(width: 30, height: 30).background(Color(uiColor: .tertiarySystemFill), in: Circle())
                 .frame(width: 44, height: 44).contentShape(Rectangle())
@@ -436,7 +452,20 @@ struct ExploreView: View {
                     ForEach([0, 2, 5, 10], id: \.self) { Text($0 == 0 ? "None" : "\($0) min").tag($0) }
                 }.pickerStyle(.segmented)
             }
-            stateContent
+            ZStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: landscape ? 8 : 14) { stateContent }.id(stateID).transition(.opacity)
+            }
+            .animation(Motion.content(reduceMotion), value: stateID)
+        }
+    }
+
+    /// Identity of the comparison state, so loading, results and errors crossfade.
+    private var stateID: String {
+        switch session.state {
+        case .idle, .loading: "loading"
+        case .cancelled: "cancelled"
+        case let .failed(message): "failed-\(message)"
+        case let .ready(comparison): "ready-\(comparison.fastest.id)-\(comparison.calmer?.id ?? "none")"
         }
     }
 
@@ -448,7 +477,7 @@ struct ExploreView: View {
                 placeButton(place: destination, target: .destination)
             }
             Button {
-                let previous = origin; origin = destination; destination = previous
+                withAnimation(Motion.content(reduceMotion)) { let previous = origin; origin = destination; destination = previous }
             } label: { Image(systemName: "arrow.up.arrow.down").font(.body).foregroundStyle(.secondary).frame(width: 44, height: 44).contentShape(Rectangle()) }
                 .buttonStyle(.plain).accessibilityLabel("Swap start and destination").accessibilityIdentifier("swap")
         }
@@ -538,7 +567,7 @@ struct ExploreView: View {
     }
 
     private func routeRow(_ route: Route, title: String, detail: String, selected: Bool, calmer: Bool) -> some View {
-        Button { selectedCalmer = calmer } label: {
+        Button { withAnimation(Motion.content(reduceMotion)) { selectedCalmer = calmer } } label: {
             HStack(spacing: 12) {
                 RoundedRectangle(cornerRadius: 2).fill(calmer ? Color.calmer : Color.fastest).frame(width: 4)
                 VStack(alignment: .leading, spacing: 2) {
@@ -552,6 +581,7 @@ struct ExploreView: View {
                 Spacer(minLength: 0)
                 if selected {
                     Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(calmer ? Color.calmer : Color.fastest)
+                        .transition(.opacity.combined(with: .scale(scale: 0.6)))
                 }
             }
             .padding(.horizontal, 14).padding(.vertical, landscape ? 6 : 10)
