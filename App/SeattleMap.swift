@@ -24,6 +24,8 @@ struct SeattleMap: UIViewRepresentable {
     /// The selected place: the only green pin, centred in the visible map.
     var selected: Place?
     var onPin: (String) -> Void = { _ in }
+    /// A long-press on the map, at that spot.
+    var onLongPress: (Coordinate) -> Void = { _ in }
     var guidance: Guidance?
     /// Space covered by the panel and map buttons, kept clear when fitting routes.
     let padding: UIEdgeInsets
@@ -42,6 +44,7 @@ struct SeattleMap: UIViewRepresentable {
         map.minimumZoomLevel = 11
         map.maximumZoomLevel = 18
         map.setCenter(CLLocationCoordinate2D(latitude: 47.649, longitude: -122.349), zoomLevel: 12, animated: false)
+        map.addGestureRecognizer(UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.longPressed(_:))))
         context.coordinator.latest = self
         return map
     }
@@ -232,6 +235,12 @@ struct SeattleMap: UIViewRepresentable {
         }
 
         private func pinKey(_ s: SeattleMap) -> String { s.pins.map(\.id).joined(separator: ",") + "|" + (s.selected?.id ?? "") }
+
+        @objc func longPressed(_ gesture: UILongPressGestureRecognizer) {
+            guard gesture.state == .began, let map = gesture.view as? MLNMapView else { return }
+            let c = map.convert(gesture.location(in: map), toCoordinateFrom: map)
+            latest?.onLongPress(Coordinate(lat: c.latitude, lon: c.longitude))
+        }
 
         func mapView(_ mapView: MLNMapView, didSelect annotation: MLNAnnotation) {
             mapView.deselectAnnotation(annotation, animated: false)
