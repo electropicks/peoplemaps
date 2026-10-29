@@ -330,6 +330,7 @@ struct GuidanceOverlay: View {
                     .foregroundStyle(.directionsText).background(.directionsFill, in: RoundedRectangle(cornerRadius: 12)).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityIdentifier("done-navigation")
             Text("Times are estimates. No live traffic.").font(.footnote).foregroundStyle(.secondary).padding(.horizontal, 4)
+            VoiceUpgradeTip()
         }
         .accessibilityElement(children: .contain).accessibilityIdentifier("arrival-card")
     }
