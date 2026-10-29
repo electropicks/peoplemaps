@@ -107,7 +107,9 @@ bridge marks the MapLibre delegate as a main-actor, preconcurrency conformance
 because the Objective-C protocol predates actor annotations. Static OSM sources
 load once; route shapes update on comparison changes. Explicit text beneath the
 map duplicates the decision information for accessibility. Search uses stable
-OSM IDs, an alphabetical list, and a small curated initial set of public places.
+OSM IDs and a small curated initial set of public places; typed queries go to
+`SearchIndex`, an SQLite FTS5 index of OSM places and addresses inflated into
+Caches on first launch (see `Docs/SEARCH.md`).
 
 ## Next architectural decision
 

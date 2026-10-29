@@ -19,6 +19,18 @@
   },
   "nodes": 73354,
   "places": 519,
+  "search": {
+    "addresses": 50026,
+    "gzippedBytes": 3398686,
+    "inflatedBytes": 11702272,
+    "places": 6742,
+    "sqlite": "3.54.1",
+    "unsnapped": {
+      "bike": 0,
+      "drive": 5,
+      "walk": 0
+    }
+  },
   "segments": 101658,
   "sidewalkTaggedRoadSegments": 20407,
   "sidewalksBesideRoad": {
@@ -43,6 +55,11 @@
       "file": "Data/seattle-dem.tif.gz",
       "sha256": "4237e4d8c6c1d3a4a29b4cadf7414c25a79b3b65aa355ce3eae3f313fb20c195",
       "source": "USGS 3DEP 3DEPElevation ImageServer exportImage, ~5 m bilinear, public domain"
+    },
+    {
+      "file": "Data/seattle-search.json.gz",
+      "osmBaseTimestamp": "2026-10-29T05:43:15Z",
+      "sha256": "095c2921683bab7232628cbaa76fc597a6d478cdcba5a8e519dad333f2730030"
     }
   ],
   "structureNodesInterpolated": 995,

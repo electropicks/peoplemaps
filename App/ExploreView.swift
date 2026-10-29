@@ -12,6 +12,7 @@ struct ExploreView: View {
     static let featuredIDs = [gasWorks, "way/37058377", "way/160545994", kerryPark]
 
     let graph: StreetGraph
+    let search: SearchIndex
     @State private var session: RouteSession
     @State private var navigator: NavigationController
     @State private var origin: Place
@@ -50,8 +51,8 @@ struct ExploreView: View {
         return .standard
     }()
 
-    init(graph: StreetGraph, router: NativeRouter) {
-        self.graph = graph
+    init(graph: StreetGraph, router: NativeRouter, search: SearchIndex) {
+        self.graph = graph; self.search = search
         #if DEBUG
         let computing: any RouteComputing = ProcessInfo.processInfo.arguments.contains("--ui-testing") ? SlowTestRouter(base: router) : router
         #else
@@ -166,9 +167,9 @@ struct ExploreView: View {
         .sheet(item: $sheet) { item in
             switch item {
             case .origin:
-                PlacePicker(title: "Starting from", graph: graph, selected: origin, saved: saved, location: permission) { origin = $0; lastOrigin = $0 }
+                PlacePicker(title: "Starting from", graph: graph, search: search, selected: origin, saved: saved, location: permission) { origin = $0; lastOrigin = $0 }
             case .destination:
-                PlacePicker(title: "Going to", graph: graph, selected: destination, saved: saved) { destination = $0; saved.addRecent($0) }
+                PlacePicker(title: "Going to", graph: graph, search: search, selected: destination, saved: saved) { destination = $0; saved.addRecent($0) }
             case .details:
                 if let comparison = session.comparison { RouteDetails(comparison: comparison) }
             case .about:
@@ -325,7 +326,7 @@ struct ExploreView: View {
 
     // MARK: Search
 
-    private var results: [Place] { query.isEmpty ? featured : Array(graph.search(query).prefix(60)) }
+    private var results: [Place] { query.isEmpty ? featured : search.search(query, near: (lastOrigin ?? origin).coordinate) }
 
     private var searchPanel: some View {
         VStack(spacing: 0) {
@@ -336,7 +337,7 @@ struct ExploreView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if results.isEmpty {
-                        EmptySearch(count: graph.places.count).padding(.top, 48)
+                        EmptySearch(count: search.count).padding(.top, 48)
                         AppleMapsLookup(query: query)
                     } else {
                         resultGroup(query.isEmpty ? "Featured places" : "Top match", Array(results.prefix(query.isEmpty ? results.count : 1)))

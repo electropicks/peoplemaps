@@ -19,18 +19,38 @@ public struct Coordinate: Hashable, Sendable {
 }
 
 public struct Place: Codable, Hashable, Sendable, Identifiable {
+    /// A named place (park, café, shop, building) or a street address.
+    public enum Kind: String, Codable, Sendable { case place, address }
     public let id: String
     public let name: String
     public let lat: Double
     public let lon: Double
+    /// OSM-style category ("park", "cafe", "restaurant"); "address" for street addresses.
     public let category: String
+    public var kind: Kind = .place
+    /// Street address of a named place, when the map has one.
+    public var address: String?
+    /// Where the entry comes from, with its date: "OpenStreetMap, Oct 2026".
+    public var source: String?
+    /// Graph node the router may start or end at for each mode, chosen by the importer. Not encoded: valid only for one graph build.
+    public var snap: [TravelMode: Int] = [:]
     public var coordinate: Coordinate { .init(lat: lat, lon: lon) }
     public var shortName: String {
         name.replacingOccurrences(of: "The Seattle Public Library - ", with: "")
             .replacingOccurrences(of: " Branch", with: " Library")
     }
-    public init(id: String, name: String, lat: Double, lon: Double, category: String) {
+    public init(id: String, name: String, lat: Double, lon: Double, category: String, kind: Kind = .place,
+                address: String? = nil, source: String? = nil, snap: [TravelMode: Int] = [:]) {
         self.id = id; self.name = name; self.lat = lat; self.lon = lon; self.category = category
+        self.kind = kind; self.address = address; self.source = source; self.snap = snap
+    }
+    enum CodingKeys: CodingKey { case id, name, lat, lon, category, kind, address, source }
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(id: try c.decode(String.self, forKey: .id), name: try c.decode(String.self, forKey: .name),
+                  lat: try c.decode(Double.self, forKey: .lat), lon: try c.decode(Double.self, forKey: .lon),
+                  category: try c.decode(String.self, forKey: .category), kind: try c.decodeIfPresent(Kind.self, forKey: .kind) ?? .place,
+                  address: try c.decodeIfPresent(String.self, forKey: .address), source: try c.decodeIfPresent(String.self, forKey: .source))
     }
 }
 

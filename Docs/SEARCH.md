@@ -5,10 +5,9 @@ Seattle, offline, with the same honesty rules as routing. Screens: the
 "finding a place" rows of the design canvas
 (https://claude.ai/artifact/HW5tDWwDFUmweSopZpuroE).
 
-Today `Graph.search` (`Core/Models.swift`) matches the names of the parks and
-landmarks the importer keeps in `places`. There are no addresses, no
-businesses, and coverage stops at the routing bounds (47.615–47.678 N,
-122.390–122.300 W).
+Stage 1 is built: `SearchIndex` (`Core/SearchIndex.swift`) searches OSM named
+places and street addresses offline. There are no Overture businesses yet, and
+coverage stops at the routing bounds (47.615–47.678 N, 122.390–122.300 W).
 
 ## Apple's terms rule out an Apple layer
 
@@ -46,7 +45,7 @@ on paper but returns Apple data, so do not rely on it either.
 |---|---|---|
 | OpenStreetMap (snapshot we already import) | named places, shops, parks, streets, some addresses | ODbL 1.0 |
 | Overture Maps Places | businesses and points of interest, with categories | CDLA-Permissive 2.0 (check each source's attribution) |
-| City of Seattle / King County address points | every street address with a point | to confirm before import |
+| City of Seattle / King County address points | every street address with a point | not used: terms don't clearly allow redistribution (see `Data/LICENSE.md`); OSM has about as many points |
 
 - **Built by the importer.** `Scripts/import_osm.py` (or a sibling script)
   joins the sources, removes duplicates (same normalised name within about
@@ -59,8 +58,9 @@ on paper but returns Apple data, so do not rely on it either.
   N"). Typos are tolerated with a trigram fallback.
 - **Snapping.** Each result stores its nearest routable node per mode, so
   routing starts without a search for the nearest road.
-- **Size.** Rough guess: a few MB gzipped for all of Seattle. Measure in
-  stage 1.
+- **Size.** Measured in stage 1 for the routing bounds (6,742 places, 50,026
+  addresses): 3.4 MB gzipped, 11.7 MB inflated. All of Seattle is roughly 8×
+  the area, so expect tens of MB inflated; check before stage 4.
 - **Honesty.** Open data goes stale. Business results show their source and
   date ("OpenStreetMap, Oct 2026"). Missing opening hours stay missing, never
   guessed.
@@ -86,7 +86,7 @@ Check app size, launch time and router speed at that size first.
 
 1. **Index from OSM and addresses** in the current bounds: importer, SQLite
    FTS5, Swift query layer in `Core` with unit tests, search screen wired to
-   it. Confirm the address-point licence first.
+   it. Done; addresses come from OSM only.
 2. **Overture places**: business coverage, categories, dedupe tests.
 3. **My location, dropped pins, recents and favourites.**
 4. **All of Seattle**: bigger bounds for every data set, with size and speed
