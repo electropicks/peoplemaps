@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Deterministic, deliberately conservative OSM + elevation to routing-graph compiler. No network."""
 import array, collections, gzip, hashlib, json, math, pathlib, struct
+import build_search
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = ROOT / 'Core/Resources'
@@ -276,17 +277,20 @@ def control(nt, way_direction):
     if kind == 'give_way': return 'yield'
     return 'allstop' if nt.get('stop') == 'all' else 'stop'
 
+def read_snapshot(basename):
+    raw = ROOT/'Data/raw'/f'{basename}.json'
+    archive = ROOT/'Data'/f'{basename}.json.gz'
+    data = raw.read_bytes() if raw.exists() else gzip.decompress(archive.read_bytes())
+    p = json.loads(data)
+    if p.get('remark'): raise ValueError(p['remark'])
+    if raw.exists(): archive.write_bytes(gzip.compress(data,mtime=0))  # archive a fresh download
+    return p, {'file':str(archive.relative_to(ROOT)),'sha256':hashlib.sha256(data).hexdigest(),
+               'osmBaseTimestamp':p['osm3s']['timestamp_osm_base']}
+
 def read_sources():
     elements = {}; sources = []
     for basename in ['seattle-osm','seattle-parks']:
-        raw = ROOT/'Data/raw'/f'{basename}.json'
-        archive = ROOT/'Data'/f'{basename}.json.gz'
-        data = raw.read_bytes() if raw.exists() else gzip.decompress(archive.read_bytes())
-        p = json.loads(data)
-        if p.get('remark'): raise ValueError(p['remark'])
-        if raw.exists(): archive.write_bytes(gzip.compress(data,mtime=0))  # archive a fresh download
-        sources.append({'file':str(archive.relative_to(ROOT)),'sha256':hashlib.sha256(data).hexdigest(),
-                        'osmBaseTimestamp':p['osm3s']['timestamp_osm_base']})
+        p, source = read_snapshot(basename); sources.append(source)
         for e in p['elements']: elements[(e['type'],e['id'])] = e
     return elements, sources
 
@@ -453,7 +457,11 @@ def main():
     places.sort(key=lambda p:p['name'].casefold())
     graph={'schemaVersion':2,'bounds':BBOX,'names':list(names),'nodes':nodes,'segments':segments,'restrictions':mapped,'places':places}
     # Shipped gzipped (39 MB -> ~5 MB installed); mtime=0 keeps the archive byte-for-byte reproducible.
-    (OUT/'seattle-graph.json.gz').write_bytes(gzip.compress((json.dumps(graph,separators=(',',':'))+'\n').encode(),compresslevel=9,mtime=0))
+    graph_gz=gzip.compress((json.dumps(graph,separators=(',',':'))+'\n').encode(),compresslevel=9,mtime=0)
+    (OUT/'seattle-graph.json.gz').write_bytes(graph_gz)
+    # Search reads its own, newer extract (places and addresses), kept apart so the graph's inputs don't change.
+    search_json, search_source = read_snapshot('seattle-search'); sources.append(search_source)
+    search=build_search.build(search_json, places, nodes, segments, inside, hashlib.sha256(graph_gz).hexdigest(), OUT/'seattle-search.sqlite.gz')
     (OUT/'seattle-map.geojson').write_text(json.dumps({'type':'FeatureCollection','features':features},separators=(',',':'))+'\n')
     directed={mode:sum(mode in s.get(k,{}).get('modes',[]) for s in segments for k in 'fr') for mode in MODES}
     report={'sources':sources,'bounds':BBOX,'nodes':len(nodes),'segments':len(segments),'directedEdgesByMode':directed,
@@ -464,7 +472,7 @@ def main():
             'approachesWithTurnLaneData':sum('leftTurnLane' in s.get(k,{}) for s in segments for k in 'fr'),
             'crossingSegments':collections.Counter(str(s['crossing']['control']) for s in segments if 'crossing' in s),
             'signalNodes':sum('signal' in n for n in nodes),
-            'structureNodesInterpolated':len(lifted)}
+            'structureNodesInterpolated':len(lifted),'search':search}
     (ROOT/'Data/provenance.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
     print(json.dumps({k:v for k,v in report.items() if k!='unsupportedRestrictionsConservativelyExcluded'},indent=2,sort_keys=True))
     print('Conservative restriction exclusions:',len(unsupported))
