@@ -79,7 +79,7 @@ router or data.
 - `Scripts/`: OSM importer, project generator, test and run scripts.
 - `Data/`: OSM snapshots, elevation model, queries, provenance and licences.
 - `Tests/`, `UITests/`, `Evidence/`: tests, route audit, screenshots.
-- Docs: [architecture](Docs/ARCHITECTURE.md), [navigation](Docs/NAVIGATION.md),
+- Docs: [architecture](Docs/ARCHITECTURE.md), [navigation](Docs/NAVIGATION.md), [search](Docs/SEARCH.md),
   [Apple practices audit](Docs/RESEARCH_UX_2026.md), [third-party notices](THIRD_PARTY.md).
 
 Original code is MIT. OSM data and derived files are ODbL 1.0, © OpenStreetMap
