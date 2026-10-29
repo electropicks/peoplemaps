@@ -81,6 +81,7 @@ struct CurrentLocationRow: View {
     let failed: Bool
     let selected: Bool
     let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Button(action: action) {
@@ -99,6 +100,8 @@ struct CurrentLocationRow: View {
                 else if selected { Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(.tint) }
             }
             .padding(.horizontal, 14).frame(minHeight: 52).contentShape(Rectangle())
+            .animation(Motion.content(reduceMotion), value: locating)
+            .animation(Motion.content(reduceMotion), value: failed)
         }
         .buttonStyle(.plain)
         .background(.panelFill, in: RoundedRectangle(cornerRadius: 12))
