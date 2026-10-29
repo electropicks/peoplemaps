@@ -113,7 +113,7 @@ final class NavigationController {
         #endif
 
         self.location = location
-        let observer = SpokenInstructionObserver(synthesizer: AVSpeechSynthesizer(), isMuted: muted)
+        let observer = SpokenInstructionObserver(synthesizer: GuidanceSpeaker(), isMuted: muted)
         self.observer = observer
         let core = FerrostarCore(customRouteProvider: provider, locationProvider: location,
                                  navigationControllerConfig: Self.config(for: request.mode),
@@ -171,7 +171,7 @@ final class NavigationController {
         location?.stopUpdating()
         keepAwake(false)
         guard let observer, let name = destination?.shortName else { return }
-        lastSpoken = "You've arrived at \(name)"
+        lastSpoken = SpokenText.normalize("You've arrived at \(name)")
         observer.spokenInstructionTriggered(SpokenInstruction(text: "You've arrived at \(name)", ssml: nil, triggerDistanceBeforeManeuver: 0, utteranceId: UUID()))
     }
 
@@ -236,7 +236,7 @@ final class NavigationController {
             break
         case let .navigating(_, _, _, remaining, _, progress, _, _, _, spoken, _):
             guard let plan = active?.plan else { return }
-            if let spoken, !spoken.text.isEmpty { lastSpoken = spoken.text }
+            if let spoken, !spoken.text.isEmpty { lastSpoken = SpokenText.normalize(spoken.text) }
             hasArrived = false
             distanceToManeuver = progress.distanceToNextManeuver
             remainingMeters = progress.distanceRemaining
