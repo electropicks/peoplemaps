@@ -21,6 +21,9 @@ struct GuidanceOverlay: View {
     @State private var leadingEdge: CGFloat = 0
     @State private var screen: CGSize = .zero
     @ScaledMetric(relativeTo: .largeTitle) private var arrowSize = 52.0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Cards slide in from their edges once the overlay is on screen.
+    @State private var shown = false
 
     var body: some View {
         Group {
@@ -31,6 +34,10 @@ struct GuidanceOverlay: View {
         .onChange(of: bottomEdge) { report() }
         .onChange(of: leadingEdge) { report() }
         .onChange(of: landscape) { report() }
+        .animation(Motion.content(reduceMotion), value: navigator.isRerouting)
+        .animation(Motion.content(reduceMotion), value: navigator.calmNote)
+        .animation(Motion.panel(reduceMotion), value: navigator.hasArrived)
+        .onAppear { withAnimation(Motion.panel(reduceMotion)) { shown = true } }
     }
 
     private func report() {
@@ -49,22 +56,31 @@ struct GuidanceOverlay: View {
         VStack(spacing: 8) {
             if !navigator.hasArrived {
                 VStack(alignment: .leading, spacing: 8) {
-                    if navigator.isRerouting { reroutingCard } else { turnCard }
+                    if shown {
+                        ZStack(alignment: .top) {
+                            if navigator.isRerouting { reroutingCard.transition(.opacity) } else { turnCard.transition(.opacity) }
+                        }
+                        .transition(Motion.edge(.top, reduce: reduceMotion))
+                    }
                     HStack(alignment: .top) {
-                        if !navigator.isRerouting, let note = navigator.calmNote { chip(note) }
+                        if !navigator.isRerouting, let note = navigator.calmNote { chip(note).id(note).transition(.opacity.combined(with: .scale(scale: 0.9))) }
                         Spacer(minLength: 0)
                         mapButtons
                     }
                 }
                 .padding(.horizontal, 8).padding(.top, 4)
                 .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { topEdge = $0 }
+                .transition(.opacity)
             } else {
                 HStack { Spacer(); mapButtons }.padding(.horizontal, 16).padding(.top, 8)
                     .onAppear { topEdge = 52 }
             }
             Spacer(minLength: 0)
             HStack { attribution; Spacer() }.padding(.horizontal, 12)
-            if navigator.hasArrived { arrivalSheet } else { tripBar }
+            ZStack(alignment: .bottom) {
+                if navigator.hasArrived { arrivalSheet.transition(Motion.edge(.bottom, reduce: reduceMotion)) }
+                else if shown { tripBar.transition(Motion.edge(.bottom, reduce: reduceMotion)) }
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
@@ -75,13 +91,18 @@ struct GuidanceOverlay: View {
         GeometryReader { geo in
             HStack(alignment: .top, spacing: 0) {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
+                    ZStack(alignment: .top) {
                         if navigator.hasArrived {
-                            arrivalContent.padding(14)
+                            arrivalContent.padding(14).transition(.opacity)
                         } else {
-                            if navigator.isRerouting { reroutingContent } else { turnContent }
-                            if !navigator.isRerouting, let note = navigator.calmNote { chip(note).padding(.horizontal, 14).padding(.top, 10) }
-                            tripContent.padding(14)
+                            VStack(alignment: .leading, spacing: 0) {
+                                ZStack(alignment: .top) {
+                                    if navigator.isRerouting { reroutingContent.transition(.opacity) } else { turnContent.transition(.opacity) }
+                                }
+                                if !navigator.isRerouting, let note = navigator.calmNote { chip(note).id(note).padding(.horizontal, 14).padding(.top, 10).transition(.opacity) }
+                                tripContent.padding(14)
+                            }
+                            .transition(.opacity)
                         }
                     }
                 }
@@ -93,6 +114,7 @@ struct GuidanceOverlay: View {
                 .shadow(color: .black.opacity(0.14), radius: 16, y: 2)
                 .padding(.vertical, 12).padding(.leading, 12)
                 .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxX } action: { leadingEdge = $0 }
+                .offset(x: shown || reduceMotion ? 0 : -(cardWidth + 24)).opacity(shown ? 1 : 0)
                 Spacer(minLength: 16)
                 VStack(alignment: .trailing) {
                     mapButtons
@@ -117,14 +139,18 @@ struct GuidanceOverlay: View {
             HStack(spacing: 14) {
                 Image(systemName: Self.symbol(navigator.currentStep?.maneuver ?? .depart))
                     .font(.system(size: arrowSize * 0.75, weight: .bold)).foregroundStyle(.calmerText)
+                    .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
                     .frame(width: arrowSize, height: arrowSize).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(NavigationFormat.distance(navigator.distanceToManeuver)).font(.largeTitle.bold()).monospacedDigit()
                         .lineLimit(1).minimumScaleFactor(0.6)
+                        .contentTransition(.numericText(value: -navigator.distanceToManeuver))
                         .accessibilityIdentifier("guidance-distance")
                     Text(navigator.instruction).font(.title3.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("guidance-instruction")
                 }
+                .animation(Motion.content(reduceMotion), value: navigator.instruction)
+                .animation(Motion.content(reduceMotion), value: NavigationFormat.distance(navigator.distanceToManeuver))
                 Spacer(minLength: 0)
             }
             .padding(.leading, 16).padding(.trailing, 18).padding(.vertical, 14)
@@ -235,6 +261,7 @@ struct GuidanceOverlay: View {
         VStack(alignment: .leading, spacing: 1) {
             Text(value).font(.title2.weight(.semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                 .foregroundStyle(waiting ? .secondary : .primary).accessibilityIdentifier(id)
+                .contentTransition(.numericText()).animation(Motion.content(reduceMotion), value: value)
             Text(label).font(.footnote).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -259,8 +286,9 @@ struct GuidanceOverlay: View {
     }
 
     private var muteButton: some View {
-        Button { muted.toggle() } label: {
+        Button { withAnimation(Motion.content(reduceMotion)) { muted.toggle() } } label: {
             Image(systemName: muted ? "speaker.slash.fill" : "speaker.wave.2.fill").font(.system(size: 19))
+                .contentTransition(.symbolEffect(.replace))
                 .frame(width: 44, height: 44).contentShape(Rectangle())
         }
         .buttonStyle(.plain).foregroundStyle(.primary)
@@ -270,8 +298,9 @@ struct GuidanceOverlay: View {
     }
 
     private var overviewButton: some View {
-        Button { overview.toggle() } label: {
+        Button { withAnimation(Motion.content(reduceMotion)) { overview.toggle() } } label: {
             Image(systemName: overview ? "location.fill" : "arrow.up.left.and.arrow.down.right").font(.system(size: 19))
+                .contentTransition(.symbolEffect(.replace))
                 .frame(width: 44, height: 44).contentShape(Rectangle())
         }
         .buttonStyle(.plain).foregroundStyle(.primary)
