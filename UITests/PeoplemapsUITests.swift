@@ -22,8 +22,9 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 20))
         return app
     }
+    /// The screen, not the app: an app screenshot in landscape comes out rotated and cropped.
     @MainActor private func capture(_ name: String, app: XCUIApplication) {
-        let attachment = XCTAttachment(screenshot: app.screenshot())
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
     @MainActor func testDrivingCyclingBudgetAndExplanation() {
@@ -370,5 +371,138 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["licence-Ferrostar-LICENSE"].tap()
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Stadia Maps'")).firstMatch.waitForExistence(timeout: 5))
         capture("07-acknowledgements-ferrostar", app: app)
+    }
+
+    // MARK: Finding a place: current location, dropped pins, recents, favourites, Apple Maps hand-off
+
+    private static let fremont = CLLocationCoordinate2D(latitude: 47.6505, longitude: -122.3500)
+
+    @MainActor private func launchHome(keepSaved: Bool) -> XCUIApplication {
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing"] + (keepSaved ? ["--keep-saved"] : [])
+        app.launch()
+        XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 20))
+        return app
+    }
+
+    @MainActor func testCurrentLocationOriginWhenAllowed() {
+        XCUIApplication().resetAuthorizationStatus(for: .location)
+        setDevice(Self.fremont)
+        let app = launch()
+        app.buttons["choose-origin"].tap()
+        let row = app.buttons["place-current-location"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "Current location should be offered before permission is asked")
+        capture("08-origin-current-location", app: app)
+        row.tap()
+        answerLocationAlert("Allow While Using App")
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["choose-origin"].label.contains("Current location"))
+        app.buttons["choose-origin"].tap()
+        XCTAssertTrue(app.buttons["place-current-location"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor func testCurrentLocationHiddenOnceDenied() {
+        XCUIApplication().resetAuthorizationStatus(for: .location)
+        setDevice(Self.fremont)
+        let app = launch()
+        let before = app.buttons["choose-origin"].label
+        app.buttons["choose-origin"].tap()
+        let row = app.buttons["place-current-location"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        answerLocationAlert("Don\u{2019}t Allow")
+        XCTAssertTrue(row.waitForNonExistence(timeout: 5))
+        XCTAssertFalse(app.alerts["Location is off for PeopleMaps"].exists, "A refusal here must not nag")
+        app.buttons["cancel-search"].tap()
+        XCTAssertEqual(app.buttons["choose-origin"].label, before)
+        app.buttons["choose-origin"].tap()
+        XCTAssertTrue(app.buttons["place-relation/1047789"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["place-current-location"].exists)
+    }
+
+    @MainActor func testLongPressDropsPinWithDirections() {
+        let app = launchHome()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.3)).press(forDuration: 1.2)
+        XCTAssertTrue(app.staticTexts["Dropped pin"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS '° N'")).firstMatch.exists)
+        XCTAssertTrue(app.buttons["directions-from"].exists)
+        capture("09-dropped-pin", app: app)
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["choose-destination"].label.contains("Dropped pin"))
+        // Far outside the routing bounds: the card says so instead of offering directions.
+        app.buttons["close-preview"].tap()
+        let map = app.otherElements["Seattle offline map"]
+        for _ in 0..<3 { map.pinch(withScale: 0.3, velocity: -2) }
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.08, dy: 0.12)).press(forDuration: 1.2)
+        XCTAssertTrue(app.descendants(matching: .any)["outside-coverage"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["directions"].exists)
+        capture("10-dropped-pin-outside", app: app)
+    }
+
+    @MainActor func testFavouriteSurvivesRelaunchAndSwipesAway() {
+        var app = launchHome(keepSaved: false)
+        XCTAssertFalse(app.staticTexts["Favourites"].exists, "First launch shows no Favourites section")
+        app.buttons["featured-relation/1047789"].tap()
+        let star = app.buttons["favourite"]
+        XCTAssertTrue(star.waitForExistence(timeout: 5))
+        XCTAssertEqual(star.label, "Add to Favourites")
+        star.tap()
+        XCTAssertEqual(star.label, "Remove from Favourites")
+        capture("11-place-favourite", app: app)
+        app.buttons["close-place"].tap()
+        XCTAssertTrue(app.buttons["favourite-relation/1047789"].waitForExistence(timeout: 5))
+        app.terminate()
+        app = launchHome(keepSaved: true)
+        let row = app.buttons["favourite-relation/1047789"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "Favourite should survive a relaunch")
+        capture("12-home-favourites", app: app)
+        row.swipeLeft()
+        let remove = app.buttons["Remove"]
+        if remove.waitForExistence(timeout: 2) { remove.tap() }
+        XCTAssertTrue(row.waitForNonExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Favourites"].exists)
+    }
+
+    @MainActor func testRecentDestinationShowsWhenSearchIsEmpty() {
+        let app = launch()
+        app.buttons["close-preview"].tap()
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(app.buttons["recent-relation/1047789"].waitForExistence(timeout: 5))
+        capture("13-search-recents", app: app)
+        app.textFields["search-input"].typeText("Gas")
+        XCTAssertFalse(app.buttons["recent-relation/1047789"].exists)
+    }
+
+    @MainActor func testNoResultsOffersAppleMapsLookup() {
+        let app = launchHome()
+        app.buttons["search-field"].tap()
+        let field = app.textFields["search-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("unfindableXYZ")
+        let lookup = app.buttons["apple-maps-lookup"]
+        XCTAssertTrue(lookup.waitForExistence(timeout: 5))
+        XCTAssertTrue(lookup.label.contains("unfindableXYZ"))
+        capture("14-search-apple-maps", app: app)
+        app.buttons["cancel-search-home"].tap()
+        XCTAssertFalse(lookup.exists)
+    }
+
+    @MainActor func testFavouritesAndDroppedPinInLandscape() {
+        let app = launchHome()
+        app.buttons["featured-way/37058377"].tap()
+        XCTAssertTrue(app.buttons["favourite"].waitForExistence(timeout: 5))
+        app.buttons["favourite"].tap()
+        app.buttons["close-place"].tap()
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let row = app.buttons["favourite-way/37058377"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        XCTAssertTrue(row.isHittable)
+        capture("15-home-favourites-landscape", app: app)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.5)).press(forDuration: 1.2)
+        XCTAssertTrue(app.staticTexts["Dropped pin"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["directions-from"].isHittable)
+        capture("16-dropped-pin-landscape", app: app)
     }
 }
