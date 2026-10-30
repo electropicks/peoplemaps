@@ -1,0 +1,2122 @@
+[
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 180,
+      "edges" : "3f7c80bed61e234e",
+      "meters" : 2278.84,
+      "seconds" : 2158.992857,
+      "stress" : 528.5398
+    },
+    "key" : "node\/10115680036>node\/2061048094 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 180,
+      "edges" : "ac68408b5f35a042",
+      "meters" : 2276.3,
+      "seconds" : 2206.928571,
+      "stress" : 490.0238
+    },
+    "candidates" : 6,
+    "fastest" : {
+      "count" : 180,
+      "edges" : "3f7c80bed61e234e",
+      "meters" : 2278.84,
+      "seconds" : 2158.992857,
+      "stress" : 528.5398
+    },
+    "key" : "node\/10115680036>node\/2061048094 walk 5 default",
+    "reasons" : [
+      "1 fewer marked crossing without a signal",
+      "Tradeoff: 1 more signalled crossing"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 122,
+      "edges" : "d23ee15586e3146a",
+      "meters" : 2349.45,
+      "seconds" : 727.654,
+      "stress" : 1418.88595
+    },
+    "key" : "node\/10115680036>node\/2061048094 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 158,
+      "edges" : "f82b87ca2cf17764",
+      "meters" : 3238.16,
+      "seconds" : 966.901625,
+      "stress" : 1116.69785
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 122,
+      "edges" : "d23ee15586e3146a",
+      "meters" : 2349.45,
+      "seconds" : 727.654,
+      "stress" : 1418.88595
+    },
+    "key" : "node\/10115680036>node\/2061048094 bike 5 default",
+    "reasons" : [
+      "0.7 km less riding in traffic on busy arterials",
+      "2 fewer left turns across traffic without a signal",
+      "6 fewer traffic signals",
+      "Tradeoff: 31 m more climbing",
+      "Tradeoff: 1 more crossing of a busy street without a signal"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 121,
+      "edges" : "8949b39527d9fd2f",
+      "meters" : 2358.65,
+      "seconds" : 507.669296,
+      "stress" : 578.9954
+    },
+    "key" : "node\/10115680036>node\/2061048094 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 121,
+      "edges" : "8949b39527d9fd2f",
+      "meters" : 2358.65,
+      "seconds" : 507.669296,
+      "stress" : 578.9954
+    },
+    "key" : "node\/10115680036>node\/2061048094 drive 5 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 102,
+      "edges" : "d74337f0a8e731a6",
+      "meters" : 2127.05,
+      "seconds" : 1926.821429,
+      "stress" : 669.4364
+    },
+    "key" : "way\/445746567>node\/10935410391 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 105,
+      "edges" : "edb7781bc67f0fa2",
+      "meters" : 2182.59,
+      "seconds" : 2050.742857,
+      "stress" : 438.9294
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 102,
+      "edges" : "d74337f0a8e731a6",
+      "meters" : 2127.05,
+      "seconds" : 1926.821429,
+      "stress" : 669.4364
+    },
+    "key" : "way\/445746567>node\/10935410391 walk 5 default",
+    "reasons" : [
+      "2 fewer unmarked crossings of busy streets",
+      "1 fewer marked crossing without a signal",
+      "Tradeoff: 2 more signalled crossings",
+      "Tradeoff: 1 more side-street crossing"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 76,
+      "edges" : "f9d350b36d34eb68",
+      "meters" : 2290.86,
+      "seconds" : 873.082982,
+      "stress" : 1409.16205
+    },
+    "key" : "way\/445746567>node\/10935410391 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 84,
+      "edges" : "ce147b3f741e3770",
+      "meters" : 2892.41,
+      "seconds" : 963.567429,
+      "stress" : 958.6482
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 76,
+      "edges" : "f9d350b36d34eb68",
+      "meters" : 2290.86,
+      "seconds" : 873.082982,
+      "stress" : 1409.16205
+    },
+    "key" : "way\/445746567>node\/10935410391 bike 5 default",
+    "reasons" : [
+      "2 fewer left turns across traffic without a signal",
+      "0.2 km less riding in traffic on busy arterials",
+      "0.6 km less riding on arterials",
+      "Tradeoff: 1.4 km more on quiet streets",
+      "Tradeoff: 7 m more climbing"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 78,
+      "edges" : "cebda0377565e84d",
+      "meters" : 2320.87,
+      "seconds" : 408.409286,
+      "stress" : 608.5963
+    },
+    "key" : "way\/445746567>node\/10935410391 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 78,
+      "edges" : "aebf4d594a388954",
+      "meters" : 2326.85,
+      "seconds" : 411.816334,
+      "stress" : 361.7845
+    },
+    "candidates" : 2,
+    "fastest" : {
+      "count" : 78,
+      "edges" : "cebda0377565e84d",
+      "meters" : 2320.87,
+      "seconds" : 408.409286,
+      "stress" : 608.5963
+    },
+    "key" : "way\/445746567>node\/10935410391 drive 5 default",
+    "reasons" : [
+      "1 fewer crossing of a busy street without a signal",
+      "1 fewer left turn across traffic without a signal",
+      "0.2 km less on residential streets",
+      "Tradeoff: 1 more left turn at a signal",
+      "Tradeoff: 1 more traffic signal"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 167,
+      "edges" : "d705bfd3d7a98411",
+      "meters" : 2691.83,
+      "seconds" : 2066.235714,
+      "stress" : 799.7194
+    },
+    "key" : "way\/50321784>way\/32526883 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 174,
+      "edges" : "baa887578dff2f34",
+      "meters" : 2875.1,
+      "seconds" : 2353.892857,
+      "stress" : 228.8764
+    },
+    "candidates" : 7,
+    "fastest" : {
+      "count" : 167,
+      "edges" : "d705bfd3d7a98411",
+      "meters" : 2691.83,
+      "seconds" : 2066.235714,
+      "stress" : 799.7194
+    },
+    "key" : "way\/50321784>way\/32526883 walk 5 default",
+    "reasons" : [
+      "4 fewer unmarked crossings of busy streets",
+      "1 fewer marked crossing without a signal",
+      "4 fewer side-street crossings",
+      "Tradeoff: 3 more signalled crossings"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 114,
+      "edges" : "421ae96ce094b05",
+      "meters" : 2734.21,
+      "seconds" : 668.692,
+      "stress" : 1034.18455
+    },
+    "key" : "way\/50321784>way\/32526883 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 122,
+      "edges" : "a45597df86d7ab12",
+      "meters" : 3287.85,
+      "seconds" : 837.621818,
+      "stress" : 552.55565
+    },
+    "candidates" : 6,
+    "fastest" : {
+      "count" : 114,
+      "edges" : "421ae96ce094b05",
+      "meters" : 2734.21,
+      "seconds" : 668.692,
+      "stress" : 1034.18455
+    },
+    "key" : "way\/50321784>way\/32526883 bike 5 default",
+    "reasons" : [
+      "2 fewer left turns across traffic without a signal",
+      "0.7 km less riding on arterials",
+      "2 fewer crossings of busy streets without a signal",
+      "Tradeoff: 14 more turns",
+      "Tradeoff: 0.3 km more on rough surfaces"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 110,
+      "edges" : "b042b98096b03c61",
+      "meters" : 2970.81,
+      "seconds" : 468.336687,
+      "stress" : 414.304
+    },
+    "key" : "way\/50321784>way\/32526883 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 173,
+      "edges" : "e35e89803e5f5ad1",
+      "meters" : 4408.56,
+      "seconds" : 647.383239,
+      "stress" : 171.2861
+    },
+    "candidates" : 3,
+    "fastest" : {
+      "count" : 110,
+      "edges" : "b042b98096b03c61",
+      "meters" : 2970.81,
+      "seconds" : 468.336687,
+      "stress" : 414.304
+    },
+    "key" : "way\/50321784>way\/32526883 drive 5 default",
+    "reasons" : [
+      "1 fewer left turn across traffic without a signal",
+      "1 fewer crossing of a busy street without a signal",
+      "1 fewer side-street shortcut",
+      "Tradeoff: 5 more traffic signals",
+      "Tradeoff: 1 more right turn into arterial traffic without a signal"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 103,
+      "edges" : "ed9db7ce47e3c576",
+      "meters" : 2922.79,
+      "seconds" : 2121.707143,
+      "stress" : 132.3017
+    },
+    "key" : "way\/486896126>way\/445746567 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 94,
+      "edges" : "45b9c20402295374",
+      "meters" : 2938.05,
+      "seconds" : 2141.607143,
+      "stress" : 98.9051
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 103,
+      "edges" : "ed9db7ce47e3c576",
+      "meters" : 2922.79,
+      "seconds" : 2121.707143,
+      "stress" : 132.3017
+    },
+    "key" : "way\/486896126>way\/445746567 walk 5 default",
+    "reasons" : [
+      "0.5 km less walking beside arterial traffic",
+      "0.5 km less without a sidewalk",
+      "2 fewer side-street crossings"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 103,
+      "edges" : "7d1add2f04715b6b",
+      "meters" : 2941.22,
+      "seconds" : 656.033429,
+      "stress" : 745.663
+    },
+    "key" : "way\/486896126>way\/445746567 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 104,
+      "edges" : "6c5e4fb812a08fd3",
+      "meters" : 3108.41,
+      "seconds" : 748.591714,
+      "stress" : 475.33775
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 103,
+      "edges" : "7d1add2f04715b6b",
+      "meters" : 2941.22,
+      "seconds" : 656.033429,
+      "stress" : 745.663
+    },
+    "key" : "way\/486896126>way\/445746567 bike 5 default",
+    "reasons" : [
+      "0.4 km less riding in traffic on busy arterials",
+      "0.4 km less riding on arterials",
+      "Tradeoff: 12 more turns",
+      "Tradeoff: 0.4 km more on quiet streets"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 110,
+      "edges" : "41037b075bfe32e4",
+      "meters" : 3355.59,
+      "seconds" : 584.015798,
+      "stress" : 533.3723
+    },
+    "key" : "way\/486896126>way\/445746567 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 131,
+      "edges" : "36d5f4819c9426bf",
+      "meters" : 3463.49,
+      "seconds" : 628.933763,
+      "stress" : 331.3723
+    },
+    "candidates" : 3,
+    "fastest" : {
+      "count" : 110,
+      "edges" : "41037b075bfe32e4",
+      "meters" : 3355.59,
+      "seconds" : 584.015798,
+      "stress" : 533.3723
+    },
+    "key" : "way\/486896126>way\/445746567 drive 5 default",
+    "reasons" : [
+      "2 fewer left turns across traffic without a signal",
+      "3 fewer turns",
+      "1 fewer yield",
+      "Tradeoff: 6 more traffic signals",
+      "Tradeoff: 3 more stop-and-go stops"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 106,
+      "edges" : "2d69aa50e2063521",
+      "meters" : 2746.41,
+      "seconds" : 2203.971429,
+      "stress" : 551.3932
+    },
+    "key" : "way\/38655779>node\/1957956607 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 110,
+      "edges" : "4284d198987143c8",
+      "meters" : 2735.07,
+      "seconds" : 2237.621429,
+      "stress" : 457.84
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 106,
+      "edges" : "2d69aa50e2063521",
+      "meters" : 2746.41,
+      "seconds" : 2203.971429,
+      "stress" : 551.3932
+    },
+    "key" : "way\/38655779>node\/1957956607 walk 5 default",
+    "reasons" : [
+      "1 fewer unmarked crossing of a busy street",
+      "2 fewer side-street crossings",
+      "Tradeoff: 0.3 km more walking beside arterial traffic"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 94,
+      "edges" : "4763cfc45f1c349e",
+      "meters" : 2860.41,
+      "seconds" : 803.573446,
+      "stress" : 1634.943
+    },
+    "key" : "way\/38655779>node\/1957956607 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 119,
+      "edges" : "124db65eafbddf38",
+      "meters" : 3443.4,
+      "seconds" : 1016.565946,
+      "stress" : 1104.1401
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 94,
+      "edges" : "4763cfc45f1c349e",
+      "meters" : 2860.41,
+      "seconds" : 803.573446,
+      "stress" : 1634.943
+    },
+    "key" : "way\/38655779>node\/1957956607 bike 5 default",
+    "reasons" : [
+      "5 fewer left turns across traffic without a signal",
+      "0.4 km less riding in traffic on busy arterials",
+      "0.3 km less riding on arterials",
+      "Tradeoff: 24 m more climbing",
+      "Tradeoff: 1.5 km more on quiet streets"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 92,
+      "edges" : "175c807fde8f5239",
+      "meters" : 2824.8,
+      "seconds" : 456.87031,
+      "stress" : 656.1563
+    },
+    "key" : "way\/38655779>node\/1957956607 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 116,
+      "edges" : "ac4b07d2a4eb7c5d",
+      "meters" : 3237.87,
+      "seconds" : 513.948151,
+      "stress" : 160.8942
+    },
+    "candidates" : 2,
+    "fastest" : {
+      "count" : 92,
+      "edges" : "175c807fde8f5239",
+      "meters" : 2824.8,
+      "seconds" : 456.87031,
+      "stress" : 656.1563
+    },
+    "key" : "way\/38655779>node\/1957956607 drive 5 default",
+    "reasons" : [
+      "3 fewer left turns across traffic without a signal",
+      "1 fewer crossing of a busy street without a signal",
+      "1 fewer intersection of five or more streets",
+      "Tradeoff: 2 more right turns into arterial traffic without a signal",
+      "Tradeoff: 0.4 km more on residential streets"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 109,
+      "edges" : "f0baaceb97b77859",
+      "meters" : 2107.54,
+      "seconds" : 1690.109524,
+      "stress" : 989.5485
+    },
+    "key" : "node\/2138396795>way\/352673556 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 106,
+      "edges" : "80bd00b83a950834",
+      "meters" : 2203.16,
+      "seconds" : 1890.659524,
+      "stress" : 579.6457
+    },
+    "candidates" : 6,
+    "fastest" : {
+      "count" : 109,
+      "edges" : "f0baaceb97b77859",
+      "meters" : 2107.54,
+      "seconds" : 1690.109524,
+      "stress" : 989.5485
+    },
+    "key" : "node\/2138396795>way\/352673556 walk 5 default",
+    "reasons" : [
+      "4 fewer unmarked crossings of busy streets",
+      "Tradeoff: 3 more signalled crossings",
+      "Tradeoff: 1 more side-street crossing"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 83,
+      "edges" : "3663c50640c3ee35",
+      "meters" : 2172.65,
+      "seconds" : 692.617818,
+      "stress" : 1187.4125
+    },
+    "key" : "node\/2138396795>way\/352673556 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 121,
+      "edges" : "d6e656f9e3487bcf",
+      "meters" : 3305.95,
+      "seconds" : 989.272494,
+      "stress" : 890.58745
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 83,
+      "edges" : "3663c50640c3ee35",
+      "meters" : 2172.65,
+      "seconds" : 692.617818,
+      "stress" : 1187.4125
+    },
+    "key" : "node\/2138396795>way\/352673556 bike 5 default",
+    "reasons" : [
+      "5 fewer crossings of busy streets without a signal",
+      "0.1 km less riding in traffic on busy arterials",
+      "2 fewer all-way stops",
+      "Tradeoff: 0.3 km more riding on arterials",
+      "Tradeoff: 10 more turns"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 86,
+      "edges" : "843b95c9c0b7b190",
+      "meters" : 2412.04,
+      "seconds" : 433.692651,
+      "stress" : 683.0668
+    },
+    "key" : "node\/2138396795>way\/352673556 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 100,
+      "edges" : "b5bf958a5d387f77",
+      "meters" : 2723.36,
+      "seconds" : 481.133409,
+      "stress" : 247.0113
+    },
+    "candidates" : 2,
+    "fastest" : {
+      "count" : 86,
+      "edges" : "843b95c9c0b7b190",
+      "meters" : 2412.04,
+      "seconds" : 433.692651,
+      "stress" : 683.0668
+    },
+    "key" : "node\/2138396795>way\/352673556 drive 5 default",
+    "reasons" : [
+      "3 fewer left turns across traffic without a signal",
+      "1 fewer intersection of five or more streets",
+      "3 fewer turns",
+      "Tradeoff: 5 more traffic signals",
+      "Tradeoff: 1 more left turn at a signal"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 128,
+      "edges" : "4042e7d26fcdf9e8",
+      "meters" : 2657.06,
+      "seconds" : 2125.9,
+      "stress" : 509.9874
+    },
+    "key" : "way\/462865832>node\/2134343249 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 141,
+      "edges" : "1b674bf4d624428f",
+      "meters" : 2669.27,
+      "seconds" : 2367.871429,
+      "stress" : 306.2172
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 128,
+      "edges" : "4042e7d26fcdf9e8",
+      "meters" : 2657.06,
+      "seconds" : 2125.9,
+      "stress" : 509.9874
+    },
+    "key" : "way\/462865832>node\/2134343249 walk 5 default",
+    "reasons" : [
+      "2 fewer unmarked crossings of busy streets",
+      "1 fewer marked crossing without a signal",
+      "0.3 km less walking beside arterial traffic",
+      "Tradeoff: 5 more signalled crossings"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 91,
+      "edges" : "b6d30e57193af323",
+      "meters" : 2631.01,
+      "seconds" : 809.902,
+      "stress" : 1019.5365
+    },
+    "key" : "way\/462865832>node\/2134343249 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 100,
+      "edges" : "fa9c83cf08c904b2",
+      "meters" : 2702.1,
+      "seconds" : 837.37,
+      "stress" : 672.1535
+    },
+    "candidates" : 2,
+    "fastest" : {
+      "count" : 91,
+      "edges" : "b6d30e57193af323",
+      "meters" : 2631.01,
+      "seconds" : 809.902,
+      "stress" : 1019.5365
+    },
+    "key" : "way\/462865832>node\/2134343249 bike 5 default",
+    "reasons" : [
+      "3 fewer left turns across traffic without a signal",
+      "0.3 km less riding on arterials",
+      "1 fewer stop sign",
+      "Tradeoff: 3 more traffic signals",
+      "Tradeoff: 1 more left turn at a signal"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 103,
+      "edges" : "6e47e657f181dd03",
+      "meters" : 2726.37,
+      "seconds" : 447.975288,
+      "stress" : 142
+    },
+    "key" : "way\/462865832>node\/2134343249 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 103,
+      "edges" : "6e47e657f181dd03",
+      "meters" : 2726.37,
+      "seconds" : 447.975288,
+      "stress" : 142
+    },
+    "key" : "way\/462865832>node\/2134343249 drive 5 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 77,
+      "edges" : "350671cc3e48636b",
+      "meters" : 1494.93,
+      "seconds" : 1283.807143,
+      "stress" : 636.524
+    },
+    "key" : "node\/2167340902>node\/1308152010 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 73,
+      "edges" : "99a958a31543d26a",
+      "meters" : 1513.2,
+      "seconds" : 1435.357143,
+      "stress" : 310.4428
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 77,
+      "edges" : "350671cc3e48636b",
+      "meters" : 1494.93,
+      "seconds" : 1283.807143,
+      "stress" : 636.524
+    },
+    "key" : "node\/2167340902>node\/1308152010 walk 5 default",
+    "reasons" : [
+      "2 fewer unmarked crossings of busy streets",
+      "1 fewer marked crossing without a signal",
+      "0.3 km less walking beside arterial traffic",
+      "Tradeoff: 3 more signalled crossings"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 49,
+      "edges" : "445cff6918787541",
+      "meters" : 1456.5,
+      "seconds" : 580.35,
+      "stress" : 763.23845
+    },
+    "key" : "node\/2167340902>node\/1308152010 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 66,
+      "edges" : "66d84eda423a63cb",
+      "meters" : 2654.59,
+      "seconds" : 813.62725,
+      "stress" : 478.3685
+    },
+    "candidates" : 3,
+    "fastest" : {
+      "count" : 49,
+      "edges" : "445cff6918787541",
+      "meters" : 1456.5,
+      "seconds" : 580.35,
+      "stress" : 763.23845
+    },
+    "key" : "node\/2167340902>node\/1308152010 bike 5 default",
+    "reasons" : [
+      "0.3 km less riding in traffic on busy arterials",
+      "1 fewer crossing of a busy street without a signal",
+      "3 fewer traffic signals",
+      "Tradeoff: 0.3 km more on quiet streets",
+      "Tradeoff: 3 more turns"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 50,
+      "edges" : "f2c1420ca163f694",
+      "meters" : 1557.06,
+      "seconds" : 260.562821,
+      "stress" : 244
+    },
+    "key" : "node\/2167340902>node\/1308152010 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 65,
+      "edges" : "56144ac074e15fce",
+      "meters" : 2226.06,
+      "seconds" : 354.911997,
+      "stress" : 164
+    },
+    "candidates" : 2,
+    "fastest" : {
+      "count" : 50,
+      "edges" : "f2c1420ca163f694",
+      "meters" : 1557.06,
+      "seconds" : 260.562821,
+      "stress" : 244
+    },
+    "key" : "node\/2167340902>node\/1308152010 drive 5 default",
+    "reasons" : [
+      "1 fewer left turn across traffic without a signal",
+      "1 fewer all-way stop",
+      "Tradeoff: 2 more left turns at signals",
+      "Tradeoff: 2 more traffic signals"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 111,
+      "edges" : "20c927107915f692",
+      "meters" : 1901.33,
+      "seconds" : 1734.709524,
+      "stress" : 903.2044
+    },
+    "key" : "node\/1297521123>node\/10794143073 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 111,
+      "edges" : "2c9148f3a7c898d2",
+      "meters" : 1978.77,
+      "seconds" : 1839.57619,
+      "stress" : 671.412
+    },
+    "candidates" : 6,
+    "fastest" : {
+      "count" : 111,
+      "edges" : "20c927107915f692",
+      "meters" : 1901.33,
+      "seconds" : 1734.709524,
+      "stress" : 903.2044
+    },
+    "key" : "node\/1297521123>node\/10794143073 walk 5 default",
+    "reasons" : [
+      "1 fewer unmarked crossing of a busy street",
+      "65 fewer steps",
+      "1 fewer side-street crossing",
+      "Tradeoff: 1 more signalled crossing"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 91,
+      "edges" : "b0c9cbcf4e4afcf0",
+      "meters" : 3297.45,
+      "seconds" : 1049.84,
+      "stress" : 1405.9264
+    },
+    "key" : "node\/1297521123>node\/10794143073 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 95,
+      "edges" : "834692444982efa7",
+      "meters" : 3957.35,
+      "seconds" : 1216.42,
+      "stress" : 778.191
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 91,
+      "edges" : "b0c9cbcf4e4afcf0",
+      "meters" : 3297.45,
+      "seconds" : 1049.84,
+      "stress" : 1405.9264
+    },
+    "key" : "node\/1297521123>node\/10794143073 bike 5 default",
+    "reasons" : [
+      "1.5 km less riding on arterials",
+      "3 fewer left turns across traffic without a signal",
+      "0.1 km less riding in traffic on busy arterials",
+      "Tradeoff: 0.9 km more on quiet streets",
+      "Tradeoff: 7 m more climbing"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 90,
+      "edges" : "a86a2a81a73b72ff",
+      "meters" : 3264.51,
+      "seconds" : 434.548529,
+      "stress" : 457.3932
+    },
+    "key" : "node\/1297521123>node\/10794143073 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 127,
+      "edges" : "b7df6cbf1be9a567",
+      "meters" : 4580.26,
+      "seconds" : 652.75648,
+      "stress" : 196.0978
+    },
+    "candidates" : 3,
+    "fastest" : {
+      "count" : 90,
+      "edges" : "a86a2a81a73b72ff",
+      "meters" : 3264.51,
+      "seconds" : 434.548529,
+      "stress" : 457.3932
+    },
+    "key" : "node\/1297521123>node\/10794143073 drive 5 default",
+    "reasons" : [
+      "2 fewer left turns across traffic without a signal",
+      "4 fewer stop signs",
+      "2 fewer stop-and-go stops",
+      "Tradeoff: 4 more traffic signals",
+      "Tradeoff: 0.6 km more on residential streets"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 109,
+      "edges" : "872512e47d9347cc",
+      "meters" : 2106.38,
+      "seconds" : 1515.807143,
+      "stress" : 531.7054
+    },
+    "key" : "way\/51805187>way\/160544280 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 93,
+      "edges" : "745169907411c9d8",
+      "meters" : 2192.99,
+      "seconds" : 1698.552381,
+      "stress" : 205.0631
+    },
+    "candidates" : 6,
+    "fastest" : {
+      "count" : 109,
+      "edges" : "872512e47d9347cc",
+      "meters" : 2106.38,
+      "seconds" : 1515.807143,
+      "stress" : 531.7054
+    },
+    "key" : "way\/51805187>way\/160544280 walk 5 default",
+    "reasons" : [
+      "4 fewer unmarked crossings of busy streets",
+      "4 fewer side-street crossings",
+      "0.2 km less walking beside arterial traffic",
+      "Tradeoff: 31 more steps",
+      "Tradeoff: 2 more signalled crossings"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 71,
+      "edges" : "7a04fbdd9b6ceab9",
+      "meters" : 2011.35,
+      "seconds" : 384.77,
+      "stress" : 640.373
+    },
+    "key" : "way\/51805187>way\/160544280 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 84,
+      "edges" : "1b05ec7d26d703cb",
+      "meters" : 2253.91,
+      "seconds" : 476.243143,
+      "stress" : 410.82795
+    },
+    "candidates" : 3,
+    "fastest" : {
+      "count" : 71,
+      "edges" : "7a04fbdd9b6ceab9",
+      "meters" : 2011.35,
+      "seconds" : 384.77,
+      "stress" : 640.373
+    },
+    "key" : "way\/51805187>way\/160544280 bike 5 default",
+    "reasons" : [
+      "0.8 km less riding on arterials",
+      "1 fewer left turn across traffic without a signal",
+      "1 fewer crossing of a busy street without a signal",
+      "Tradeoff: 0.2 km more of steep downhill in traffic",
+      "Tradeoff: 0.6 km more on quiet streets"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 68,
+      "edges" : "d2e9b7e3d54c5ef",
+      "meters" : 1970.3,
+      "seconds" : 353.047923,
+      "stress" : 530.4121
+    },
+    "key" : "way\/51805187>way\/160544280 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 73,
+      "edges" : "892be41d32296fe",
+      "meters" : 2292.54,
+      "seconds" : 390.60212,
+      "stress" : 393.8703
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 68,
+      "edges" : "d2e9b7e3d54c5ef",
+      "meters" : 1970.3,
+      "seconds" : 353.047923,
+      "stress" : 530.4121
+    },
+    "key" : "way\/51805187>way\/160544280 drive 5 default",
+    "reasons" : [
+      "1 fewer left turn across traffic without a signal",
+      "1 fewer left turn at a signal",
+      "2 fewer turns",
+      "Tradeoff: 1 more stop sign"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 123,
+      "edges" : "eeff829bff8b8e84",
+      "meters" : 2084.45,
+      "seconds" : 1906.392857,
+      "stress" : 550.2776
+    },
+    "key" : "relation\/907023>node\/4243744790 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 117,
+      "edges" : "f66baaabc090e566",
+      "meters" : 2187.22,
+      "seconds" : 2125.8,
+      "stress" : 238.4592
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 123,
+      "edges" : "eeff829bff8b8e84",
+      "meters" : 2084.45,
+      "seconds" : 1906.392857,
+      "stress" : 550.2776
+    },
+    "key" : "relation\/907023>node\/4243744790 walk 5 default",
+    "reasons" : [
+      "2 fewer unmarked crossings of busy streets",
+      "3 fewer marked crossings without a signal",
+      "0.3 km less walking beside arterial traffic",
+      "Tradeoff: 3 more signalled crossings"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 103,
+      "edges" : "5c8cf79359aa7bea",
+      "meters" : 2533.45,
+      "seconds" : 812.271714,
+      "stress" : 870.955
+    },
+    "key" : "relation\/907023>node\/4243744790 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 95,
+      "edges" : "eb415582a33c378f",
+      "meters" : 3408.97,
+      "seconds" : 1024.125714,
+      "stress" : 749.4741
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 103,
+      "edges" : "5c8cf79359aa7bea",
+      "meters" : 2533.45,
+      "seconds" : 812.271714,
+      "stress" : 870.955
+    },
+    "key" : "relation\/907023>node\/4243744790 bike 5 default",
+    "reasons" : [
+      "0.5 km less riding in traffic on busy arterials",
+      "2 fewer traffic signals",
+      "1 fewer left turn at a signal",
+      "Tradeoff: 1.2 km more on quiet streets",
+      "Tradeoff: 16 m more climbing"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 97,
+      "edges" : "265421bca79835b9",
+      "meters" : 2555.52,
+      "seconds" : 464.8171,
+      "stress" : 357.4752
+    },
+    "key" : "relation\/907023>node\/4243744790 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "candidates" : 3,
+    "fastest" : {
+      "count" : 97,
+      "edges" : "265421bca79835b9",
+      "meters" : 2555.52,
+      "seconds" : 464.8171,
+      "stress" : 357.4752
+    },
+    "key" : "relation\/907023>node\/4243744790 drive 5 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 116,
+      "edges" : "f3d8e24eb79d24fa",
+      "meters" : 2647.28,
+      "seconds" : 1979.414286,
+      "stress" : 481.0008
+    },
+    "key" : "node\/1158397939>way\/40833028 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 104,
+      "edges" : "ab38e56f97ded7ea",
+      "meters" : 2591.85,
+      "seconds" : 2191.821429,
+      "stress" : 198.795
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 116,
+      "edges" : "f3d8e24eb79d24fa",
+      "meters" : 2647.28,
+      "seconds" : 1979.414286,
+      "stress" : 481.0008
+    },
+    "key" : "node\/1158397939>way\/40833028 walk 5 default",
+    "reasons" : [
+      "6 fewer marked crossings without a signal",
+      "0.3 km less walking beside arterial traffic",
+      "1 fewer side-street crossing",
+      "Tradeoff: 5 more signalled crossings"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 77,
+      "edges" : "7d006773063f43dc",
+      "meters" : 2041.38,
+      "seconds" : 484.830623,
+      "stress" : 566.43605
+    },
+    "key" : "node\/1158397939>way\/40833028 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 77,
+      "edges" : "7d006773063f43dc",
+      "meters" : 2041.38,
+      "seconds" : 484.830623,
+      "stress" : 566.43605
+    },
+    "key" : "node\/1158397939>way\/40833028 bike 5 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 78,
+      "edges" : "9897283ee91dce11",
+      "meters" : 1934.79,
+      "seconds" : 380.522023,
+      "stress" : 275.546
+    },
+    "key" : "node\/1158397939>way\/40833028 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "candidates" : 2,
+    "fastest" : {
+      "count" : 78,
+      "edges" : "9897283ee91dce11",
+      "meters" : 1934.79,
+      "seconds" : 380.522023,
+      "stress" : 275.546
+    },
+    "key" : "node\/1158397939>way\/40833028 drive 5 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 131,
+      "edges" : "5140e3344fdb8bb0",
+      "meters" : 2222.67,
+      "seconds" : 1756.619048,
+      "stress" : 693.115
+    },
+    "key" : "way\/295867977>way\/306759590 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 91,
+      "edges" : "a70f93a1d12646ad",
+      "meters" : 2470.07,
+      "seconds" : 1950.7,
+      "stress" : 273.9727
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 131,
+      "edges" : "5140e3344fdb8bb0",
+      "meters" : 2222.67,
+      "seconds" : 1756.619048,
+      "stress" : 693.115
+    },
+    "key" : "way\/295867977>way\/306759590 walk 5 default",
+    "reasons" : [
+      "2 fewer unmarked crossings of busy streets",
+      "162 fewer steps",
+      "1 fewer marked crossing without a signal",
+      "Tradeoff: 1 more signalled crossing",
+      "Tradeoff: 0.2 km more without a sidewalk"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 80,
+      "edges" : "2a10ac236bef81bd",
+      "meters" : 2703.9,
+      "seconds" : 634.73,
+      "stress" : 1042.39485
+    },
+    "key" : "way\/295867977>way\/306759590 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 75,
+      "edges" : "8384e27434ea6e3d",
+      "meters" : 3749.61,
+      "seconds" : 823.140625,
+      "stress" : 715.91115
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 80,
+      "edges" : "2a10ac236bef81bd",
+      "meters" : 2703.9,
+      "seconds" : 634.73,
+      "stress" : 1042.39485
+    },
+    "key" : "way\/295867977>way\/306759590 bike 5 default",
+    "reasons" : [
+      "0.2 km less riding in traffic on busy arterials",
+      "0.4 km less riding on arterials",
+      "0.3 km less of steep downhill in traffic",
+      "Tradeoff: 1.0 km more on quiet streets",
+      "Tradeoff: 3 more turns"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 83,
+      "edges" : "dda8db26688dce11",
+      "meters" : 2823.85,
+      "seconds" : 421.581519,
+      "stress" : 167.1868
+    },
+    "key" : "way\/295867977>way\/306759590 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "candidates" : 2,
+    "fastest" : {
+      "count" : 83,
+      "edges" : "dda8db26688dce11",
+      "meters" : 2823.85,
+      "seconds" : 421.581519,
+      "stress" : 167.1868
+    },
+    "key" : "way\/295867977>way\/306759590 drive 5 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 139,
+      "edges" : "d46a9025f625ab2",
+      "meters" : 2286.33,
+      "seconds" : 1913.842857,
+      "stress" : 495.464
+    },
+    "key" : "node\/1630958088>node\/10861762926 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 126,
+      "edges" : "ac48aa5b8a794d8",
+      "meters" : 2362.49,
+      "seconds" : 2121.992857,
+      "stress" : 227.8112
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 139,
+      "edges" : "d46a9025f625ab2",
+      "meters" : 2286.33,
+      "seconds" : 1913.842857,
+      "stress" : 495.464
+    },
+    "key" : "node\/1630958088>node\/10861762926 walk 5 default",
+    "reasons" : [
+      "2 fewer unmarked crossings of busy streets",
+      "1 fewer marked crossing without a signal",
+      "0.5 km less walking beside arterial traffic",
+      "Tradeoff: 3 more signalled crossings"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 84,
+      "edges" : "36490ab500a2e25c",
+      "meters" : 2331.84,
+      "seconds" : 583.718,
+      "stress" : 563.46735
+    },
+    "key" : "node\/1630958088>node\/10861762926 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 82,
+      "edges" : "a7b750e96e727dd8",
+      "meters" : 2332.01,
+      "seconds" : 601.752,
+      "stress" : 336.7892
+    },
+    "candidates" : 2,
+    "fastest" : {
+      "count" : 84,
+      "edges" : "36490ab500a2e25c",
+      "meters" : 2331.84,
+      "seconds" : 583.718,
+      "stress" : 563.46735
+    },
+    "key" : "node\/1630958088>node\/10861762926 bike 5 default",
+    "reasons" : [
+      "2 fewer crossings of busy streets without a signal",
+      "1 fewer left turn across traffic without a signal",
+      "Tradeoff: 1 more place where the bike route drops you into traffic",
+      "Tradeoff: 2 more traffic signals"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 69,
+      "edges" : "db7c75919d6173e3",
+      "meters" : 2204.54,
+      "seconds" : 331.125817,
+      "stress" : 454.6211
+    },
+    "key" : "node\/1630958088>node\/10861762926 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 90,
+      "edges" : "22226df566a4db20",
+      "meters" : 4282.7,
+      "seconds" : 496.306437,
+      "stress" : 250
+    },
+    "candidates" : 3,
+    "fastest" : {
+      "count" : 69,
+      "edges" : "db7c75919d6173e3",
+      "meters" : 2204.54,
+      "seconds" : 331.125817,
+      "stress" : 454.6211
+    },
+    "key" : "node\/1630958088>node\/10861762926 drive 5 default",
+    "reasons" : [
+      "1 fewer left turn across traffic without a signal",
+      "1 fewer short freeway hop with quick lane changes",
+      "Tradeoff: 1 more turn"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 203,
+      "edges" : "a3eb36bbd717d68d",
+      "meters" : 5487.44,
+      "seconds" : 4056.580952,
+      "stress" : 465.4519
+    },
+    "key" : "relation\/1047789>node\/2140460393 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 230,
+      "edges" : "fade5027ef1c35d",
+      "meters" : 5622.29,
+      "seconds" : 4355.402381,
+      "stress" : 308.8179
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 203,
+      "edges" : "a3eb36bbd717d68d",
+      "meters" : 5487.44,
+      "seconds" : 4056.580952,
+      "stress" : 465.4519
+    },
+    "key" : "relation\/1047789>node\/2140460393 walk 5 default",
+    "reasons" : [
+      "2 fewer unmarked crossings of busy streets",
+      "0.3 km less walking beside arterial traffic",
+      "Tradeoff: 4 more signalled crossings"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 165,
+      "edges" : "b89caea81ae6c4cd",
+      "meters" : 5514.4,
+      "seconds" : 1242.675429,
+      "stress" : 784.4108
+    },
+    "key" : "relation\/1047789>node\/2140460393 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "candidates" : 2,
+    "fastest" : {
+      "count" : 165,
+      "edges" : "b89caea81ae6c4cd",
+      "meters" : 5514.4,
+      "seconds" : 1242.675429,
+      "stress" : 784.4108
+    },
+    "key" : "relation\/1047789>node\/2140460393 bike 5 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 193,
+      "edges" : "616a8bf99550d75f",
+      "meters" : 5447.32,
+      "seconds" : 827.123026,
+      "stress" : 628.4638
+    },
+    "key" : "relation\/1047789>node\/2140460393 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 260,
+      "edges" : "10fbc1bbe7af1f54",
+      "meters" : 7915.37,
+      "seconds" : 1003.336922,
+      "stress" : 293.5361
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 193,
+      "edges" : "616a8bf99550d75f",
+      "meters" : 5447.32,
+      "seconds" : 827.123026,
+      "stress" : 628.4638
+    },
+    "key" : "relation\/1047789>node\/2140460393 drive 5 default",
+    "reasons" : [
+      "3 fewer left turns across traffic without a signal",
+      "3 fewer stop-and-go stops",
+      "1 fewer traffic signal",
+      "Tradeoff: 1 more intersection of five or more streets",
+      "Tradeoff: 1 more freeway entry"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 295,
+      "edges" : "1bafc2735e8faa24",
+      "meters" : 6446.64,
+      "seconds" : 5037.485714,
+      "stress" : 1849.2448
+    },
+    "key" : "way\/234054122>node\/1995793592 walk 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 303,
+      "edges" : "58f464270996264",
+      "meters" : 6658.09,
+      "seconds" : 5175.857143,
+      "stress" : 901.5942
+    },
+    "candidates" : 7,
+    "fastest" : {
+      "count" : 295,
+      "edges" : "1bafc2735e8faa24",
+      "meters" : 6446.64,
+      "seconds" : 5037.485714,
+      "stress" : 1849.2448
+    },
+    "key" : "way\/234054122>node\/1995793592 walk 5 default",
+    "reasons" : [
+      "11 fewer unmarked crossings of busy streets",
+      "0.5 km less walking beside arterial traffic",
+      "21 fewer steps",
+      "Tradeoff: 4 more marked crossings without a signal",
+      "Tradeoff: 6 more side-street crossings"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 218,
+      "edges" : "6b32578dcd5d9fc0",
+      "meters" : 6730.13,
+      "seconds" : 1839.052455,
+      "stress" : 2348.8137
+    },
+    "key" : "way\/234054122>node\/1995793592 bike 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 258,
+      "edges" : "87b2a66e861c8e7a",
+      "meters" : 8261.3,
+      "seconds" : 2056.156857,
+      "stress" : 1470.9626
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 218,
+      "edges" : "6b32578dcd5d9fc0",
+      "meters" : 6730.13,
+      "seconds" : 1839.052455,
+      "stress" : 2348.8137
+    },
+    "key" : "way\/234054122>node\/1995793592 bike 5 default",
+    "reasons" : [
+      "1.0 km less riding on arterials",
+      "2 fewer left turns across traffic without a signal",
+      "43 m less climbing",
+      "Tradeoff: 5 more traffic signals",
+      "Tradeoff: 4 more stop-and-go stops"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 208,
+      "edges" : "e5532e2c05e38d92",
+      "meters" : 7005.91,
+      "seconds" : 913.456544,
+      "stress" : 823.9698
+    },
+    "key" : "way\/234054122>node\/1995793592 drive 0 default",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 276,
+      "edges" : "e08c915c421f6284",
+      "meters" : 8896.5,
+      "seconds" : 1186.099548,
+      "stress" : 399.3003
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 208,
+      "edges" : "e5532e2c05e38d92",
+      "meters" : 7005.91,
+      "seconds" : 913.456544,
+      "stress" : 823.9698
+    },
+    "key" : "way\/234054122>node\/1995793592 drive 5 default",
+    "reasons" : [
+      "3 fewer left turns across traffic without a signal",
+      "3 fewer stop-and-go stops",
+      "1 fewer traffic signal",
+      "Tradeoff: 1 more stop sign",
+      "Tradeoff: 0.3 km more on residential streets"
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 180,
+      "edges" : "82d06e2192b8de1e",
+      "meters" : 2811.85,
+      "seconds" : 2294.714286,
+      "stress" : 493.1116
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 180,
+      "edges" : "3f7c80bed61e234e",
+      "meters" : 2278.84,
+      "seconds" : 2158.992857,
+      "stress" : 528.5398
+    },
+    "key" : "node\/10115680036>node\/2061048094 walk 5 hills+lights avoid",
+    "reasons" : [
+      "6 fewer signalled crossings",
+      "1 fewer unmarked crossing of a busy street",
+      "0.6 km less walking beside arterial traffic",
+      "Tradeoff: 22 m more climbing",
+      "Tradeoff: 2 more marked crossings without a signal"
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 155,
+      "edges" : "d9b0d0eccf02265a",
+      "meters" : 3369.61,
+      "seconds" : 992.155429,
+      "stress" : 1149.55825
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 122,
+      "edges" : "d23ee15586e3146a",
+      "meters" : 2349.45,
+      "seconds" : 727.654,
+      "stress" : 1418.88595
+    },
+    "key" : "node\/10115680036>node\/2061048094 bike 5 stops+turns dontMind",
+    "reasons" : [
+      "0.5 km less riding in traffic on busy arterials",
+      "3 fewer left turns across traffic without a signal",
+      "0.3 km less riding on arterials",
+      "Tradeoff: 1.2 km more on quiet streets",
+      "Tradeoff: 3 more crossings of busy streets without a signal"
+    ]
+  },
+  {
+    "candidates" : 1,
+    "fastest" : {
+      "count" : 121,
+      "edges" : "8949b39527d9fd2f",
+      "meters" : 2358.65,
+      "seconds" : 507.669296,
+      "stress" : 578.9954
+    },
+    "key" : "node\/10115680036>node\/2061048094 drive 5 streets+lefts avoid",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 111,
+      "edges" : "3c68d1a28ccc6ebe",
+      "meters" : 2172.67,
+      "seconds" : 2046.657143,
+      "stress" : 448.4112
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 102,
+      "edges" : "d74337f0a8e731a6",
+      "meters" : 2127.05,
+      "seconds" : 1926.821429,
+      "stress" : 669.4364
+    },
+    "key" : "way\/445746567>node\/10935410391 walk 5 stops+turns dontMind",
+    "reasons" : [
+      "2 fewer unmarked crossings of busy streets",
+      "0.5 km less walking beside arterial traffic",
+      "1 fewer side-street crossing",
+      "Tradeoff: 2 more signalled crossings"
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 102,
+      "edges" : "69ab0fb4322c58c5",
+      "meters" : 3271.35,
+      "seconds" : 1046.055429,
+      "stress" : 979.12345
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 76,
+      "edges" : "f9d350b36d34eb68",
+      "meters" : 2290.86,
+      "seconds" : 873.082982,
+      "stress" : 1409.16205
+    },
+    "key" : "way\/445746567>node\/10935410391 bike 5 streets+lefts avoid",
+    "reasons" : [
+      "0.8 km less riding on arterials",
+      "2 fewer left turns across traffic without a signal",
+      "0.2 km less riding in traffic on busy arterials",
+      "Tradeoff: 2.0 km more on quiet streets",
+      "Tradeoff: 1 more place where the bike route drops you into traffic"
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 89,
+      "edges" : "770e6e9e6a90ef63",
+      "meters" : 3760.73,
+      "seconds" : 668.788607,
+      "stress" : 343.9736
+    },
+    "candidates" : 3,
+    "fastest" : {
+      "count" : 78,
+      "edges" : "cebda0377565e84d",
+      "meters" : 2320.87,
+      "seconds" : 408.409286,
+      "stress" : 608.5963
+    },
+    "key" : "way\/445746567>node\/10935410391 drive 5 hills+lights avoid",
+    "reasons" : [
+      "2 fewer left turns across traffic without a signal",
+      "1 fewer crossing of a busy street without a signal",
+      "0.8 km less on narrow streets with parking on both sides",
+      "Tradeoff: 1.7 km more on residential streets",
+      "Tradeoff: 2 more all-way stops"
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 167,
+      "edges" : "47a6e1fc06454b9b",
+      "meters" : 2857.44,
+      "seconds" : 2345.278571,
+      "stress" : 232.2606
+    },
+    "candidates" : 7,
+    "fastest" : {
+      "count" : 167,
+      "edges" : "d705bfd3d7a98411",
+      "meters" : 2691.83,
+      "seconds" : 2066.235714,
+      "stress" : 799.7194
+    },
+    "key" : "way\/50321784>way\/32526883 walk 5 streets+lefts avoid",
+    "reasons" : [
+      "4 fewer unmarked crossings of busy streets",
+      "1 fewer marked crossing without a signal",
+      "0.2 km less walking beside arterial traffic",
+      "Tradeoff: 3 more signalled crossings"
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 122,
+      "edges" : "a45597df86d7ab12",
+      "meters" : 3287.85,
+      "seconds" : 837.621818,
+      "stress" : 552.55565
+    },
+    "candidates" : 6,
+    "fastest" : {
+      "count" : 114,
+      "edges" : "421ae96ce094b05",
+      "meters" : 2734.21,
+      "seconds" : 668.692,
+      "stress" : 1034.18455
+    },
+    "key" : "way\/50321784>way\/32526883 bike 5 hills+lights avoid",
+    "reasons" : [
+      "2 fewer left turns across traffic without a signal",
+      "0.7 km less riding on arterials",
+      "2 fewer crossings of busy streets without a signal",
+      "Tradeoff: 14 more turns",
+      "Tradeoff: 0.3 km more on rough surfaces"
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 151,
+      "edges" : "bf439931e1f580ce",
+      "meters" : 3948.09,
+      "seconds" : 636.210045,
+      "stress" : 220.8029
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 110,
+      "edges" : "b042b98096b03c61",
+      "meters" : 2970.81,
+      "seconds" : 468.336687,
+      "stress" : 414.304
+    },
+    "key" : "way\/50321784>way\/32526883 drive 5 stops+turns dontMind",
+    "reasons" : [
+      "1 fewer left turn across traffic without a signal",
+      "1 fewer side-street shortcut",
+      "1 fewer crossing of a busy street without a signal",
+      "Tradeoff: 2 more traffic signals",
+      "Tradeoff: 2 more all-way stops"
+    ]
+  },
+  {
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 103,
+      "edges" : "ed9db7ce47e3c576",
+      "meters" : 2922.79,
+      "seconds" : 2121.707143,
+      "stress" : 132.3017
+    },
+    "key" : "way\/486896126>way\/445746567 walk 5 hills+lights avoid",
+    "reasons" : [
+      "No calmer route was found within your extra time. This one is already the easiest the map can see."
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 104,
+      "edges" : "6c5e4fb812a08fd3",
+      "meters" : 3108.41,
+      "seconds" : 748.591714,
+      "stress" : 475.33775
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 103,
+      "edges" : "7d1add2f04715b6b",
+      "meters" : 2941.22,
+      "seconds" : 656.033429,
+      "stress" : 745.663
+    },
+    "key" : "way\/486896126>way\/445746567 bike 5 stops+turns dontMind",
+    "reasons" : [
+      "0.4 km less riding in traffic on busy arterials",
+      "0.4 km less riding on arterials",
+      "Tradeoff: 0.4 km more on quiet streets",
+      "Tradeoff: 5 m more climbing"
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 131,
+      "edges" : "36d5f4819c9426bf",
+      "meters" : 3463.49,
+      "seconds" : 628.933763,
+      "stress" : 331.3723
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 110,
+      "edges" : "41037b075bfe32e4",
+      "meters" : 3355.59,
+      "seconds" : 584.015798,
+      "stress" : 533.3723
+    },
+    "key" : "way\/486896126>way\/445746567 drive 5 streets+lefts avoid",
+    "reasons" : [
+      "2 fewer left turns across traffic without a signal",
+      "3 fewer turns",
+      "1 fewer yield",
+      "Tradeoff: 6 more traffic signals",
+      "Tradeoff: 3 more stop-and-go stops"
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 209,
+      "edges" : "d49ff679e6ab6eb",
+      "meters" : 5611.48,
+      "seconds" : 4195.45,
+      "stress" : 432.8754
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 203,
+      "edges" : "a3eb36bbd717d68d",
+      "meters" : 5487.44,
+      "seconds" : 4056.580952,
+      "stress" : 465.4519
+    },
+    "key" : "relation\/1047789>node\/2140460393 walk 5 stops+turns dontMind",
+    "reasons" : [
+      "0.7 km less walking beside arterial traffic",
+      "10 fewer steps",
+      "2 fewer side-street crossings",
+      "Tradeoff: 1 more marked crossing without a signal",
+      "Tradeoff: 1 more signalled crossing"
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 207,
+      "edges" : "f9aa62d84e1a6e51",
+      "meters" : 6217.34,
+      "seconds" : 1450.963429,
+      "stress" : 715.19625
+    },
+    "candidates" : 4,
+    "fastest" : {
+      "count" : 165,
+      "edges" : "b89caea81ae6c4cd",
+      "meters" : 5514.4,
+      "seconds" : 1242.675429,
+      "stress" : 784.4108
+    },
+    "key" : "relation\/1047789>node\/2140460393 bike 5 streets+lefts avoid",
+    "reasons" : [
+      "1.0 km less riding on arterials",
+      "2 fewer left turns across traffic without a signal",
+      "1 fewer place where the bike route drops you into traffic",
+      "Tradeoff: 2 more crossings of busy streets without a signal",
+      "Tradeoff: 2.0 km more on quiet streets"
+    ]
+  },
+  {
+    "calmer" : {
+      "count" : 260,
+      "edges" : "10fbc1bbe7af1f54",
+      "meters" : 7915.37,
+      "seconds" : 1003.336922,
+      "stress" : 293.5361
+    },
+    "candidates" : 5,
+    "fastest" : {
+      "count" : 193,
+      "edges" : "616a8bf99550d75f",
+      "meters" : 5447.32,
+      "seconds" : 827.123026,
+      "stress" : 628.4638
+    },
+    "key" : "relation\/1047789>node\/2140460393 drive 5 hills+lights avoid",
+    "reasons" : [
+      "3 fewer left turns across traffic without a signal",
+      "1 fewer traffic signal",
+      "3 fewer stop-and-go stops",
+      "Tradeoff: 1 more intersection of five or more streets",
+      "Tradeoff: 1 more freeway entry"
+    ]
+  }
+]
