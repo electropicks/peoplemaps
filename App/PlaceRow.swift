@@ -50,6 +50,7 @@ struct PlaceList: View {
     var minHeight: CGFloat = 52
     var identifier: (Place) -> String
     let action: (Place) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 0) {
@@ -60,5 +61,6 @@ struct PlaceList: View {
             }
         }
         .background(.panelFill, in: RoundedRectangle(cornerRadius: 12))
+        .animation(Motion.content(reduceMotion), value: places.map(\.id))
     }
 }

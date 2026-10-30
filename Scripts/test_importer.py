@@ -1,5 +1,6 @@
-import unittest
-from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks
+import gzip, pathlib, sqlite3, tempfile, unittest
+import build_search
+from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,simplify_line,map_geojson
 
 class ImportPolicyTests(unittest.TestCase):
     def test_private_road_excluded(self):
@@ -66,5 +67,88 @@ class ImportPolicyTests(unittest.TestCase):
     def test_walkers_pass_bollards_drivers_do_not(self):
         self.assertFalse(node_blocks({'barrier':'bollard'},'walk'))
         self.assertTrue(node_blocks({'barrier':'bollard'},'drive'))
+    def test_map_lines_are_rounded_and_simplified(self):
+        self.assertEqual(simplify_line([[-122.12345678,47.1],[-122.12345679,47.1]]),None)  # collapses to a point
+        line=simplify_line([[-122.1,47.1],[-122.0999,47.10000001],[-122.0998,47.1]])  # middle point is within 0.3 m
+        self.assertEqual(line,[[-122.1,47.1],[-122.0998,47.1]])
+        bend=simplify_line([[-122.1,47.1],[-122.0999,47.1005],[-122.0998,47.1]])  # 55 m off the chord stays
+        self.assertEqual(len(bend),3)
+    def test_map_merges_lines_by_kind_without_names(self):
+        out=map_geojson([],{'path':[[[0,0],[1,1]],[[2,2],[3,3]]]})
+        self.assertEqual(out['features'],[{'type':'Feature','properties':{'kind':'path'},'geometry':{'type':'MultiLineString','coordinates':[[[0,0],[1,1]],[[2,2],[3,3]]]}}])
+
+class SearchIndexTests(unittest.TestCase):
+    @staticmethod
+    def node(i, lat, lon, **tags): return {'type':'node','id':i,'lat':lat,'lon':lon,'tags':tags}
+    @staticmethod
+    def inside(n): return 47.6 <= n['lat'] <= 47.7 and -122.4 <= n['lon'] <= -122.3
+
+    def test_fold_and_aliases(self):
+        self.assertEqual(build_search.fold("Café Ladro's  Fremont-Ave"), 'cafe ladros fremont ave')
+        self.assertEqual(build_search.fold('Bread & Butter'), 'bread and butter')
+        self.assertEqual(build_search.aliases('3400 fremont avenue north'), 'ave av n')
+    def test_categories_rank_landmarks_and_parks_over_shops(self):
+        weight = lambda tags: build_search.category_of(tags)[1]
+        self.assertGreater(weight({'tourism':'museum'}), weight({'leisure':'park'}))
+        self.assertGreater(weight({'leisure':'park'}), weight({'shop':'bakery'}))
+        self.assertGreater(weight({'shop':'bakery'}), weight({'building':'yes'}))
+        self.assertGreater(weight({'historic':'memorial'}), weight({'historic':'house'}))
+        self.assertIsNone(build_search.category_of({'amenity':'bench'}))
+        self.assertIsNone(build_search.category_of({'highway':'bus_stop'}))
+    def test_address_needs_number_and_street(self):
+        self.assertEqual(build_search.address_of({'addr:housenumber':'2101','addr:street':'North 55th Street','addr:unit':'100'}),
+                         ('2101 North 55th Street','100'))
+        self.assertEqual(build_search.address_of({'addr:housenumber':'2101'}), (None, None))
+        self.assertEqual(build_search.address_of({'addr:housenumber':'1;3','addr:street':'A Street'}), (None, None))
+    def test_dedupe_within_50m_and_graph_places_win(self):
+        graph = [{'id':'way/1','name':'Gas Works Park','lat':47.6456,'lon':-122.3344,'category':'park'}]
+        elements = [
+            {'type':'way','id':1,'center':{'lat':47.6460,'lon':-122.3340},'tags':{'name':'Gas Works Park','leisure':'park','wikidata':'Q5526323','addr:housenumber':'2101','addr:street':'North Northlake Way'}},
+            self.node(2, 47.6500, -122.3500, name='Cafe Ladro', amenity='cafe'),
+            self.node(3, 47.6502, -122.3501, name='Café Ladro', amenity='cafe'),     # ~25 m: same place
+            self.node(4, 47.6600, -122.3500, name='Cafe Ladro', amenity='cafe'),     # ~1 km: another branch
+            self.node(5, 47.6400, -122.3400, **{'addr:housenumber':'10','addr:street':'A Street'}),
+            self.node(6, 47.6401, -122.3400, **{'addr:housenumber':'10','addr:street':'A Street'}),
+            self.node(7, 47.6401, -122.3400, **{'addr:housenumber':'10','addr:street':'A Street','addr:unit':'B'}),
+            self.node(8, 48.0, -122.35, name='Outside', amenity='cafe'),
+        ]
+        entries = build_search.entries_from(elements, graph, self.inside)
+        places = [(e['osm'], e['name']) for e in entries if e['kind']=='place']
+        self.assertEqual(places[0], ('way/1','Gas Works Park'))
+        self.assertEqual(entries[0]['address'], '2101 North Northlake Way')
+        self.assertEqual(entries[0]['weight'], 95)  # park, plus the notability bonus from the newer extract
+        self.assertEqual(sum(n.startswith('Caf') for _, n in places), 2)
+        self.assertNotIn('Outside', [n for _, n in places])
+        self.assertEqual(sorted(e['name'] for e in entries if e['kind']=='address'),
+                         ['10 A Street','10 A Street, Unit B','2101 North Northlake Way'])
+    def test_snaps_to_largest_component_with_edges_both_ways(self):
+        nodes = [{'lat':47.65,'lon':-122.35},{'lat':47.651,'lon':-122.35},{'lat':47.6501,'lon':-122.3501},{'lat':47.65,'lon':-122.351}]
+        seg = lambda a, b, hw='residential', **d: {'a':a,'b':b,'hw':hw,**d}
+        both = {'f':{'modes':['walk','drive']},'r':{'modes':['walk','drive']}}
+        segments = [seg(0,1,**both), seg(2,3,'motorway',f={'modes':['drive']})]
+        routable = build_search.routable_nodes(nodes, segments)
+        self.assertEqual(routable['drive'], [0,1])   # node 2 is closer but only on a one-way motorway
+        entries = [{'lat':47.6501,'lon':-122.3501}]
+        build_search.snap(entries, nodes, routable)
+        self.assertEqual(entries[0]['drive'], 0); self.assertIsNone(entries[0]['bike'])
+    def test_database_is_deterministic_and_searchable(self):
+        elements = [self.node(1, 47.65, -122.35, name='Fremont Brewing', amenity='pub', **{'addr:housenumber':'3409','addr:street':'Woodland Park Avenue North'}),
+                    self.node(2, 47.651, -122.35, **{'addr:housenumber':'3400','addr:street':'Fremont Avenue North'})]
+        nodes = [{'lat':47.65,'lon':-122.35},{'lat':47.651,'lon':-122.35}]
+        segments = [{'a':0,'b':1,'hw':'residential','f':{'modes':['walk']},'r':{'modes':['walk']}}]
+        snapshot = {'elements':elements,'osm3s':{'timestamp_osm_base':'2026-10-29T05:43:15Z'}}
+        with tempfile.TemporaryDirectory() as tmp:
+            a, b = pathlib.Path(tmp)/'a.gz', pathlib.Path(tmp)/'b.gz'
+            build_search.build(snapshot, [], nodes, segments, self.inside, 'x', a)
+            build_search.build(snapshot, [], nodes, segments, self.inside, 'x', b)
+            self.assertEqual(a.read_bytes(), b.read_bytes())
+            (pathlib.Path(tmp)/'db').write_bytes(gzip.decompress(a.read_bytes()))
+            db = sqlite3.connect(pathlib.Path(tmp)/'db')
+            q = lambda m: [r[0] for r in db.execute('SELECT name FROM entries WHERE id IN (SELECT rowid FROM fts WHERE fts MATCH ?) ORDER BY id', (m,))]
+            self.assertEqual(q('{name alias}: "3400"* AND "fremont"* AND "ave"* AND "n"*'), ['3400 Fremont Avenue North'])
+            self.assertEqual(q('"woodland"*'), ['Fremont Brewing', '3409 Woodland Park Avenue North'])  # the pub by its address
+            self.assertEqual(dict(db.execute('SELECT key, value FROM meta'))['sourceDate'], '2026-10-29')
+            self.assertEqual(db.execute('SELECT walk FROM entries WHERE number = ?', ('3400',)).fetchone()[0], 1)
+            db.close()
 
 if __name__=='__main__':unittest.main()

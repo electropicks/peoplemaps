@@ -1,8 +1,8 @@
-import Compression
+import CZlib
 import Foundation
 
 extension Data {
-    /// Inflates a single-member gzip file (RFC 1952) with the system Compression framework, whose ZLIB codec is raw deflate.
+    /// Inflates a single-member gzip file (RFC 1952) with zlib; the gzip header is parsed here and the body inflated as raw deflate.
     /// The trailer's size field sizes the output; a short or corrupt stream returns nil.
     func gunzipped() -> Data? {
         guard count >= 18, self[startIndex] == 0x1F, self[startIndex + 1] == 0x8B, self[startIndex + 2] == 8 else { return nil }
@@ -20,10 +20,16 @@ extension Data {
         let size = (0..<4).reduce(0) { $0 | Int(bytes[trailer + 4 + $1]) << (8 * $1) }
         guard size > 0 else { return Data() }
         var output = Data(count: size)
-        let written = output.withUnsafeMutableBytes { out in
+        let written: Int = output.withUnsafeMutableBytes { out in
             bytes.withUnsafeBufferPointer { input in
-                compression_decode_buffer(out.bindMemory(to: UInt8.self).baseAddress!, size,
-                                          input.baseAddress! + offset, trailer - offset, nil, COMPRESSION_ZLIB)
+                var stream = z_stream()
+                guard inflateInit2_(&stream, -15, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size)) == Z_OK else { return -1 }
+                defer { inflateEnd(&stream) }
+                stream.next_in = UnsafeMutablePointer(mutating: input.baseAddress! + offset)
+                stream.avail_in = UInt32(trailer - offset)
+                stream.next_out = out.bindMemory(to: UInt8.self).baseAddress!
+                stream.avail_out = UInt32(size)
+                return inflate(&stream, Z_FINISH) == Z_STREAM_END ? Int(stream.total_out) : -1
             }
         }
         return written == size ? output : nil

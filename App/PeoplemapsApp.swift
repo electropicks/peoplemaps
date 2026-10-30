@@ -3,12 +3,12 @@ import PeoplemapsCore
 
 @main
 struct PeoplemapsApp: App {
-    @State private var loaded: (graph: StreetGraph, router: NativeRouter)?
+    @State private var loaded: (graph: StreetGraph, router: NativeRouter, search: SearchIndex)?
     @State private var error: String?
     var body: some Scene {
         WindowGroup {
             Group {
-                if let loaded { ExploreView(graph: loaded.graph, router: loaded.router) }
+                if let loaded { ExploreView(graph: loaded.graph, router: loaded.router, search: loaded.search) }
                 else if let error { ContentUnavailableView("Seattle data unavailable", systemImage: "map", description: Text(error)) }
                 else {
                     ProgressView("Opening Seattle…")
@@ -24,7 +24,7 @@ struct PeoplemapsApp: App {
         do {
             loaded = try await Task.detached {
                 let graph = try StreetGraph.bundled()
-                return (graph, NativeRouter(graph: graph))
+                return (graph, NativeRouter(graph: graph), try SearchIndex.bundled(graph: graph))
             }.value
         }
         catch { self.error = error.localizedDescription }
@@ -68,6 +68,26 @@ extension ShapeStyle where Self == Color {
     static var fastest: Color { Color(uiColor: .fastest) }
     static var panel: Color { Color(uiColor: .panel) }
     static var panelFill: Color { Color(uiColor: .panelFill) }
+}
+
+/// One set of short, physical timings for every screen, like Apple Maps. Reduce Motion keeps crossfades and drops
+/// movement; UI tests run without animation so a view is gone the moment its state says so.
+enum Motion {
+    static let off: Bool = {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("--ui-testing")
+        #else
+        return false
+        #endif
+    }()
+    /// Panels, cards and sheets entering, leaving or resizing.
+    static func panel(_ reduce: Bool) -> Animation? { off ? nil : reduce ? .easeInOut(duration: 0.2) : .snappy(duration: 0.35) }
+    /// Content changing in place: route states, numbers, instructions.
+    static func content(_ reduce: Bool) -> Animation? { off ? nil : reduce ? .easeInOut(duration: 0.2) : .smooth(duration: 0.3) }
+    /// Slides in from an edge; a plain crossfade with Reduce Motion.
+    static func edge(_ edge: Edge, reduce: Bool) -> AnyTransition { reduce ? .opacity : .move(edge: edge).combined(with: .opacity) }
+    /// Map camera moves, in seconds; 0 cuts straight to the new view.
+    static func camera(_ reduce: Bool, _ duration: TimeInterval = 0.5) -> TimeInterval { off || reduce ? 0 : duration }
 }
 
 #if DEBUG

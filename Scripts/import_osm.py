@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """Deterministic, deliberately conservative OSM + elevation to routing-graph compiler. No network."""
-import array, collections, gzip, hashlib, json, math, pathlib, struct
+import argparse, array, collections, gzip, hashlib, json, math, os, pathlib, struct
+import build_search
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-OUT = ROOT / 'Core/Resources'
-BBOX = [47.615, -122.390, 47.678, -122.300]  # S,W,N,E
+# PEOPLEMAPS_BBOX="S,W,N,E", PEOPLEMAPS_DATA and PEOPLEMAPS_OUT redirect an import (coverage spikes) without touching the shipped data.
+OUT = pathlib.Path(os.environ.get('PEOPLEMAPS_OUT', ROOT / 'Core/Resources'))
+DATA = pathlib.Path(os.environ.get('PEOPLEMAPS_DATA', ROOT / 'Data'))
+def shown(path):
+    return str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else path.name
+REPORT = DATA  # provenance.json; --out redirects it with the outputs
+BBOX = [float(x) for x in os.environ['PEOPLEMAPS_BBOX'].split(',')] if os.environ.get('PEOPLEMAPS_BBOX') else [47.615, -122.390, 47.678, -122.300]  # S,W,N,E
 MODES = ['drive', 'bike', 'walk']
 ROAD = {'motorway','motorway_link','trunk','trunk_link','primary','primary_link',
         'secondary','secondary_link','tertiary','tertiary_link','residential',
@@ -276,17 +282,20 @@ def control(nt, way_direction):
     if kind == 'give_way': return 'yield'
     return 'allstop' if nt.get('stop') == 'all' else 'stop'
 
+def read_snapshot(basename):
+    raw = DATA/'raw'/f'{basename}.json'
+    archive = DATA/f'{basename}.json.gz'
+    data = raw.read_bytes() if raw.exists() else gzip.decompress(archive.read_bytes())
+    p = json.loads(data)
+    if p.get('remark'): raise ValueError(p['remark'])
+    if raw.exists(): archive.write_bytes(gzip.compress(data,mtime=0))  # archive a fresh download
+    return p, {'file':shown(archive),'sha256':hashlib.sha256(data).hexdigest(),
+               'osmBaseTimestamp':p['osm3s']['timestamp_osm_base']}
+
 def read_sources():
     elements = {}; sources = []
     for basename in ['seattle-osm','seattle-parks']:
-        raw = ROOT/'Data/raw'/f'{basename}.json'
-        archive = ROOT/'Data'/f'{basename}.json.gz'
-        data = raw.read_bytes() if raw.exists() else gzip.decompress(archive.read_bytes())
-        p = json.loads(data)
-        if p.get('remark'): raise ValueError(p['remark'])
-        if raw.exists(): archive.write_bytes(gzip.compress(data,mtime=0))  # archive a fresh download
-        sources.append({'file':str(archive.relative_to(ROOT)),'sha256':hashlib.sha256(data).hexdigest(),
-                        'osmBaseTimestamp':p['osm3s']['timestamp_osm_base']})
+        p, source = read_snapshot(basename); sources.append(source)
         for e in p['elements']: elements[(e['type'],e['id'])] = e
     return elements, sources
 
@@ -309,12 +318,104 @@ def compile_restrictions(relations):
                 unsupported.append({'osmID':r['id'],'mode':mode})
     return restrictions, excluded, unsupported
 
+# Binary graph, schema v3 (little-endian, every section padded to 8 bytes). Read by Core/GraphBinary.swift.
+#   header 64 B: magic 'PMGB', u32 version, 4 x f64 bounds (S,W,N,E), u32 counts: strings, nodes, segments, points, json bytes
+#   strings:  u32 offsets[count+1] then UTF-8 bytes; names, highway kinds, surfaces etc. are indices into it (NIL = none)
+#   nodes:    i64 osm[n], f64 lat[n], f64 lon[n], f64 z[n], u8 flags[n] (1 signal, 2 pedestrianSignal)
+#   points:   i32 lon,lat pairs in 1e-6 degrees (the JSON rounded to 6 decimals, so this is lossless)
+#   segments: 120 B records, SEGMENT then two DIRECTION (forward, reverse); a direction with modes == 0 is absent
+#   json:     {"restrictions": [...], "places": [...]} (small)
+NIL = 0xFFFFFFFF
+SEGMENT = struct.Struct('<q3d10I2iIBBBx')
+DIRECTION = struct.Struct('<dIBBBx')
+MODE_BITS = {'drive': 1, 'bike': 2, 'walk': 4}
+CONTROL_CODES = {None: 0, 'signal': 1, 'stop': 2, 'allstop': 3, 'yield': 4}
+ROAD_CODES = {None: 0, 'local': 1, 'arterial': 2, 'busy': 3}
+
+def pad8(b): return b + b'\0' * (-len(b) % 8)
+
+def graph_binary(graph):
+    strings = {}
+    def sid(v):
+        return NIL if v is None else strings.setdefault(v, len(strings))
+    for n in graph['names']: sid(n)
+    records = []; points = array.array('i'); nodes = graph['nodes']
+    for s in graph['segments']:
+        g = s['g']; start = len(points) // 2
+        points.extend(int(round(c * 1e6)) for c in g)
+        assert all(abs(points[-len(g) + i] / 1e6 - c) == 0 for i, c in enumerate(g)), 'coordinate is not a 6-decimal value'
+        pb = s.get('parkedBothSides'); cr = s.get('crossing')
+        flags = (0 if pb is None else 2 if pb else 1) | (4 if s.get('movableBridge') else 0) | (8 if cr else 0)
+        lanes = s.get('lanes', -1); steps = s.get('steps', -1)
+        records.append(SEGMENT.pack(s['way'], s['m'], s['up'], s['down'], s['a'], s['b'], start, len(g) // 2,
+            s['n'], sid(s['hw']), sid(s.get('maxspeed')), sid(s.get('surface')), sid(s.get('sidewalk')), sid(s.get('footway')),
+            steps, lanes, sid(cr['control']) if cr else NIL, flags, ROAD_CODES[cr['road']] if cr else 0, ROAD_CODES[s.get('besideRoad')]))
+        for key in 'fr':
+            d = s.get(key)
+            if not d:
+                records.append(DIRECTION.pack(float('nan'), NIL, 0, 0, 0)); continue
+            ltl = d.get('leftTurnLane')
+            records.append(DIRECTION.pack(d.get('approachGrade', float('nan')), sid(d.get('facility')),
+                sum(MODE_BITS[m] for m in d['modes']), CONTROL_CODES[d.get('control')], 0 if ltl is None else 2 if ltl else 1))
+    table = list(strings)
+    encoded = [t.encode() for t in table]
+    offsets = array.array('I', [0]); [offsets.append(offsets[-1] + len(e)) for e in encoded]
+    tail = json.dumps({'restrictions': graph['restrictions'], 'places': graph['places']}, separators=(',', ':')).encode()
+    out = bytearray(struct.pack('<4sI4d5I', b'PMGB', 3, *graph['bounds'], len(table), len(nodes), len(graph['segments']), len(points) // 2, len(tail)))
+    out += b'\0' * (64 - len(out))
+    out += pad8(offsets.tobytes() + b''.join(encoded))
+    out += pad8(array.array('q', [n['osm'] for n in nodes]).tobytes())
+    for key in ('lat', 'lon', 'z'): out += array.array('d', [n[key] for n in nodes]).tobytes()
+    out += pad8(bytes((1 if n.get('signal') else 0) | (2 if n.get('pedestrianSignal') else 0) for n in nodes))
+    out += pad8(points.tobytes())
+    out += b''.join(records)
+    out += pad8(tail)
+    return bytes(out)
+
+MAP_PRECISION = 6        # decimal degrees: 0.11 m north-south, under a pixel at the closest zoom (18)
+MAP_TOLERANCE_M = 0.3    # Douglas-Peucker tolerance for map lines
+
+def round_coords(c):
+    return [round(c[0],MAP_PRECISION),round(c[1],MAP_PRECISION)] if isinstance(c[0],(int,float)) else [round_coords(x) for x in c]
+
+def simplify_line(coords):
+    """Rounds to MAP_PRECISION, drops repeated points, then Douglas-Peucker at MAP_TOLERANCE_M. None if it collapses to a point."""
+    pts=[]
+    for c in round_coords(coords):
+        if not pts or c!=pts[-1]: pts.append(c)
+    if len(pts)<2: return None
+    kx=111_320*math.cos(math.radians(pts[0][1])); ky=110_574
+    xy=[(p[0]*kx,p[1]*ky) for p in pts]
+    keep=[False]*len(pts); keep[0]=keep[-1]=True
+    stack=[(0,len(pts)-1)]
+    while stack:
+        i,j=stack.pop()
+        (x1,y1),(x2,y2)=xy[i],xy[j]; dx,dy=x2-x1,y2-y1; length=math.hypot(dx,dy)
+        far=-1; far_d=MAP_TOLERANCE_M
+        for k in range(i+1,j):
+            x,y=xy[k]
+            d=abs(dx*(y1-y)-(x1-x)*dy)/length if length else math.hypot(x-x1,y-y1)
+            if d>far_d: far,far_d=k,d
+        if far>=0: keep[far]=True; stack+=[(i,far),(far,j)]
+    return [p for p,k in zip(pts,keep) if k]
+
+def map_geojson(polygons,lines):
+    """Polygons keep one feature each; all lines of a kind become one MultiLineString (the per-feature JSON overhead was most of the bytes)."""
+    merged=[{'type':'Feature','properties':{'kind':kind},'geometry':{'type':'MultiLineString','coordinates':ls}} for kind,ls in sorted(lines.items())]
+    return {'type':'FeatureCollection','features':polygons+merged}
+
 def main():
+    global OUT, REPORT
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--out', help='write all outputs here instead of the repository (for tests)')
+    ap.add_argument('--json-graph', help='also write the intermediate graph as JSON to this path (for tests)')
+    args = ap.parse_args()
+    if args.out: OUT = REPORT = pathlib.Path(args.out)
     OUT.mkdir(parents=True,exist_ok=True)
     elements, sources = read_sources()
-    dem_path = ROOT/'Data/seattle-dem.tif.gz'
+    dem_path = DATA/'seattle-dem.tif.gz'
     z, dem_sha = load_dem(dem_path)
-    sources.append({'file':str(dem_path.relative_to(ROOT)),'sha256':dem_sha,
+    sources.append({'file':shown(dem_path),'sha256':dem_sha,
                     'source':'USGS 3DEP 3DEPElevation ImageServer exportImage, ~5 m bilinear, public domain'})
     allnodes={i:e for (typ,i),e in elements.items() if typ=='node'}
     allways={i:e for (typ,i),e in elements.items() if typ=='way'}
@@ -419,8 +520,13 @@ def main():
 
     features=[]; places=[]
     def coords(ns):return [[allnodes[n]['lon'],allnodes[n]['lat']] for n in ns if n in allnodes]
+    lines=collections.defaultdict(list)
     def feature(geom,kind,name=''):
-        features.append({'type':'Feature','properties':{'kind':kind,'name':name},'geometry':geom})
+        # The style only reads `kind`, so names are dropped; lines of one kind share a feature (see map_geojson).
+        if geom['type']=='LineString':
+            line=simplify_line(geom['coordinates'])
+            if line: lines[kind].append(line)
+        else: features.append({'type':'Feature','properties':{'kind':kind},'geometry':{'type':geom['type'],'coordinates':round_coords(geom['coordinates'])}})
     for w in sorted(allways.values(),key=lambda w:w['id']):
         t=w.get('tags',{}); ns=w['nodes'];cs=coords(ns)
         if len(cs)<2:continue
@@ -452,9 +558,13 @@ def main():
         places.append({'id':f'{typ}/{i}','name':name,'lat':round(c[1],7),'lon':round(c[0],7),'category':category})
     places.sort(key=lambda p:p['name'].casefold())
     graph={'schemaVersion':2,'bounds':BBOX,'names':list(names),'nodes':nodes,'segments':segments,'restrictions':mapped,'places':places}
-    # Shipped gzipped (39 MB -> ~5 MB installed); mtime=0 keeps the archive byte-for-byte reproducible.
-    (OUT/'seattle-graph.json.gz').write_bytes(gzip.compress((json.dumps(graph,separators=(',',':'))+'\n').encode(),compresslevel=9,mtime=0))
-    (OUT/'seattle-map.geojson').write_text(json.dumps({'type':'FeatureCollection','features':features},separators=(',',':'))+'\n')
+    graph_bin=graph_binary(graph)
+    (OUT/'seattle-graph.bin').write_bytes(graph_bin)
+    if args.json_graph: pathlib.Path(args.json_graph).write_text(json.dumps(graph,separators=(',',':'))+'\n')
+    # Search reads its own, newer extract (places and addresses), kept apart so the graph's inputs don't change.
+    search_json, search_source = read_snapshot('seattle-search'); sources.append(search_source)
+    search=build_search.build(search_json, places, nodes, segments, inside, hashlib.sha256(graph_bin).hexdigest(), OUT/'seattle-search.sqlite.gz')
+    (OUT/'seattle-map.geojson').write_text(json.dumps(map_geojson(features,lines),separators=(',',':'))+'\n')
     directed={mode:sum(mode in s.get(k,{}).get('modes',[]) for s in segments for k in 'fr') for mode in MODES}
     report={'sources':sources,'bounds':BBOX,'nodes':len(nodes),'segments':len(segments),'directedEdgesByMode':directed,
             'places':len(places),'supportedRestrictions':len(mapped),'unsupportedRestrictionsConservativelyExcluded':unsupported,
@@ -464,8 +574,8 @@ def main():
             'approachesWithTurnLaneData':sum('leftTurnLane' in s.get(k,{}) for s in segments for k in 'fr'),
             'crossingSegments':collections.Counter(str(s['crossing']['control']) for s in segments if 'crossing' in s),
             'signalNodes':sum('signal' in n for n in nodes),
-            'structureNodesInterpolated':len(lifted)}
-    (ROOT/'Data/provenance.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
+            'structureNodesInterpolated':len(lifted),'search':search}
+    (REPORT/'provenance.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
     print(json.dumps({k:v for k,v in report.items() if k!='unsupportedRestrictionsConservativelyExcluded'},indent=2,sort_keys=True))
     print('Conservative restriction exclusions:',len(unsupported))
 

@@ -6,7 +6,9 @@ let package = Package(
     platforms: [.macOS(.v14), .iOS(.v17)],
     products: [.library(name: "PeoplemapsCore", targets: ["PeoplemapsCore"]), .executable(name: "peoplemaps-audit", targets: ["RouteAudit"])],
     targets: [
-        .target(name: "PeoplemapsCore", path: "Core", resources: [.process("Resources")]),
+        .systemLibrary(name: "CZlib", path: "Sources/CZlib", providers: [.apt(["zlib1g-dev"])]),
+        .systemLibrary(name: "CSQLite", path: "Sources/CSQLite", providers: [.apt(["libsqlite3-dev"])]),
+        .target(name: "PeoplemapsCore", dependencies: ["CZlib", "CSQLite"], path: "Core", resources: [.process("Resources")]),
         .executableTarget(name: "RouteAudit", dependencies: ["PeoplemapsCore"], path: "Tools"),
         .testTarget(name: "PeoplemapsCoreTests", dependencies: ["PeoplemapsCore"], path: "Tests")
     ]

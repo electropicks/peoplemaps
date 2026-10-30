@@ -43,13 +43,13 @@ for name,sources,resources in [('app',app_sources,app_resources),('test',test_so
     obj(name+'-frameworks',f'isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = ({frameworks}); runOnlyForDeploymentPostprocessing = 0;')
     for config in ['Debug','Release']:
         settings={'SDKROOT':'iphoneos','IPHONEOS_DEPLOYMENT_TARGET':'17.0','SWIFT_VERSION':'6.0','TARGETED_DEVICE_FAMILY':'1',
-                  'GENERATE_INFOPLIST_FILE':'YES','CODE_SIGNING_ALLOWED':'NO','PRODUCT_NAME':'"$(TARGET_NAME)"',
+                  'GENERATE_INFOPLIST_FILE':'YES','CODE_SIGN_STYLE':'Automatic','DEVELOPMENT_TEAM':'""','PRODUCT_NAME':'"$(TARGET_NAME)"',
                   'ONLY_ACTIVE_ARCH':'YES' if config=='Debug' else 'NO',
                   'SWIFT_OPTIMIZATION_LEVEL':'"-Onone"' if config=='Debug' else '"-O"',
                   'SWIFT_ACTIVE_COMPILATION_CONDITIONS':'"DEBUG $(inherited)"' if config=='Debug' else '"$(inherited)"',
-                  'PRODUCT_BUNDLE_IDENTIFIER':'org.peoplemaps.prototype' if name=='app' else 'org.peoplemaps.prototype.uitests',
+                  'PRODUCT_BUNDLE_IDENTIFIER':'electrocorp.peoplemaps' if name=='app' else 'electrocorp.peoplemaps.uitests',
                   'LD_RUNPATH_SEARCH_PATHS':'"$(inherited) @executable_path/Frameworks"'}
-        if name=='app':settings.update({'INFOPLIST_FILE':'App/Info.plist','INFOPLIST_KEY_UIApplicationSceneManifest_Generation':'YES','INFOPLIST_KEY_UISupportedInterfaceOrientations':'"UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"','INFOPLIST_KEY_CFBundleDisplayName':'Peoplemaps','INFOPLIST_KEY_ITSAppUsesNonExemptEncryption':'NO','INFOPLIST_KEY_NSLocationWhenInUseUsageDescription':'"PeopleMaps uses your location only while guiding you, to show where you are and announce the next turn."','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME':'AccentColor','MARKETING_VERSION':'0.1.0','CURRENT_PROJECT_VERSION':'1'})
+        if name=='app':settings.update({'INFOPLIST_FILE':'App/Info.plist','INFOPLIST_KEY_UIApplicationSceneManifest_Generation':'YES','INFOPLIST_KEY_UISupportedInterfaceOrientations':'"UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"','INFOPLIST_KEY_CFBundleDisplayName':'Peoplemaps','INFOPLIST_KEY_ITSAppUsesNonExemptEncryption':'NO','INFOPLIST_KEY_NSLocationWhenInUseUsageDescription':'"PeopleMaps uses your location when you start a route from where you are, and while guiding you, to show where you are and announce the next turn."','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME':'AccentColor','MARKETING_VERSION':'0.1.0','CURRENT_PROJECT_VERSION':'1'})
         else:settings['TEST_TARGET_NAME']='Peoplemaps'
         obj(name+'-'+config,f'isa = XCBuildConfiguration; name = {config}; buildSettings = {{'+''.join(f'{k} = {v};' for k,v in settings.items())+'};')
     obj(name+'-config',f'isa = XCConfigurationList; buildConfigurations = ({ref(name+"-Debug")},{ref(name+"-Release")}); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')

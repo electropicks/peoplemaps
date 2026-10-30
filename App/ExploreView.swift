@@ -4,7 +4,11 @@ import PeoplemapsCore
 
 private enum Sheet: String, Identifiable { case origin, destination, details, about; var id: String { rawValue } }
 
-private enum Screen: Equatable { case home, search, place(Place), preview, navigating }
+private enum Screen: Equatable {
+    case home, search, place(Place), preview, navigating
+    /// Identity of the panel content, so a new screen crossfades in place.
+    var panelID: String { if case let .place(place) = self { "place-\(place.id)" } else { "\(self)" } }
+}
 
 struct ExploreView: View {
     static let gasWorks = "relation/1047789", kerryPark = "node/693337509"
@@ -12,6 +16,7 @@ struct ExploreView: View {
     static let featuredIDs = [gasWorks, "way/37058377", "way/160545994", kerryPark]
 
     let graph: StreetGraph
+    let search: SearchIndex
     @State private var session: RouteSession
     @State private var navigator: NavigationController
     @State private var origin: Place
@@ -33,9 +38,12 @@ struct ExploreView: View {
     @State private var permission = LocationPermission()
     @State private var asking = false
     @State private var locationOff = false
+    @State private var saved = SavedPlacesStore()
+    @ScaledMetric(relativeTo: .body) private var favouriteRowHeight: CGFloat = 52
     @AppStorage("voiceMuted", store: ExploreView.voiceStore) private var voiceMuted = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// UI tests start muted and in their own defaults, so they never change the real preference.
     static let voiceStore: UserDefaults = {
@@ -48,8 +56,8 @@ struct ExploreView: View {
         return .standard
     }()
 
-    init(graph: StreetGraph, router: NativeRouter) {
-        self.graph = graph
+    init(graph: StreetGraph, router: NativeRouter, search: SearchIndex) {
+        self.graph = graph; self.search = search
         #if DEBUG
         let computing: any RouteComputing = ProcessInfo.processInfo.arguments.contains("--ui-testing") ? SlowTestRouter(base: router) : router
         #else
@@ -57,11 +65,14 @@ struct ExploreView: View {
         #endif
         _session = State(initialValue: RouteSession(router: computing))
         _navigator = State(initialValue: NavigationController(router: router))
-        _origin = State(initialValue: graph.places.first { $0.id == Self.kerryPark } ?? graph.places[0])
-        _destination = State(initialValue: graph.places.first { $0.id == Self.gasWorks } ?? graph.places[1])
+        let featured = Self.featuredIDs.compactMap { id in graph.places.first { $0.id == id }.map(search.withAddress) }
+        self.featured = featured
+        _origin = State(initialValue: featured.first { $0.id == Self.kerryPark } ?? graph.places[0])
+        _destination = State(initialValue: featured.first { $0.id == Self.gasWorks } ?? graph.places[1])
     }
 
-    private var featured: [Place] { Self.featuredIDs.compactMap { id in graph.places.first { $0.id == id } } }
+    /// With addresses from the search index, which the graph's places lack.
+    private let featured: [Place]
     private var selectedPlace: Place? { if case let .place(place) = screen { place } else { nil } }
     /// Stays set while guiding, so the comparison survives and End returns to the same routes.
     private var previewRequest: RouteRequest? { screen == .preview || screen == .navigating ? request : nil }
@@ -100,13 +111,20 @@ struct ExploreView: View {
     private func endNavigation() { navigator.stop(); screen = .preview }
     private func finishNavigation() { navigator.stop(); screen = .home }
 
-    private func open(_ place: Place) { query = ""; screen = .place(place) }
-    private func openPin(_ id: String) { if let place = graph.places.first(where: { $0.id == id }) { open(place) } }
+    private func open(_ place: Place) { query = ""; screen = .place(search.withAddress(place)) }
+    private func openPin(_ id: String) { if let place = featured.first(where: { $0.id == id }) ?? graph.places.first(where: { $0.id == id }) { open(place) } }
+    /// Long-press drops a pin while browsing, never over a route or guidance.
+    private func dropPin(_ c: Coordinate) {
+        guard screen == .home || selectedPlace != nil else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        open(.droppedPin(at: c))
+    }
 
     private func startDirections(to place: Place) {
         let fallbackID = place.id == Self.kerryPark ? Self.gasWorks : Self.kerryPark
-        let from = lastOrigin.flatMap { $0.id == place.id ? nil : $0 } ?? graph.places.first { $0.id == fallbackID } ?? origin
+        let from = lastOrigin.flatMap { $0.id == place.id ? nil : $0 } ?? featured.first { $0.id == fallbackID } ?? origin
         origin = from; lastOrigin = from; destination = place
+        saved.addRecent(place)
         screen = .preview
     }
 
@@ -119,18 +137,20 @@ struct ExploreView: View {
         GeometryReader { geo in
             ZStack {
                 SeattleMap(comparison: screen == .preview ? session.comparison : nil, selectedCalmer: selectedCalmer, recenter: recenter, pins: screen == .preview ? [] : featured,
-                           selected: selectedPlace, onPin: openPin, guidance: guidance, padding: mapPadding(geo))
+                           selected: selectedPlace, onPin: openPin, onLongPress: dropPin, guidance: guidance, padding: mapPadding(geo))
                     .ignoresSafeArea()
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(screen == .preview ? "Seattle offline map. Routes are also described in the panel." : "Seattle offline map")
                 if screen == .navigating {
                     GuidanceOverlay(navigator: navigator, landscape: landscape, cardWidth: cardWidth, attribution: AnyView(attribution), overview: $overview, muted: $voiceMuted,
                                     onInsets: { guidanceInset = $0 }, onEnd: endNavigation, onDone: finishNavigation)
-                } else if landscape { landscapeLayout(geo) } else { portraitLayout(geo) }
+                        .transition(.opacity)
+                } else if landscape { landscapeLayout(geo).transition(.opacity) } else { portraitLayout(geo).transition(.opacity) }
                 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("--ui-testing") { NavigationDebugProbe(navigator: navigator) }
                 #endif
             }
+            .animation(Motion.panel(reduceMotion), value: screen)
         }
         .task(id: previewRequest) {
             if let previewRequest { selectedCalmer = true; session.start(previewRequest) } else { session.cancel() }
@@ -149,9 +169,9 @@ struct ExploreView: View {
         .sheet(item: $sheet) { item in
             switch item {
             case .origin:
-                PlacePicker(title: "Starting from", graph: graph, selected: origin) { origin = $0; lastOrigin = $0 }
+                PlacePicker(title: "Starting from", graph: graph, search: search, selected: origin, saved: saved, location: permission) { origin = $0; lastOrigin = $0 }
             case .destination:
-                PlacePicker(title: "Going to", graph: graph, selected: destination) { destination = $0 }
+                PlacePicker(title: "Going to", graph: graph, search: search, selected: destination, saved: saved) { destination = $0; saved.addRecent($0) }
             case .details:
                 if let comparison = session.comparison { RouteDetails(comparison: comparison) }
             case .about:
@@ -182,10 +202,12 @@ struct ExploreView: View {
             VStack(spacing: 0) {
                 Capsule().fill(Color(uiColor: .systemGray3)).frame(width: 36, height: 5).padding(.top, 6).padding(.bottom, 8)
                     .accessibilityHidden(true)
-                if screen == .search {
-                    searchPanel.frame(height: geo.size.height * 0.9 - 19)
-                } else {
-                    scrollingContent(maxHeight: geo.size.height * 0.6)
+                ZStack(alignment: .top) {
+                    if screen == .search {
+                        searchPanel.frame(height: geo.size.height * 0.9 - 19).transition(.opacity)
+                    } else {
+                        scrollingContent(maxHeight: geo.size.height * 0.6).transition(.opacity)
+                    }
                 }
             }
             .background {
@@ -199,9 +221,9 @@ struct ExploreView: View {
     private func landscapeLayout(_ geo: GeometryProxy) -> some View {
         HStack(alignment: .top, spacing: 0) {
             // The card may run into the bottom safe area: the home indicator sits clear of it, at the screen's centre.
-            Group {
-                if screen == .search { searchPanel.frame(height: geo.size.height + geo.safeAreaInsets.bottom - 24) }
-                else { scrollingContent(maxHeight: geo.size.height + geo.safeAreaInsets.bottom - 24) }
+            ZStack(alignment: .top) {
+                if screen == .search { searchPanel.frame(height: geo.size.height + geo.safeAreaInsets.bottom - 24).transition(.opacity) }
+                else { scrollingContent(maxHeight: geo.size.height + geo.safeAreaInsets.bottom - 24).transition(.opacity) }
             }
                 .background(.panel, in: RoundedRectangle(cornerRadius: 14))
                 .shadow(color: .black.opacity(0.14), radius: 16, y: 2)
@@ -219,13 +241,19 @@ struct ExploreView: View {
     /// Sizes itself to the content and scrolls only once the content is taller than `maxHeight`.
     private func scrollingContent(maxHeight: CGFloat) -> some View {
         ScrollView {
-            panelContent
+            // Old and new content overlap while they crossfade; the panel then eases to the new height.
+            ZStack(alignment: .top) { panelContent.id(screen.panelID).transition(.opacity) }
                 .padding(.horizontal, landscape ? 12 : 16)
                 .padding(.top, landscape ? 12 : 0).padding(.bottom, 4)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                    // The first measurement sizes the panel at launch without animating it open.
+                    var launch = Transaction(); launch.disablesAnimations = contentHeight == 0
+                    withTransaction(launch) { contentHeight = height }
+                }
         }
         .scrollBounceBehavior(.basedOnSize)
         .frame(height: min(contentHeight, maxHeight))
+        .animation(Motion.panel(reduceMotion), value: contentHeight)
     }
 
     private var mapButtons: some View {
@@ -272,6 +300,12 @@ struct ExploreView: View {
                 .font(.body).foregroundStyle(.secondary).padding(.horizontal, 12).frame(height: 44)
                 .background(.panelFill, in: RoundedRectangle(cornerRadius: 12)).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityLabel("Search places").accessibilityIdentifier("search-field")
+            if !saved.favourites.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Favourites").font(.footnote).textCase(.uppercase).foregroundStyle(.secondary).padding(.leading, 16)
+                    favouritesList
+                }
+            }
             VStack(alignment: .leading, spacing: 6) {
                 Text("Featured places").font(.footnote).textCase(.uppercase).foregroundStyle(.secondary).padding(.leading, 16)
                 PlaceList(places: featured, minHeight: landscape ? 46 : 52, identifier: { "featured-\($0.id)" }, action: open)
@@ -279,9 +313,30 @@ struct ExploreView: View {
         }
     }
 
+    /// A List only for its swipe-to-remove; sized to its rows so the panel's own scroll view does the scrolling.
+    private var favouritesList: some View {
+        let height = landscape ? favouriteRowHeight - 6 : favouriteRowHeight
+        return List {
+            ForEach(saved.favourites, id: \.self) { place in
+                PlaceRow(place: place, minHeight: height) { open(place) }
+                    .accessibilityIdentifier("favourite-\(place.id)")
+                    .listRowInsets(EdgeInsets()).listRowBackground(Color.panelFill)
+                    .listRowSeparator(place == saved.favourites.last ? .hidden : .visible, edges: .bottom)
+                    .alignmentGuide(.listRowSeparatorLeading) { _ in 58 }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) { withAnimation(Motion.panel(reduceMotion)) { saved.removeFavourite(place) } } label: { Label("Remove", systemImage: "star.slash") }
+                    }
+            }
+        }
+        .listStyle(.plain).scrollDisabled(true).scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, height)
+        .frame(height: CGFloat(saved.favourites.count) * height)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
     // MARK: Search
 
-    private var results: [Place] { query.isEmpty ? featured : Array(graph.search(query).prefix(60)) }
+    private var results: [Place] { query.isEmpty ? featured : search.search(query, near: (lastOrigin ?? origin).coordinate) }
 
     private var searchPanel: some View {
         VStack(spacing: 0) {
@@ -292,10 +347,12 @@ struct ExploreView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if results.isEmpty {
-                        EmptySearch(count: graph.places.count).padding(.top, 48)
+                        EmptySearch(count: search.count).padding(.top, 48)
+                        AppleMapsLookup(query: query)
                     } else {
                         resultGroup(query.isEmpty ? "Featured places" : "Top match", Array(results.prefix(query.isEmpty ? results.count : 1)))
                         if !query.isEmpty && results.count > 1 { resultGroup("Other matches", Array(results.dropFirst())) }
+                        if query.isEmpty && !saved.recents.isEmpty { resultGroup("Recents", saved.recents, prefix: "recent-") }
                     }
                 }.padding(.horizontal, landscape ? 12 : 16).padding(.bottom, 16)
             }
@@ -304,10 +361,10 @@ struct ExploreView: View {
         .task { searchFocused = true }
     }
 
-    private func resultGroup(_ title: String, _ places: [Place]) -> some View {
+    private func resultGroup(_ title: String, _ places: [Place], prefix: String = "result-") -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(.footnote).textCase(.uppercase).foregroundStyle(.secondary).padding(.leading, 16)
-            PlaceList(places: places, query: query, identifier: { "result-\($0.id)" }, action: open)
+            PlaceList(places: places, query: query, identifier: { prefix + $0.id }, action: open)
         }
     }
 
@@ -322,16 +379,41 @@ struct ExploreView: View {
                     Text(place.subtitle).font(.subheadline).foregroundStyle(.secondary)
                 }.padding(.top, 4)
                 Spacer(minLength: 0)
+                favouriteButton(place)
                 closeButton(label: "Close", id: "close-place") { screen = .home }
             }
-            Button { startDirections(to: place) } label: {
-                Label("Directions", systemImage: "arrow.right").font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity).frame(height: 50)
-                    .foregroundStyle(.directionsText).background(.directionsFill, in: RoundedRectangle(cornerRadius: 12))
-                    .contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityIdentifier("directions")
-            Text("Compares the fastest route with a calmer one. Works offline.").font(.footnote).foregroundStyle(.secondary).padding(.horizontal, 4)
+            if graph.contains(place.coordinate) {
+                Button { startDirections(to: place) } label: {
+                    Label("Directions", systemImage: "arrow.right").font(.body.weight(.semibold))
+                        .frame(maxWidth: .infinity).frame(height: 50)
+                        .foregroundStyle(.directionsText).background(.directionsFill, in: RoundedRectangle(cornerRadius: 12))
+                        .contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityIdentifier("directions")
+                Text("Compares the fastest route with a calmer one. Works offline.").font(.footnote).foregroundStyle(.secondary).padding(.horizontal, 4)
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Outside the area we cover yet").font(.headline)
+                    Text("PeopleMaps can route only inside its offline Seattle area for now.").font(.footnote).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+                .background(.panelFill, in: RoundedRectangle(cornerRadius: 12))
+                .accessibilityElement(children: .combine).accessibilityIdentifier("outside-coverage")
+            }
         }
+    }
+
+    private func favouriteButton(_ place: Place) -> some View {
+        let on = saved.isFavourite(place)
+        return Button { withAnimation(Motion.content(reduceMotion)) { saved.toggleFavourite(place) } } label: {
+            Image(systemName: on ? "star.fill" : "star").font(.system(size: 14, weight: .semibold))
+                .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
+                .foregroundStyle(on ? Color.calmer : Color.secondary)
+                .frame(width: 30, height: 30).background(Color(uiColor: .tertiarySystemFill), in: Circle())
+                .frame(width: 44, height: 44).contentShape(Rectangle())
+        }.buttonStyle(.plain)
+            .accessibilityLabel(on ? "Remove from Favourites" : "Add to Favourites")
+            .accessibilityIdentifier("favourite")
     }
 
     private func closeButton(label: String, id: String, action: @escaping () -> Void) -> some View {
@@ -357,7 +439,20 @@ struct ExploreView: View {
                     ForEach([0, 2, 5, 10], id: \.self) { Text($0 == 0 ? "None" : "\($0) min").tag($0) }
                 }.pickerStyle(.segmented)
             }
-            stateContent
+            ZStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: landscape ? 8 : 14) { stateContent }.id(stateID).transition(.opacity)
+            }
+            .animation(Motion.content(reduceMotion), value: stateID)
+        }
+    }
+
+    /// Identity of the comparison state, so loading, results and errors crossfade.
+    private var stateID: String {
+        switch session.state {
+        case .idle, .loading: "loading"
+        case .cancelled: "cancelled"
+        case let .failed(message): "failed-\(message)"
+        case let .ready(comparison): "ready-\(comparison.fastest.id)-\(comparison.calmer?.id ?? "none")"
         }
     }
 
@@ -369,7 +464,7 @@ struct ExploreView: View {
                 placeButton(place: destination, target: .destination)
             }
             Button {
-                let previous = origin; origin = destination; destination = previous
+                withAnimation(Motion.content(reduceMotion)) { let previous = origin; origin = destination; destination = previous }
             } label: { Image(systemName: "arrow.up.arrow.down").font(.body).foregroundStyle(.secondary).frame(width: 44, height: 44).contentShape(Rectangle()) }
                 .buttonStyle(.plain).accessibilityLabel("Swap start and destination").accessibilityIdentifier("swap")
         }
@@ -459,7 +554,7 @@ struct ExploreView: View {
     }
 
     private func routeRow(_ route: Route, title: String, detail: String, selected: Bool, calmer: Bool) -> some View {
-        Button { selectedCalmer = calmer } label: {
+        Button { withAnimation(Motion.content(reduceMotion)) { selectedCalmer = calmer } } label: {
             HStack(spacing: 12) {
                 RoundedRectangle(cornerRadius: 2).fill(calmer ? Color.calmer : Color.fastest).frame(width: 4)
                 VStack(alignment: .leading, spacing: 2) {
@@ -473,6 +568,7 @@ struct ExploreView: View {
                 Spacer(minLength: 0)
                 if selected {
                     Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(calmer ? Color.calmer : Color.fastest)
+                        .transition(.opacity.combined(with: .scale(scale: 0.6)))
                 }
             }
             .padding(.horizontal, 14).padding(.vertical, landscape ? 6 : 10)
