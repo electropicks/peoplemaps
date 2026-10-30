@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 import PeoplemapsCore
 
-private enum Sheet: String, Identifiable { case origin, destination, details, about; var id: String { rawValue } }
+private enum Sheet: String, Identifiable { case origin, destination, details, about, preferences; var id: String { rawValue } }
 
 private enum Screen: Equatable {
     case home, search, place(Place), preview, navigating
@@ -39,6 +39,7 @@ struct ExploreView: View {
     @State private var asking = false
     @State private var locationOff = false
     @State private var saved = SavedPlacesStore()
+    @State private var preferences = RoutePreferencesStore()
     @ScaledMetric(relativeTo: .body) private var favouriteRowHeight: CGFloat = 52
     @AppStorage("voiceMuted", store: ExploreView.voiceStore) private var voiceMuted = false
     @Environment(\.scenePhase) private var scenePhase
@@ -128,7 +129,7 @@ struct ExploreView: View {
         screen = .preview
     }
 
-    private var request: RouteRequest { .init(origin: origin, destination: destination, mode: mode, extraMinutes: budget) }
+    private var request: RouteRequest { .init(origin: origin, destination: destination, mode: mode, extraMinutes: budget, preferences: preferences[mode]) }
     /// Landscape on a phone: the panel becomes a floating card at the leading edge.
     private var landscape: Bool { verticalSizeClass == .compact }
     private let cardWidth: CGFloat = 330
@@ -176,6 +177,8 @@ struct ExploreView: View {
                 if let comparison = session.comparison { RouteDetails(comparison: comparison) }
             case .about:
                 AboutView(graph: graph)
+            case .preferences:
+                RoutePreferencesView(store: preferences, mode: mode)
             }
         }
     }
@@ -439,6 +442,7 @@ struct ExploreView: View {
                     ForEach([0, 2, 5, 10], id: \.self) { Text($0 == 0 ? "None" : "\($0) min").tag($0) }
                 }.pickerStyle(.segmented)
             }
+            RoutePreferencesRow(isCustom: !preferences[mode].isDefault(in: mode)) { sheet = .preferences }
             ZStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: landscape ? 8 : 14) { stateContent }.id(stateID).transition(.opacity)
             }
