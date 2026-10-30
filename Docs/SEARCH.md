@@ -67,9 +67,13 @@ on paper but returns Apple data, so do not rely on it either.
 
 ## Also in scope
 
-- **My location as the start.** "Current location" heads the origin list once
-  permission is granted. If it is denied, the list hides that row and asks for
-  nothing.
+- **My location as the start.** The app asks once, on first launch. When
+  allowed, routes start from "Current location", which heads the origin list.
+  If it is denied, the start is an empty "Choose start" field, the list hides
+  that row, and nothing asks again.
+- **Near an address.** A place with no address of its own shows the nearest
+  indexed address within 40 m ("Near 211 West Highland Drive"), else its
+  neighbourhood (`SearchIndex.nearestAddress`).
 - **Drop a pin.** Long-press the map for "Dropped pin" plus the nearest
   address from the index.
 - **Recents and favourites.** Stored on the device as our own place IDs and

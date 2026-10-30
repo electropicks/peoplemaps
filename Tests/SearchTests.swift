@@ -37,6 +37,25 @@ final class SearchTests: XCTestCase {
         let pin = Place(id: "pin", name: "Dropped pin", lat: 47.65, lon: -122.34, category: "pin")
         XCTAssertNil(index.withAddress(pin).address)
     }
+    func testNearestAddressForAPlaceWithoutOne() throws {
+        // Amazon.com Nitro North has no address in OSM; the nearest mapped one is about 20 m away.
+        let nitro = try XCTUnwrap(index.place(id: "way/1137900798"))
+        XCTAssertNil(nitro.address)
+        let near = try XCTUnwrap(index.nearestAddress(to: nitro.coordinate, within: 40))
+        XCTAssertEqual(near.kind, .address)
+        XCTAssertEqual(near.id, "node/10964497269")
+        XCTAssertEqual(near.coordinate.distance(to: nitro.coordinate), 19.5, accuracy: 1)
+        XCTAssertEqual(index.nearestAddress(to: nitro.coordinate)?.id, near.id, "40 m by default")
+        XCTAssertNil(index.nearestAddress(to: nitro.coordinate, within: 15))
+    }
+    func testNearestAddressPrefersTheBuildingOverAUnit() throws {
+        // A unit row and its building's row share one point.
+        let spot = Coordinate(lat: 47.6179645, lon: -122.3140016)
+        XCTAssertEqual(index.nearestAddress(to: spot, within: 5)?.name, "1808 14th Avenue")
+    }
+    func testNearestAddressIsNilFarFromAny() {
+        XCTAssertNil(index.nearestAddress(to: Coordinate(lat: 47.637, lon: -122.336), within: 40), "middle of Lake Union")
+    }
     func testRepeatedQueriesReuseTheLastAnswer() {
         let first = index.search("gas works", near: Self.fremont)
         XCTAssertEqual(index.search("gas works", near: Self.fremont).map(\.id), first.map(\.id))
