@@ -44,7 +44,7 @@ def main(fresh_path, shipped_path):
     if fresh['gz'] == shipped['gz']:
         print('verdict: identical')
     elif fresh['raw'] == shipped['raw']:
-        print('verdict: same SQLite bytes; only the gzip stream differs (zlib build)')
+        print('verdict: same SQLite bytes; only the gzip stream differs (gzip header or zlib build)')
     elif fresh['rows'] == shipped['rows']:
         print('verdict: same rows; the SQLite page layout differs (SQLite build or compile options)')
     else:

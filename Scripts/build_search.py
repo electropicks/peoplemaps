@@ -3,7 +3,7 @@
 
 Called by import_osm.py once the routing graph is built, so every entry can carry the graph node
 it routes from or to. Deterministic for a given input and SQLite version; no network."""
-import collections, gzip, hashlib, json, math, os, pathlib, re, sqlite3, tempfile, unicodedata
+import collections, gzip, hashlib, json, math, os, pathlib, re, sqlite3, struct, tempfile, zlib, unicodedata
 
 SCHEMA_VERSION = 1
 DEDUPE_METERS = 50
@@ -374,6 +374,14 @@ def write_database(path, entries, meta):
     db.close()
 
 
+def gzip_bytes(raw):
+    """A gzip file with a fixed header (no name, mtime 0, unknown OS), so the bytes depend only on zlib.
+    gzip.compress writes its header differently between Python versions, which broke byte-for-byte reproduction."""
+    deflate = zlib.compressobj(9, zlib.DEFLATED, -zlib.MAX_WBITS)
+    body = deflate.compress(raw) + deflate.flush()
+    return b'\x1f\x8b\x08\x00\x00\x00\x00\x00\x02\xff' + body + struct.pack('<II', zlib.crc32(raw), len(raw) & 0xffffffff)
+
+
 def read_overture(path):
     """(header, records) of the archive from fetch_overture.py."""
     archive = json.loads(gzip.decompress(path.read_bytes()))
@@ -397,7 +405,7 @@ def build(search_json, graph_places, nodes, segments, inside, graph_sha256, out_
         db_path = pathlib.Path(tmp) / 'search.sqlite'
         write_database(db_path, entries, meta)
         raw = db_path.read_bytes()
-    out_path.write_bytes(gzip.compress(raw, compresslevel=9, mtime=0))
+    out_path.write_bytes(gzip_bytes(raw))
     kinds = collections.Counter(x['kind'] for x in entries)
     summary = {'places': kinds['place'], 'addresses': kinds['address'], 'inflatedBytes': len(raw),
                'gzippedBytes': out_path.stat().st_size, 'sqlite': sqlite3.sqlite_version,

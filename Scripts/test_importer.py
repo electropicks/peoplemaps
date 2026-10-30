@@ -152,6 +152,12 @@ class SearchIndexTests(unittest.TestCase):
         self.assertEqual({x['osm']: x['source'] for x in found}['overture/meta'], 'Overture · Meta')
         self.assertTrue(all(x['address'] is None for x in found))   # addresses come from OSM only
         self.assertEqual((stats['archive'], stats['inBox'], stats['confident'], stats['categorised']), (14, 13, 6, 5))
+    def test_gzip_bytes_has_a_fixed_header_and_round_trips(self):
+        raw = b'peoplemaps ' * 1000
+        out = build_search.gzip_bytes(raw)
+        self.assertEqual(out[:10], b'\x1f\x8b\x08\x00\x00\x00\x00\x00\x02\xff')
+        self.assertEqual(gzip.decompress(out), raw)
+        self.assertEqual(out, build_search.gzip_bytes(raw))
     def test_overture_categories_map_to_osm_names_and_weights(self):
         cat = lambda primary, *hierarchy: build_search.overture_category({'primary': primary, 'hierarchy': list(hierarchy)})
         self.assertEqual(cat('coffee_shop', 'food_and_drink', 'cafe'), ('cafe', 50))
