@@ -21,7 +21,7 @@ struct PlacePicker: View {
         _access = State(initialValue: location?.access ?? .denied)
     }
 
-    private var featured: [Place] { ExploreView.featuredIDs.compactMap { id in graph.places.first { $0.id == id } } }
+    private var featured: [Place] { ExploreView.featuredIDs.compactMap { id in graph.places.first { $0.id == id }.map(search.withAddress) } }
     private var results: [Place] { search.search(query, near: selected.coordinate) }
 
     var body: some View {

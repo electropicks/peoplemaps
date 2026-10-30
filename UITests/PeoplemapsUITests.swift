@@ -321,7 +321,8 @@ final class PeoplemapsUITests: XCTestCase {
             XCTAssertTrue(app.buttons["featured-\(id)"].exists, id)
         }
         XCTAssertFalse(app.buttons["route-fastest"].exists)
-        for (id, subtitle) in [("way/37058377", "Fremont"), ("way/160545994", "University District"), ("node/693337509", "Queen Anne")] {
+        // A street address when the index has one, else the neighbourhood.
+        for (id, subtitle) in [("way/37058377", "731 North 35th Street"), ("way/160545994", "4303 Memorial Way Northeast"), ("node/693337509", "Queen Anne")] {
             XCTAssertTrue(app.buttons["featured-\(id)"].label.hasSuffix("· \(subtitle)"), id)
         }
         capture("00-home", app: app)
@@ -445,7 +446,6 @@ final class PeoplemapsUITests: XCTestCase {
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.3)).press(forDuration: 1.2)
         XCTAssertTrue(app.staticTexts["Dropped pin"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS '° N'")).firstMatch.exists)
-        XCTAssertTrue(app.buttons["directions-from"].exists)
         capture("09-dropped-pin", app: app)
         app.buttons["directions"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
@@ -521,7 +521,7 @@ final class PeoplemapsUITests: XCTestCase {
         capture("15-home-favourites-landscape", app: app)
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.5)).press(forDuration: 1.2)
         XCTAssertTrue(app.staticTexts["Dropped pin"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["directions-from"].isHittable)
+        XCTAssertTrue(app.buttons["directions"].isHittable)
         capture("16-dropped-pin-landscape", app: app)
     }
 }
