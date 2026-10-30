@@ -1,5 +1,9 @@
 import Foundation
+#if canImport(SQLite3)
 import SQLite3
+#else
+import CSQLite
+#endif
 
 /// Offline search over the bundled index of OpenStreetMap places and street addresses, built by
 /// Scripts/build_search.py. Ranked by text match, then category weight (landmarks and parks over shops,
