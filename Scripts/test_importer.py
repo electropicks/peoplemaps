@@ -150,7 +150,7 @@ class SearchIndexTests(unittest.TestCase):
         ids = sorted(x['osm'] for x in found)
         self.assertEqual(ids, ['overture/keep', 'overture/meta', 'overture/overture-own', 'overture/threshold', 'overture/unknown-status'])
         self.assertEqual({x['osm']: x['source'] for x in found}['overture/meta'], 'Overture · Meta')
-        self.assertEqual(found[0]['address'], '1 Main St')   # whitespace collapsed
+        self.assertTrue(all(x['address'] is None for x in found))   # addresses come from OSM only
         self.assertEqual((stats['archive'], stats['inBox'], stats['confident'], stats['categorised']), (14, 13, 6, 5))
     def test_overture_categories_map_to_osm_names_and_weights(self):
         cat = lambda primary, *hierarchy: build_search.overture_category({'primary': primary, 'hierarchy': list(hierarchy)})

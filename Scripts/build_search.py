@@ -9,6 +9,7 @@ SCHEMA_VERSION = 1
 DEDUPE_METERS = 50
 AREA_DEDUPE_METERS = 250  # same-named parks and civic places (weight 70 and up) from Overture and OSM
 AREA_WEIGHT = 70
+OVERTURE_PENALTY = 5  # an Overture place ranks just below an OSM place of the same category
 SNAP_METERS = 400  # the router's own snap radius
 NOTABLE = 5  # weight bonus: ranks well-known places above others of their kind, never above a better category
 
@@ -191,9 +192,9 @@ def overture_candidates(records, inside, stats=None):
         if not category:
             continue
         stats['categorised'] += 1
-        address = ' '.join(((r.get('address') or {}).get('freeform') or '').split()) or None
+        # Addresses come from OSM only; the app shows the nearest OSM address for a business instead.
         found.append({'osm': f"overture/{r['id']}", 'kind': 'place', 'name': name, 'category': category[0],
-                      'lat': round(r['lat'], 7), 'lon': round(r['lon'], 7), 'weight': category[1], 'address': address,
+                      'lat': round(r['lat'], 7), 'lon': round(r['lon'], 7), 'weight': category[1], 'address': None,
                       'unit': None, 'number': None, 'source': f'Overture · {source}', 'confidence': r['confidence']})
     found.sort(key=lambda x: (-x['weight'], -x['confidence'], x['osm']))
     return found
@@ -267,6 +268,9 @@ def entries_from(elements, graph_places, inside, overture=(), stats=None):
                         stats['categoryFilled'] += 1
             continue
         seen_ids.add((x['osm'], x['kind'])); grid[(gx, gy)].append(x); kept.append(x)
+    for x in kept:
+        if x['osm'].startswith('overture/'):
+            x['weight'] -= OVERTURE_PENALTY
     # Graph places come from the older routing extract: fill in their address from the search extract.
     by_id = {x['osm']: x for x in candidates if x['kind'] == 'place'}
     for x in kept[:len(graph_places)]:

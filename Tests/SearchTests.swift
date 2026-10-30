@@ -20,7 +20,7 @@ final class SearchTests: XCTestCase {
         XCTAssertEqual(hit.name, "Broadcast Coffee")
         XCTAssertEqual(hit.id, "overture/e1fb6a43-f757-4588-bdae-60ea3637cc69")
         XCTAssertEqual(hit.category, "cafe")
-        XCTAssertEqual(hit.address, "6515 Roosevelt Way NE")
+        XCTAssertNil(hit.address, "addresses come from OSM only")
         XCTAssertEqual(hit.source, "Overture (Foursquare), Oct 2026")
         XCTAssertEqual(index.place(id: hit.id)?.name, "Broadcast Coffee")
         XCTAssertEqual(Set(hit.snap.keys), Set(TravelMode.allCases), "snapped to routable nodes like OSM rows")
@@ -91,7 +91,7 @@ final class SearchTests: XCTestCase {
         // Within a tier and weight, nearer first.
         let cafes = index.search("starbucks", near: Self.fremont).filter { $0.name == "Starbucks" }
         XCTAssertGreaterThan(cafes.count, 1)
-        let distances = cafes.filter { $0.category == cafes[0].category }.map { $0.coordinate.distance(to: Self.fremont) }
+        let distances = cafes.filter { $0.category == cafes[0].category && $0.source == cafes[0].source }.map { $0.coordinate.distance(to: Self.fremont) }
         XCTAssertEqual(distances, distances.sorted())
         // A name that starts with the query beats one that only contains it.
         XCTAssertTrue(index.search("space needle").first?.name.hasPrefix("Space Needle") == true)

@@ -58,6 +58,8 @@ into OSM.
 Places theme, release 2026-10-21.0, for 47.49–47.74 N, 122.44–122.24 W, fetched on 2026-10-30
 with `Scripts/fetch_overture.py`. It keeps each place's name, position, categories, confidence,
 operating status, freeform address and sources (dataset, record ID, licence, update time).
+The search index uses the name, position, category and source only; its addresses come from
+OpenStreetMap alone.
 It holds no phone numbers, emails, websites, social links or brands. Its SHA-256 is in
 `provenance.json`. The Places theme contains no OpenStreetMap data; each record is licensed by
 its source, and the importer keeps a record only if its first source is one of these under the

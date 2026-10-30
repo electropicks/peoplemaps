@@ -105,7 +105,9 @@ on paper but returns Apple data, so do not rely on it either.
   (lawyers, consultants, software, real estate) and delivery-only or utility
   listings are dropped; everything else maps to our category names and weights
   (`OVERTURE_GROUPS` in `build_search.py`), unmapped ones keeping Overture's own
-  name at a shop-like weight.
+  name at a shop-like weight. Overture rows rank 5 below an OSM place of the same
+  category, and carry no address: addresses come from OSM only, so a business
+  shows the nearest OSM address.
 - **Derivative database.** Merging with OSM makes the search index a derived
   database, so it stays under ODbL 1.0, and every Overture-sourced row is
   identifiable by its `source` column.

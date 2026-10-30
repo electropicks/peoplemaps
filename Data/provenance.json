@@ -21,8 +21,8 @@
   "places": 519,
   "search": {
     "addresses": 50026,
-    "gzippedBytes": 4715649,
-    "inflatedBytes": 15519744,
+    "gzippedBytes": 4413854,
+    "inflatedBytes": 14671872,
     "overture": {
       "archive": {
         "file": "Data/seattle-overture-places.json.gz",
