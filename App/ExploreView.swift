@@ -65,11 +65,14 @@ struct ExploreView: View {
         #endif
         _session = State(initialValue: RouteSession(router: computing))
         _navigator = State(initialValue: NavigationController(router: router))
-        _origin = State(initialValue: graph.places.first { $0.id == Self.kerryPark } ?? graph.places[0])
-        _destination = State(initialValue: graph.places.first { $0.id == Self.gasWorks } ?? graph.places[1])
+        let featured = Self.featuredIDs.compactMap { id in graph.places.first { $0.id == id }.map(search.withAddress) }
+        self.featured = featured
+        _origin = State(initialValue: featured.first { $0.id == Self.kerryPark } ?? graph.places[0])
+        _destination = State(initialValue: featured.first { $0.id == Self.gasWorks } ?? graph.places[1])
     }
 
-    private var featured: [Place] { Self.featuredIDs.compactMap { id in graph.places.first { $0.id == id } } }
+    /// With addresses from the search index, which the graph's places lack.
+    private let featured: [Place]
     private var selectedPlace: Place? { if case let .place(place) = screen { place } else { nil } }
     /// Stays set while guiding, so the comparison survives and End returns to the same routes.
     private var previewRequest: RouteRequest? { screen == .preview || screen == .navigating ? request : nil }
@@ -108,8 +111,8 @@ struct ExploreView: View {
     private func endNavigation() { navigator.stop(); screen = .preview }
     private func finishNavigation() { navigator.stop(); screen = .home }
 
-    private func open(_ place: Place) { query = ""; screen = .place(place) }
-    private func openPin(_ id: String) { if let place = graph.places.first(where: { $0.id == id }) { open(place) } }
+    private func open(_ place: Place) { query = ""; screen = .place(search.withAddress(place)) }
+    private func openPin(_ id: String) { if let place = featured.first(where: { $0.id == id }) ?? graph.places.first(where: { $0.id == id }) { open(place) } }
     /// Long-press drops a pin while browsing, never over a route or guidance.
     private func dropPin(_ c: Coordinate) {
         guard screen == .home || selectedPlace != nil else { return }
@@ -119,18 +122,10 @@ struct ExploreView: View {
 
     private func startDirections(to place: Place) {
         let fallbackID = place.id == Self.kerryPark ? Self.gasWorks : Self.kerryPark
-        let from = lastOrigin.flatMap { $0.id == place.id ? nil : $0 } ?? graph.places.first { $0.id == fallbackID } ?? origin
+        let from = lastOrigin.flatMap { $0.id == place.id ? nil : $0 } ?? featured.first { $0.id == fallbackID } ?? origin
         origin = from; lastOrigin = from; destination = place
         saved.addRecent(place)
         screen = .preview
-    }
-
-    /// Starts from the place and asks where to, keeping the last destination underneath unless it is this place.
-    private func startDirections(from place: Place) {
-        let fallbackID = place.id == Self.gasWorks ? Self.kerryPark : Self.gasWorks
-        if destination.id == place.id, let other = graph.places.first(where: { $0.id == fallbackID }) { destination = other }
-        origin = place; lastOrigin = place
-        screen = .preview; sheet = .destination
     }
 
     private var request: RouteRequest { .init(origin: origin, destination: destination, mode: mode, extraMinutes: budget) }
@@ -388,20 +383,12 @@ struct ExploreView: View {
                 closeButton(label: "Close", id: "close-place") { screen = .home }
             }
             if graph.contains(place.coordinate) {
-                HStack(spacing: 10) {
-                    Button { startDirections(to: place) } label: {
-                        Label("Directions", systemImage: "arrow.right").font(.body.weight(.semibold))
-                            .frame(maxWidth: .infinity).frame(height: 50)
-                            .foregroundStyle(.directionsText).background(.directionsFill, in: RoundedRectangle(cornerRadius: 12))
-                            .contentShape(Rectangle())
-                    }.buttonStyle(.plain).accessibilityIdentifier("directions")
-                    Button { startDirections(from: place) } label: {
-                        Text("From here").font(.body.weight(.semibold)).padding(.horizontal, 18)
-                            .frame(height: 50).foregroundStyle(.calmerText)
-                            .background(Color(uiColor: .tertiarySystemFill), in: RoundedRectangle(cornerRadius: 12))
-                            .contentShape(Rectangle())
-                    }.buttonStyle(.plain).accessibilityLabel("Directions from here").accessibilityIdentifier("directions-from")
-                }
+                Button { startDirections(to: place) } label: {
+                    Label("Directions", systemImage: "arrow.right").font(.body.weight(.semibold))
+                        .frame(maxWidth: .infinity).frame(height: 50)
+                        .foregroundStyle(.directionsText).background(.directionsFill, in: RoundedRectangle(cornerRadius: 12))
+                        .contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityIdentifier("directions")
                 Text("Compares the fastest route with a calmer one. Works offline.").font(.footnote).foregroundStyle(.secondary).padding(.horizontal, 4)
             } else {
                 VStack(alignment: .leading, spacing: 4) {
