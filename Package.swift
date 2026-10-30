@@ -12,6 +12,6 @@ let package = Package(
         .target(name: "PeoplemapsCore", dependencies: ["CZlib", "CSQLite"], path: "Core", resources: [.process("Resources")]),
         .executableTarget(name: "RouteAudit", dependencies: ["PeoplemapsCore"], path: "Tools"),
         .executableTarget(name: "RouterBench", dependencies: ["PeoplemapsCore"], path: "Bench"),
-        .testTarget(name: "PeoplemapsCoreTests", dependencies: ["PeoplemapsCore"], path: "Tests")
+        .testTarget(name: "PeoplemapsCoreTests", dependencies: ["PeoplemapsCore"], path: "Tests", resources: [.copy("Fixtures/route-golden.json")])
     ]
 )
