@@ -48,6 +48,12 @@ are kept as distinct licensing scopes. The map uses the local GeoJSON data;
 there is no remote tile, font, sprite, geocoder, or routing endpoint at runtime.
 The map shows a visible "© OpenStreetMap" attribution link.
 
+Search (`Core/Resources/seattle-search.sqlite.gz`) is built from a separate OSM
+extract fetched on 2026-10-28 and also uses OSM for street addresses. King County
+and City of Seattle address points were reviewed and not used: their terms
+do not clearly allow redistribution in this app (details in `Data/LICENSE.md`).
+Results are labelled with their source and date ("OpenStreetMap, Oct 2026").
+
 **USGS 3D Elevation Program (3DEP)** — public domain; credit requested.
 
 Elevation comes from the 3DEP ground model (~5 m, exported from the

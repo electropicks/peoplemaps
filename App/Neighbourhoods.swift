@@ -20,14 +20,21 @@ enum Neighbourhoods {
 
 extension Place {
     var categoryLabel: String {
-        switch category { case "cafe": "Café"; default: category.prefix(1).uppercased() + category.dropFirst() }
+        let words = category.replacingOccurrences(of: "_", with: " ")
+        switch category { case "cafe": return "Café"; default: return words.prefix(1).uppercased() + words.dropFirst() }
     }
-    /// "Category · Neighbourhood", or just the category outside every neighbourhood.
-    var subtitle: String { [categoryLabel, Neighbourhoods.nearest(to: coordinate)].compactMap { $0 }.joined(separator: " · ") }
+    /// "Category · Address" when the map has the place's address, else "Category · Neighbourhood", or just the
+    /// category outside every neighbourhood. Addresses read "Address · Neighbourhood"; dropped pins show coordinates.
+    var subtitle: String {
+        if isDroppedPin { return coordinateLabel }
+        return [categoryLabel, address ?? Neighbourhoods.nearest(to: coordinate)].compactMap { $0 }.joined(separator: " · ")
+    }
     var symbol: String {
-        switch category {
+        if kind == .address { return "mappin" }
+        return switch category {
         case "park": "tree"; case "library": "books.vertical"; case "museum": "building.columns"
-        case "cafe": "cup.and.saucer"; case "viewpoint": "eye"; default: "star"
+        case "cafe": "cup.and.saucer"; case "viewpoint": "eye"; case Place.pinCategory: "mappin"
+        case Place.locationCategory: "location.fill"; default: "star"
         }
     }
 }

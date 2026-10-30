@@ -157,8 +157,8 @@ public final class NativeRouter: RouteComputing, Sendable {
         guard (0...20).contains(request.extraMinutes) else { throw RoutingError.invalidBudget }
         guard request.origin.id != request.destination.id, request.origin.coordinate.distance(to: request.destination.coordinate) >= 10 else { throw RoutingError.samePlace }
         guard graph.contains(request.origin.coordinate), graph.contains(request.destination.coordinate) else { throw RoutingError.outsideCoverage }
-        let start = try snap(request.origin.coordinate, mode: request.mode, departing: true)
-        let end = try snap(request.destination.coordinate, mode: request.mode, departing: false)
+        let start = try snap(request.origin, mode: request.mode, departing: true)
+        let end = try snap(request.destination, mode: request.mode, departing: false)
         guard start.node != end.node else { throw RoutingError.samePlace }
         let fastest = try shortest(from: start.node, to: end.node, mode: request.mode, weight: 0)
         var candidates = [fastest]
@@ -193,8 +193,14 @@ public final class NativeRouter: RouteComputing, Sendable {
                  crossedArterial: arterialsAt[node]?.filter { $0.way != previous.wayID && $0.way != next.wayID }.map(\.road).max())
     }
 
-    private func snap(_ point: Coordinate, mode: TravelMode, departing: Bool) throws -> (node: Int, distance: Double) {
+    private func snap(_ place: Place, mode: TravelMode, departing: Bool) throws -> (node: Int, distance: Double) {
         guard let connected = connectedNodes[mode] else { throw RoutingError.noConnection }
+        let point = place.coordinate
+        // The search index stores the node the importer picked; use it when it is still a valid start or end here.
+        if let i = place.snap[mode], graph.nodes.indices.contains(i), connected.contains(i),
+           (departing ? outgoing[i] : incoming[i]).contains(where: { graph.edges[$0].modes.contains(mode) && !graph.edges[$0].isHighway }) {
+            return (i, point.distance(to: graph.nodes[i].coordinate))
+        }
         var best: (Int, Double)?
         for i in graph.nodes.indices where connected.contains(i) {
             let d = point.distance(to: graph.nodes[i].coordinate)

@@ -13,3 +13,5 @@ Evidence/ui-attachments*/
 Evidence/ui-test-results.json
 __pycache__/
 Spikes/
+.claude/worktrees/
+.claude/settings.local.json

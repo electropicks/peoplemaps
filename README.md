@@ -34,8 +34,9 @@ open Peoplemaps.xcodeproj   # Peoplemaps scheme, any iPhone Simulator
 ```
 
 Xcode resolves the pinned MapLibre 6.31.0 and Ferrostar 0.59.0 packages on the
-first build. Signing is not configured yet, so physical devices need your own
-team and bundle id. Scripts set `DEVELOPER_DIR` per command; override
+first build. Signing is automatic with team H43GY37VXC and bundle ID
+`electrocorp.peoplemaps`; to install on another team's phone, change both in
+`Scripts/generate_project.py`. Scripts set `DEVELOPER_DIR` per command; override
 `PEOPLEMAPS_XCODE` if Xcode lives elsewhere.
 
 Try **Kerry Park → Gas Works Park**: with five extra minutes the driving model
@@ -46,8 +47,8 @@ the route.
 ## Test
 
 ```sh
-./Scripts/test.sh                       # importer + Swift tests
-./Scripts/test.sh <booted-simulator-udid>   # plus the UI suite
+Scripts/verify.sh                       # importer, data reproduction, Swift tests, iOS build
+Scripts/verify.sh --ui                  # plus the UI suite on a "PeopleMaps Verify" simulator
 python3 Scripts/import_osm.py           # rebuild the graph from the archived OSM snapshots
 python3 Scripts/generate_project.py     # regenerate the Xcode project after adding files
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \

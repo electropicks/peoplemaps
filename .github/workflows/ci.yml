@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Cheap and fast: importer, data reproduction and Core's Swift tests, the same checks a cloud session runs.
+  linux:
+    runs-on: ubuntu-latest
+    container: swift:6.4.1-noble
+    steps:
+      - uses: actions/checkout@v4
+      - run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev zlib1g-dev python3
+      - run: Scripts/verify.sh
+
+  # The iOS app build, on every PR. macOS minutes cost 10x, so the UI suite runs only when asked.
+  ios-build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+          key: spm-${{ hashFiles('Peoplemaps.xcodeproj/project.pbxproj', 'Package.swift') }}
+      - run: PEOPLEMAPS_XCODE="$(xcode-select -p)" Scripts/verify.sh
+
+  # Push to main, a manual run, or a PR labelled "ui-tests".
+  ui-tests:
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ui-tests')
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+          key: spm-${{ hashFiles('Peoplemaps.xcodeproj/project.pbxproj', 'Package.swift') }}
+      - run: PEOPLEMAPS_XCODE="$(xcode-select -p)" Scripts/verify.sh --fast --ui

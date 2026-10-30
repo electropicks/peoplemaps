@@ -19,18 +19,38 @@ public struct Coordinate: Hashable, Sendable {
 }
 
 public struct Place: Codable, Hashable, Sendable, Identifiable {
+    /// A named place (park, café, shop, building) or a street address.
+    public enum Kind: String, Codable, Sendable { case place, address }
     public let id: String
     public let name: String
     public let lat: Double
     public let lon: Double
+    /// OSM-style category ("park", "cafe", "restaurant"); "address" for street addresses.
     public let category: String
+    public var kind: Kind = .place
+    /// Street address of a named place, when the map has one.
+    public var address: String?
+    /// Where the entry comes from, with its date: "OpenStreetMap, Oct 2026".
+    public var source: String?
+    /// Graph node the router may start or end at for each mode, chosen by the importer. Not encoded: valid only for one graph build.
+    public var snap: [TravelMode: Int] = [:]
     public var coordinate: Coordinate { .init(lat: lat, lon: lon) }
     public var shortName: String {
         name.replacingOccurrences(of: "The Seattle Public Library - ", with: "")
             .replacingOccurrences(of: " Branch", with: " Library")
     }
-    public init(id: String, name: String, lat: Double, lon: Double, category: String) {
+    public init(id: String, name: String, lat: Double, lon: Double, category: String, kind: Kind = .place,
+                address: String? = nil, source: String? = nil, snap: [TravelMode: Int] = [:]) {
         self.id = id; self.name = name; self.lat = lat; self.lon = lon; self.category = category
+        self.kind = kind; self.address = address; self.source = source; self.snap = snap
+    }
+    enum CodingKeys: CodingKey { case id, name, lat, lon, category, kind, address, source }
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(id: try c.decode(String.self, forKey: .id), name: try c.decode(String.self, forKey: .name),
+                  lat: try c.decode(Double.self, forKey: .lat), lon: try c.decode(Double.self, forKey: .lon),
+                  category: try c.decode(String.self, forKey: .category), kind: try c.decodeIfPresent(Kind.self, forKey: .kind) ?? .place,
+                  address: try c.decodeIfPresent(String.self, forKey: .address), source: try c.decodeIfPresent(String.self, forKey: .source))
     }
 }
 
@@ -157,11 +177,10 @@ public struct StreetGraph: Sendable {
     }
 
     public static func bundled() throws -> StreetGraph {
-        guard let url = Bundle.module.url(forResource: "seattle-graph.json", withExtension: "gz"),
-              let json = try Data(contentsOf: url).gunzipped() else { throw RoutingError.missingData }
-        let file = try JSONDecoder().decode(GraphFile.self, from: json)
-        guard file.schemaVersion == 2 else { throw RoutingError.missingData }
-        let graph = file.graph()
+        // Coverage spike: PEOPLEMAPS_GRAPH points the benchmark at an alternative graph file.
+        let override = ProcessInfo.processInfo.environment["PEOPLEMAPS_GRAPH"].map { URL(fileURLWithPath: $0) }
+        guard let url = override ?? Bundle.module.url(forResource: "seattle-graph", withExtension: "bin") else { throw RoutingError.missingData }
+        let graph = try GraphBinary.decode(Data(contentsOf: url, options: .mappedIfSafe))
         try graph.validate()
         return graph
     }
@@ -194,52 +213,6 @@ public struct StreetGraph: Sendable {
         return ranked.map(\.place)
     }
     public func contains(_ c: Coordinate) -> Bool { c.lat >= bounds[0] && c.lat <= bounds[2] && c.lon >= bounds[1] && c.lon <= bounds[3] }
-}
-
-/// On-disk schema v2: undirected segments with per-direction attributes, written by Scripts/import_osm.py.
-private struct GraphFile: Decodable {
-    struct Direction: Decodable {
-        let modes: [TravelMode]
-        let facility: String?
-        let control: TrafficControl?
-        let approachGrade: Double?
-        let leftTurnLane: Bool?
-    }
-    struct Segment: Decodable {
-        let way: Int64, a: Int, b: Int, g: [Double], m: Double, hw: String, n: Int, up: Double, down: Double
-        let lanes: Int?, maxspeed: String?, surface: String?, sidewalk: String?, parkedBothSides: Bool?
-        let movableBridge: Bool?, footway: String?, steps: Int?, crossing: Crossing?, besideRoad: RoadClass?
-        let f: Direction?, r: Direction?
-    }
-    let schemaVersion: Int
-    let bounds: [Double]
-    let names: [String]
-    let nodes: [GraphNode]
-    let segments: [Segment]
-    let restrictions: [TurnRestriction]
-    let places: [Place]
-
-    func graph() -> StreetGraph {
-        var edges: [GraphEdge] = []
-        edges.reserveCapacity(segments.count * 2)
-        for s in segments {
-            let points = stride(from: 0, to: s.g.count - 1, by: 2).map { Coordinate(lat: s.g[$0 + 1], lon: s.g[$0]) }
-            let twoWay = (s.f?.modes.contains(.drive) ?? false) && (s.r?.modes.contains(.drive) ?? false)
-            for (direction, forward) in [(s.f, true), (s.r, false)] {
-                guard let direction, !direction.modes.isEmpty else { continue }
-                var e = GraphEdge(id: edges.count, from: forward ? s.a : s.b, to: forward ? s.b : s.a, wayID: s.way,
-                                  coordinates: forward ? points : points.reversed(), meters: s.m, modes: direction.modes,
-                                  highway: s.hw, name: names[s.n], surface: s.surface, maxspeed: s.maxspeed, lanes: s.lanes)
-                e.sidewalk = s.sidewalk; e.parkedBothSides = s.parkedBothSides; e.movableBridge = s.movableBridge ?? false
-                e.footway = s.footway; e.steps = s.steps; e.crossing = s.crossing; e.besideRoad = s.besideRoad
-                e.facility = direction.facility ?? "none"; e.control = direction.control
-                e.approachGrade = direction.approachGrade; e.leftTurnLane = direction.leftTurnLane
-                e.climb = forward ? s.up : s.down; e.descent = forward ? s.down : s.up; e.twoWayForDriving = twoWay
-                edges.append(e)
-            }
-        }
-        return StreetGraph(bounds: bounds, nodes: nodes, edges: edges, restrictions: restrictions, places: places)
-    }
 }
 
 public struct RouteRequest: Hashable, Sendable {
