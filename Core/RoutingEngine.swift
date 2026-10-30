@@ -190,10 +190,16 @@ public final class NativeRouter: RouteComputing, Sendable {
         let scale = FactorScale(request.preferences, mode: request.mode)
         if request.extraMinutes > 0 {
             let scaled = scale == nil ? stress : exposure(mode: request.mode, scale: scale)
-            for weight in Self.weights {
+            var weights = Self.weights[...]
+            let limit = fastest.metrics.seconds + Double(request.extraMinutes) * 60 + 0.000_001
+            while let weight = weights.popFirst() {
                 try Task.checkCancellation()
                 let candidate = try shortest(from: start.node, to: end.node, mode: request.mode, weight: weight, stress: scaled, scale: scale)
                 if !candidates.contains(where: { $0.edgeIDs == candidate.edgeIDs }) { candidates.append(candidate) }
+                // Avoid can make even the lightest weight detour past the budget; then look closer to the fastest route.
+                if weights.isEmpty, scale != nil, weight > Self.weights[0] / 4, !candidates.dropFirst().contains(where: { $0.metrics.seconds <= limit }) {
+                    weights.append(min(weight, Self.weights[0]) / 2)
+                }
             }
         }
         let calmer = Self.selectCalmer(candidates: candidates, fastest: fastest, extraMinutes: request.extraMinutes,
