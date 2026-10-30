@@ -100,9 +100,11 @@ final class SeattlePreferenceTests: XCTestCase {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Evidence/route-audit.json")
         let rows = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [[String: Any]])
         func number(_ v: Any?) -> Double? { (v as? NSNumber)?.doubleValue }
-        func factors(_ v: Any?) -> Set<String> { Set(((v as? [[Any]]) ?? []).map { "\($0[0]) \(number($0[1])!) \(number($0[2])!)" }) }
-        func factors(_ r: Route?) -> Set<String> {
-            Set((r?.metrics.breakdown.tallies ?? [:]).map { "\($0.key.rawValue) \(($0.value.amount * 10).rounded() / 10) \($0.value.cost.rounded())" })
+        // Fixed rounding and name order: dictionary order and JSON parsing of the last digits differ between platforms.
+        func row(_ name: String, _ amount: Double, _ cost: Double) -> String { "\(name) \(String(format: "%.1f", amount)) \(String(format: "%.0f", cost))" }
+        func factors(_ v: Any?) -> [String] { ((v as? [[Any]]) ?? []).map { row("\($0[0])", number($0[1])!, number($0[2])!) }.sorted() }
+        func factors(_ r: Route?) -> [String] {
+            (r?.metrics.breakdown.tallies ?? [:]).map { row($0.key.rawValue, ($0.value.amount * 10).rounded() / 10, $0.value.cost.rounded()) }.sorted()
         }
         var checked = 0
         for (a, b) in [("way/37056567", "relation/1047789"), ("way/37058377", "way/160545994"), ("node/693337509", "relation/1047789")] {
