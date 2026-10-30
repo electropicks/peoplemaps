@@ -94,7 +94,7 @@ final class RouteGoldenTests: XCTestCase {
             try encoder.encode(entries).write(to: fixtureURL)
             return
         }
-        let golden = try JSONDecoder().decode([Entry].self, from: Data(contentsOf: Bundle.module.url(forResource: "route-golden", withExtension: "json") ?? fixtureURL))
+        let golden = try JSONDecoder().decode([Entry].self, from: Data(contentsOf: fixtureURL))
         XCTAssertEqual(golden.map(\.key), entries.map(\.key), "The request list changed; regenerate the fixture")
         XCTAssertGreaterThan(golden.filter { $0.error == nil }.count, golden.count * 9 / 10, "Most trips should route")
         XCTAssertTrue(golden.contains { $0.calmer != nil }, "Some trips should have a calmer route")
