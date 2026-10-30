@@ -15,7 +15,7 @@ jobs:
   # Cheap and fast: importer, data reproduction and Core's Swift tests, the same checks a cloud session runs.
   linux:
     runs-on: ubuntu-latest
-    container: swift:6.1-noble
+    container: swift:6.4.1-noble
     steps:
       - uses: actions/checkout@v4
       - run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev zlib1g-dev python3
