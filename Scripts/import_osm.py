@@ -372,6 +372,38 @@ def graph_binary(graph):
     out += pad8(tail)
     return bytes(out)
 
+MAP_PRECISION = 6        # decimal degrees: 0.11 m north-south, under a pixel at the closest zoom (18)
+MAP_TOLERANCE_M = 0.3    # Douglas-Peucker tolerance for map lines
+
+def round_coords(c):
+    return [round(c[0],MAP_PRECISION),round(c[1],MAP_PRECISION)] if isinstance(c[0],(int,float)) else [round_coords(x) for x in c]
+
+def simplify_line(coords):
+    """Rounds to MAP_PRECISION, drops repeated points, then Douglas-Peucker at MAP_TOLERANCE_M. None if it collapses to a point."""
+    pts=[]
+    for c in round_coords(coords):
+        if not pts or c!=pts[-1]: pts.append(c)
+    if len(pts)<2: return None
+    kx=111_320*math.cos(math.radians(pts[0][1])); ky=110_574
+    xy=[(p[0]*kx,p[1]*ky) for p in pts]
+    keep=[False]*len(pts); keep[0]=keep[-1]=True
+    stack=[(0,len(pts)-1)]
+    while stack:
+        i,j=stack.pop()
+        (x1,y1),(x2,y2)=xy[i],xy[j]; dx,dy=x2-x1,y2-y1; length=math.hypot(dx,dy)
+        far=-1; far_d=MAP_TOLERANCE_M
+        for k in range(i+1,j):
+            x,y=xy[k]
+            d=abs(dx*(y1-y)-(x1-x)*dy)/length if length else math.hypot(x-x1,y-y1)
+            if d>far_d: far,far_d=k,d
+        if far>=0: keep[far]=True; stack+=[(i,far),(far,j)]
+    return [p for p,k in zip(pts,keep) if k]
+
+def map_geojson(polygons,lines):
+    """Polygons keep one feature each; all lines of a kind become one MultiLineString (the per-feature JSON overhead was most of the bytes)."""
+    merged=[{'type':'Feature','properties':{'kind':kind},'geometry':{'type':'MultiLineString','coordinates':ls}} for kind,ls in sorted(lines.items())]
+    return {'type':'FeatureCollection','features':polygons+merged}
+
 def main():
     global OUT, REPORT
     ap = argparse.ArgumentParser()
@@ -488,8 +520,13 @@ def main():
 
     features=[]; places=[]
     def coords(ns):return [[allnodes[n]['lon'],allnodes[n]['lat']] for n in ns if n in allnodes]
+    lines=collections.defaultdict(list)
     def feature(geom,kind,name=''):
-        features.append({'type':'Feature','properties':{'kind':kind,'name':name},'geometry':geom})
+        # The style only reads `kind`, so names are dropped; lines of one kind share a feature (see map_geojson).
+        if geom['type']=='LineString':
+            line=simplify_line(geom['coordinates'])
+            if line: lines[kind].append(line)
+        else: features.append({'type':'Feature','properties':{'kind':kind},'geometry':{'type':geom['type'],'coordinates':round_coords(geom['coordinates'])}})
     for w in sorted(allways.values(),key=lambda w:w['id']):
         t=w.get('tags',{}); ns=w['nodes'];cs=coords(ns)
         if len(cs)<2:continue
@@ -527,7 +564,7 @@ def main():
     # Search reads its own, newer extract (places and addresses), kept apart so the graph's inputs don't change.
     search_json, search_source = read_snapshot('seattle-search'); sources.append(search_source)
     search=build_search.build(search_json, places, nodes, segments, inside, hashlib.sha256(graph_bin).hexdigest(), OUT/'seattle-search.sqlite.gz')
-    (OUT/'seattle-map.geojson').write_text(json.dumps({'type':'FeatureCollection','features':features},separators=(',',':'))+'\n')
+    (OUT/'seattle-map.geojson').write_text(json.dumps(map_geojson(features,lines),separators=(',',':'))+'\n')
     directed={mode:sum(mode in s.get(k,{}).get('modes',[]) for s in segments for k in 'fr') for mode in MODES}
     report={'sources':sources,'bounds':BBOX,'nodes':len(nodes),'segments':len(segments),'directedEdgesByMode':directed,
             'places':len(places),'supportedRestrictions':len(mapped),'unsupportedRestrictionsConservativelyExcluded':unsupported,
