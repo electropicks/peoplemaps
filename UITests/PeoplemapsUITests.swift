@@ -305,6 +305,41 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["recenter"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].exists)
     }
+    /// Scrolls the preferences sheet until `element` can be tapped; the first swipe also lifts the sheet to its large detent.
+    @MainActor private func scrollPreferences(to element: XCUIElement, in app: XCUIApplication) {
+        for i in 0..<4 where !(element.exists && element.isHittable) {
+            (i.isMultiple(of: 2) ? app.navigationBars["Calmer means"] : app.collectionViews.firstMatch).swipeUp()
+        }
+        XCTAssertTrue(element.exists && element.isHittable)
+    }
+    @MainActor func testCalmerMeansPreferencesSetAndReset() {
+        let app = launch()
+        let row = app.buttons["route-preferences"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertEqual(row.label, "Calmer means, Default")
+        row.tap()
+        XCTAssertTrue(app.navigationBars["Calmer means"].waitForExistence(timeout: 5))
+        let hills = app.segmentedControls["preference-hills"]
+        scrollPreferences(to: hills, in: app)
+        hills.buttons["Avoid"].tap()
+        XCTAssertTrue(hills.buttons["Avoid"].isSelected)
+        capture("17-route-preferences", app: app)
+        app.buttons["preferences-done"].tap()
+        XCTAssertTrue(app.buttons["preferences-done"].waitForNonExistence(timeout: 5))
+        XCTAssertEqual(row.label, "Calmer means, Custom")
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 12), "The comparison reruns with the new preference")
+        row.tap()
+        XCTAssertTrue(app.navigationBars["Calmer means"].waitForExistence(timeout: 5))
+        let reset = app.buttons["reset-preferences"]
+        scrollPreferences(to: reset, in: app)
+        XCTAssertTrue(reset.isEnabled)
+        reset.tap()
+        XCTAssertFalse(reset.isEnabled)
+        app.buttons["preferences-done"].tap()
+        XCTAssertTrue(app.buttons["preferences-done"].waitForNonExistence(timeout: 5))
+        XCTAssertEqual(row.label, "Calmer means, Default")
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 12))
+    }
     @MainActor func testLandscapeKeepsComparison() {
         let app = launch()
         XCUIDevice.shared.orientation = .landscapeLeft
