@@ -180,11 +180,14 @@ public final class NativeRouter: RouteComputing, Sendable {
     }
 
     public func compare(_ request: RouteRequest) async throws -> RouteComparison {
-        let worker = Task.detached(priority: .userInitiated) { try self.compute(request) }
-        return try await withTaskCancellationHandler(operation: { try await worker.value }, onCancel: { worker.cancel() })
+        let cancel = CancelFlag()
+        let worker = Task.detached(priority: .userInitiated) { try self.compute(request, cancel: cancel) }
+        return try await withTaskCancellationHandler(operation: { try await worker.value }, onCancel: { worker.cancel(); cancel.cancel() })
     }
 
-    public func compute(_ request: RouteRequest) throws -> RouteComparison {
+    public func compute(_ request: RouteRequest) throws -> RouteComparison { try compute(request, cancel: CancelFlag()) }
+
+    func compute(_ request: RouteRequest, cancel: CancelFlag) throws -> RouteComparison {
         guard (0...20).contains(request.extraMinutes) else { throw RoutingError.invalidBudget }
         guard request.origin.id != request.destination.id, request.origin.coordinate.distance(to: request.destination.coordinate) >= 10 else { throw RoutingError.samePlace }
         guard graph.contains(request.origin.coordinate), graph.contains(request.destination.coordinate) else { throw RoutingError.outsideCoverage }
@@ -193,21 +196,29 @@ public final class NativeRouter: RouteComputing, Sendable {
         guard start.node != end.node else { throw RoutingError.samePlace }
         let stress = exposure(mode: request.mode, scale: nil)
         let transitions = TransitionCache()
-        let fastest = try shortest(from: start.node, to: end.node, mode: request.mode, weight: 0, stress: stress, scale: nil, transitions: transitions)
-        var candidates = [fastest]
         let scale = FactorScale(request.preferences, mode: request.mode)
-        if request.extraMinutes > 0 {
-            let scaled = scale == nil ? stress : exposure(mode: request.mode, scale: scale)
-            var weights = Self.weights[...]
+        let weights = request.extraMinutes > 0 ? Self.weights : []
+        let scaled = scale == nil || weights.isEmpty ? stress : exposure(mode: request.mode, scale: scale)
+        // The fastest route and the base weights don't depend on each other, so they run side by side; candidates keep weight order.
+        let found = Found(count: 1 + weights.count)
+        DispatchQueue.concurrentPerform(iterations: found.count) { i in
+            found.set(i, Result {
+                try shortest(from: start.node, to: end.node, mode: request.mode, weight: i == 0 ? 0 : weights[i - 1], stress: i == 0 ? stress : scaled,
+                             scale: i == 0 ? nil : scale, transitions: transitions, cancel: cancel)
+            })
+        }
+        let routes = try found.routes()
+        let fastest = routes[0]
+        var candidates = [fastest]
+        func add(_ candidate: Route) { if !candidates.contains(where: { $0.edgeIDs == candidate.edgeIDs }) { candidates.append(candidate) } }
+        routes.dropFirst().forEach(add)
+        if var weight = weights.last {
             let limit = fastest.metrics.seconds + Double(request.extraMinutes) * 60 + 0.000_001
-            while let weight = weights.popFirst() {
-                try Task.checkCancellation()
-                let candidate = try shortest(from: start.node, to: end.node, mode: request.mode, weight: weight, stress: scaled, scale: scale, transitions: transitions)
-                if !candidates.contains(where: { $0.edgeIDs == candidate.edgeIDs }) { candidates.append(candidate) }
-                // Avoid can make even the lightest weight detour past the budget; then look closer to the fastest route.
-                if weights.isEmpty, scale != nil, weight > Self.weights[0] / 4, !candidates.dropFirst().contains(where: { $0.metrics.seconds <= limit }) {
-                    weights.append(min(weight, Self.weights[0]) / 2)
-                }
+            // Avoid can make even the lightest weight detour past the budget; then look closer to the fastest route.
+            while scale != nil, weight > Self.weights[0] / 4, !candidates.dropFirst().contains(where: { $0.metrics.seconds <= limit }) {
+                weight = min(weight, Self.weights[0]) / 2
+                try cancel.check()
+                add(try shortest(from: start.node, to: end.node, mode: request.mode, weight: weight, stress: scaled, scale: scale, transitions: transitions, cancel: cancel))
             }
         }
         let calmer = Self.selectCalmer(candidates: candidates, fastest: fastest, extraMinutes: request.extraMinutes,
@@ -306,16 +317,16 @@ public final class NativeRouter: RouteComputing, Sendable {
     /// Straight-line distance at top speed never overestimates, and stress is never negative, so results are exact.
     /// `stress` is the per-edge exposure for this request and `scale` its preference multipliers for junction costs.
     private func shortest(from start: Int, to destination: Int, mode: TravelMode, weight: Double, stress: Exposure, scale: FactorScale?,
-                          transitions: TransitionCache) throws -> Route {
+                          transitions: TransitionCache, cancel: CancelFlag) throws -> Route {
         let ids = try graph.edges.withUnsafeBufferPointer {
-            try search($0, from: start, to: destination, mode: mode, weight: weight, stress: stress, scale: scale, transitions: transitions)
+            try search($0, from: start, to: destination, mode: mode, weight: weight, stress: stress, scale: scale, transitions: transitions, cancel: cancel)
         }
         return route(ids: ids, mode: mode)
     }
 
     /// The edge ids of the best path; `edges` is `graph.edges`, borrowed so the loop never copies an edge.
     private func search(_ edges: UnsafeBufferPointer<GraphEdge>, from start: Int, to destination: Int, mode: TravelMode, weight: Double,
-                        stress: Exposure, scale: FactorScale?, transitions: TransitionCache) throws -> [Int] {
+                        stress: Exposure, scale: FactorScale?, transitions: TransitionCache, cancel: CancelFlag) throws -> [Int] {
         let source = edges.count, bit = mode.bit
         let seconds = edgeSeconds[mode]!
         let target = nodePoints[destination], speed = Self.topSpeed(mode)
@@ -331,7 +342,7 @@ public final class NativeRouter: RouteComputing, Sendable {
             if stamp[item.state] == closed { continue }
             stamp[item.state] = closed
             visits += 1
-            if visits % 256 == 0 { try Task.checkCancellation() }
+            if visits % 256 == 0 { try cancel.check() }
             let previous = item.state == source ? -1 : item.state
             let node = previous < 0 ? start : Int(edgeTo[previous])
             if node == destination {
@@ -492,6 +503,17 @@ private struct OptionShares {
     var start: [Int32] = [0]
     var options: [UInt8] = []
     var costs: [Double] = []
+}
+
+/// Where concurrent searches leave their results, by position.
+private final class Found: @unchecked Sendable {
+    let count: Int
+    private let lock = NSLock()
+    private var results: [Result<Route, Error>?]
+    init(count: Int) { self.count = count; results = Array(repeating: nil, count: count) }
+    func set(_ i: Int, _ result: Result<Route, Error>) { lock.lock(); results[i] = result; lock.unlock() }
+    /// The routes in order, or the first error in that order.
+    func routes() throws -> [Route] { try results.map { try $0!.get() } }
 }
 
 private struct MinHeap {
