@@ -10,6 +10,11 @@ private enum Screen: Equatable {
     var panelID: String { if case let .place(place) = self { "place-\(place.id)" } else { "\(self)" } }
 }
 
+extension TravelMode {
+    /// Left to right in every mode picker, as in Apple Maps; the enum's own order stays as it is.
+    static let displayOrder: [TravelMode] = [.drive, .bike, .walk]
+}
+
 struct ExploreView: View {
     static let gasWorks = "relation/1047789", kerryPark = "node/693337509"
     /// Shown on Home and on the map, in this order.
@@ -431,7 +436,7 @@ struct ExploreView: View {
             HStack { Spacer(); closeButton(label: "Close routes", id: "close-preview") { screen = .home } }.frame(height: 30)
             places
             Picker("Travel mode", selection: $mode) {
-                ForEach(TravelMode.allCases) { Text($0.title).tag($0) }
+                ForEach(TravelMode.displayOrder) { Text($0.title).tag($0) }
             }.pickerStyle(.segmented)
             VStack(alignment: .leading, spacing: landscape ? 4 : 6) {
                 Text("Extra time you'd spend for an easier route").font(.footnote).foregroundStyle(.secondary)
