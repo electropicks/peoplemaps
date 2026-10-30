@@ -35,6 +35,6 @@ final class BufferPool: @unchecked Sendable {
     }
     func give(_ buffers: SearchBuffers) {
         lock.lock(); defer { lock.unlock() }
-        if free.count < 8 { free.append(buffers) }
+        if free.count < 2 { free.append(buffers) }
     }
 }

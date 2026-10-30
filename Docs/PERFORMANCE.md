@@ -76,11 +76,11 @@ Scale 4 (293416 nodes, 795852 edges) against scale 1, same trips and routes:
 | Graph load, scale 1 | 125 ms | 97 ms |
 | Router init, scale 1 | 885 ms | 285 ms |
 | Router init, scale 4 | 3626 ms | 1184 ms |
-| Peak RSS after init, scale 1 | 131 MB | 134 MB |
-| Peak RSS after all trips, scale 1 | 136 MB | 265 MB |
-| Peak RSS after short trips, scale 4 | 444 MB | 469 MB |
+| Peak RSS after init, scale 1 | 131 MB | 135 MB |
+| Peak RSS after all trips, scale 1 | 136 MB | 268 MB |
+| Peak RSS after short trips, scale 4 | 444 MB | 490 MB |
 
-**Memory went up while routing.** A long trip now costs about 130 MB over the idle router at scale 1 (before: 5 MB): seven buffer sets, the turn cache, and per-thread allocator arenas. At scale 4 the short trips add about 10 MB. If the all-Seattle graph is bundled (3.6 times larger), the buffer sets grow with it. Reducing concurrency, or a smaller cache, trades time for memory; decide when we measure on a device.
+**Memory went up while routing.** A long trip now costs about 130 MB over the idle router at scale 1 (before: 5 MB): seven buffer sets, the turn cache, and per-thread allocator arenas. At scale 4 the short trips add 10 to 35 MB. The turn-cost cache and the search buffers beyond two sets belong to one request and are freed when it returns; the router keeps at most two buffer sets (enough for sequential searches to reuse), so idle memory does not grow with use. Peak RSS is a high-water mark and cannot show that release, so these rows measure the peak during a request, not what stays resident. If the all-Seattle graph is bundled (3.6 times larger), the buffer sets grow with it. Reducing concurrency, or a smaller cache, trades time for memory; decide when we measure on a device.
 
 ## Budgets
 
@@ -89,8 +89,8 @@ Proposed, for this box in a release build, as limits on the medians above (curre
 - Short trips (about 2 km, any mode, any preferences): at most 60 ms at scale 1 (46), and at most 1.25 times that at scale 4 (1.13; it was 1.33).
 - Medium trips (6 to 7 km): at most 150 ms (99).
 - Long trips (9 to 11 km): bike and drive at most 300 ms (223), walk at most 900 ms (710).
-- Router init: at most 400 ms at scale 1 (285), and at most 1.6 s at scale 4 (1184). Graph load at most 150 ms (97).
-- Peak RSS after a long trip at scale 1: at most 320 MB (265).
+- Router init: at most 400 ms at scale 1 (285 to 372, depending on load), and at most 1.6 s at scale 4 (1184 to 1225). Graph load at most 150 ms (97).
+- Peak RSS after a long trip at scale 1: at most 320 MB (268).
 - Debug `RouteGoldenTests`: under 30 s (16 s here).
 
 Walking is the slowest because the walk network has the most edges. If a long walk is still too slow on a device, the next step is a better lower bound (landmarks), which this work did not need and did not try.
