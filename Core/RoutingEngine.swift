@@ -114,7 +114,8 @@ public final class NativeRouter: RouteComputing, Sendable {
     private let edgeSeconds: [TravelMode: [Double]]
     private let edgeStress: [TravelMode: [Double]]
     /// The part of `edgeStress` each preference option accounts for, kept only for edges where it's nonzero.
-    private let edgeOptionStress: [TravelMode: [RoutePreferences.Option: (edges: [Int32], costs: [Double])]]
+    private let edgeOptionStress: [TravelMode: OptionShares]
+    private let buffers = BufferPool()
 
     /// Searches trading time against stress; each extra weight finds another point on the time/stress curve.
     static let weights = [0.25, 0.5, 1, 2, 4, 8]
@@ -144,32 +145,26 @@ public final class NativeRouter: RouteComputing, Sendable {
         arterialsAt = arterials
         let onRoad = (0..<graph.nodes.count).map { !neighbours[$0].isEmpty }
         var seconds: [TravelMode: [Double]] = [:], stress: [TravelMode: [Double]] = [:]
-        var parts: [TravelMode: [RoutePreferences.Option: (edges: [Int32], costs: [Double])]] = [:]
+        var parts: [TravelMode: OptionShares] = [:]
         for mode in TravelMode.allCases {
-            var split = OptionSplit(), byOption: [[(Int32, Double)]] = Array(repeating: [], count: RoutePreferences.Option.allCases.count)
+            var split = OptionSplit(), shares = OptionShares()
             seconds[mode] = graph.edges.map { StressModel.seconds($0, mode: mode) }
             stress[mode] = graph.edges.map { e in
                 for i in split.costs.indices { split.costs[i] = 0 }
                 let total = StressModel.exposure(e, mode: mode, arrivesAtRoad: onRoad[e.to], into: &split)
-                for (i, cost) in split.costs.enumerated() where cost != 0 { byOption[i].append((Int32(e.id), cost)) }
+                for (i, cost) in split.costs.enumerated() where cost != 0 { shares.options.append(UInt8(i)); shares.costs.append(cost) }
+                shares.start.append(Int32(shares.costs.count))
                 return total
             }
-            parts[mode] = Dictionary(uniqueKeysWithValues: RoutePreferences.Option.allCases.filter { !byOption[$0.index].isEmpty }
-                .map { ($0, (byOption[$0.index].map(\.0), byOption[$0.index].map(\.1))) })
+            parts[mode] = shares
         }
         edgeSeconds = seconds; edgeStress = stress; edgeOptionStress = parts
     }
 
-    /// Per-edge exposure stress for one request: the precomputed costs, with each preferred option's share rescaled.
-    private func exposure(mode: TravelMode, scale: FactorScale?) -> [Double] {
-        var stress = edgeStress[mode]!
-        guard let scale else { return stress }
-        for (option, part) in edgeOptionStress[mode] ?? [:] {
-            let extra = scale.multiplier(option) - 1
-            guard extra != 0 else { continue }
-            for (edge, cost) in zip(part.edges, part.costs) { stress[Int(edge)] += extra * cost }
-        }
-        return stress
+    /// Per-edge exposure stress for one request: the precomputed costs, with each preferred option's share rescaled on lookup.
+    private func exposure(mode: TravelMode, scale: FactorScale?) -> Exposure {
+        Exposure(base: edgeStress[mode]!, shares: scale == nil ? nil : edgeOptionStress[mode]!,
+                 extra: RoutePreferences.Option.allCases.map { (scale?.multiplier($0) ?? 1) - 1 })
     }
 
     public func compare(_ request: RouteRequest) async throws -> RouteComparison {
@@ -290,27 +285,27 @@ public final class NativeRouter: RouteComputing, Sendable {
     /// by visiting a node first. Minimizes seconds + weight × stress; weight 0 is the fastest route.
     /// Straight-line distance at top speed never overestimates, and stress is never negative, so results are exact.
     /// `stress` is the per-edge exposure for this request and `scale` its preference multipliers for junction costs.
-    private func shortest(from start: Int, to destination: Int, mode: TravelMode, weight: Double, stress: [Double], scale: FactorScale?) throws -> Route {
+    private func shortest(from start: Int, to destination: Int, mode: TravelMode, weight: Double, stress: Exposure, scale: FactorScale?) throws -> Route {
         let source = graph.edges.count
         let seconds = edgeSeconds[mode]!
         let target = graph.nodes[destination].coordinate, speed = Self.topSpeed(mode)
         func remaining(_ node: Int) -> Double { graph.nodes[node].coordinate.distance(to: target) / speed }
-        var costs = Array(repeating: Double.infinity, count: source + 1)
-        var parents = Array(repeating: -1, count: source + 1)
-        var closed = Array(repeating: false, count: source + 1)
-        costs[source] = 0
+        let search = buffers.take(size: source + 1); defer { buffers.give(search) }
+        let reached = search.begin(), closed = reached + 1
+        let stamp = search.stamp, costs = search.cost, parents = search.parent
+        stamp[source] = reached; costs[source] = 0; parents[source] = -1
         var heap = MinHeap(); heap.push(.init(cost: remaining(start), state: source))
         var visits = 0, none = NoRecord(), scaled = ScaledRecord(scale: scale ?? .identity)
         while let item = heap.pop() {
-            if closed[item.state] { continue }
-            closed[item.state] = true
+            if stamp[item.state] == closed { continue }
+            stamp[item.state] = closed
             visits += 1
             if visits % 256 == 0 { try Task.checkCancellation() }
             let previous: GraphEdge? = item.state == source ? nil : graph.edges[item.state]
             let node = previous?.to ?? start
             if node == destination {
                 var ids: [Int] = []; var state = item.state
-                while state != source { ids.append(state); state = parents[state] }
+                while state != source { ids.append(state); state = Int(parents[state]) }
                 return route(ids: ids.reversed(), mode: mode)
             }
             for edgeID in outgoing[node] {
@@ -330,8 +325,10 @@ public final class NativeRouter: RouteComputing, Sendable {
                         }
                     }
                 }
-                if cost < costs[edgeID] {
-                    costs[edgeID] = cost; parents[edgeID] = item.state
+                let seen = stamp[edgeID] >= reached
+                if !seen || cost < costs[edgeID] {
+                    if !seen { stamp[edgeID] = reached }
+                    costs[edgeID] = cost; parents[edgeID] = Int32(item.state)
                     heap.push(.init(cost: cost + remaining(edge.to), state: edgeID))
                 }
             }
@@ -394,6 +391,26 @@ extension Breakdown {
     mutating func merge(_ other: Breakdown) {
         for (factor, tally) in other.tallies { add(factor, amount: tally.amount, cost: tally.cost) }
     }
+}
+
+/// Exposure stress per edge for one request. With preferences, each edge's option shares are rescaled as it is read.
+private struct Exposure {
+    let base: [Double]
+    let shares: OptionShares?
+    let extra: [Double]
+    subscript(edge: Int) -> Double {
+        var stress = base[edge]
+        guard let shares else { return stress }
+        for k in Int(shares.start[edge])..<Int(shares.start[edge + 1]) { stress += extra[Int(shares.options[k])] * shares.costs[k] }
+        return stress
+    }
+}
+
+/// The part of each edge's exposure stress that each preference option accounts for, in edge order; edge `e` owns entries `start[e]..<start[e + 1]`.
+private struct OptionShares {
+    var start: [Int32] = [0]
+    var options: [UInt8] = []
+    var costs: [Double] = []
 }
 
 private struct MinHeap {
