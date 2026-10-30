@@ -209,11 +209,21 @@ Favourites and Featured places (`home-favourites-light.png`).
 Proposed (with `ux-round-1`): a persistent system sheet,
 `presentationDetents([.height(peek), .medium, .large])`,
 `presentationBackgroundInteraction(.enabled(upThrough: .medium))`,
-`interactiveDismissDisabled()`. Peek = search field + one row.
+`interactiveDismissDisabled()`. Peek = search field + Favourites row.
 - Search field labelled **"Where to?"**, capsule, `magnifyingglass` leading.
-- Favourites then Recents, each a `panelFill` group with category badges.
-  No Featured places (ux-round-1). Empty first launch shows one line:
-  "Routes with fewer stressful turns, for a few minutes more." (D4).
+- **Favourites row**, as in Apple Maps: a horizontal row of 56-pt circular
+  category badges (`@ScaledMetric`), each with the place's short name
+  (`Place.shortName`) in `.caption` under it, one line, centred. Tapping a
+  badge opens the place card. The row ends in an **Add** badge: `plus` on a
+  `systemGray5` fill, label "Add", which raises the sheet to `.large` with
+  the search field focused; picking a result there favourites it. With no
+  favourites the row shows only the Add badge with "Add favourites here"
+  beside it, `.subheadline` secondary. No `panelFill` group: the badges sit
+  on the sheet, like Apple Maps.
+- **Recents** below, a vertical `panelFill` list with category badges,
+  visible from the medium detent. No Featured places (ux-round-1). Empty
+  first launch shows one line instead: "Routes with fewer stressful turns,
+  for a few minutes more." (D4).
 - Footer row "About PeopleMaps" (`info.circle`), secondary.
 
 ```
@@ -221,15 +231,18 @@ Proposed (with `ux-round-1`): a persistent system sheet,
 │          ───               │
 │ ( 🔍 Where to?           ) │
 │ Favourites                 │
-│ ┌────────────────────────┐ │
-│ │ (🍃) Gas Works Park    › │ │
-│ │      Park · Wallingford  │ │
-│ └────────────────────────┘ │
+│  (🍃)    (☕)    (＋)       │  ← peek ends here
+│  Gas     Milstead  Add     │
+│  Works                     │
 │ Recents                    │
 │ ┌────────────────────────┐ │
 │ │ (☕) Milstead & Co.    › │ │
+│ │      Café · Fremont      │ │
 │ └────────────────────────┘ │
 │ ⓘ About PeopleMaps         │
+
+No favourites yet:
+│  (＋)  Add favourites here  │
 ```
 
 ### 4.3 Search and results
@@ -463,8 +476,11 @@ All through `Motion` (`App/PeoplemapsApp.swift`); no new durations.
   ≥4.5:1).
 - **Dynamic Type**: test at `.large`, `.xxxLarge` and `.accessibility3`.
   Rows wrap, never truncate place names past two lines; trip bar stacks;
-  preference segmented controls move under their label.
-- **VoiceOver order**: home: search field, favourites, recents, About, then
+  preference segmented controls move under their label. The Favourites row
+  scrolls horizontally at accessibility sizes, with names wrapping to two
+  lines.
+- **VoiceOver order**: home: search field, favourites (each "Gas Works
+  Park, park"), the Add badge ("Add a favourite"), recents, About, then
   map controls (locate, fit), then the map. Preview: close, from, to, swap,
   mode, extra time, Calmer means, calmer card, fastest card, Start, Why this
   route. Guidance: banner (distance + instruction + then), calm note, trip
@@ -474,7 +490,7 @@ All through `Motion` (`App/PeoplemapsApp.swift`); no new durations.
 - **Contrast**: 4.5:1 for all text (table in section 2), 3:1 for route lines
   and badges against the map.
 - Every control keeps its current `accessibilityIdentifier` so UI tests keep
-  working; new controls get one (`locate`, `extra-time-menu`,
+  working; new controls get one (`locate`, `add-favourite`, `extra-time-menu`,
   `route-preferences`, `preference-<factor>`, `reset-preferences`).
 
 ## 7. Implementation plan
@@ -497,7 +513,9 @@ landscape unless noted). Base each on the latest `main` after `ux-round-1`.
 3. **Persistent sheet.** `App/ExploreView.swift` (portrait panel → system
    sheet with detents, landscape card keeps a leading floating card on glass),
    remove decorative grabber and `panelHeight` plumbing where the sheet
-   reports it. Evidence: home at each detent, landscape, Reduce Transparency.
+   reports it), plus the horizontal Favourites row with its Add badge.
+   Evidence: home at each detent with and without favourites, landscape,
+   AX3 type, Reduce Transparency.
 4. **Map chrome on glass.** `App/ExploreView.swift` (`mapButtons`, locate
    button, attribution), `App/SeattleMap.swift` (padding from the sheet
    detent, follow mode), `floatingSurface` helper. Evidence: home, preview,
@@ -525,15 +543,11 @@ landscape unless noted). Base each on the latest `main` after `ux-round-1`.
 Run `python3 Scripts/generate_project.py` in any PR that adds an `App/` file
 (2, 7).
 
-## 8. Open questions
+## 8. Decided 30 October 2026
 
-1. **Peek detent content:** search field only, or search field plus the first
-   favourite? (Spec assumes field + one row.)
-2. **Parks colour:** teal-green `#0B7A6B` keeps green for "calmer" only. Fine,
-   or would you rather parks be plainly green like Apple Maps?
-3. **About placement:** move it from the map buttons into the home sheet's
-   footer (spec), or keep an info button on the map?
-4. **Extra-time control:** menu at the medium detent and segmented at large
-   (spec), or segmented always?
-5. **iPad:** iPhone-only for now (as `TARGETED_DEVICE_FAMILY = 1`), or design
-   the regular-width sidebar in this round?
+1. **Peek detent:** search field plus the Favourites row (4.2).
+2. **Parks colour:** teal-green `#0B7A6B`, so green means only "calmer".
+3. **About:** moves from the map buttons to the home sheet's footer.
+4. **Extra time:** a menu at the medium detent; segmented at the large
+   detent and in landscape.
+5. **iPad:** iPhone only for now.
