@@ -31,6 +31,13 @@ final class PeoplemapsUITests: XCTestCase {
         result.tap()
         XCTAssertTrue(app.buttons["close-place"].waitForExistence(timeout: 5))
     }
+    /// Waits for the card's estimate, which the Directions button carries as "18 min drive, 4.2 miles, …".
+    @MainActor @discardableResult private func waitForEstimate(_ app: XCUIApplication, containing text: String = " min ") -> String {
+        let directions = app.buttons["directions"]
+        let ready = NSPredicate { _, _ in (directions.value as? String)?.contains(text) == true }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: ready, object: nil)], timeout: 20), .completed, text)
+        return directions.value as? String ?? ""
+    }
     @MainActor private func showGasWorksRoutes(_ app: XCUIApplication) {
         openPlace(app, "Gas Works", id: "relation/1047789")
         app.buttons["directions"].tap()
@@ -395,9 +402,12 @@ final class PeoplemapsUITests: XCTestCase {
         openPlace(app, "Gas Works", id: "relation/1047789")
         XCTAssertTrue(app.staticTexts["place-estimate-loading"].waitForExistence(timeout: 2), "A quiet placeholder while it computes")
         XCTAssertTrue(app.buttons["directions"].isHittable, "The estimate never blocks the card")
+        let value = waitForEstimate(app)
+        XCTAssertNotNil(value.range(of: #"^\d+ min drive, [\d.]+ (miles|kilometres|feet|metres), estimate without live traffic$"#, options: .regularExpression), value)
+        // From Current location, the line under the name says only what the calmer route costs and gains.
         let estimate = app.staticTexts["place-estimate"]
-        XCTAssertTrue(estimate.waitForExistence(timeout: 20))
-        XCTAssertNotNil(estimate.label.range(of: #"^Estimate, no live traffic: \d+ min drive · calmer"#, options: .regularExpression), estimate.label)
+        XCTAssertTrue(estimate.exists)
+        XCTAssertTrue(estimate.label.hasPrefix("Calmer"), estimate.label)
         XCTAssertFalse(estimate.label.localizedCaseInsensitiveContains("safe"))
         capture("17-place-estimate", app: app)
         // Closing mid-way and opening another place starts over for the new one.
@@ -413,8 +423,7 @@ final class PeoplemapsUITests: XCTestCase {
         let recent = app.buttons["home-recent-way/37058377"]
         XCTAssertTrue(recent.waitForExistence(timeout: 5))
         recent.tap()
-        XCTAssertTrue(estimate.waitForExistence(timeout: 20))
-        XCTAssertTrue(estimate.label.contains("min cycle"), estimate.label)
+        waitForEstimate(app, containing: " min cycle")
     }
     @MainActor func testSearchFindsParkAndOpensPlaceCard() {
         let app = launchHome()
@@ -512,7 +521,7 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: located, object: nil)], timeout: 10), .completed)
         capture("00b-home-at-user", app: app)
         openPlace(app, "Gas Works", id: "relation/1047789")
-        XCTAssertTrue(app.staticTexts["place-estimate"].waitForExistence(timeout: 20))
+        waitForEstimate(app)
         app.buttons["directions"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
         XCTAssertEqual(app.buttons["choose-origin"].label, "Starting from, Current location")
@@ -545,8 +554,8 @@ final class PeoplemapsUITests: XCTestCase {
         // Without location, the next Directions reuses the start chosen last.
         app.buttons["close-preview"].tap()
         openPlace(app, "Fremont Branch", id: "way/37058377")
-        XCTAssertTrue(app.staticTexts["place-estimate"].waitForExistence(timeout: 20))
-        XCTAssertTrue(app.staticTexts["place-estimate"].label.contains("from Kerry Park"), app.staticTexts["place-estimate"].label)
+        waitForEstimate(app)
+        XCTAssertTrue(app.staticTexts["place-estimate"].label.hasPrefix("From Kerry Park"), app.staticTexts["place-estimate"].label)
         app.buttons["directions"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
         XCTAssertTrue(app.buttons["choose-origin"].label.contains("Kerry Park"))

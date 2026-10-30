@@ -15,6 +15,7 @@ extension TravelMode {
     static let displayOrder: [TravelMode] = [.drive, .bike, .walk]
     /// "18 min drive", "18 min cycle", "18 min walk".
     var trip: String { switch self { case .walk: "walk"; case .bike: "cycle"; case .drive: "drive" } }
+    var symbol: String { switch self { case .walk: "figure.walk"; case .bike: "bicycle"; case .drive: "car.fill" } }
 }
 
 struct ExploreView: View {
@@ -447,12 +448,7 @@ struct ExploreView: View {
                 estimateLine(place)
             }
             if graph.contains(place.coordinate) {
-                Button { startDirections(to: place) } label: {
-                    Label("Directions", systemImage: "arrow.right").font(.body.weight(.semibold))
-                        .frame(maxWidth: .infinity).frame(height: 50)
-                        .foregroundStyle(.directionsText).background(.directionsFill, in: RoundedRectangle(cornerRadius: 12))
-                        .contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityIdentifier("directions")
+                directionsButton(place)
                 Text("Compares the fastest route with a calmer one. Works offline.").font(.footnote).foregroundStyle(.secondary).padding(.horizontal, 4)
             } else {
                 VStack(alignment: .leading, spacing: 4) {
@@ -482,25 +478,58 @@ struct ExploreView: View {
         estimate = (request, comparison)
     }
 
-    /// "18 min drive · calmer +3 min, 2 fewer left turns across traffic without a signal". Nothing without a start,
-    /// a quiet placeholder while it computes, and nothing when no route can be found.
-    @ViewBuilder private func estimateLine(_ place: Place) -> some View {
-        if let request = estimateRequest(for: place) {
-            if let estimate, estimate.request == request {
-                if let comparison = estimate.comparison {
-                    let from = request.origin.isCurrentLocation ? "" : " from \(request.origin.shortName)"
-                    let trip = "\(comparison.fastest.minutes) min \(request.mode.trip)\(from)"
-                    let calmer = calmerNote(comparison).map { " · " + $0 } ?? ""
-                    Text("\(Text(trip).foregroundStyle(.primary))\(Text(calmer).foregroundStyle(.calmerText))")
-                        .font(.subheadline).fixedSize(horizontal: false, vertical: true)
-                        .accessibilityLabel("Estimate, no live traffic: \(trip)\(calmer)")
-                        .accessibilityIdentifier("place-estimate")
+    /// The fastest route's mode, time and distance once estimated, as in Apple Maps ("18 min  4.2 mi"); plain "Directions" until then.
+    private func directionsButton(_ place: Place) -> some View {
+        let ready = readyEstimate(for: place)
+        return Button { startDirections(to: place) } label: {
+            Group {
+                if let ready {
+                    HStack(spacing: 8) {
+                        Image(systemName: ready.request.mode.symbol)
+                        Text("\(ready.comparison.fastest.minutes) min")
+                        Text(NavigationFormat.distance(ready.comparison.fastest.metrics.meters)).fontWeight(.regular).opacity(0.8)
+                    }
+                } else {
+                    Label("Directions", systemImage: "arrow.right")
                 }
-            } else {
-                Text("Estimating\u{2026}").font(.subheadline).foregroundStyle(.tertiary).accessibilityIdentifier("place-estimate-loading")
             }
+            .font(.body.weight(.semibold)).monospacedDigit()
+            .frame(maxWidth: .infinity).frame(height: 50)
+            .foregroundStyle(.directionsText).background(.directionsFill, in: RoundedRectangle(cornerRadius: 12))
+            .contentShape(Rectangle())
+        }.buttonStyle(.plain)
+            .accessibilityLabel("Directions")
+            .accessibilityValue(ready.map { ready in
+                let fastest = ready.comparison.fastest
+                return "\(fastest.minutes) min \(ready.request.mode.trip), \(NavigationFormat.distance(fastest.metrics.meters, spoken: true)), estimate without live traffic"
+            } ?? "")
+            .accessibilityIdentifier("directions")
+    }
+
+    private func readyEstimate(for place: Place) -> (request: RouteRequest, comparison: RouteComparison)? {
+        guard let request = estimateRequest(for: place), let estimate, estimate.request == request,
+              let comparison = estimate.comparison else { return nil }
+        return (request, comparison)
+    }
+
+    /// What the button can't say: "From Kerry Park · calmer +3 min, 2 fewer left turns across traffic without a signal".
+    /// Nothing without a start, a quiet placeholder while it computes, and nothing when there's nothing to add.
+    @ViewBuilder private func estimateLine(_ place: Place) -> some View {
+        if let ready = readyEstimate(for: place) {
+            let from = ready.request.origin.isCurrentLocation ? nil : "From \(ready.request.origin.shortName)"
+            let calmer = calmerNote(ready.comparison).map { from == nil ? capitalised($0) : " · " + $0 }
+            if from != nil || calmer != nil {
+                Text("\(Text(from ?? "").foregroundStyle(.secondary))\(Text(calmer ?? "").foregroundStyle(.calmerText))")
+                    .font(.subheadline).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityLabel("\(from ?? "")\(calmer ?? "")")
+                    .accessibilityIdentifier("place-estimate")
+            }
+        } else if estimateRequest(for: place) != nil, estimate?.request != estimateRequest(for: place) {
+            Text("Estimating\u{2026}").font(.subheadline).foregroundStyle(.tertiary).accessibilityIdentifier("place-estimate-loading")
         }
     }
+
+    private func capitalised(_ text: String) -> String { text.prefix(1).uppercased() + text.dropFirst() }
 
     /// "calmer +3 min, 2 fewer unsignalled lefts": what the calmer route costs, then its main benefit.
     private func calmerNote(_ comparison: RouteComparison) -> String? {

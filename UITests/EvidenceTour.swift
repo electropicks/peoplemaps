@@ -34,7 +34,9 @@ final class EvidenceTour: XCTestCase {
         _ = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: located, object: nil)], timeout: 10)
         shot("home-no-history")
         open(app, "Kerry Park", id: "node/693337509")
-        XCTAssertTrue(app.staticTexts["place-estimate"].waitForExistence(timeout: 20))
+        let directions = app.buttons["directions"]
+        let estimated = NSPredicate { _, _ in (directions.value as? String)?.contains(" min ") == true }
+        _ = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: estimated, object: nil)], timeout: 20)
         shot("place-card-near-estimate")
         app.buttons["directions"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
