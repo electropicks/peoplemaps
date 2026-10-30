@@ -6,16 +6,18 @@ An offline iOS maps app for Seattle that picks the calmer route a local would ch
 
 - `Core/`: Swift package `PeoplemapsCore`. Graph, router (`RoutingEngine.swift`), stress model, navigation plan, search index, saved places, spoken text. Builds on macOS, iOS and Linux.
 - `App/`: SwiftUI app. MapLibre map (`SeattleMap.swift`), `ExploreView.swift` (home, search, place card, preview), `Navigation/` (Ferrostar guidance, voice). macOS and Xcode only.
+- `Bench/`: `peoplemaps-bench`, the router benchmark (timings, peak RSS, `--scale N` graph copies, `--json`). Budgets and method: `Docs/PERFORMANCE.md`. Replaces `Scripts/coverage_bench`.
 - `Scripts/`: Python data importer and search builder, project generator, `verify.sh`.
 - `Data/`: OSM snapshots, elevation, provenance, licences.
 - `Core/Resources/`: generated data. Never hand-edit it.
-- `Docs/`: design docs and spikes. Read the relevant one before changing an area: `STRESS_MODEL`, `NAVIGATION`, `SEARCH`, `COVERAGE_SPIKE`, `VOICE_SPIKE`.
+- `Docs/`: design docs and spikes. Read the relevant one before changing an area: `STRESS_MODEL`, `NAVIGATION`, `SEARCH`, `COVERAGE_SPIKE`, `PERFORMANCE`, `VOICE_SPIKE`.
 
 ## Commands
 
 ```bash
 Scripts/verify.sh                 # importer tests, data reproduction, Swift tests, iOS build (macOS)
 Scripts/verify.sh --ui            # plus the UI suite (macOS)
+swift build -c release --product peoplemaps-bench && .build/release/peoplemaps-bench [--scale 4] [--json]   # router timings
 python3 Scripts/import_osm.py     # regenerate Core/Resources from Data/
 python3 Scripts/generate_project.py   # after adding or removing App/ or UITests/ files
 ```
