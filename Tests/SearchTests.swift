@@ -31,6 +31,18 @@ final class SearchTests: XCTestCase {
         }
         XCTAssertEqual(index.search("gas works").first?.id, "relation/1047789", "keeps the graph's own place ID")
     }
+    func testGraphPlacesGetTheirAddressFromTheIndex() throws {
+        let park = try XCTUnwrap(Self.graph.places.first { $0.id == "relation/1047789" })
+        XCTAssertEqual(index.withAddress(park).address, "2101 North Northlake Way")
+        let pin = Place(id: "pin", name: "Dropped pin", lat: 47.65, lon: -122.34, category: "pin")
+        XCTAssertNil(index.withAddress(pin).address)
+    }
+    func testRepeatedQueriesReuseTheLastAnswer() {
+        let first = index.search("gas works", near: Self.fremont)
+        XCTAssertEqual(index.search("gas works", near: Self.fremont).map(\.id), first.map(\.id))
+        XCTAssertNotEqual(index.search("kerry", near: Self.fremont).first?.id, first.first?.id)
+        XCTAssertTrue(index.search(" ").isEmpty)
+    }
     func testHouseNumberAddresses() throws {
         for typed in ["3400 Fremont Ave N", "3400 fremont", "3400 Fremont Avenue North", "3400 frem av n"] {
             let first = try XCTUnwrap(index.search(typed, near: Self.fremont).first, typed)

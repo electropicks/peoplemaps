@@ -14,6 +14,7 @@ public final class SearchIndex: @unchecked Sendable {
     /// The importer's per-mode graph nodes; ignored when the index was built against another graph.
     private let snapsMatchGraph: Bool
     private var vocabulary: [(term: String, docs: Int)]?
+    private var last: (key: String, results: [Place])?
 
     /// The bundled index, inflated once into `directory` (Caches by default) and reused on later launches.
     public static func bundled(graph: StreetGraph? = nil, directory: URL? = nil) throws -> SearchIndex {
@@ -68,6 +69,15 @@ public final class SearchIndex: @unchecked Sendable {
     /// nearest numbers on that street when the exact one isn't mapped.
     public func search(_ query: String, near: Coordinate? = nil, limit: Int = 60) -> [Place] {
         lock.lock(); defer { lock.unlock() }
+        // Views ask again on every redraw while the text is unchanged, so the last answer is kept.
+        let key = "\(query)|\(near?.lat ?? 0)|\(near?.lon ?? 0)|\(limit)"
+        if let last, last.key == key { return last.results }
+        let results = lookUp(query, near: near, limit: limit)
+        last = (key, results)
+        return results
+    }
+
+    private func lookUp(_ query: String, near: Coordinate?, limit: Int) -> [Place] {
         let (text, unit) = Self.splitUnit(query)
         var tokens = Self.normalize(text).split(separator: " ").map(String.init)
         guard !tokens.isEmpty else { return [] }
@@ -77,6 +87,21 @@ public final class SearchIndex: @unchecked Sendable {
             results = run(tokens, unit: unit, near: near, limit: limit)
         }
         return results
+    }
+
+    /// The indexed entry for an OSM ID ("relation/1047789"), which carries the newest address; nil when not indexed.
+    public func place(id: String) -> Place? {
+        lock.lock(); defer { lock.unlock() }
+        var found: Place?
+        Self.rows(db, "SELECT \(Self.columns) FROM entries WHERE osm = ?1 AND kind = 'place' LIMIT 1", [.text(id)]) { found = place($0) }
+        return found
+    }
+
+    /// The place with its address from the index when it has none (graph places come from the routing extract,
+    /// which has no addresses). Dropped pins and the current location are not indexed and come back unchanged.
+    public func withAddress(_ place: Place) -> Place {
+        guard place.address == nil, let address = self.place(id: place.id)?.address else { return place }
+        var place = place; place.address = address; return place
     }
 
     private func run(_ tokens: [String], unit: String?, near: Coordinate?, limit: Int) -> [Place] {
