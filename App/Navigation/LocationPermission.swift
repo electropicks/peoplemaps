@@ -1,7 +1,8 @@
 import CoreLocation
 
-/// Asks for "when in use" location, only when the user starts guidance or picks "Current location". Ferrostar's own
-/// provider would ask by itself the moment it is created, so we ask first and create it only once access is granted.
+/// Asks for "when in use" location once the map shows on first launch, so routes can start from where the user is.
+/// Start and "Current location" check again. Ferrostar's own provider would ask by itself the moment it is created,
+/// so we ask first and create it only once access is granted.
 @MainActor
 final class LocationPermission: NSObject, CLLocationManagerDelegate {
     enum Access { case granted, undecided, denied }
@@ -10,7 +11,23 @@ final class LocationPermission: NSObject, CLLocationManagerDelegate {
     private var waiting: CheckedContinuation<Access, Never>?
     private var locating: [CheckedContinuation<CLLocationCoordinate2D?, Never>] = []
 
-    var access: Access { Self.access(manager.authorizationStatus) }
+    #if DEBUG
+    /// UI tests answer for the system: `--location-granted LAT,LON` allows location at that spot; without it,
+    /// `--ui-testing` counts as denied, so no prompt interrupts a test. `--real-location` asks Core Location for real.
+    private static let fake: (access: Access, at: CLLocationCoordinate2D?)? = {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard arguments.contains("--ui-testing"), !arguments.contains("--real-location") else { return nil }
+        if let i = arguments.firstIndex(of: "--location-granted"), i + 1 < arguments.count {
+            let p = arguments[i + 1].split(separator: ",").compactMap { Double($0) }
+            if p.count == 2 { return (.granted, CLLocationCoordinate2D(latitude: p[0], longitude: p[1])) }
+        }
+        return (.denied, nil)
+    }()
+    #else
+    private static let fake: (access: Access, at: CLLocationCoordinate2D?)? = nil
+    #endif
+
+    var access: Access { Self.fake?.access ?? Self.access(manager.authorizationStatus) }
 
     private static func access(_ status: CLAuthorizationStatus) -> Access {
         switch status {
@@ -22,7 +39,7 @@ final class LocationPermission: NSObject, CLLocationManagerDelegate {
 
     /// Shows the system prompt if the choice has not been made, and returns the answer.
     func request() async -> Access {
-        guard access == .undecided else { return access }
+        guard Self.fake == nil, access == .undecided else { return access }
         manager.delegate = self
         return await withCheckedContinuation { continuation in
             waiting = continuation
@@ -32,6 +49,7 @@ final class LocationPermission: NSObject, CLLocationManagerDelegate {
 
     /// One fix of where the device is, or nil without access or when Core Location cannot tell.
     func currentCoordinate() async -> CLLocationCoordinate2D? {
+        if let fake = Self.fake { return fake.at }
         guard access == .granted else { return nil }
         manager.delegate = self
         return await withCheckedContinuation { continuation in
