@@ -109,17 +109,20 @@ public final class SearchIndex: @unchecked Sendable {
     }
 
     /// The indexed street address nearest to `c` within `meters`, or nil. Labels a place the map has no address for
-    /// ("Near 410 Terry Avenue North"). At one spot, the building's own address wins over one of its units.
+    /// ("Near 410 Terry Avenue North"), so it carries no snap nodes. At one spot, the building's own address wins
+    /// over one of its units.
     public func nearestAddress(to c: Coordinate, within meters: Double = 40) -> Place? {
         lock.lock(); defer { lock.unlock() }
         // A box a little larger than the circle, then the exact distance.
         let dLat = meters / 111_000, dLon = meters / (111_000 * max(0.01, cos(c.lat * .pi / 180)))
         var best: (distance: Double, unit: Bool, place: Place)?
         Self.rows(db, """
-            SELECT \(Self.columns), unit IS NOT NULL FROM entries
+            SELECT osm, name, lat, lon, unit IS NOT NULL FROM entries
             WHERE kind = 'address' AND lat BETWEEN ?1 AND ?2 AND lon BETWEEN ?3 AND ?4 ORDER BY id
             """, [.double(c.lat - dLat), .double(c.lat + dLat), .double(c.lon - dLon), .double(c.lon + dLon)]) { row in
-            let found = place(row), distance = c.distance(to: found.coordinate), unit = sqlite3_column_int(row, 10) != 0
+            let found = Place(id: Self.text(row, 0) ?? "", name: Self.text(row, 1) ?? "", lat: sqlite3_column_double(row, 2),
+                              lon: sqlite3_column_double(row, 3), category: "address", kind: .address, source: source)
+            let distance = c.distance(to: found.coordinate), unit = sqlite3_column_int(row, 4) != 0
             guard distance <= meters else { return }
             if let best, (best.distance, best.unit ? 1 : 0) <= (distance, unit ? 1 : 0) { return }
             best = (distance, unit, found)
