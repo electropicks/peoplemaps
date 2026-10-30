@@ -7,4 +7,4 @@ DEVELOPER_DIR="$peoplemaps_xcode" xcodebuild -project Peoplemaps.xcodeproj -sche
   -configuration Debug -destination "platform=iOS Simulator,id=$peoplemaps_sim" \
   -derivedDataPath DerivedData -clonedSourcePackagesDirPath DerivedData/SourcePackages -jobs 4 build
 DEVELOPER_DIR="$peoplemaps_xcode" xcrun simctl install "$peoplemaps_sim" DerivedData/Build/Products/Debug-iphonesimulator/Peoplemaps.app
-DEVELOPER_DIR="$peoplemaps_xcode" xcrun simctl launch --terminate-running-process "$peoplemaps_sim" org.peoplemaps.prototype
+DEVELOPER_DIR="$peoplemaps_xcode" xcrun simctl launch --terminate-running-process "$peoplemaps_sim" electrocorp.peoplemaps
