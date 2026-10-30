@@ -39,7 +39,6 @@ struct RoutePreferencesView: View {
     /// Edited here and copied to the store on every change.
     @State private var draft: RoutePreferences
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     init(store: RoutePreferencesStore, mode: TravelMode) {
         self.store = store; self.mode = mode
@@ -79,20 +78,14 @@ struct RoutePreferencesView: View {
             Image(systemName: symbol(option)).foregroundStyle(.secondary).frame(width: 24)
             Text(option.title)
         }.accessibilityHidden(true)
-        let level: Binding<RoutePreferences.Level> = $draft[dynamicMember: \.[option]]
+        let level = Binding(get: { draft[option] }, set: { draft[option] = $0 })
         let picker = Picker(option.title, selection: level) {
             ForEach(RoutePreferences.Level.allCases, id: \.self) { Text($0.title).tag($0) }
         }
         .pickerStyle(.segmented).labelsHidden()
         .accessibilityLabel(option.title)
         .accessibilityIdentifier("preference-\(option.rawValue)")
-        return Group {
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: 8) { label; picker }
-            } else {
-                HStack(spacing: 12) { label; Spacer(minLength: 0); picker.fixedSize() }
-            }
-        }.padding(.vertical, 4)
+        return VStack(alignment: .leading, spacing: 8) { label; picker }.padding(.vertical, 4)
     }
 
     private func symbol(_ option: RoutePreferences.Option) -> String {
