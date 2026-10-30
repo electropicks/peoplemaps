@@ -100,9 +100,10 @@ same distance by about 100 equivalent seconds, even at equal time.
 
 ### Optional preferences (later)
 
-- **Hill starts matter to me** (manual or weak car): grade-stop costs x3.
+- **Hill starts matter to me** (manual or weak car): now the Hills preference
+  (see [Preferences](#preferences)), which scales hill stops x3.
 - **Steady over fast**: stop-and-go costs x2, for people who strongly prefer
-  never stopping.
+  never stopping. Not built yet: stop-and-go is scored only on finished routes.
 
 ## Bike
 
@@ -183,6 +184,119 @@ Routing on the real sidewalk-and-crossing network makes the router weigh
 - **Step-free** (stroller, wheelchair, luggage): no stairs, penalise steep grades.
 - **Pleasant**: favour parks, trails and waterfront. Applied as a lower cost
   on those segments, never negative.
+
+## Preferences
+
+Implemented in `Core/RoutePreferences.swift`. What "calmer" means differs
+between people: after riding the first routes, cyclists and walkers said they
+barely mind stop signs but do mind traffic lights (long waits), drivers hate
+lefts across traffic, and some people want the fewest stops of any kind, or no
+hills, or no busy streets. Preferences let each person turn a few groups of
+factors up or down, per mode, on top of the weights above.
+
+### Options and the factors they scale
+
+Each option has three levels. **Avoid** multiplies its factors' costs by 3,
+**Don't mind** by 0.3, and **Normal** leaves them as they are. An option is
+offered only in a mode that has at least one of its factors.
+
+| Option | Drive | Bike | Walk |
+| --- | --- | --- | --- |
+| Traffic lights | `signal` | `signal` | `signalCrossing` |
+| Stop signs | `stopSign`, `allWayStop` | `stopSign`, `allWayStop` | not offered |
+| Left turns across traffic | `unsignalledLeft`, `leftAtSignal` | `unsignalledLeft`, `leftAtSignal` | not offered |
+| Busy streets | not offered | `arterialRiding`, `busyArterialRiding`, `bikeRouteGap` | `besideTraffic` |
+| Busy crossings without a signal | `unsignalledCrossing` | `unsignalledCrossing` | `unmarkedCrossing`, `markedCrossing` |
+| Hills | `hillStop` | `climb`, `steepDescent`, `hillStop` | `climb`, `stairs` |
+| Turns | `turn` | `turn` | not offered |
+
+Choices behind the mapping:
+
+- **Lefts at signals count as lefts across traffic.** The map doesn't record
+  arrow phases, so a left at a signal may well be a permissive green. They
+  keep their smaller base cost (10 to 30 s), so Avoid still mostly removes
+  the unsignalled ones.
+- **Driving has no Busy streets option.** The drive model charges nothing for
+  being on an arterial (getting on, off and across them is what it prices), so
+  there is nothing to scale. Avoiding unsignalled crossings and lefts is how a
+  driver steers away from busy roads.
+- **Walking has no Stop signs, Lefts or Turns.** Walkers don't stop at stop
+  signs, and walking has no per-turn cost.
+- **Stairs are a hill for walkers**: the people who avoid hills (strollers,
+  sore knees, luggage) avoid steps too. A strict step-free mode is still later.
+- **Not scaled:** stop-and-go clusters, freeway hops and side-street shortcuts
+  (scored only on finished routes), yields, rights into traffic, five-way
+  junctions, freeway entries, drawbridges, residential and narrow streets,
+  rough surfaces, and unknowns. "Fewest stops of any kind" is Avoid on both
+  Traffic lights and Stop signs.
+
+### Multipliers
+
+| Level | Multiplier | Why |
+| --- | --- | --- |
+| Avoid | x3 | Enough to move the factor ahead of most others in the same mode (a bike signal at 8 s becomes 24 s, above a stop sign at 10 s and close to a 20 s bike route gap), without one option swamping the time budget, which still caps every calmer route. |
+| Normal | x1 | The model as described above. |
+| Don't mind | x0.3 | Close to ignoring the factor, but not zero: a route with 10 extra stop signs still loses to an equal one without them. |
+
+How they were tuned: 40 trips between bundled places 1.5 to 6 km apart, in
+every mode with a 5-minute budget, each offered option set to one level at a
+time (680 runs per level), compared with the default route shown:
+
+| Multiplier | Route changed | Option's amount on the shown routes | Runs where it went the wrong way |
+| --- | --- | --- | --- |
+| Avoid x2 | 43% | -17% | 15 |
+| **Avoid x3** | 54% | -26% | 9 |
+| Avoid x5 | 66% | -41% | 6 |
+| Don't mind x0.5 | 39% | +23% | 13 |
+| **Don't mind x0.3** | 48% | +43% | 12 |
+| Don't mind x0 | 61% | +106% | 11 |
+
+Average travel time moved by less than 10 s at every setting. x2 was too
+timid (most trips unchanged), x5 starts to override the rest of the model.
+Don't mind at 0 makes the factor free, so routes collect them for a second
+saved; 0.3 still breaks ties toward fewer.
+
+"Wrong way" means, for Avoid, the shown route has more of that option's
+factors than the default one. It happens on about 1 run in 75, for two
+reasons: the six searches sample a different set of routes once the weights
+change, so the default route may not be among the candidates; and options
+that group factors (Hills is climbing and steps) can trade one for the other.
+Four of the nine at x3 differ by under 0.5% (metres of climb or of sidewalk
+beside traffic). The tests pin trips where each option clearly works.
+
+### Defaults
+
+`RoutePreferences.default(for:)` is Normal for every option in every mode, and
+reproduces the routes exactly as before preferences existed (checked against
+`Evidence/route-audit.json`). Each mode's defaults are the per-mode weights in
+the sections above, which already encode what a typical local minds in that
+mode: a cyclist's stop sign (10 s) costs more than a signal (8 s) because
+restarting costs momentum, and a walker's signal costs only 10 s because the
+wait is already in the time estimate. Changing those weights is a model change
+to be argued with evidence, not a preference.
+
+### How the router uses them
+
+- Only the calmer search reads preferences. The fastest route stays the pure
+  time estimate, and the extra-time budget still applies.
+- Multipliers are resolved once per request. Per-edge exposure is precomputed
+  per mode with each option's share stored separately, so a request rescales
+  only the edges an option touches; junction costs are scaled as they are
+  recorded. With defaults the search takes exactly the old code path.
+- Avoid makes every search weigh stress more, so even the lightest weight
+  (0.25) can detour past the budget. When no candidate fits the budget, the
+  router tries weights 0.125 and then 0.0625 before giving up.
+- The calmer route is chosen by stress as this person weighs it, and the
+  reasons are ranked the same way, so an avoided factor ranks higher. Every
+  count, distance and cost in `Breakdown` stays the model's real value.
+- Latency (release build, 12 trips x 2 rounds, 5-minute budget): defaults
+  unchanged within noise. One option on Avoid costs 0 to 9% more per request,
+  because a heavier stress term makes A* settle more states; the most were
+  walk Hills (+9%), bike Busy streets (+9%) and drive Traffic lights or Lefts
+  (+9%). Two exposure options together on walk reached +10 to 14%.
+- Stored as JSON listing only changed options, for example
+  `{"trafficLights":"avoid","hills":"dontMind"}`. Option and level names are
+  stable keys; unknown ones are skipped when reading.
 
 ## Choosing and explaining routes
 
