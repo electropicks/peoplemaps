@@ -1,6 +1,6 @@
 import gzip, pathlib, sqlite3, tempfile, unittest
 import build_search
-from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks
+from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,simplify_line,map_geojson
 
 class ImportPolicyTests(unittest.TestCase):
     def test_private_road_excluded(self):
@@ -67,6 +67,15 @@ class ImportPolicyTests(unittest.TestCase):
     def test_walkers_pass_bollards_drivers_do_not(self):
         self.assertFalse(node_blocks({'barrier':'bollard'},'walk'))
         self.assertTrue(node_blocks({'barrier':'bollard'},'drive'))
+    def test_map_lines_are_rounded_and_simplified(self):
+        self.assertEqual(simplify_line([[-122.12345678,47.1],[-122.12345679,47.1]]),None)  # collapses to a point
+        line=simplify_line([[-122.1,47.1],[-122.0999,47.10000001],[-122.0998,47.1]])  # middle point is within 0.3 m
+        self.assertEqual(line,[[-122.1,47.1],[-122.0998,47.1]])
+        bend=simplify_line([[-122.1,47.1],[-122.0999,47.1005],[-122.0998,47.1]])  # 55 m off the chord stays
+        self.assertEqual(len(bend),3)
+    def test_map_merges_lines_by_kind_without_names(self):
+        out=map_geojson([],{'path':[[[0,0],[1,1]],[[2,2],[3,3]]]})
+        self.assertEqual(out['features'],[{'type':'Feature','properties':{'kind':'path'},'geometry':{'type':'MultiLineString','coordinates':[[[0,0],[1,1]],[[2,2],[3,3]]]}}])
 
 class SearchIndexTests(unittest.TestCase):
     @staticmethod
