@@ -253,7 +253,8 @@ final class SeattleTests: XCTestCase {
     }
     func testCancelledSearchStopsBeforeReturning() async throws {
         let request = RouteRequest(origin: try place("node/693337509"), destination: try place("relation/1047789"), mode: .walk, extraMinutes: 10)
-        let task = Task { try await Self.router.compare(request) }
+        let router = Self.router
+        let task = Task { try await router.compare(request) }
         task.cancel()
         do { _ = try await task.value; XCTFail("Cancelled routing returned a route") }
         catch { XCTAssertTrue(error is CancellationError) }
