@@ -5,14 +5,19 @@ import SQLite3
 import CSQLite
 #endif
 
-/// Offline search over the bundled index of OpenStreetMap places and street addresses, built by
-/// Scripts/build_search.py. Ranked by text match, then category weight (landmarks and parks over shops,
-/// addresses last), then distance from a supplied point. Falls back to typo correction when nothing matches.
+/// Offline search over the bundled index of OpenStreetMap places and street addresses plus Overture Maps
+/// businesses, built by Scripts/build_search.py. Ranked by text match, then category weight (landmarks and
+/// parks over shops, addresses last), then distance from a supplied point. Falls back to typo correction
+/// when nothing matches.
 public final class SearchIndex: @unchecked Sendable {
     /// Entries in the index: named places plus addresses.
     public let count: Int
-    /// "OpenStreetMap, Oct 2026": the source and date of the extract.
+    /// "OpenStreetMap, Oct 2026": the source and date of the OSM extract. Each `Place.source` names its own row's
+    /// source ("Overture (Foursquare), Oct 2026" for a business from Overture, dated by the release).
     public let source: String
+    private let overtureDate: String?
+    /// The row columns to select; indexes built before the per-row `source` column are all OpenStreetMap.
+    private let columns: String
     private let db: OpaquePointer
     private let lock = NSLock()
     /// The importer's per-mode graph nodes; ignored when the index was built against another graph.
@@ -55,6 +60,10 @@ public final class SearchIndex: @unchecked Sendable {
         count = total
         snapsMatchGraph = graphNodeCount.map { String($0) == meta["graphNodes"] } ?? false
         source = [meta["source"], Self.monthYear(meta["sourceDate"])].compactMap { $0 }.joined(separator: ", ")
+        overtureDate = Self.monthYear(meta["overtureDate"])
+        var hasSource = false
+        Self.rows(db, "SELECT 1 FROM pragma_table_info('entries') WHERE name = 'source'", []) { _ in hasSource = true }
+        columns = "osm, kind, name, category, address, lat, lon, walk, bike, drive, " + (hasSource ? "source" : "NULL")
     }
 
     deinit { sqlite3_close(db) }
@@ -97,7 +106,7 @@ public final class SearchIndex: @unchecked Sendable {
     public func place(id: String) -> Place? {
         lock.lock(); defer { lock.unlock() }
         var found: Place?
-        Self.rows(db, "SELECT \(Self.columns) FROM entries WHERE osm = ?1 AND kind = 'place' LIMIT 1", [.text(id)]) { found = place($0) }
+        Self.rows(db, "SELECT \(columns) FROM entries WHERE osm = ?1 AND kind = 'place' LIMIT 1", [.text(id)]) { found = place($0) }
         return found
     }
 
@@ -124,7 +133,7 @@ public final class SearchIndex: @unchecked Sendable {
                       [.text(number), .text(street)]) { _ in exact = true }
             if !exact {
                 Self.rows(db, """
-                    SELECT \(Self.columns) FROM entries WHERE kind = 'address' AND number GLOB '[0-9]*'
+                    SELECT \(columns) FROM entries WHERE kind = 'address' AND number GLOB '[0-9]*'
                     AND id IN (SELECT rowid FROM fts WHERE fts MATCH ?1)
                     ORDER BY abs(CAST(number AS INTEGER) - ?2), unit IS NOT NULL, id LIMIT 3
                     """, [.text(street), .int(n)]) { nearest.append(place($0)) }
@@ -133,7 +142,7 @@ public final class SearchIndex: @unchecked Sendable {
         var ranked: [Place] = []
         let k = near.map { pow(cos($0.lat * .pi / 180), 2) } ?? 0
         Self.rows(db, """
-            SELECT \(Self.columns) FROM entries WHERE id IN (SELECT rowid FROM fts WHERE fts MATCH ?3)
+            SELECT \(columns) FROM entries WHERE id IN (SELECT rowid FROM fts WHERE fts MATCH ?3)
             ORDER BY CASE
                 WHEN ?4 IS NOT NULL AND number = ?4 COLLATE NOCASE AND id IN (SELECT rowid FROM fts WHERE fts MATCH ?5) THEN 0
                 WHEN id IN (SELECT rowid FROM fts WHERE fts MATCH ?1) THEN 1
@@ -215,8 +224,6 @@ public final class SearchIndex: @unchecked Sendable {
         return (String(query[..<whole.lowerBound]), String(query[unit]).uppercased())
     }
 
-    private static let columns = "osm, kind, name, category, address, lat, lon, walk, bike, drive"
-
     private func place(_ row: OpaquePointer) -> Place {
         var snap: [TravelMode: Int] = [:]
         if snapsMatchGraph {
@@ -227,7 +234,14 @@ public final class SearchIndex: @unchecked Sendable {
         let kind = Place.Kind(rawValue: Self.text(row, 1) ?? "") ?? .place
         return Place(id: Self.text(row, 0) ?? "", name: Self.text(row, 2) ?? "", lat: sqlite3_column_double(row, 5),
                      lon: sqlite3_column_double(row, 6), category: Self.text(row, 3) ?? kind.rawValue, kind: kind,
-                     address: Self.text(row, 4), source: source, snap: snap)
+                     address: Self.text(row, 4), source: label(Self.text(row, 10)), snap: snap)
+    }
+
+    /// "Overture · Foursquare" → "Overture (Foursquare), Oct 2026"; nothing, or "OpenStreetMap", → the extract's own source.
+    private func label(_ rowSource: String?) -> String {
+        guard let rowSource, rowSource.hasPrefix("Overture") else { return source }
+        let dataset = rowSource.components(separatedBy: " · ").dropFirst().first
+        return [dataset.map { "Overture (\($0))" } ?? "Overture", overtureDate].compactMap { $0 }.joined(separator: ", ")
     }
 
     private enum Value { case text(String), int(Int), double(Double), null }
