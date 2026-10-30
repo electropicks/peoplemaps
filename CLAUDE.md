@@ -31,7 +31,7 @@ Before reporting any task done, committing or opening a PR, follow the `verify` 
 - **Never call a route "safe".** Say calmer, estimates, unknown when tags are missing. See the `product-rules` skill.
 - **No Apple Maps data** in our data or UI, only the "Look up in Apple Maps" hand-off (`Docs/SEARCH.md`). Data licences and regeneration: the `data-pipeline` skill.
 - Generated files come only from their generators: `Core/Resources/*` and `Data/provenance.json` from the importer, `Peoplemaps.xcodeproj` from `generate_project.py`. A hook blocks hand edits.
-- Small, logical commits with plain messages and no attribution lines. Work on a branch, and land it through a PR into `main`.
+- Small, logical commits with plain messages and no attribution lines. Work on a branch, and land it through a PR into `main`. Never push to `main`: a hook blocks it, since this GitHub plan has no branch protection.
 - Use `trash`, never `rm`. Ask before deleting anything you didn't create.
 - Match the surrounding code: terse Swift, few comments, `///` docs on non-obvious types.
 
