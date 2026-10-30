@@ -107,7 +107,9 @@ public final class NativeRouter: RouteComputing, Sendable {
     private let outgoing: Adjacency
     private let incoming: Adjacency
     private let restrictions: [Int: [TurnRestriction]]
-    private let connectedNodes: [TravelMode: Set<Int>]
+    /// Nodes in the largest strongly connected part of each mode's network.
+    let connectedNodes: [TravelMode: [Bool]]
+    private let grid: NodeGrid
     private let signalized: [Bool]
     private let legs: [Int]
     /// Flat copies of what the search reads per edge and node, so it rarely touches a `GraphEdge`.
@@ -128,50 +130,72 @@ public final class NativeRouter: RouteComputing, Sendable {
 
     public init(graph: StreetGraph) {
         self.graph = graph
-        let out = Adjacency(nodes: graph.nodes.count, edges: graph.edges, node: \.from)
-        let inc = Adjacency(nodes: graph.nodes.count, edges: graph.edges, node: \.to)
+        let nodeCount = graph.nodes.count
+        let out = Adjacency(nodes: nodeCount, edges: graph.edges, node: \.from)
+        let inc = Adjacency(nodes: nodeCount, edges: graph.edges, node: \.to)
         outgoing = out; incoming = inc
         restrictions = Dictionary(grouping: graph.restrictions, by: \.via)
-        connectedNodes = Dictionary(uniqueKeysWithValues: TravelMode.allCases.map { mode in
-            (mode, Self.largestStrongComponent(graph: graph, outgoing: out, incoming: inc, mode: mode))
-        })
+        let bits = graph.edges.map { $0.modes.reduce(0) { $0 | $1.bit } }
+        modeBits = bits
+        let components = parallelMap(TravelMode.allCases.count) { Self.largestStrongComponent(nodes: nodeCount, outgoing: out, incoming: inc, edges: graph.edges, modeBits: bits, mode: TravelMode.allCases[$0]) }
+        connectedNodes = Dictionary(uniqueKeysWithValues: zip(TravelMode.allCases, components))
         edgeFrom = graph.edges.map { Int32($0.from) }; edgeTo = graph.edges.map { Int32($0.to) }; edgeWay = graph.edges.map(\.wayID)
-        modeBits = graph.edges.map { $0.modes.reduce(0) { $0 | $1.bit } }
-        nodePoints = graph.nodes.map(\.coordinate); pedestrianSignal = graph.nodes.map(\.pedestrianSignal)
-        var restricted = Array(repeating: false, count: graph.nodes.count)
+        let points = graph.nodes.map(\.coordinate)
+        nodePoints = points; pedestrianSignal = graph.nodes.map(\.pedestrianSignal); grid = NodeGrid(points)
+        var restricted = Array(repeating: false, count: nodeCount)
         for r in graph.restrictions { restricted[r.via] = true }
         self.restricted = restricted
-        var neighbours = Array(repeating: Set<Int>(), count: graph.nodes.count)
-        var arterials = Array(repeating: [(way: Int64, road: RoadClass)](), count: graph.nodes.count)
+        let roads = parallelChunks(graph.edges.count) { range in range.map { i -> RoadInfo in
+            let e = graph.edges[i]
+            return RoadInfo(isRoad: e.isRoad, road: e.roadClass)
+        } }
+        // Road legs: distinct road neighbours of each node.
+        var links: [UInt64] = []
+        var arterials = Array(repeating: [(way: Int64, road: RoadClass)](), count: nodeCount)
         var lit = graph.nodes.map(\.signal)
-        for e in graph.edges where e.isRoad {
-            neighbours[e.from].insert(e.to); neighbours[e.to].insert(e.from)
-            if let road = e.roadClass, road >= .arterial {
+        for e in graph.edges where roads[e.id].isRoad {
+            links.append(UInt64(e.from) << 32 | UInt64(e.to)); links.append(UInt64(e.to) << 32 | UInt64(e.from))
+            if let road = roads[e.id].road, road >= .arterial {
                 for n in [e.from, e.to] where !arterials[n].contains(where: { $0.way == e.wayID }) { arterials[n].append((e.wayID, road)) }
             }
             if e.meters < 30, graph.nodes[e.from].signal { lit[e.to] = true }  // signal mapped just before the junction
         }
         signalized = lit
-        legs = neighbours.map(\.count)
+        links.sort()
+        var legCounts = Array(repeating: 0, count: nodeCount)
+        for (i, link) in links.enumerated() where i == 0 || link != links[i - 1] { legCounts[Int(link >> 32)] += 1 }
+        legs = legCounts
         arterialStart = arterials.reduce(into: [0]) { $0.append($0.last! + Int32($1.count)) }
         arterialWay = arterials.flatMap { $0.map(\.way) }; arterialRoad = arterials.flatMap { $0.map(\.road) }
-        let onRoad = (0..<graph.nodes.count).map { !neighbours[$0].isEmpty }
+        let onRoad = legCounts.map { $0 > 0 }
         var seconds: [TravelMode: [Double]] = [:], stress: [TravelMode: [Double]] = [:]
         var parts: [TravelMode: OptionShares] = [:]
         for mode in TravelMode.allCases {
-            var split = OptionSplit(), shares = OptionShares()
-            seconds[mode] = graph.edges.map { StressModel.seconds($0, mode: mode) }
-            stress[mode] = graph.edges.map { e in
-                for i in split.costs.indices { split.costs[i] = 0 }
-                let total = StressModel.exposure(e, mode: mode, arrivesAtRoad: onRoad[e.to], into: &split)
-                for (i, cost) in split.costs.enumerated() where cost != 0 { shares.options.append(UInt8(i)); shares.costs.append(cost) }
-                shares.start.append(Int32(shares.costs.count))
-                return total
+            seconds[mode] = parallelChunks(graph.edges.count) { $0.map { StressModel.seconds(graph.edges[$0], mode: mode) } }
+            let chunks = parallelMap((graph.edges.count + Self.chunk - 1) / Self.chunk) { c -> (totals: [Double], shares: OptionShares) in
+                var split = OptionSplit(), shares = OptionShares(), totals: [Double] = []
+                for i in c * Self.chunk..<min(graph.edges.count, (c + 1) * Self.chunk) {
+                    let e = graph.edges[i]
+                    for k in split.costs.indices { split.costs[k] = 0 }
+                    totals.append(StressModel.exposure(e, mode: mode, arrivesAtRoad: onRoad[e.to], into: &split))
+                    for (k, cost) in split.costs.enumerated() where cost != 0 { shares.options.append(UInt8(k)); shares.costs.append(cost) }
+                    shares.start.append(Int32(shares.costs.count))
+                }
+                return (totals, shares)
+            }
+            stress[mode] = chunks.flatMap(\.totals)
+            var shares = OptionShares()
+            for part in chunks {
+                let base = Int32(shares.costs.count)
+                shares.start.append(contentsOf: part.shares.start.dropFirst().map { $0 + base })
+                shares.options.append(contentsOf: part.shares.options); shares.costs.append(contentsOf: part.shares.costs)
             }
             parts[mode] = shares
         }
         edgeSeconds = seconds; edgeStress = stress; edgeOptionStress = parts
     }
+
+    private static let chunk = 8192
 
     /// Per-edge exposure stress for one request: the precomputed costs, with each preferred option's share rescaled on lookup.
     private func exposure(mode: TravelMode, scale: FactorScale?) -> Exposure {
@@ -255,20 +279,23 @@ public final class NativeRouter: RouteComputing, Sendable {
         return Junction(signalized: signalized[node], pedestrianSignal: pedestrianSignal[node], legs: legs[node], crossedArterial: crossed)
     }
 
-    private func snap(_ place: Place, mode: TravelMode, departing: Bool) throws -> (node: Int, distance: Double) {
+    func snap(_ place: Place, mode: TravelMode, departing: Bool) throws -> (node: Int, distance: Double) {
         guard let connected = connectedNodes[mode] else { throw RoutingError.noConnection }
         let point = place.coordinate
-        // The search index stores the node the importer picked; use it when it is still a valid start or end here.
-        if let i = place.snap[mode], graph.nodes.indices.contains(i), connected.contains(i),
-           (departing ? outgoing : incoming).row(i).contains(where: { graph.edges[Int($0)].modes.contains(mode) && !graph.edges[Int($0)].isHighway }) {
-            return (i, point.distance(to: graph.nodes[i].coordinate))
+        func usable(_ i: Int) -> Bool {
+            (departing ? outgoing : incoming).row(i).contains(where: { graph.edges[Int($0)].modes.contains(mode) && !graph.edges[Int($0)].isHighway })
         }
-        var best: (Int, Double)?
-        for i in graph.nodes.indices where connected.contains(i) {
-            let d = point.distance(to: graph.nodes[i].coordinate)
-            guard d <= 400, best == nil || d < best!.1 else { continue }
-            let usable = (departing ? outgoing : incoming).row(i)
-            if usable.contains(where: { graph.edges[Int($0)].modes.contains(mode) && !graph.edges[Int($0)].isHighway }) { best = (i, d) }
+        // The search index stores the node the importer picked; use it when it is still a valid start or end here.
+        if let i = place.snap[mode], graph.nodes.indices.contains(i), connected[i], usable(i) {
+            return (i, point.distance(to: nodePoints[i]))
+        }
+        // The nearest usable node within 400 m, the lowest id on a tie.
+        var best: (node: Int, distance: Double)?
+        grid.forEachNode(within: 400, of: point) { i in
+            guard connected[i] else { return }
+            let d = point.distance(to: nodePoints[i])
+            guard d <= 400, best == nil || d < best!.distance || (d == best!.distance && i < best!.node), usable(i) else { return }
+            best = (i, d)
         }
         guard let best else { throw RoutingError.noConnection }
         return best
@@ -276,35 +303,41 @@ public final class NativeRouter: RouteComputing, Sendable {
 
     /// Snap to the main connected network, rather than an isolated mapped driveway or campus loop.
     /// Kosaraju, iterative to avoid stack overflow. Turn restrictions are still enforced during search.
-    private static func largestStrongComponent(graph: StreetGraph, outgoing: Adjacency, incoming: Adjacency, mode: TravelMode) -> Set<Int> {
-        var visited = Set<Int>(), order: [Int] = []
-        for root in graph.nodes.indices where !visited.contains(root) {
-            var stack: [(Int, Bool)] = [(root, false)]
-            while let (node, expanded) = stack.popLast() {
-                if expanded { order.append(node); continue }
-                if !visited.insert(node).inserted { continue }
-                stack.append((node, true))
-                for id in outgoing.row(node) where graph.edges[Int(id)].modes.contains(mode) {
-                    let next = graph.edges[Int(id)].to
-                    if !visited.contains(next) { stack.append((next, false)) }
+    private static func largestStrongComponent(nodes: Int, outgoing: Adjacency, incoming: Adjacency, edges: [GraphEdge], modeBits: [UInt8], mode: TravelMode) -> [Bool] {
+        let bit = mode.bit
+        var visited = Array(repeating: false, count: nodes), order: [Int] = []
+        // A pending node is pushed as itself, and again as its complement once its neighbours are done.
+        for root in 0..<nodes where !visited[root] {
+            var stack = [root]
+            while let top = stack.popLast() {
+                if top < 0 { order.append(~top); continue }
+                if visited[top] { continue }
+                visited[top] = true
+                stack.append(~top)
+                for id in outgoing.row(top) where modeBits[Int(id)] & bit != 0 {
+                    let next = edges[Int(id)].to
+                    if !visited[next] { stack.append(next) }
                 }
             }
         }
-        visited.removeAll(keepingCapacity: true)
-        var largest = Set<Int>()
-        for root in order.reversed() where !visited.contains(root) {
-            var component = Set<Int>(), stack = [root]
+        visited = Array(repeating: false, count: nodes)
+        var largest: [Int] = []
+        for root in order.reversed() where !visited[root] {
+            var component: [Int] = [], stack = [root]
             while let node = stack.popLast() {
-                if !visited.insert(node).inserted { continue }
-                component.insert(node)
-                for id in incoming.row(node) where graph.edges[Int(id)].modes.contains(mode) {
-                    let next = graph.edges[Int(id)].from
-                    if !visited.contains(next) { stack.append(next) }
+                if visited[node] { continue }
+                visited[node] = true
+                component.append(node)
+                for id in incoming.row(node) where modeBits[Int(id)] & bit != 0 {
+                    let next = edges[Int(id)].from
+                    if !visited[next] { stack.append(next) }
                 }
             }
             if component.count > largest.count { largest = component }
         }
-        return largest
+        var member = Array(repeating: false, count: nodes)
+        for node in largest { member[node] = true }
+        return member
     }
 
     /// Fastest plausible travel speed per mode in m/s, for the A* lower bound on remaining time.
@@ -503,6 +536,12 @@ private struct OptionShares {
     var start: [Int32] = [0]
     var options: [UInt8] = []
     var costs: [Double] = []
+}
+
+/// What the importer-built graph says about an edge as a road, worked out once for all edges.
+private struct RoadInfo {
+    let isRoad: Bool
+    let road: RoadClass?
 }
 
 /// Where concurrent searches leave their results, by position.
