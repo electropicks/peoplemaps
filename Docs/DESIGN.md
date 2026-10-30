@@ -186,7 +186,8 @@ Proposed:
 - The cluster rides above the sheet's detent and fades out when the sheet is
   at the large detent (Apple Maps behaviour).
 - Attribution: "© OpenStreetMap" stays always visible and linked (ODbL),
-  `.caption2`, on a small glass capsule just above the sheet's top edge,
+  and becomes "© OpenStreetMap contributors · Overture Maps Foundation" once
+  Overture Places lands (branch `search/overture-places`). `.caption2`, on a small glass capsule just above the sheet's top edge,
   leading. It moves with the detent; it is never hidden behind the sheet.
 - Remove all custom `.shadow` calls on glass; glass draws its own.
 
@@ -249,11 +250,10 @@ list. Each row:
 - Badge from `PlaceCategory`; title `.body`; subtitle as today
   (`Place.subtitle`); distance trailing `.subheadline` secondary,
   monospaced digits.
-- **Source and date line**, `.caption` secondary: "OpenStreetMap, Oct 2026"
-  today, from the index `meta` table (`source`, `sourceDate`). When Overture
-  lands, per-row source: "Overture (Foursquare), Oct 2026" etc. `SearchIndex`
-  needs a `sourceLabel(for:)` that reads per-entry source when the column
-  exists; until then one value for all rows. Addresses show it too.
+- **Source and date line**, `.caption` secondary: the row reads
+  `place.source`, which the Overture branch (`search/overture-places`) sets
+  per row in `Core/SearchIndex.swift` ("OpenStreetMap, Oct 2026" or
+  "Overture (Foursquare), Oct 2026"). Addresses show it too.
 - VoiceOver reads one element: "Tilikum Place Cafe, restaurant, 407 Cedar St,
   0.4 miles, OpenStreetMap, October 2026".
 - No results: `ContentUnavailableView` with today's copy, then the "Look up in
@@ -337,13 +337,15 @@ apply one mode's rule to another):
 | Factor | Drive | Cycle | Walk |
 |---|---|---|---|
 | Traffic lights | ✓ | ✓ | ✓ (crossings) |
-| Stop signs | ✓ | ✓ | — |
-| Unsignalled lefts | ✓ | ✓ | — |
+| Stop signs | ✓ | ✓ | Unsignalled crossings |
+| Unsignalled lefts | ✓ | ✓ | Unsignalled crossings |
 | Busy streets | ✓ | ✓ | ✓ |
 | Hills | ✓ | ✓ | ✓ |
 | Turns | ✓ | ✓ | ✓ |
 
-The Mac session confirms the per-mode set against the stress model before
+Walk has no stop signs or lefts in the stress model; it has unsignalled and
+unmarked crossings instead, shown as one "Unsignalled crossings" row in place
+of those two. Confirm the per-mode set against the route-preferences PR before
 building; the table is a starting point.
 
 Each row: symbol (`trafficlight`, `octagon`, `arrow.turn.up.left`,
@@ -428,9 +430,9 @@ prototype, not turn-by-turn navigation", D12).
 
 Proposed: reached from the home footer row. Standard `NavigationStack` +
 inset grouped `List` in a `.large` sheet (system glass toolbar). Sections:
-"What calmer means" (one paragraph, the mode list), "No ads, no account"
-("No sponsored results, ever. Routing runs on this phone."), "Data"
-(OpenStreetMap ODbL link, snapshot date, USGS elevation, Overture when added),
+"What calmer means" (one paragraph, the mode list), "Data" (OpenStreetMap
+ODbL link, snapshot date, USGS elevation, and "Overture Maps Foundation" once
+Overture Places lands on `search/overture-places`),
 "Coverage" (current copy), Acknowledgements (MapLibre, Ferrostar BSD-3, OSM,
 USGS). Remove "not turn-by-turn navigation". Links in `label` colour with
 `arrow.up.forward`, not green.
@@ -501,8 +503,8 @@ landscape unless noted). Base each on the latest `main` after `ux-round-1`.
    detent, follow mode), `floatingSurface` helper. Evidence: home, preview,
    Increase Contrast.
 5. **Rows, search and source line.** `App/PlaceRow.swift`,
-   `App/PlacePicker.swift`, `App/AppleMapsLookup.swift`,
-   `Core/SearchIndex.swift` (`sourceLabel`), tests. Evidence: search results,
+   `App/PlacePicker.swift`, `App/AppleMapsLookup.swift` (rows read
+   `place.source`; no `Core` change). Evidence: search results,
    no results with Apple Maps hand-off, VoiceOver label in the UI test.
 6. **Place card and route preview.** `App/ExploreView.swift`,
    `App/RouteDetails.swift` ("Why this route" colour). Evidence: place card,
