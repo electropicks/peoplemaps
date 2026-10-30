@@ -39,7 +39,8 @@ first build. Signing is automatic and the project sets no team; the bundle ID is
 `xcodebuild` or pick your team in Xcode's Signing tab. Scripts set `DEVELOPER_DIR` per command; override
 `PEOPLEMAPS_XCODE` if Xcode lives elsewhere.
 
-Try **Kerry Park → Gas Works Park**: with five extra minutes the driving model
+Try **Kerry Park → Gas Works Park** (search Gas Works, tap Directions, and pick
+Kerry Park as the start if you are not there): with five extra minutes the driving model
 finds a calmer route with two fewer unsignalled left turns and fewer
 stop-and-go stops. Tap Start to follow it; in the Simulator, Debug builds replay
 the route.
