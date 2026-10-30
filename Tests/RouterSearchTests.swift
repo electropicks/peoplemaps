@@ -18,8 +18,8 @@ final class RouterSearchTests: XCTestCase {
     }
 
     func testCancellingTheTaskStopsAnAsyncCompare() async throws {
-        let request = try request(5)
-        let task = Task { try await Self.router.compare(request) }
+        let router = Self.router, request = try request(5)
+        let task = Task.detached { try await router.compare(request) }
         task.cancel()
         do { _ = try await task.value; XCTFail("A cancelled compare should throw") } catch { XCTAssertTrue(error is CancellationError, "\(error)") }
     }
