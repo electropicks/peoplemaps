@@ -129,6 +129,54 @@ final class SeattlePreferenceTests: XCTestCase {
         XCTAssertEqual(checked, 9)
     }
 
+    /// The route shown as calmer, or the fastest when there's no calmer one.
+    private func shown(_ c: RouteComparison) -> Route { c.calmer ?? c.fastest }
+    private func amount(_ r: Route, _ option: RoutePreferences.Option, _ mode: TravelMode) -> Double {
+        option.factors(in: mode).reduce(0) { $0 + r.metrics.breakdown[$1].amount }
+    }
+
+    /// Trips in the bundled data where each option, set to Avoid, changes the route and cuts that option's factors.
+    private static let avoidTrips: [(trip: (String, String), mode: TravelMode, options: [RoutePreferences.Option])] = [
+        (("node/2544213221", "node/4318969638"), .bike, RoutePreferences.Option.allCases),
+        (("node/6737717414", "way/293941621"), .drive, [.trafficLights, .stopSigns, .unprotectedLefts, .busyCrossings, .turns]),
+        (("node/2158768959", "node/2327652050"), .drive, [.hills]),
+        (("way/253553517", "way/222420235"), .walk, [.trafficLights, .busyStreets, .busyCrossings, .hills]),
+    ]
+
+    func testEachOptionSetToAvoidChangesARealTripAndNeverAddsItsFactors() throws {
+        var covered = Set<String>()
+        for (trip, mode, options) in Self.avoidTrips {
+            let plain = try compare(trip.0, trip.1, mode)
+            for factor in Set([plain.fastest, shown(plain)].flatMap { $0.metrics.breakdown.tallies.keys }) {
+                guard let option = factor.preferenceOption else { continue }
+                XCTAssertTrue(option.factors(in: mode).contains(factor), "\(mode) records \(factor), which \(option) doesn't list")
+            }
+            for option in options {
+                let avoided = try compare(trip.0, trip.1, mode, 5, .init([option: .avoid]))
+                let label = "\(mode) \(option) \(trip)"
+                XCTAssertEqual(avoided.fastest.edgeIDs, plain.fastest.edgeIDs, "The fastest route ignores preferences: \(label)")
+                XCTAssertNotEqual(shown(avoided).edgeIDs, shown(plain).edgeIDs, label)
+                XCTAssertLessThan(amount(shown(avoided), option, mode), amount(shown(plain), option, mode), label)
+                XCTAssertLessThanOrEqual(shown(avoided).metrics.seconds, avoided.fastest.metrics.seconds + 300.000001, "Budget still applies: \(label)")
+                covered.insert("\(mode) \(option)")
+            }
+        }
+        let offered = TravelMode.allCases.flatMap { mode in RoutePreferences.Option.available(in: mode).map { "\(mode) \($0)" } }
+        XCTAssertEqual(covered, Set(offered), "Every offered option has a trip it changes")
+    }
+
+    /// Cyclists and drivers who don't mind stop signs get a quicker route through them; walkers who don't mind busy crossings likewise.
+    func testDontMindTradesThatFactorForTime() throws {
+        let trip = ("node/6737717414", "way/293941621")
+        for (mode, option) in [(TravelMode.bike, RoutePreferences.Option.stopSigns), (.drive, .stopSigns), (.walk, .busyCrossings)] {
+            let plain = try compare(trip.0, trip.1, mode), relaxed = try compare(trip.0, trip.1, mode, 5, .init([option: .dontMind]))
+            let label = "\(mode) \(option)"
+            XCTAssertNotEqual(shown(relaxed).edgeIDs, shown(plain).edgeIDs, label)
+            XCTAssertGreaterThan(amount(shown(relaxed), option, mode), amount(shown(plain), option, mode), label)
+            XCTAssertLessThan(shown(relaxed).metrics.seconds, shown(plain).metrics.seconds, label)
+        }
+    }
+
     func testAnOptionTheModeDoesNotHaveChangesNothing() throws {
         let plain = try compare("way/37056567", "relation/1047789", .walk)
         let other = try compare("way/37056567", "relation/1047789", .walk, 5, .init([.stopSigns: .avoid, .unprotectedLefts: .avoid, .turns: .dontMind]))
