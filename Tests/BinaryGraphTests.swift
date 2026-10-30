@@ -5,7 +5,7 @@ import XCTest
 /// emitting both formats from the same in-memory graph. macOS only: it needs Process and python3.
 final class BinaryGraphTests: XCTestCase {
     func testBinaryGraphMatchesImporterJSON() throws {
-        #if os(macOS)
+        #if os(macOS) || os(Linux)
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
         let temp = FileManager.default.temporaryDirectory.appendingPathComponent("peoplemaps-graph-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: temp) }
