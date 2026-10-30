@@ -27,7 +27,7 @@ Scripts/verify.sh                  # "data reproduces byte for byte" must pass
 
 - OpenStreetMap: ODbL 1.0. Attribution "© OpenStreetMap" stays on the map.
 - USGS 3DEP elevation: public domain.
-- Overture Maps: CDLA-Permissive 2.0. Check each source's attribution.
+- Overture Maps Places: licensed per source, not per theme: CDLA-Permissive 2.0 (most), Apache 2.0 (Foursquare, keep its NOTICE), CC0 1.0 (AllThePlaces); no OSM data in this theme. Only the allowlist in `Scripts/build_search.py` is used. The extract is archived in `Data/seattle-overture-places.json.gz` because Overture keeps only two releases online (about 60 days); `Scripts/fetch_overture.py` takes a new one (pyarrow, not part of the importer). Merged into the search index, it stays under ODbL with a per-row `source`. Licence texts: `Data/licenses/`.
 - King County / City of Seattle address points: **not used**. Their terms don't clearly allow redistribution.
 - **Apple Maps / MapKit data must never enter our data or UI.** DPLA Attachment 6, sections 2.2–2.5: no caching, no derived databases, no showing it on a non-Apple map. The only Apple touchpoint is the "Look up in Apple Maps" hand-off. `CLGeocoder` counts too. See `Docs/SEARCH.md`.
 
