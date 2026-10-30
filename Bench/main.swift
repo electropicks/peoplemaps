@@ -5,14 +5,15 @@ import PeoplemapsCore
 //   swift build -c release --product peoplemaps-bench && .build/release/peoplemaps-bench [--scale N] [--runs N] [--json]
 // --scale N routes on the bundled graph plus N-1 disjoint copies placed to its east, to show cost that grows with graph size.
 
-var scale = 1, runs = 5, json = false
+var scale = 1, runs = 5, json = false, only = ""
 var args = CommandLine.arguments.dropFirst()
 while let arg = args.popFirst() {
     switch arg {
     case "--scale": scale = max(1, Int(args.popFirst() ?? "") ?? 1)
     case "--runs": runs = max(1, Int(args.popFirst() ?? "") ?? 5)
+    case "--trip": only = args.popFirst() ?? ""
     case "--json": json = true
-    default: FileHandle.standardError.write(Data("usage: peoplemaps-bench [--scale N] [--runs N] [--json]\n".utf8)); exit(64)
+    default: FileHandle.standardError.write(Data("usage: peoplemaps-bench [--scale N] [--runs N] [--trip NAME] [--json]\n".utf8)); exit(64)
     }
 }
 
@@ -84,7 +85,7 @@ func fnv(_ ids: [Int]) -> String {
 struct Row { var trip: String, mode: String, prefs: String, median: Double, min: Double, max: Double, meters: Int, candidates: Int, fingerprint: String }
 var rows: [Row] = []
 let avoid: [(String, RoutePreferences)] = [("default", RoutePreferences()), ("hills+trafficLights avoid", RoutePreferences([.hills: .avoid, .trafficLights: .avoid]))]
-for trip in trips {
+for trip in trips where only.isEmpty || trip.name.contains(only) {
     for mode in TravelMode.allCases {
         for (label, prefs) in avoid {
             var times: [Double] = [], meters = 0, candidates = 0, fp = ""
