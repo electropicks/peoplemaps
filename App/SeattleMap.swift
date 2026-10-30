@@ -19,11 +19,12 @@ struct SeattleMap: UIViewRepresentable {
     let comparison: RouteComparison?
     let selectedCalmer: Bool
     let recenter: Int
-    /// Small gray pins for places the user can open.
-    var pins: [Place] = []
     /// The selected place: the only green pin, centred in the visible map.
     var selected: Place?
-    var onPin: (String) -> Void = { _ in }
+    /// Where the device is, when known and inside coverage: a blue dot, and what Home frames at neighbourhood zoom.
+    var user: Coordinate?
+    /// South-west and north-east corners of the area we cover, framed by Home when the user's location is unknown.
+    var coverage: [Coordinate] = []
     /// A long-press on the map, at that spot.
     var onLongPress: (Coordinate) -> Void = { _ in }
     var guidance: Guidance?
@@ -67,6 +68,7 @@ struct SeattleMap: UIViewRepresentable {
         private var endpoints: [MLNPointAnnotation] = []
         private var pinAnnotations: [MLNPointAnnotation] = []
         private var pinKey = ""
+        private var userDot: MapPuck?
         private var focusKey = ""
         private var guiding = false
         private var guidanceKey = ""
@@ -152,12 +154,19 @@ struct SeattleMap: UIViewRepresentable {
             let pk = pinKey(latest)
             if pk != pinKey {
                 map.removeAnnotations(pinAnnotations)
-                pinAnnotations = latest.pins.filter { $0.id != latest.selected?.id }.map { MapPin(place: $0, selected: false) }
-                if let place = latest.selected { pinAnnotations.append(MapPin(place: place, selected: true)) }
+                pinAnnotations = latest.selected.map { [MapPin(place: $0)] } ?? []
                 map.addAnnotations(pinAnnotations)
                 pinKey = pk
             }
-            let focus = c != nil ? "route" : latest.selected?.id ?? "home"
+            if userDot?.coordinate.latitude != latest.user?.lat || userDot?.coordinate.longitude != latest.user?.lon {
+                if let userDot { map.removeAnnotation(userDot) }
+                userDot = latest.user.map { user in
+                    let dot = MapPuck(); dot.coordinate = CLLocationCoordinate2D(latitude: user.lat, longitude: user.lon); return dot
+                }
+                if let userDot { map.addAnnotation(userDot) }
+            }
+            // Home refits once when the user's location first becomes known, never on later fixes.
+            let focus = c != nil ? "route" : latest.selected?.id ?? (latest.user != nil ? "home-user" : "home")
             let focusChanged = focus != focusKey
             let paddingChanged = (abs(fittedPadding.bottom - latest.padding.bottom) > 1 || abs(fittedPadding.left - latest.padding.left) > 1)
             let recentered = recenterID >= 0 && recenterID != latest.recenter
@@ -167,7 +176,10 @@ struct SeattleMap: UIViewRepresentable {
                     // A neighbourhood-sized window around the place, so it lands in the middle of the visible map.
                     points = [Coordinate(lat: place.lat - 0.004, lon: place.lon - 0.006), Coordinate(lat: place.lat + 0.004, lon: place.lon + 0.006)]
                 }
-                if points.isEmpty { points = latest.pins.map(\.coordinate) }
+                if points.isEmpty, let user = latest.user {
+                    points = [Coordinate(lat: user.lat - 0.004, lon: user.lon - 0.006), Coordinate(lat: user.lat + 0.004, lon: user.lon + 0.006)]
+                }
+                if points.isEmpty { points = latest.coverage }
                 if !points.isEmpty {
                     let sw = CLLocationCoordinate2D(latitude: points.map(\.lat).min()!, longitude: points.map(\.lon).min()!)
                     let ne = CLLocationCoordinate2D(latitude: points.map(\.lat).max()!, longitude: points.map(\.lon).max()!)
@@ -205,8 +217,8 @@ struct SeattleMap: UIViewRepresentable {
         private func updateGuidance(_ g: Guidance, map: MLNMapView, style: MLNStyle) {
             if !guiding {
                 guiding = true
-                map.removeAnnotations(endpoints + pinAnnotations)
-                endpoints = []; pinAnnotations = []; pinKey = ""; guidanceKey = ""; lastUser = nil
+                map.removeAnnotations(endpoints + pinAnnotations + (userDot.map { [$0] } ?? []))
+                endpoints = []; pinAnnotations = []; pinKey = ""; userDot = nil; guidanceKey = ""; lastUser = nil
                 clearRoutes(style)
                 followZoom = true
                 if g.user == nil { follow(g.coordinates[0], map: map, puck: false) }
@@ -284,7 +296,7 @@ struct SeattleMap: UIViewRepresentable {
             routeKey = ""; focusKey = ""; pinKey = ""
         }
 
-        private func pinKey(_ s: SeattleMap) -> String { s.pins.map(\.id).joined(separator: ",") + "|" + (s.selected?.id ?? "") }
+        private func pinKey(_ s: SeattleMap) -> String { s.selected?.id ?? "" }
 
         @objc func longPressed(_ gesture: UILongPressGestureRecognizer) {
             guard gesture.state == .began, let map = gesture.view as? MLNMapView else { return }
@@ -294,7 +306,6 @@ struct SeattleMap: UIViewRepresentable {
 
         func mapView(_ mapView: MLNMapView, didSelect annotation: MLNAnnotation) {
             mapView.deselectAnnotation(annotation, animated: false)
-            if let pin = annotation as? MapPin { latest?.onPin(pin.placeID) }
         }
 
         /// Map colours are constants in the style, so they are resolved for the current scheme and re-applied when it changes.
@@ -310,7 +321,7 @@ struct SeattleMap: UIViewRepresentable {
                 (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineColor = constant(color)
             }
             // Annotation views are drawn once, so re-add them to pick up the new colours.
-            let extras: [MLNPointAnnotation] = guidanceAnnotations + (puck.map { [$0] } ?? [])
+            let extras: [MLNPointAnnotation] = guidanceAnnotations + (puck.map { [$0] } ?? []) + (userDot.map { [$0] } ?? [])
             map.removeAnnotations(labels + endpoints + pinAnnotations + extras)
             map.addAnnotations(labels + endpoints + pinAnnotations + extras)
         }
@@ -360,16 +371,14 @@ struct SeattleMap: UIViewRepresentable {
                 view.layer.cornerRadius = 11
             case let pin as MapPin:
                 view = MLNAnnotationView(reuseIdentifier: nil)
-                let size: CGFloat = pin.isSelected ? 22 : 14
-                view.frame = CGRect(x: 0, y: 0, width: size, height: size)
-                view.backgroundColor = pin.isSelected ? UIColor.calmer.resolvedColor(with: traits) : UIColor.systemGray.resolvedColor(with: traits)
+                view.frame = CGRect(x: 0, y: 0, width: 22, height: 22)
+                view.backgroundColor = UIColor.calmer.resolvedColor(with: traits)
                 view.layer.borderColor = background.cgColor
-                view.layer.borderWidth = pin.isSelected ? 3 : 2.5
-                view.layer.cornerRadius = size / 2
+                view.layer.borderWidth = 3
+                view.layer.cornerRadius = 11
                 view.isAccessibilityElement = true
                 view.accessibilityLabel = pin.title
-                view.accessibilityTraits = .button
-                if pin.isSelected { fadeIn(view) }
+                fadeIn(view)
                 return view
             case is MapLabel:
                 view = MLNAnnotationView(reuseIdentifier: nil)
@@ -396,10 +405,7 @@ struct SeattleMap: UIViewRepresentable {
 }
 private final class MapLabel: MLNPointAnnotation {}
 private final class MapPin: MLNPointAnnotation {
-    let placeID: String
-    let isSelected: Bool
-    init(place: Place, selected: Bool) {
-        placeID = place.id; isSelected = selected
+    init(place: Place) {
         super.init()
         title = place.shortName
         coordinate = CLLocationCoordinate2D(latitude: place.lat, longitude: place.lon)

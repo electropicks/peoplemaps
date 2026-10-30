@@ -18,7 +18,8 @@ PeopleMaps suggests the route a Seattle local would pick: the calmer one, not ju
 
 ## UX
 
-- First launch stays simple: map, search and featured places. Ask for location only when the user starts guidance or picks Current location.
+- First launch stays simple: the map and a "Where to?" search, then Favourites and Recents once there are some. No featured or suggested places yet.
+- Location: once the map shows on first launch, ask for When-In-Use with the system prompt, once. When allowed, every route starts from Current location (Directions, the preview, the pickers) and Home frames the user's neighbourhood. When denied or unavailable, the start is an empty "Choose start" field and no route shows until it is filled. Never fill in a made-up default place. Start still checks permission, because guidance needs it.
 - Apple-first design: system fonts and materials, white/black with one green accent (`.calmer`), and full light/dark and landscape support.
 - Motion uses the shared `Motion` timings (`App/PeoplemapsApp.swift`). Respect Reduce Motion, and keep animations off under `--ui-testing`.
 - Accessibility: VoiceOver labels on every control, 4.5:1 text contrast, Dynamic Type that doesn't truncate the essentials.

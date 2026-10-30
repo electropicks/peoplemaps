@@ -3,9 +3,9 @@ import PeoplemapsCore
 
 struct PlacePicker: View {
     let title: String
-    let graph: StreetGraph
     let search: SearchIndex
-    let selected: Place
+    /// Nil while the field is empty ("Choose start").
+    let selected: Place?
     let saved: SavedPlacesStore
     /// Set for the origin: offers "Current location" unless location is denied.
     let location: LocationPermission?
@@ -16,13 +16,13 @@ struct PlacePicker: View {
     @State private var locating = false
     @State private var locationFailed = false
 
-    init(title: String, graph: StreetGraph, search: SearchIndex, selected: Place, saved: SavedPlacesStore, location: LocationPermission? = nil, onSelect: @escaping (Place) -> Void) {
-        self.title = title; self.graph = graph; self.search = search; self.selected = selected; self.saved = saved; self.location = location; self.onSelect = onSelect
+    init(title: String, search: SearchIndex, selected: Place?, saved: SavedPlacesStore, location: LocationPermission? = nil, onSelect: @escaping (Place) -> Void) {
+        self.title = title; self.search = search; self.selected = selected; self.saved = saved; self.location = location; self.onSelect = onSelect
         _access = State(initialValue: location?.access ?? .denied)
     }
 
-    private var featured: [Place] { ExploreView.featuredIDs.compactMap { id in graph.places.first { $0.id == id }.map(search.withAddress) } }
-    private var results: [Place] { search.search(query, near: selected.coordinate) }
+    private var results: [Place] { search.search(query, near: selected?.coordinate) }
+    private var offersCurrentLocation: Bool { location != nil && access != .denied }
 
     var body: some View {
         NavigationStack {
@@ -30,12 +30,15 @@ struct PlacePicker: View {
                 VStack(alignment: .leading, spacing: 16) {
                     SearchField(text: $query, identifier: "place-search")
                     if query.isEmpty {
-                        if location != nil && access != .denied {
-                            CurrentLocationRow(locating: locating, failed: locationFailed, selected: selected.isCurrentLocation, action: useCurrentLocation)
+                        if offersCurrentLocation {
+                            CurrentLocationRow(locating: locating, failed: locationFailed, selected: selected?.isCurrentLocation == true, action: useCurrentLocation)
                         }
                         if !saved.favourites.isEmpty { section("Favourites", saved.favourites, prefix: "place-favourite-") }
-                        section("Featured places", featured, prefix: "place-")
                         if !saved.recents.isEmpty { section("Recents", saved.recents, prefix: "place-recent-") }
+                        if !offersCurrentLocation && saved.favourites.isEmpty && saved.recents.isEmpty {
+                            Text("Search a place or address.").font(.footnote).foregroundStyle(.secondary).padding(.horizontal, 4)
+                                .accessibilityIdentifier("place-hint")
+                        }
                     } else if results.isEmpty {
                         EmptySearch(count: search.count).padding(.top, 40)
                         AppleMapsLookup(query: query)
@@ -54,7 +57,7 @@ struct PlacePicker: View {
     private func section(_ title: String, _ places: [Place], prefix: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(.footnote).textCase(.uppercase).foregroundStyle(.secondary).padding(.leading, 16)
-            PlaceList(places: places, query: query, selectedID: selected.id, identifier: { prefix + $0.id }) {
+            PlaceList(places: places, query: query, selectedID: selected?.id, identifier: { prefix + $0.id }) {
                 onSelect($0); dismiss()
             }
         }
@@ -113,6 +116,7 @@ struct CurrentLocationRow: View {
 /// Native-style search field: gray rounded field, magnifier, clear button.
 struct SearchField: View {
     @Binding var text: String
+    var placeholder = "Search places"
     var identifier = "search-input"
     var focused: FocusState<Bool>.Binding?
 
@@ -130,7 +134,7 @@ struct SearchField: View {
     }
 
     @ViewBuilder private var field: some View {
-        let base = TextField("Search places", text: $text).autocorrectionDisabled().submitLabel(.search).accessibilityIdentifier(identifier)
+        let base = TextField(placeholder, text: $text).autocorrectionDisabled().submitLabel(.search).accessibilityIdentifier(identifier)
         if let focused { base.focused(focused) } else { base }
     }
 }

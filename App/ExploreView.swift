@@ -10,25 +10,38 @@ private enum Screen: Equatable {
     var panelID: String { if case let .place(place) = self { "place-\(place.id)" } else { "\(self)" } }
 }
 
-struct ExploreView: View {
-    static let gasWorks = "relation/1047789", kerryPark = "node/693337509"
-    /// Shown on Home and on the map, in this order.
-    static let featuredIDs = [gasWorks, "way/37058377", "way/160545994", kerryPark]
+extension TravelMode {
+    /// Left to right in every mode picker, as in Apple Maps; the enum's own order stays as it is.
+    static let displayOrder: [TravelMode] = [.drive, .bike, .walk]
+    /// "18 min drive", "18 min cycle", "18 min walk".
+    var trip: String { switch self { case .walk: "walk"; case .bike: "cycle"; case .drive: "drive" } }
+    var symbol: String { switch self { case .walk: "figure.walk"; case .bike: "bicycle"; case .drive: "car.fill" } }
+}
 
+struct ExploreView: View {
     let graph: StreetGraph
     let search: SearchIndex
+    private let router: any RouteComputing
     @State private var session: RouteSession
     @State private var navigator: NavigationController
-    @State private var origin: Place
-    @State private var destination: Place
+    /// Nil shows an empty "Choose start" or "Choose destination" field, and no route.
+    @State private var origin: Place?
+    @State private var destination: Place?
+    /// The last mode used; the place card's estimate uses it too.
     @State private var mode: TravelMode = .drive
     @State private var budget = 5
     @State private var selectedCalmer = true
     @State private var sheet: Sheet?
     @State private var screen = Screen.home
     @State private var query = ""
-    /// The origin the user chose last; a later Directions reuses it unless it is the new destination.
+    /// The start the user chose last. Without location, a later Directions reuses it unless it is the new destination.
     @State private var lastOrigin: Place?
+    /// The device's last fix, kept only while location is allowed.
+    @State private var userLocation: Coordinate?
+    /// The nearest indexed address of the open place when it has none of its own.
+    @State private var placeNear: String?
+    /// The place card's comparison and the request it answers; nil when no route could be found.
+    @State private var estimate: (request: RouteRequest, comparison: RouteComparison?)?
     @FocusState private var searchFocused: Bool
     @State private var recenter = 0
     @State private var panelHeight: CGFloat = 0
@@ -63,17 +76,18 @@ struct ExploreView: View {
         #else
         let computing: any RouteComputing = router
         #endif
+        self.router = computing
         _session = State(initialValue: RouteSession(router: computing))
         _navigator = State(initialValue: NavigationController(router: router))
-        let featured = Self.featuredIDs.compactMap { id in graph.places.first { $0.id == id }.map(search.withAddress) }
-        self.featured = featured
-        _origin = State(initialValue: featured.first { $0.id == Self.kerryPark } ?? graph.places[0])
-        _destination = State(initialValue: featured.first { $0.id == Self.gasWorks } ?? graph.places[1])
     }
 
-    /// With addresses from the search index, which the graph's places lack.
-    private let featured: [Place]
     private var selectedPlace: Place? { if case let .place(place) = screen { place } else { nil } }
+    /// Where the device is, as a start; nil without location.
+    private var here: Place? { userLocation.map(Place.currentLocation(at:)) }
+    /// The user's location when the map can show it: inside the area we cover.
+    private var userInCoverage: Coordinate? { userLocation.flatMap { graph.contains($0) ? $0 : nil } }
+    /// The selected place, or the destination of a preview that has no route yet.
+    private var mapSelection: Place? { selectedPlace ?? (screen == .preview && request == nil ? destination : nil) }
     /// Stays set while guiding, so the comparison survives and End returns to the same routes.
     private var previewRequest: RouteRequest? { screen == .preview || screen == .navigating ? request : nil }
     private var guiding: Bool { screen == .navigating && navigator.isActive }
@@ -83,7 +97,26 @@ struct ExploreView: View {
                         destination: navigator.routeGeometry.last!, user: navigator.coordinate, overview: overview, inset: guidanceInset)
     }
 
-    /// Guidance needs location, so Start is where permission is asked (never while browsing or comparing).
+    /// Asks once, after the map shows on first launch, then takes a fix when allowed. Coming back to the app reads the
+    /// answer again (it may have changed in Settings) without asking.
+    private func locate(prompting: Bool) async {
+        if prompting, permission.access == .undecided {
+            if !Motion.off { try? await Task.sleep(for: .milliseconds(600)) }
+            asking = true
+            _ = await permission.request()
+            asking = false
+        }
+        guard permission.access == .granted else { userLocation = nil; return }
+        if let c = await permission.currentCoordinate() { userLocation = Coordinate(lat: c.latitude, lon: c.longitude) }
+    }
+
+    /// A start that follows the user moves with each new fix; an empty start fills in once one arrives.
+    private func followUser() {
+        guard screen != .navigating else { return }
+        if origin?.isCurrentLocation ?? true { origin = here }
+    }
+
+    /// Guidance needs location, so Start checks permission again and asks if it is still undecided.
     /// The simulated provider path needs none.
     private func startNavigation(_ comparison: RouteComparison) {
         guard !asking else { return }
@@ -111,8 +144,12 @@ struct ExploreView: View {
     private func endNavigation() { navigator.stop(); screen = .preview }
     private func finishNavigation() { navigator.stop(); screen = .home }
 
-    private func open(_ place: Place) { query = ""; screen = .place(search.withAddress(place)) }
-    private func openPin(_ id: String) { if let place = featured.first(where: { $0.id == id }) ?? graph.places.first(where: { $0.id == id }) { open(place) } }
+    private func open(_ place: Place) {
+        let place = search.withAddress(place)
+        query = ""
+        placeNear = place.address == nil && place.kind == .place && !place.isDroppedPin ? search.nearestAddress(to: place.coordinate)?.name : nil
+        screen = .place(place)
+    }
     /// Long-press drops a pin while browsing, never over a route or guidance.
     private func dropPin(_ c: Coordinate) {
         guard screen == .home || selectedPlace != nil else { return }
@@ -120,24 +157,31 @@ struct ExploreView: View {
         open(.droppedPin(at: c))
     }
 
+    /// Current location when allowed; otherwise the start the user chose last, unless that is where they are going.
+    private func start(for place: Place) -> Place? {
+        here ?? lastOrigin.flatMap { $0.id == place.id || $0.isCurrentLocation ? nil : $0 }
+    }
+
     private func startDirections(to place: Place) {
-        let fallbackID = place.id == Self.kerryPark ? Self.gasWorks : Self.kerryPark
-        let from = lastOrigin.flatMap { $0.id == place.id ? nil : $0 } ?? featured.first { $0.id == fallbackID } ?? origin
-        origin = from; lastOrigin = from; destination = place
+        origin = start(for: place); destination = place
         saved.addRecent(place)
         screen = .preview
     }
 
-    private var request: RouteRequest { .init(origin: origin, destination: destination, mode: mode, extraMinutes: budget) }
+    private var request: RouteRequest? {
+        guard let origin, let destination else { return nil }
+        return .init(origin: origin, destination: destination, mode: mode, extraMinutes: budget)
+    }
     /// Landscape on a phone: the panel becomes a floating card at the leading edge.
     private var landscape: Bool { verticalSizeClass == .compact }
+    private var coverage: [Coordinate] { [Coordinate(lat: graph.bounds[0], lon: graph.bounds[1]), Coordinate(lat: graph.bounds[2], lon: graph.bounds[3])] }
     private let cardWidth: CGFloat = 330
 
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                SeattleMap(comparison: screen == .preview ? session.comparison : nil, selectedCalmer: selectedCalmer, recenter: recenter, pins: screen == .preview ? [] : featured,
-                           selected: selectedPlace, onPin: openPin, onLongPress: dropPin, guidance: guidance, padding: mapPadding(geo))
+                SeattleMap(comparison: screen == .preview ? session.comparison : nil, selectedCalmer: selectedCalmer, recenter: recenter, selected: mapSelection,
+                           user: userInCoverage, coverage: coverage, onLongPress: dropPin, guidance: guidance, padding: mapPadding(geo))
                     .ignoresSafeArea()
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(screen == .preview ? "Seattle offline map. Routes are also described in the panel." : "Seattle offline map")
@@ -155,10 +199,15 @@ struct ExploreView: View {
         .task(id: previewRequest) {
             if let previewRequest { selectedCalmer = true; session.start(previewRequest) } else { session.cancel() }
         }
+        .task { await locate(prompting: true) }
         .onDisappear { session.cancel(); navigator.stop() }
         .onChange(of: voiceMuted) { navigator.setMuted(voiceMuted) }
+        .onChange(of: userLocation) { followUser() }
         .onChange(of: scenePhase) {
-            if scenePhase == .background { navigator.pause() } else if scenePhase == .active { navigator.resume() }
+            if scenePhase == .background { navigator.pause() } else if scenePhase == .active {
+                navigator.resume()
+                if !asking { Task { await locate(prompting: false) } }
+            }
         }
         .alert("Location is off for PeopleMaps", isPresented: $locationOff) {
             Button("Open Settings") { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } }
@@ -169,9 +218,12 @@ struct ExploreView: View {
         .sheet(item: $sheet) { item in
             switch item {
             case .origin:
-                PlacePicker(title: "Starting from", graph: graph, search: search, selected: origin, saved: saved, location: permission) { origin = $0; lastOrigin = $0 }
+                PlacePicker(title: "Starting from", search: search, selected: origin, saved: saved, location: permission) { place in
+                    origin = place; lastOrigin = place
+                    if place.isCurrentLocation { userLocation = place.coordinate }
+                }
             case .destination:
-                PlacePicker(title: "Going to", graph: graph, search: search, selected: destination, saved: saved) { destination = $0; saved.addRecent($0) }
+                PlacePicker(title: "Going to", search: search, selected: destination, saved: saved) { destination = $0; saved.addRecent($0) }
             case .details:
                 if let comparison = session.comparison { RouteDetails(comparison: comparison) }
             case .about:
@@ -184,7 +236,7 @@ struct ExploreView: View {
     private func mapPadding(_ geo: GeometryProxy) -> UIEdgeInsets {
         let safe = geo.safeAreaInsets
         if screen == .home {
-            // Home frames the featured places: clear of the panel and the map buttons, 48 pt elsewhere.
+            // Home frames the user's neighbourhood or the area we cover: clear of the panel and the map buttons, 48 pt elsewhere.
             if landscape { return UIEdgeInsets(top: safe.top + 48, left: safe.leading + 12 + cardWidth + 24, bottom: safe.bottom + 48, right: safe.trailing + 16 + 44 + 24) }
             return UIEdgeInsets(top: safe.top + 48, left: 48, bottom: safe.bottom + panelHeight + 24, right: 16 + 44 + 24)
         }
@@ -262,7 +314,8 @@ struct ExploreView: View {
                 .accessibilityLabel("About Peoplemaps").accessibilityIdentifier("about")
             Divider().frame(width: 44)
             Button { recenter += 1 } label: { Image(systemName: "viewfinder").frame(width: 44, height: 44) }
-                .accessibilityLabel(screen == .preview ? "Fit routes on map" : "Fit map to Seattle").accessibilityIdentifier("recenter")
+                .accessibilityLabel(screen == .preview && request != nil ? "Fit routes on map" : userInCoverage != nil && screen == .home ? "Centre on your location" : "Fit map to Seattle")
+                .accessibilityIdentifier("recenter")
         }
         .font(.system(size: 19)).foregroundStyle(.primary)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
@@ -294,21 +347,27 @@ struct ExploreView: View {
             Button { screen = .search } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
-                    Text("Search places")
+                    Text("Where to?")
                     Spacer(minLength: 0)
                 }
                 .font(.body).foregroundStyle(.secondary).padding(.horizontal, 12).frame(height: 44)
                 .background(.panelFill, in: RoundedRectangle(cornerRadius: 12)).contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityLabel("Search places").accessibilityIdentifier("search-field")
+            }.buttonStyle(.plain).accessibilityLabel("Where to?").accessibilityHint("Search places and addresses").accessibilityIdentifier("search-field")
             if !saved.favourites.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Favourites").font(.footnote).textCase(.uppercase).foregroundStyle(.secondary).padding(.leading, 16)
                     favouritesList
                 }
             }
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Featured places").font(.footnote).textCase(.uppercase).foregroundStyle(.secondary).padding(.leading, 16)
-                PlaceList(places: featured, minHeight: landscape ? 46 : 52, identifier: { "featured-\($0.id)" }, action: open)
+            if !saved.recents.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Recents").font(.footnote).textCase(.uppercase).foregroundStyle(.secondary).padding(.leading, 16)
+                    PlaceList(places: Array(saved.recents.prefix(3)), minHeight: landscape ? 46 : 52, identifier: { "home-recent-\($0.id)" }, action: open)
+                }
+            }
+            if saved.favourites.isEmpty && saved.recents.isEmpty {
+                Text("Search a place or address, or long-press the map").font(.footnote).foregroundStyle(.secondary)
+                    .padding(.horizontal, 4).accessibilityIdentifier("home-hint")
             }
         }
     }
@@ -336,23 +395,24 @@ struct ExploreView: View {
 
     // MARK: Search
 
-    private var results: [Place] { query.isEmpty ? featured : search.search(query, near: (lastOrigin ?? origin).coordinate) }
+    private var results: [Place] { search.search(query, near: userLocation ?? origin?.coordinate ?? lastOrigin?.coordinate) }
 
     private var searchPanel: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
-                SearchField(text: $query, focused: $searchFocused)
+                SearchField(text: $query, placeholder: "Where to?", focused: $searchFocused)
                 Button("Cancel") { query = ""; screen = .home }.font(.body).accessibilityIdentifier("cancel-search-home")
             }.padding(.horizontal, landscape ? 12 : 16).padding(.top, landscape ? 12 : 4).padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    if results.isEmpty {
+                    if query.isEmpty {
+                        if !saved.recents.isEmpty { resultGroup("Recents", saved.recents, prefix: "recent-") }
+                    } else if results.isEmpty {
                         EmptySearch(count: search.count).padding(.top, 48)
                         AppleMapsLookup(query: query)
                     } else {
-                        resultGroup(query.isEmpty ? "Featured places" : "Top match", Array(results.prefix(query.isEmpty ? results.count : 1)))
-                        if !query.isEmpty && results.count > 1 { resultGroup("Other matches", Array(results.dropFirst())) }
-                        if query.isEmpty && !saved.recents.isEmpty { resultGroup("Recents", saved.recents, prefix: "recent-") }
+                        resultGroup("Top match", Array(results.prefix(1)))
+                        if results.count > 1 { resultGroup("Other matches", Array(results.dropFirst())) }
                     }
                 }.padding(.horizontal, landscape ? 12 : 16).padding(.bottom, 16)
             }
@@ -372,23 +432,23 @@ struct ExploreView: View {
 
     private func placeContent(_ place: Place) -> some View {
         VStack(alignment: .leading, spacing: landscape ? 10 : 16) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(place.shortName).font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
-                    Text(place.subtitle).font(.subheadline).foregroundStyle(.secondary)
-                }.padding(.top, 4)
-                Spacer(minLength: 0)
-                favouriteButton(place)
-                closeButton(label: "Close", id: "close-place") { screen = .home }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(place.shortName).font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader)
+                        Text(place.subtitle(near: placeNear)).font(.subheadline).foregroundStyle(.secondary)
+                            .accessibilityIdentifier("place-subtitle")
+                    }.padding(.top, 4)
+                    Spacer(minLength: 0)
+                    favouriteButton(place)
+                    closeButton(label: "Close", id: "close-place") { screen = .home }
+                }
+                // Full width under the subtitle, clear of the buttons, so it rarely wraps.
+                estimateLine(place)
             }
             if graph.contains(place.coordinate) {
-                Button { startDirections(to: place) } label: {
-                    Label("Directions", systemImage: "arrow.right").font(.body.weight(.semibold))
-                        .frame(maxWidth: .infinity).frame(height: 50)
-                        .foregroundStyle(.directionsText).background(.directionsFill, in: RoundedRectangle(cornerRadius: 12))
-                        .contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityIdentifier("directions")
+                directionsButton(place)
                 Text("Compares the fastest route with a calmer one. Works offline.").font(.footnote).foregroundStyle(.secondary).padding(.horizontal, 4)
             } else {
                 VStack(alignment: .leading, spacing: 4) {
@@ -401,6 +461,82 @@ struct ExploreView: View {
                 .accessibilityElement(children: .combine).accessibilityIdentifier("outside-coverage")
             }
         }
+        .task(id: estimateRequest(for: place)) { await loadEstimate(estimateRequest(for: place)) }
+    }
+
+    /// From where Directions would start, in the last-used mode, when both ends are inside the area we cover.
+    private func estimateRequest(for place: Place) -> RouteRequest? {
+        guard graph.contains(place.coordinate), let from = start(for: place), graph.contains(from.coordinate) else { return nil }
+        return .init(origin: from, destination: place, mode: mode, extraMinutes: budget)
+    }
+
+    /// Runs off the main thread; SwiftUI cancels it when the card closes or shows another place.
+    private func loadEstimate(_ request: RouteRequest?) async {
+        guard let request else { return }
+        let comparison = try? await router.compare(request)
+        guard !Task.isCancelled else { return }
+        estimate = (request, comparison)
+    }
+
+    /// The fastest route's mode, time and distance once estimated, as in Apple Maps ("18 min  4.2 mi"); plain "Directions" until then.
+    private func directionsButton(_ place: Place) -> some View {
+        let ready = readyEstimate(for: place)
+        return Button { startDirections(to: place) } label: {
+            Group {
+                if let ready {
+                    HStack(spacing: 8) {
+                        Image(systemName: ready.request.mode.symbol)
+                        Text("\(ready.comparison.fastest.minutes) min")
+                        Text(NavigationFormat.distance(ready.comparison.fastest.metrics.meters)).fontWeight(.regular).opacity(0.8)
+                    }
+                } else {
+                    Label("Directions", systemImage: "arrow.right")
+                }
+            }
+            .font(.body.weight(.semibold)).monospacedDigit()
+            .frame(maxWidth: .infinity).frame(height: 50)
+            .foregroundStyle(.directionsText).background(.directionsFill, in: RoundedRectangle(cornerRadius: 12))
+            .contentShape(Rectangle())
+        }.buttonStyle(.plain)
+            .accessibilityLabel("Directions")
+            .accessibilityValue(ready.map { ready in
+                let fastest = ready.comparison.fastest
+                return "\(fastest.minutes) min \(ready.request.mode.trip), \(NavigationFormat.distance(fastest.metrics.meters, spoken: true)), estimate without live traffic"
+            } ?? "")
+            .accessibilityIdentifier("directions")
+    }
+
+    private func readyEstimate(for place: Place) -> (request: RouteRequest, comparison: RouteComparison)? {
+        guard let request = estimateRequest(for: place), let estimate, estimate.request == request,
+              let comparison = estimate.comparison else { return nil }
+        return (request, comparison)
+    }
+
+    /// What the button can't say: "From Kerry Park · calmer +3 min, 2 fewer left turns across traffic without a signal".
+    /// Nothing without a start, a quiet placeholder while it computes, and nothing when there's nothing to add.
+    @ViewBuilder private func estimateLine(_ place: Place) -> some View {
+        if let ready = readyEstimate(for: place) {
+            let from = ready.request.origin.isCurrentLocation ? nil : "From \(ready.request.origin.shortName)"
+            let calmer = calmerNote(ready.comparison).map { from == nil ? capitalised($0) : " · " + $0 }
+            if from != nil || calmer != nil {
+                Text("\(Text(from ?? "").foregroundStyle(.secondary))\(Text(calmer ?? "").foregroundStyle(.calmerText))")
+                    .font(.subheadline).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityLabel("\(from ?? "")\(calmer ?? "")")
+                    .accessibilityIdentifier("place-estimate")
+            }
+        } else if estimateRequest(for: place) != nil, estimate?.request != estimateRequest(for: place) {
+            Text("Estimating\u{2026}").font(.subheadline).foregroundStyle(.tertiary).accessibilityIdentifier("place-estimate-loading")
+        }
+    }
+
+    private func capitalised(_ text: String) -> String { text.prefix(1).uppercased() + text.dropFirst() }
+
+    /// "calmer +3 min, 2 fewer unsignalled lefts": what the calmer route costs, then its main benefit.
+    private func calmerNote(_ comparison: RouteComparison) -> String? {
+        guard comparison.calmer != nil, let gain = comparison.reasons.first, !gain.hasPrefix("Tradeoff") else { return nil }
+        let extra = comparison.extraTimeLabel
+        let cost = extra.hasPrefix("+") ? "calmer \(extra)" : extra == "No extra time" ? "calmer, no extra time" : "calmer, \(extra)"
+        return "\(cost), \(gain.prefix(1).lowercased())\(gain.dropFirst())"
     }
 
     private func favouriteButton(_ place: Place) -> some View {
@@ -431,7 +567,7 @@ struct ExploreView: View {
             HStack { Spacer(); closeButton(label: "Close routes", id: "close-preview") { screen = .home } }.frame(height: 30)
             places
             Picker("Travel mode", selection: $mode) {
-                ForEach(TravelMode.allCases) { Text($0.title).tag($0) }
+                ForEach(TravelMode.displayOrder) { Text($0.title).tag($0) }
             }.pickerStyle(.segmented)
             VStack(alignment: .leading, spacing: landscape ? 4 : 6) {
                 Text("Extra time you'd spend for an easier route").font(.footnote).foregroundStyle(.secondary)
@@ -440,9 +576,11 @@ struct ExploreView: View {
                 }.pickerStyle(.segmented)
             }
             ZStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: landscape ? 8 : 14) { stateContent }.id(stateID).transition(.opacity)
+                VStack(alignment: .leading, spacing: landscape ? 8 : 14) {
+                    if request == nil { needsPlace } else { stateContent }
+                }.id(request == nil ? "needs-place" : stateID).transition(.opacity)
             }
-            .animation(Motion.content(reduceMotion), value: stateID)
+            .animation(Motion.content(reduceMotion), value: request == nil ? "needs-place" : stateID)
         }
     }
 
@@ -454,6 +592,15 @@ struct ExploreView: View {
         case let .failed(message): "failed-\(message)"
         case let .ready(comparison): "ready-\(comparison.fastest.id)-\(comparison.calmer?.id ?? "none")"
         }
+    }
+
+    /// No start (location off or unavailable) or no destination yet: say what to do, and show no route.
+    private var needsPlace: some View {
+        card {
+            Text(origin == nil ? "Choose a start to compare routes." : "Choose a destination to compare routes.")
+                .font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                .padding(14).frame(maxWidth: .infinity, minHeight: routeListHeight, alignment: .leading)
+        }.accessibilityIdentifier("needs-place")
     }
 
     private var places: some View {
@@ -472,18 +619,19 @@ struct ExploreView: View {
         .background(.panelFill, in: RoundedRectangle(cornerRadius: 12))
     }
 
-    private func placeButton(place: Place, target: Sheet) -> some View {
+    private func placeButton(place: Place?, target: Sheet) -> some View {
         let origin = target == .origin
+        let empty = origin ? "Choose start" : "Choose destination"
         return Button { sheet = target } label: {
             HStack(spacing: 12) {
                 Group {
                     if origin { Circle().strokeBorder(.primary, lineWidth: 2.5) } else { Circle().fill(.calmer) }
                 }.frame(width: 14, height: 14)
-                Text(place.shortName).font(.body).foregroundStyle(.primary).lineLimit(1)
+                Text(place?.shortName ?? empty).font(.body).foregroundStyle(place == nil ? .secondary : .primary).lineLimit(1)
                 Spacer(minLength: 0)
             }.frame(minHeight: landscape ? 40 : 44).contentShape(Rectangle())
         }.buttonStyle(.plain)
-            .accessibilityLabel("\(origin ? "Starting from" : "Going to"), \(place.shortName)")
+            .accessibilityLabel(place.map { "\(origin ? "Starting from" : "Going to"), \($0.shortName)" } ?? empty)
             .accessibilityIdentifier("choose-\(target.rawValue)")
     }
 
@@ -584,7 +732,7 @@ struct ExploreView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(title).font(.headline)
                 Text(message).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                Button(button) { session.start(request) }.font(.subheadline.weight(.semibold)).padding(.top, 2)
+                Button(button) { if let request { session.start(request) } }.font(.subheadline.weight(.semibold)).padding(.top, 2)
                     .accessibilityIdentifier("retry-route")
             }.padding(14).frame(maxWidth: .infinity, minHeight: routeListHeight, alignment: .leading)
         }

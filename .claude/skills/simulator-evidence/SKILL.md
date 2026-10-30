@@ -20,7 +20,8 @@ macOS with Xcode only. In a cloud or Linux session, say so and leave the screens
 | `--ui-testing` | animations off, muted voice, isolated defaults |
 | `--simulate-route` | Start replays the route instead of using GPS |
 | `--fast-simulation` | replay at 40× |
-| `--real-location` | use the simulated GPS track |
+| `--real-location` | use the simulated GPS track, and ask for location for real (the system prompt on first launch) |
+| `--location-granted LAT,LON` | with `--ui-testing`: location allowed at that spot, no prompt. Without it (and without `--real-location`) location counts as denied |
 | `--slow-routing` | 3 s router delay, to show loading states |
 | `--keep-saved` | keep favourites and recents between UI-test launches |
 

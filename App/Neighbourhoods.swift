@@ -29,6 +29,12 @@ extension Place {
         if isDroppedPin { return coordinateLabel }
         return [categoryLabel, address ?? Neighbourhoods.nearest(to: coordinate)].compactMap { $0 }.joined(separator: " · ")
     }
+    /// The place card's subtitle: "Category · Near 410 Terry Avenue North" when the place has no address of its own
+    /// and `nearest` is the closest indexed one, else `subtitle`.
+    func subtitle(near nearest: String?) -> String {
+        guard let nearest, address == nil, kind == .place, !isDroppedPin, !isCurrentLocation else { return subtitle }
+        return "\(categoryLabel) · Near \(nearest)"
+    }
     var symbol: String {
         if kind == .address { return "mappin" }
         return switch category {
