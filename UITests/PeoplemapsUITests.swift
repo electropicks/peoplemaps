@@ -2,25 +2,48 @@ import XCTest
 import CoreLocation
 
 final class PeoplemapsUITests: XCTestCase {
-    @MainActor private func launch(slow: Bool = false, simulateRoute: Bool = false, fast: Bool = false, realLocation: Bool = false) -> XCUIApplication {
-        XCUIDevice.shared.orientation = .portrait
-        let app = XCUIApplication()
-        app.launchArguments = (slow ? ["--ui-testing", "--slow-routing"] : ["--ui-testing"]) + (simulateRoute ? ["--simulate-route"] : []) + (fast ? ["--fast-simulation"] : []) + (realLocation ? ["--real-location"] : [])
-        app.launch()
-        XCTAssertTrue(app.buttons["featured-relation/1047789"].waitForExistence(timeout: 20))
-        app.buttons["featured-relation/1047789"].tap()
-        XCTAssertTrue(app.buttons["directions"].waitForExistence(timeout: 5))
-        app.buttons["directions"].tap()
-        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
+    /// `--location-granted` value: the app starts as if location were allowed with the device at Kerry Park.
+    private static let atKerryPark = "47.6295,-122.3599"
+
+    /// Gas Works Park previewed from Current location at Kerry Park (location faked as allowed, no system prompt).
+    @MainActor private func launch(slow: Bool = false, simulateRoute: Bool = false, fast: Bool = false) -> XCUIApplication {
+        let app = launchHome(location: Self.atKerryPark, extra: (slow ? ["--slow-routing"] : []) + (simulateRoute ? ["--simulate-route"] : []) + (fast ? ["--fast-simulation"] : []))
+        showGasWorksRoutes(app)
         return app
     }
-    @MainActor private func launchHome() -> XCUIApplication {
+    /// Home with location faked as denied unless `location` is given (`--location-granted`).
+    @MainActor private func launchHome(location: String? = nil, extra: [String] = []) -> XCUIApplication {
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing"]
+        app.launchArguments = ["--ui-testing"] + (location.map { ["--location-granted", $0] } ?? []) + extra
         app.launch()
         XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 20))
         return app
+    }
+    /// Searches from Home and opens the place card for `id`.
+    @MainActor private func openPlace(_ app: XCUIApplication, _ query: String, id: String) {
+        app.buttons["search-field"].tap()
+        let field = app.textFields["search-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText(query)
+        let result = app.buttons["result-\(id)"]
+        XCTAssertTrue(result.waitForExistence(timeout: 5), id)
+        result.tap()
+        XCTAssertTrue(app.buttons["close-place"].waitForExistence(timeout: 5))
+    }
+    @MainActor private func showGasWorksRoutes(_ app: XCUIApplication) {
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
+    }
+    /// Picks a place in the open start or destination picker by searching for it.
+    @MainActor private func pick(_ app: XCUIApplication, _ query: String, id: String) {
+        let field = app.textFields["place-search"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap(); field.typeText(query)
+        let row = app.buttons["place-\(id)"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5), id)
+        row.tap()
     }
     /// The screen, not the app: an app screenshot in landscape comes out rotated and cropped.
     @MainActor private func capture(_ name: String, app: XCUIApplication) {
@@ -30,6 +53,10 @@ final class PeoplemapsUITests: XCTestCase {
     @MainActor func testDrivingCyclingBudgetAndExplanation() {
         let app = launch()
         capture("01-driving-comparison", app: app)
+        // Drive, Cycle, Walk from left to right.
+        let x = ["Drive", "Cycle", "Walk"].map { app.buttons[$0].frame.midX }
+        XCTAssertEqual(x, x.sorted(), "Mode order")
+        XCTAssertTrue(app.buttons["Drive"].isSelected)
         app.buttons["None"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["no-alternative"].waitForExistence(timeout: 10))
         app.buttons["5 min"].tap()
@@ -56,12 +83,25 @@ final class PeoplemapsUITests: XCTestCase {
                                                                          course: course, speed: course < 0 ? 0 : 8, timestamp: Date()))
     }
 
-    /// Fresh permission state, device parked at Kerry Park, real location provider, route preview open.
-    @MainActor private func launchReal(resetPermission: Bool = true) -> XCUIApplication {
+    /// Fresh permission state, device parked at `at`, real location: the system prompt comes up once the map shows.
+    @MainActor private func launchAskingForLocation(answer: String, at: CLLocationCoordinate2D = kerryPark) -> XCUIApplication {
+        XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
-        if resetPermission { app.resetAuthorizationStatus(for: .location) }
-        setDevice(Self.kerryPark)
-        return launch(realLocation: true)
+        app.resetAuthorizationStatus(for: .location)
+        setDevice(at)
+        app.launchArguments = ["--ui-testing", "--real-location"]
+        app.launch()
+        XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 20))
+        answerLocationAlert(answer)
+        return app
+    }
+
+    /// Location allowed at first launch, device at Kerry Park, real location provider, route preview from there open.
+    @MainActor private func launchReal() -> XCUIApplication {
+        let app = launchAskingForLocation(answer: "Allow While Using App")
+        showGasWorksRoutes(app)
+        XCTAssertTrue(app.buttons["choose-origin"].label.contains("Current location"))
+        return app
     }
 
     @MainActor private func answerLocationAlert(_ button: String) {
@@ -75,9 +115,9 @@ final class PeoplemapsUITests: XCTestCase {
         (app.descendants(matching: .any)[id].value as? String) ?? "<missing>"
     }
 
+    /// Permission was given at launch, so Start goes straight into guidance.
     @MainActor private func startGuidanceReal(_ app: XCUIApplication) {
         app.buttons["start-navigation"].tap()
-        answerLocationAlert("Allow While Using App")
         XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 20))
     }
 
@@ -126,9 +166,13 @@ final class PeoplemapsUITests: XCTestCase {
     }
 
     @MainActor func testRealLocationPermissionDeniedKeepsPreview() {
-        let app = launchReal()
+        let app = launchAskingForLocation(answer: "Don\u{2019}t Allow")
+        showGasWorksStartless(app)
+        app.buttons["choose-origin"].tap()
+        pick(app, "Kerry Park", id: "node/693337509")
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
+        // Start still checks: guidance needs location, so it explains how to turn it on.
         app.buttons["start-navigation"].tap()
-        answerLocationAlert("Don\u{2019}t Allow")
         let alert = app.alerts["Location is off for PeopleMaps"]
         XCTAssertTrue(alert.waitForExistence(timeout: 10))
         alert.buttons["Not Now"].tap()
@@ -254,6 +298,7 @@ final class PeoplemapsUITests: XCTestCase {
     @MainActor func testSearchEmptyCancelAndSelection() {
         let app = launch()
         let before = app.buttons["choose-origin"].label
+        XCTAssertTrue(before.contains("Current location"), before)
         app.buttons["choose-origin"].tap()
         let field = app.textFields["place-search"]
         XCTAssertTrue(field.waitForExistence(timeout: 5)); field.tap(); field.typeText("unfindableXYZ")
@@ -261,21 +306,20 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["cancel-search"].tap()
         XCTAssertEqual(app.buttons["choose-origin"].label, before)
         app.buttons["choose-origin"].tap()
-        XCTAssertTrue(app.buttons["place-way/37058377"].waitForExistence(timeout: 5))
-        app.buttons["place-way/37058377"].tap()
+        pick(app, "Fremont Branch", id: "way/37058377")
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["choose-origin"].label.contains("Fremont"))
     }
     @MainActor func testSamePlaceErrorAndRecovery() {
         let app = launch()
-        app.buttons["choose-destination"].tap()
-        app.buttons["place-node/693337509"].tap()
+        app.buttons["choose-origin"].tap()
+        pick(app, "Gas Works", id: "relation/1047789")
         XCTAssertTrue(app.staticTexts["Choose two different places to compare routes."].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["route-fastest"].exists)
         app.buttons["retry-route"].tap()
         XCTAssertTrue(app.staticTexts["Choose two different places to compare routes."].waitForExistence(timeout: 10))
         app.buttons["choose-destination"].tap()
-        app.buttons["place-relation/1047789"].tap()
+        pick(app, "Kerry Park", id: "node/693337509")
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
     }
     @MainActor func testCancelAndResumeComparison() {
@@ -298,7 +342,7 @@ final class PeoplemapsUITests: XCTestCase {
             app.buttons["swap"].tap()
             XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 12))
         }
-        XCTAssertTrue(app.buttons["choose-origin"].label.contains("Kerry"))
+        XCTAssertTrue(app.buttons["choose-origin"].label.contains("Current location"))
         XCTAssertTrue(app.buttons["choose-destination"].label.contains("Gas Works"))
         XCTAssertTrue(app.buttons["10 min"].isSelected)
         XCTAssertTrue(app.buttons["Drive"].isSelected)
@@ -315,17 +359,62 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["recenter"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].exists)
     }
-    @MainActor func testHomeLandsOnFeaturedPlacesWithoutRoutes() {
+    @MainActor func testHomeSaysWhereToWithAHintAndNoRoutes() {
         let app = launchHome()
-        for id in ["relation/1047789", "way/37058377", "way/160545994", "node/693337509"] {
-            XCTAssertTrue(app.buttons["featured-\(id)"].exists, id)
-        }
+        XCTAssertEqual(app.buttons["search-field"].label, "Where to?")
+        XCTAssertTrue(app.staticTexts["home-hint"].exists, "First launch shows a one-line hint")
+        XCTAssertFalse(app.staticTexts["Featured places"].exists)
+        XCTAssertFalse(app.staticTexts["Favourites"].exists)
+        XCTAssertFalse(app.staticTexts["Recents"].exists)
         XCTAssertFalse(app.buttons["route-fastest"].exists)
-        // A street address when the index has one, else the neighbourhood.
-        for (id, subtitle) in [("way/37058377", "731 North 35th Street"), ("way/160545994", "4303 Memorial Way Northeast"), ("node/693337509", "Queen Anne")] {
-            XCTAssertTrue(app.buttons["featured-\(id)"].label.hasSuffix("· \(subtitle)"), id)
-        }
         capture("00-home", app: app)
+        // The search panel has nothing to list before the first search either.
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.textFields["search-input"].placeholderValue, "Where to?")
+        XCTAssertFalse(app.descendants(matching: .any)["search-empty"].exists)
+    }
+    @MainActor func testPlaceCardSubtitleAddressNearbyAddressOrNeighbourhood() {
+        let app = launchHome()
+        // The place's own address; the nearest indexed address within 40 m; else the neighbourhood.
+        for (query, id, subtitle) in [("Fremont Branch", "way/37058377", "Library · 731 North 35th Street"),
+                                      ("Amazon.com Nitro North", "way/1137900798", "Building · Near 2245 Happy Lemon"),
+                                      ("Kerry Park", "node/693337509", "Viewpoint · Near 211 West Highland Drive"),
+                                      ("Montlake Playfield", "way/40833029", "Park · Montlake")] {
+            openPlace(app, query, id: id)
+            XCTAssertEqual(app.staticTexts["place-subtitle"].label, subtitle, id)
+            // Location is off: no start, so no estimate and no placeholder.
+            XCTAssertFalse(app.staticTexts["place-estimate"].exists)
+            XCTAssertFalse(app.staticTexts["place-estimate-loading"].exists)
+            app.buttons["close-place"].tap()
+            XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
+        }
+    }
+    @MainActor func testPlaceCardEstimatesFromCurrentLocationInTheLastMode() {
+        let app = launchHome(location: Self.atKerryPark, extra: ["--slow-routing"])
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        XCTAssertTrue(app.staticTexts["place-estimate-loading"].waitForExistence(timeout: 2), "A quiet placeholder while it computes")
+        XCTAssertTrue(app.buttons["directions"].isHittable, "The estimate never blocks the card")
+        let estimate = app.staticTexts["place-estimate"]
+        XCTAssertTrue(estimate.waitForExistence(timeout: 20))
+        XCTAssertNotNil(estimate.label.range(of: #"^Estimate, no live traffic: \d+ min drive · calmer"#, options: .regularExpression), estimate.label)
+        XCTAssertFalse(estimate.label.localizedCaseInsensitiveContains("safe"))
+        capture("17-place-estimate", app: app)
+        // Closing mid-way and opening another place starts over for the new one.
+        app.buttons["close-place"].tap()
+        openPlace(app, "Fremont Branch", id: "way/37058377")
+        XCTAssertTrue(app.staticTexts["place-estimate-loading"].waitForExistence(timeout: 2))
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
+        app.buttons["Cycle"].tap()
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
+        app.buttons["close-preview"].tap()
+        // Home now lists it under Recents, and its card estimates in the mode used last.
+        let recent = app.buttons["home-recent-way/37058377"]
+        XCTAssertTrue(recent.waitForExistence(timeout: 5))
+        recent.tap()
+        XCTAssertTrue(estimate.waitForExistence(timeout: 20))
+        XCTAssertTrue(estimate.label.contains("min cycle"), estimate.label)
     }
     @MainActor func testSearchFindsParkAndOpensPlaceCard() {
         let app = launchHome()
@@ -342,7 +431,7 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
     }
     @MainActor func testSearchAddressAndRouteToIt() {
-        let app = launchHome()
+        let app = launchHome(location: Self.atKerryPark)
         app.buttons["search-field"].tap()
         let field = app.textFields["search-input"]
         XCTAssertTrue(field.waitForExistence(timeout: 5))
@@ -406,43 +495,65 @@ final class PeoplemapsUITests: XCTestCase {
         return app
     }
 
-    @MainActor func testCurrentLocationOriginWhenAllowed() {
-        XCUIApplication().resetAuthorizationStatus(for: .location)
-        setDevice(Self.fremont)
-        let app = launch()
-        app.buttons["choose-origin"].tap()
-        let row = app.buttons["place-current-location"]
-        XCTAssertTrue(row.waitForExistence(timeout: 5), "Current location should be offered before permission is asked")
-        capture("08-origin-current-location", app: app)
-        row.tap()
-        answerLocationAlert("Allow While Using App")
-        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
-        XCTAssertTrue(app.buttons["choose-origin"].label.contains("Current location"))
-        app.buttons["choose-origin"].tap()
-        XCTAssertTrue(app.buttons["place-current-location"].waitForExistence(timeout: 5))
+    /// Directions to Gas Works with no start: an empty "Choose start" field and no route.
+    @MainActor private func showGasWorksStartless(_ app: XCUIApplication) {
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["needs-place"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.buttons["choose-origin"].label, "Choose start")
+        XCTAssertFalse(app.buttons["route-fastest"].exists)
+        XCTAssertFalse(app.buttons["start-navigation"].exists)
     }
 
-    @MainActor func testCurrentLocationHiddenOnceDenied() {
-        XCUIApplication().resetAuthorizationStatus(for: .location)
-        setDevice(Self.fremont)
-        let app = launch()
-        let before = app.buttons["choose-origin"].label
+    @MainActor func testFirstLaunchAsksForLocationAndStartsFromIt() {
+        let app = launchAskingForLocation(answer: "Allow While Using App", at: Self.fremont)
+        // Home frames the user's neighbourhood once the first fix arrives.
+        let located = NSPredicate { _, _ in app.buttons["recenter"].label == "Centre on your location" }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: located, object: nil)], timeout: 10), .completed)
+        capture("00b-home-at-user", app: app)
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        XCTAssertTrue(app.staticTexts["place-estimate"].waitForExistence(timeout: 20))
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
+        XCTAssertEqual(app.buttons["choose-origin"].label, "Starting from, Current location")
+        capture("08-preview-from-current-location", app: app)
         app.buttons["choose-origin"].tap()
-        let row = app.buttons["place-current-location"]
-        XCTAssertTrue(row.waitForExistence(timeout: 5))
-        row.tap()
-        answerLocationAlert("Don\u{2019}t Allow")
-        XCTAssertTrue(row.waitForNonExistence(timeout: 5))
-        XCTAssertFalse(app.alerts["Location is off for PeopleMaps"].exists, "A refusal here must not nag")
+        XCTAssertTrue(app.buttons["place-current-location"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["place-relation/1047789"].exists, "No featured places")
         app.buttons["cancel-search"].tap()
-        XCTAssertEqual(app.buttons["choose-origin"].label, before)
+        // The next Directions starts from Current location again.
+        app.buttons["close-preview"].tap()
+        openPlace(app, "Fremont Branch", id: "way/37058377")
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
+        XCTAssertEqual(app.buttons["choose-origin"].label, "Starting from, Current location")
+    }
+
+    @MainActor func testDeniedLocationLeavesTheStartEmpty() {
+        let app = launchAskingForLocation(answer: "Don\u{2019}t Allow", at: Self.fremont)
+        XCTAssertFalse(app.alerts["Location is off for PeopleMaps"].exists, "A refusal must not nag")
+        XCTAssertEqual(app.buttons["recenter"].label, "Fit map to Seattle")
+        showGasWorksStartless(app)
+        capture("09-preview-empty-start", app: app)
         app.buttons["choose-origin"].tap()
-        XCTAssertTrue(app.buttons["place-relation/1047789"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.textFields["place-search"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["place-current-location"].exists)
+        XCTAssertFalse(app.buttons["place-relation/1047789"].exists, "No featured places")
+        pick(app, "Kerry Park", id: "node/693337509")
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["choose-origin"].label.contains("Kerry Park"))
+        // Without location, the next Directions reuses the start chosen last.
+        app.buttons["close-preview"].tap()
+        openPlace(app, "Fremont Branch", id: "way/37058377")
+        XCTAssertTrue(app.staticTexts["place-estimate"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.staticTexts["place-estimate"].label.contains("from Kerry Park"), app.staticTexts["place-estimate"].label)
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["choose-origin"].label.contains("Kerry Park"))
     }
 
     @MainActor func testLongPressDropsPinWithDirections() {
-        let app = launchHome()
+        let app = launchHome(location: Self.atKerryPark)
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.3)).press(forDuration: 1.2)
         XCTAssertTrue(app.staticTexts["Dropped pin"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS '° N'")).firstMatch.exists)
@@ -463,7 +574,7 @@ final class PeoplemapsUITests: XCTestCase {
     @MainActor func testFavouriteSurvivesRelaunchAndSwipesAway() {
         var app = launchHome(keepSaved: false)
         XCTAssertFalse(app.staticTexts["Favourites"].exists, "First launch shows no Favourites section")
-        app.buttons["featured-relation/1047789"].tap()
+        openPlace(app, "Gas Works", id: "relation/1047789")
         let star = app.buttons["favourite"]
         XCTAssertTrue(star.waitForExistence(timeout: 5))
         XCTAssertEqual(star.label, "Add to Favourites")
@@ -487,6 +598,9 @@ final class PeoplemapsUITests: XCTestCase {
     @MainActor func testRecentDestinationShowsWhenSearchIsEmpty() {
         let app = launch()
         app.buttons["close-preview"].tap()
+        XCTAssertTrue(app.buttons["home-recent-relation/1047789"].waitForExistence(timeout: 5), "Home lists Recents")
+        XCTAssertFalse(app.staticTexts["home-hint"].exists, "The hint is only for an empty history")
+        capture("12b-home-recents", app: app)
         app.buttons["search-field"].tap()
         XCTAssertTrue(app.buttons["recent-relation/1047789"].waitForExistence(timeout: 5))
         capture("13-search-recents", app: app)
@@ -510,7 +624,7 @@ final class PeoplemapsUITests: XCTestCase {
 
     @MainActor func testFavouritesAndDroppedPinInLandscape() {
         let app = launchHome()
-        app.buttons["featured-way/37058377"].tap()
+        openPlace(app, "Fremont Branch", id: "way/37058377")
         XCTAssertTrue(app.buttons["favourite"].waitForExistence(timeout: 5))
         app.buttons["favourite"].tap()
         app.buttons["close-place"].tap()
