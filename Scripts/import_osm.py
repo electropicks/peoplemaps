@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Deterministic, deliberately conservative OSM + elevation to routing-graph compiler. No network."""
-import array, collections, gzip, hashlib, json, math, os, pathlib, struct
+import argparse, array, collections, gzip, hashlib, json, math, os, pathlib, struct
 import build_search
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -9,6 +9,7 @@ OUT = pathlib.Path(os.environ.get('PEOPLEMAPS_OUT', ROOT / 'Core/Resources'))
 DATA = pathlib.Path(os.environ.get('PEOPLEMAPS_DATA', ROOT / 'Data'))
 def shown(path):
     return str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else path.name
+REPORT = DATA  # provenance.json; --out redirects it with the outputs
 BBOX = [float(x) for x in os.environ['PEOPLEMAPS_BBOX'].split(',')] if os.environ.get('PEOPLEMAPS_BBOX') else [47.615, -122.390, 47.678, -122.300]  # S,W,N,E
 MODES = ['drive', 'bike', 'walk']
 ROAD = {'motorway','motorway_link','trunk','trunk_link','primary','primary_link',
@@ -317,7 +318,67 @@ def compile_restrictions(relations):
                 unsupported.append({'osmID':r['id'],'mode':mode})
     return restrictions, excluded, unsupported
 
+# Binary graph, schema v3 (little-endian, every section padded to 8 bytes). Read by Core/GraphBinary.swift.
+#   header 64 B: magic 'PMGB', u32 version, 4 x f64 bounds (S,W,N,E), u32 counts: strings, nodes, segments, points, json bytes
+#   strings:  u32 offsets[count+1] then UTF-8 bytes; names, highway kinds, surfaces etc. are indices into it (NIL = none)
+#   nodes:    i64 osm[n], f64 lat[n], f64 lon[n], f64 z[n], u8 flags[n] (1 signal, 2 pedestrianSignal)
+#   points:   i32 lon,lat pairs in 1e-6 degrees (the JSON rounded to 6 decimals, so this is lossless)
+#   segments: 120 B records, SEGMENT then two DIRECTION (forward, reverse); a direction with modes == 0 is absent
+#   json:     {"restrictions": [...], "places": [...]} (small)
+NIL = 0xFFFFFFFF
+SEGMENT = struct.Struct('<q3d10I2iIBBBx')
+DIRECTION = struct.Struct('<dIBBBx')
+MODE_BITS = {'drive': 1, 'bike': 2, 'walk': 4}
+CONTROL_CODES = {None: 0, 'signal': 1, 'stop': 2, 'allstop': 3, 'yield': 4}
+ROAD_CODES = {None: 0, 'local': 1, 'arterial': 2, 'busy': 3}
+
+def pad8(b): return b + b'\0' * (-len(b) % 8)
+
+def graph_binary(graph):
+    strings = {}
+    def sid(v):
+        return NIL if v is None else strings.setdefault(v, len(strings))
+    for n in graph['names']: sid(n)
+    records = []; points = array.array('i'); nodes = graph['nodes']
+    for s in graph['segments']:
+        g = s['g']; start = len(points) // 2
+        points.extend(int(round(c * 1e6)) for c in g)
+        assert all(abs(points[-len(g) + i] / 1e6 - c) == 0 for i, c in enumerate(g)), 'coordinate is not a 6-decimal value'
+        pb = s.get('parkedBothSides'); cr = s.get('crossing')
+        flags = (0 if pb is None else 2 if pb else 1) | (4 if s.get('movableBridge') else 0) | (8 if cr else 0)
+        lanes = s.get('lanes', -1); steps = s.get('steps', -1)
+        records.append(SEGMENT.pack(s['way'], s['m'], s['up'], s['down'], s['a'], s['b'], start, len(g) // 2,
+            s['n'], sid(s['hw']), sid(s.get('maxspeed')), sid(s.get('surface')), sid(s.get('sidewalk')), sid(s.get('footway')),
+            steps, lanes, sid(cr['control']) if cr else NIL, flags, ROAD_CODES[cr['road']] if cr else 0, ROAD_CODES[s.get('besideRoad')]))
+        for key in 'fr':
+            d = s.get(key)
+            if not d:
+                records.append(DIRECTION.pack(float('nan'), NIL, 0, 0, 0)); continue
+            ltl = d.get('leftTurnLane')
+            records.append(DIRECTION.pack(d.get('approachGrade', float('nan')), sid(d.get('facility')),
+                sum(MODE_BITS[m] for m in d['modes']), CONTROL_CODES[d.get('control')], 0 if ltl is None else 2 if ltl else 1))
+    table = list(strings)
+    encoded = [t.encode() for t in table]
+    offsets = array.array('I', [0]); [offsets.append(offsets[-1] + len(e)) for e in encoded]
+    tail = json.dumps({'restrictions': graph['restrictions'], 'places': graph['places']}, separators=(',', ':')).encode()
+    out = bytearray(struct.pack('<4sI4d5I', b'PMGB', 3, *graph['bounds'], len(table), len(nodes), len(graph['segments']), len(points) // 2, len(tail)))
+    out += b'\0' * (64 - len(out))
+    out += pad8(offsets.tobytes() + b''.join(encoded))
+    out += pad8(array.array('q', [n['osm'] for n in nodes]).tobytes())
+    for key in ('lat', 'lon', 'z'): out += array.array('d', [n[key] for n in nodes]).tobytes()
+    out += pad8(bytes((1 if n.get('signal') else 0) | (2 if n.get('pedestrianSignal') else 0) for n in nodes))
+    out += pad8(points.tobytes())
+    out += b''.join(records)
+    out += pad8(tail)
+    return bytes(out)
+
 def main():
+    global OUT, REPORT
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--out', help='write all outputs here instead of the repository (for tests)')
+    ap.add_argument('--json-graph', help='also write the intermediate graph as JSON to this path (for tests)')
+    args = ap.parse_args()
+    if args.out: OUT = REPORT = pathlib.Path(args.out)
     OUT.mkdir(parents=True,exist_ok=True)
     elements, sources = read_sources()
     dem_path = DATA/'seattle-dem.tif.gz'
@@ -460,12 +521,12 @@ def main():
         places.append({'id':f'{typ}/{i}','name':name,'lat':round(c[1],7),'lon':round(c[0],7),'category':category})
     places.sort(key=lambda p:p['name'].casefold())
     graph={'schemaVersion':2,'bounds':BBOX,'names':list(names),'nodes':nodes,'segments':segments,'restrictions':mapped,'places':places}
-    # Shipped gzipped (39 MB -> ~5 MB installed); mtime=0 keeps the archive byte-for-byte reproducible.
-    graph_gz=gzip.compress((json.dumps(graph,separators=(',',':'))+'\n').encode(),compresslevel=9,mtime=0)
-    (OUT/'seattle-graph.json.gz').write_bytes(graph_gz)
+    graph_bin=graph_binary(graph)
+    (OUT/'seattle-graph.bin').write_bytes(graph_bin)
+    if args.json_graph: pathlib.Path(args.json_graph).write_text(json.dumps(graph,separators=(',',':'))+'\n')
     # Search reads its own, newer extract (places and addresses), kept apart so the graph's inputs don't change.
     search_json, search_source = read_snapshot('seattle-search'); sources.append(search_source)
-    search=build_search.build(search_json, places, nodes, segments, inside, hashlib.sha256(graph_gz).hexdigest(), OUT/'seattle-search.sqlite.gz')
+    search=build_search.build(search_json, places, nodes, segments, inside, hashlib.sha256(graph_bin).hexdigest(), OUT/'seattle-search.sqlite.gz')
     (OUT/'seattle-map.geojson').write_text(json.dumps({'type':'FeatureCollection','features':features},separators=(',',':'))+'\n')
     directed={mode:sum(mode in s.get(k,{}).get('modes',[]) for s in segments for k in 'fr') for mode in MODES}
     report={'sources':sources,'bounds':BBOX,'nodes':len(nodes),'segments':len(segments),'directedEdgesByMode':directed,
@@ -477,7 +538,7 @@ def main():
             'crossingSegments':collections.Counter(str(s['crossing']['control']) for s in segments if 'crossing' in s),
             'signalNodes':sum('signal' in n for n in nodes),
             'structureNodesInterpolated':len(lifted),'search':search}
-    (DATA/'provenance.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
+    (REPORT/'provenance.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
     print(json.dumps({k:v for k,v in report.items() if k!='unsupportedRestrictionsConservativelyExcluded'},indent=2,sort_keys=True))
     print('Conservative restriction exclusions:',len(unsupported))
 

@@ -179,11 +179,8 @@ public struct StreetGraph: Sendable {
     public static func bundled() throws -> StreetGraph {
         // Coverage spike: PEOPLEMAPS_GRAPH points the benchmark at an alternative graph file.
         let override = ProcessInfo.processInfo.environment["PEOPLEMAPS_GRAPH"].map { URL(fileURLWithPath: $0) }
-        guard let url = override ?? Bundle.module.url(forResource: "seattle-graph.json", withExtension: "gz"),
-              let json = try Data(contentsOf: url).gunzipped() else { throw RoutingError.missingData }
-        let file = try JSONDecoder().decode(GraphFile.self, from: json)
-        guard file.schemaVersion == 2 else { throw RoutingError.missingData }
-        let graph = file.graph()
+        guard let url = override ?? Bundle.module.url(forResource: "seattle-graph", withExtension: "bin") else { throw RoutingError.missingData }
+        let graph = try GraphBinary.decode(Data(contentsOf: url, options: .mappedIfSafe))
         try graph.validate()
         return graph
     }
@@ -216,52 +213,6 @@ public struct StreetGraph: Sendable {
         return ranked.map(\.place)
     }
     public func contains(_ c: Coordinate) -> Bool { c.lat >= bounds[0] && c.lat <= bounds[2] && c.lon >= bounds[1] && c.lon <= bounds[3] }
-}
-
-/// On-disk schema v2: undirected segments with per-direction attributes, written by Scripts/import_osm.py.
-private struct GraphFile: Decodable {
-    struct Direction: Decodable {
-        let modes: [TravelMode]
-        let facility: String?
-        let control: TrafficControl?
-        let approachGrade: Double?
-        let leftTurnLane: Bool?
-    }
-    struct Segment: Decodable {
-        let way: Int64, a: Int, b: Int, g: [Double], m: Double, hw: String, n: Int, up: Double, down: Double
-        let lanes: Int?, maxspeed: String?, surface: String?, sidewalk: String?, parkedBothSides: Bool?
-        let movableBridge: Bool?, footway: String?, steps: Int?, crossing: Crossing?, besideRoad: RoadClass?
-        let f: Direction?, r: Direction?
-    }
-    let schemaVersion: Int
-    let bounds: [Double]
-    let names: [String]
-    let nodes: [GraphNode]
-    let segments: [Segment]
-    let restrictions: [TurnRestriction]
-    let places: [Place]
-
-    func graph() -> StreetGraph {
-        var edges: [GraphEdge] = []
-        edges.reserveCapacity(segments.count * 2)
-        for s in segments {
-            let points = stride(from: 0, to: s.g.count - 1, by: 2).map { Coordinate(lat: s.g[$0 + 1], lon: s.g[$0]) }
-            let twoWay = (s.f?.modes.contains(.drive) ?? false) && (s.r?.modes.contains(.drive) ?? false)
-            for (direction, forward) in [(s.f, true), (s.r, false)] {
-                guard let direction, !direction.modes.isEmpty else { continue }
-                var e = GraphEdge(id: edges.count, from: forward ? s.a : s.b, to: forward ? s.b : s.a, wayID: s.way,
-                                  coordinates: forward ? points : points.reversed(), meters: s.m, modes: direction.modes,
-                                  highway: s.hw, name: names[s.n], surface: s.surface, maxspeed: s.maxspeed, lanes: s.lanes)
-                e.sidewalk = s.sidewalk; e.parkedBothSides = s.parkedBothSides; e.movableBridge = s.movableBridge ?? false
-                e.footway = s.footway; e.steps = s.steps; e.crossing = s.crossing; e.besideRoad = s.besideRoad
-                e.facility = direction.facility ?? "none"; e.control = direction.control
-                e.approachGrade = direction.approachGrade; e.leftTurnLane = direction.leftTurnLane
-                e.climb = forward ? s.up : s.down; e.descent = forward ? s.down : s.up; e.twoWayForDriving = twoWay
-                edges.append(e)
-            }
-        }
-        return StreetGraph(bounds: bounds, nodes: nodes, edges: edges, restrictions: restrictions, places: places)
-    }
 }
 
 public struct RouteRequest: Hashable, Sendable {

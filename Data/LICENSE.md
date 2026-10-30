@@ -5,7 +5,7 @@
 See [OSM copyright and attribution](https://www.openstreetmap.org/copyright).
 
 The original snapshots in `Data/*.json.gz` and the derived databases in
-`Core/Resources/seattle-graph.json.gz` (gzipped JSON), `Core/Resources/seattle-map.geojson`
+`Core/Resources/seattle-graph.bin` (binary graph), `Core/Resources/seattle-map.geojson`
 and `Core/Resources/seattle-search.sqlite.gz` (gzipped SQLite search index)
 are distributed under ODbL 1.0, separately from the source-code MIT license.
 This repository supplies the underlying data and deterministic transformation
