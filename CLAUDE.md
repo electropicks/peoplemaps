@@ -10,6 +10,8 @@ An offline iOS maps app for Seattle that picks the calmer route a local would ch
 - `Data/`: OSM snapshots, elevation, provenance, licences.
 - `Core/Resources/`: generated data. Never hand-edit it.
 - `Docs/`: design docs and spikes. Read the relevant one before changing an area: `STRESS_MODEL`, `NAVIGATION`, `SEARCH`, `COVERAGE_SPIKE`, `VOICE_SPIKE`.
+  - `REPORTS`: in-app problem reports: the snapshot and report schema, on-device storage, the Workers/D1 backend, the GitHub issue and the replay tool.
+  - `PRIVACY`: the user-facing privacy policy. It must say exactly what `REPORTS` collects; change them together.
 
 ## Commands
 
