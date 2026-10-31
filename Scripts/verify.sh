@@ -41,7 +41,11 @@ reproduce() {
     echo "SQLite $built here, $shipped shipped: search index and provenance not compared"
   fi
   for f in "${files[@]}"; do
-    cmp -s "$out/$f" "Core/Resources/$f" || { echo "differs from a fresh import: Core/Resources/$f"; bad=1; }
+    cmp -s "$out/$f" "Core/Resources/$f" || {
+      echo "differs from a fresh import: Core/Resources/$f"; bad=1
+      # The index's bytes depend on the zlib and SQLite builds too; say which layer differs.
+      [[ "$f" == *.sqlite.gz ]] && python3 Scripts/compare_search_index.py "$out/$f" "Core/Resources/$f"
+    }
   done
   return $bad
 }

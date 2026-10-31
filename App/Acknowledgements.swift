@@ -7,6 +7,8 @@ struct AcknowledgementsView: View {
             Section {
                 credit("OpenStreetMap", "© OpenStreetMap contributors. Streets, paths and places, under the Open Database License 1.0.",
                        link: "https://www.openstreetmap.org/copyright")
+                credit("Overture Maps Foundation", "Places: Overture Maps Foundation (release 2026-10-21), with data from Meta, Microsoft, BrightQuery, Foursquare, AllThePlaces, Uberall, Birdeye and DAC. Licences: CDLA Permissive 2.0, Apache 2.0, CC0 1.0. Foursquare data © Foursquare Labs, Inc. Combined with OpenStreetMap data in the search index, provided as is.",
+                       link: "https://docs.overturemaps.org/attribution/")
                 credit("USGS 3D Elevation Program", "Elevation from the U.S. Geological Survey 3DEP ground model, public domain.",
                        link: "https://www.usgs.gov/3d-elevation-program")
             } header: { Text("Data") }
