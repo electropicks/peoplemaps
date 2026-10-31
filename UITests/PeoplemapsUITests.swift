@@ -283,11 +283,15 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["start-navigation"].tap()
         let mute = app.buttons["guidance-mute"]
         XCTAssertTrue(mute.waitForExistence(timeout: 10))
-        XCTAssertEqual(mute.label, "Unmute voice", "UI tests start muted")
-        mute.tap()
-        XCTAssertEqual(mute.label, "Mute voice")
-        mute.tap()
-        XCTAssertEqual(mute.label, "Unmute voice")
+        waitForLabel(mute, "Unmute voice", "UI tests start muted")
+        mute.tap(); waitForLabel(mute, "Mute voice")
+        mute.tap(); waitForLabel(mute, "Unmute voice")
+    }
+    /// The label changes inside an animation, so a read straight after the tap can still see the old one.
+    @MainActor private func waitForLabel(_ element: XCUIElement, _ label: String, _ note: String = "") {
+        let changed = NSPredicate { _, _ in element.label == label }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: changed, object: nil)], timeout: 5), .completed,
+                       "Label is '\(element.label)', wanted '\(label)'. \(note)")
     }
     @MainActor func testSimulatedGuidanceArrivesAndDoneReturnsHome() {
         let app = launch(simulateRoute: true, fast: true)
