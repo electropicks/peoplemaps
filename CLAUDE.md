@@ -16,6 +16,7 @@ An offline iOS maps app for Seattle that picks the calmer route a local would ch
 ```bash
 Scripts/verify.sh                 # importer tests, data reproduction, Swift tests, iOS build (macOS)
 Scripts/verify.sh --ui            # plus the UI suite (macOS)
+Scripts/evidence.sh               # EvidenceTour screenshots, light and dark (macOS; CI uploads them as the "evidence" artifact)
 python3 Scripts/import_osm.py     # regenerate Core/Resources from Data/
 python3 Scripts/generate_project.py   # after adding or removing App/ or UITests/ files
 ```

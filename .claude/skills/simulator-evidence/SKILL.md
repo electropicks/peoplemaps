@@ -5,7 +5,9 @@ description: Run PeopleMaps in the iOS Simulator and capture screenshots or a de
 
 # Simulator evidence
 
-macOS with Xcode only. In a cloud or Linux session, say so and leave the screenshots to the Mac or CI.
+macOS with Xcode only. In a cloud or Linux session, say so and get pictures from CI instead: label the PR `ui-tests`, and the
+`ui-tests` job runs `Scripts/evidence.sh` and uploads `EvidenceTour`'s screenshots (light and dark) as the `evidence` workflow
+artifact. Say in the PR what was not seen on a device.
 
 ## Setup
 
@@ -33,7 +35,8 @@ xcrun simctl ui $UDID appearance dark          # then light
 xcrun simctl io $UDID screenshot Evidence/<screen>-<light|dark>.png
 ```
 
-- UI tests save screenshots through `capture(...)` into the test results.
+- UI tests save screenshots through `capture(...)` into the test results. `Scripts/evidence.sh [OUT] [UDID]` runs
+  `EvidenceTour` in dark and light and exports its attachments as `OUT/<name>-<light|dark>.png`.
 - Landscape: `XCUIDevice.shared.orientation` in a test.
 - Demo video: `UITests/DemoTour.swift` (skipped unless `TEST_RUNNER_PEOPLEMAPS_DEMO=1`), recorded with `xcrun simctl io $UDID recordVideo --codec h264`.
 - Name files `Evidence/<feature>-<variant>-<light|dark>.png`. Look at every screenshot before citing it.
