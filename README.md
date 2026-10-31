@@ -50,6 +50,7 @@ the route.
 ```sh
 Scripts/verify.sh                       # importer, data reproduction, Swift tests, iOS build
 Scripts/verify.sh --ui                  # plus the UI suite on a "PeopleMaps Verify" simulator
+Scripts/evidence.sh                     # EvidenceTour screenshots into Evidence/ui-attachments/, light and dark
 python3 Scripts/import_osm.py           # rebuild the graph from the archived OSM snapshots
 python3 Scripts/generate_project.py     # regenerate the Xcode project after adding files
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \

@@ -32,11 +32,12 @@ jobs:
           key: spm-${{ hashFiles('Peoplemaps.xcodeproj/project.pbxproj', 'Package.swift') }}
       - run: PEOPLEMAPS_XCODE="$(xcode-select -p)" Scripts/verify.sh
 
-  # Push to main, a manual run, or a PR labelled "ui-tests".
+  # Push to main, a manual run, or a PR labelled "ui-tests". The EvidenceTour screenshots (light and dark) are
+  # uploaded as the "evidence" artifact, so a PR can carry pictures without a Mac.
   ui-tests:
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ui-tests')
     runs-on: macos-26
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -44,3 +45,11 @@ jobs:
           path: ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
           key: spm-${{ hashFiles('Peoplemaps.xcodeproj/project.pbxproj', 'Package.swift') }}
       - run: PEOPLEMAPS_XCODE="$(xcode-select -p)" Scripts/verify.sh --fast --ui
+      - run: PEOPLEMAPS_XCODE="$(xcode-select -p)" Scripts/evidence.sh evidence
+        if: ${{ !cancelled() }}
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: evidence
+          path: evidence
+          if-no-files-found: warn
