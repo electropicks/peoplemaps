@@ -2,7 +2,8 @@
 # Run UITests/EvidenceTour.swift in dark and light and save its screenshots as PNGs. macOS with Xcode only.
 #   Scripts/evidence.sh            into Evidence/ui-attachments/, on the "PeopleMaps Verify" simulator
 #   Scripts/evidence.sh OUT UDID   into OUT, on that simulator
-# CI runs this in the ui-tests job and uploads OUT as the "evidence" workflow artifact.
+# CI runs this in the ui-tests job with OUT=ci-evidence, not "evidence": on the runner's case-insensitive disk that is
+# Evidence/, the committed screenshots. It uploads OUT as the "evidence" workflow artifact.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 out="${1:-Evidence/ui-attachments}"; udid="${2:-}"

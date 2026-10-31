@@ -45,11 +45,11 @@ jobs:
           path: ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
           key: spm-${{ hashFiles('Peoplemaps.xcodeproj/project.pbxproj', 'Package.swift') }}
       - run: PEOPLEMAPS_XCODE="$(xcode-select -p)" Scripts/verify.sh --fast --ui
-      - run: PEOPLEMAPS_XCODE="$(xcode-select -p)" Scripts/evidence.sh evidence
+      - run: PEOPLEMAPS_XCODE="$(xcode-select -p)" Scripts/evidence.sh ci-evidence
         if: ${{ !cancelled() }}
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
           name: evidence
-          path: evidence
+          path: ci-evidence
           if-no-files-found: warn
