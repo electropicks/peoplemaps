@@ -225,8 +225,8 @@ Proposed (with `ux-round-1`): a persistent system sheet,
   on the sheet, like Apple Maps.
 - **Recents** below, a vertical `panelFill` list with category badges,
   visible from the medium detent. No Featured places (ux-round-1). Empty
-  first launch shows one line instead: "Routes with fewer stressful turns,
-  for a few minutes more." (D4).
+  first launch shows one line instead: "Search a place or address, or
+  long-press the map" (D4).
 - Footer row "About PeopleMaps" (`info.circle`), secondary.
 
 ```
@@ -310,7 +310,7 @@ Proposed, top to bottom:
    `ux-round-1`), destination row, swap button trailing.
 3. **Mode picker**: segmented, order **Drive, Cycle, Walk**, each with its
    symbol and text (icon-only fails at large type). `.sensoryFeedback(.selection)`.
-4. **Extra time**: `Picker(.menu)` row "Extra time for a calmer route: 5 min ›"
+4. **Extra time**: `Picker(.menu)` row "Most extra time for a calmer route: 10 min ›"
    at the medium detent (D5); full segmented at the large detent and in
    landscape.
 5. **"Calmer means: Default ›"** row (`slider.horizontal.3`), directly under
@@ -331,7 +331,7 @@ Proposed, top to bottom:
 │ │ ● Gas Works Park        │ │
 │ └────────────────────────┘ │
 │ [🚗 Drive|🚲 Cycle|🚶 Walk] │
-│ Extra time: 5 min        ›  │
+│ Extra time: 10 min       ›  │
 │ ⚙ Calmer means: Default  ›  │
 │ ┌────────────────────────┐ │
 │ │▌Calmer 12 min · 5.2 km ✓│ │

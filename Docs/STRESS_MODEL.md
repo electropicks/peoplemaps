@@ -264,6 +264,65 @@ Routing on the real sidewalk-and-crossing network makes the router weigh
 
 ## Choosing and explaining routes
 
+### What ships
+
+Changed on 1 November 2026, after the owner's call: the target audience would
+often add 5 to 10 minutes for a calmer route, so bias for calm.
+
+**Search.** One fastest search, then six searches minimizing `seconds + weight ×
+stress` at weights 0.25, 0.5, 1, 2, 4 and 8. The extra-time limit does not bound
+or steer these. It only filters their results afterwards, so 2, 5 and 10 minutes
+cost the same router time; "None" runs the fastest search alone.
+
+**Selection** (`NativeRouter.selectCalmer`). A candidate can be the calmer route
+when it fits the limit (default 10 minutes), has at least 5% and 30 equivalent
+seconds less stress than the fastest route, shares under 90% of its length with
+it, and removes more than 15 equivalent seconds of stress per extra minute. Of
+those, the one with the most `stress saved − 0.25 × extra seconds` wins.
+
+**What the app shows first.** When a calmer route exists the preview lists it
+first and selects it, resetting on every new request, and Start follows the
+selection. This already leaned calm and did not change, including for routes
+that cost only seconds. The place card's Directions button still shows the
+fastest route's time, with the calmer route's cost on the line above it.
+
+**Why the 15 per minute.** The limit is a maximum, not a target, and the old rule
+took the least stressful candidate inside it however little that last stretch
+bought. At 10 minutes that means paying for scraps: Ballard Library to Hyson by
+car would go from 2 extra minutes at stress 848 to 5.6 extra minutes at stress
+828. Rule 4 prices one equivalent second at one second, so a neutral rate would be
+60 per minute; 15 is the bias for calm. An unsignalled left (120) can justify up
+to 8 extra minutes here, against 2 in the model alone, which fits the owner's 5
+to 10. Netting the time, rather than only filtering on it, is what stops a slower
+route winning when a nearly-as-calm quicker one exists. Like every weight here,
+15 is a hypothesis.
+
+Measured on 150 seeded random pairs of bundled places, in each mode. Extra time
+is for trips that show a calmer route; stress saved is against the fastest route.
+
+| Mode | Rule, limit | Calmer shown | Extra min, median / p90 / max | Stress saved, median |
+| --- | --- | ---: | ---: | ---: |
+| Drive | old, 5 min | 126 | 1.5 / 3.0 / 4.6 | 335 (44%) |
+| Drive | old, 10 min | 126 | 1.7 / 3.7 / 8.0 | 343 (45%) |
+| Drive | **new, 10 min** | 126 | 1.5 / 3.1 / 8.0 | 343 (44%) |
+| Bike | old, 5 min | 142 | 2.1 / 4.4 / 5.0 | 908 (49%) |
+| Bike | old, 10 min | 143 | 3.3 / 8.4 / 9.5 | 1016 (54%) |
+| Bike | **new, 10 min** | 143 | 2.9 / 8.1 / 9.3 | 1016 (53%) |
+| Walk | old, 5 min | 146 | 3.3 / 4.6 / 5.0 | 504 (50%) |
+| Walk | old, 10 min | 148 | 5.7 / 9.0 / 10.0 | 639 (59%) |
+| Walk | **new, 10 min** | 148 | 5.1 / 8.4 / 9.7 | 639 (59%) |
+
+Against the old rule at 10 minutes, the new one keeps nearly all the extra calm
+for less time: mean stress change from the old 5 minute default of −5, −106 and
+−99 (drive, bike, walk) rather than −6, −108 and −104, at a mean of 0.11, 1.46
+and 2.02 extra minutes rather than 0.24, 1.68 and 2.50. Trips that end up less
+calm than the old default give up at most 39 equivalent seconds. A limit beyond
+10 adds little: at 20 minutes under the old rule, drive is unchanged, bike saves
+54% either way, and walk goes from 59% to 65% for 2.6 more minutes at the median.
+`Evidence/route-audit.json` (`peoplemaps-audit`) has per-trip numbers.
+
+### Still to consider
+
 - **Use every best trade-off, not six fixed weights.** For each trip, compute
   the routes where you can't get less stress without more time (the Pareto
   frontier). The extra-time control moves along that curve instantly.
