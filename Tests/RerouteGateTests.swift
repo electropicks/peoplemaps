@@ -121,10 +121,33 @@ final class RerouteGateTests: XCTestCase {
     func testJitterWhileStandingStillIsNotTravel() {
         var gate = RerouteGate(mode: .walk)
         gate.routeInstalled(at: t0.addingTimeInterval(-60))
-        // 100 m gap; overdue needs 2 x 100 + threshold of travel. Twenty-metre wobbles at 30 m accuracy, speed 0.
+        // 100 m gap; overdue needs 2 x 100 + threshold of travel. Ten-metre wobbles at 15 m accuracy (Ferrostar never delivers worse than 25), speed 0.2.
         for s in 0..<200 {
-            XCTAssertFalse(gate.shouldReroute(fix(100, accuracy: 30, speed: 0.2, x: s % 2 == 0 ? 0 : 20, seconds: Double(s))), "second \(s)")
+            XCTAssertFalse(gate.shouldReroute(fix(100, accuracy: 15, speed: 0.2, x: s % 2 == 0 ? 0 : 10, seconds: Double(s))), "second \(s)")
         }
+    }
+
+    func testSlowWalkerPastTheStartWithoutReachingItEventuallyReroutes() {
+        var gate = RerouteGate(mode: .walk)
+        gate.routeInstalled(at: t0.addingTimeInterval(-60))
+        // 100 m gap held constant while walking 1.2 m/s with fixes about 1 m apart: overdue after 2 x 100 + 30 + 10 + 1.2 m.
+        var first: Int?
+        for s in 0..<400 {
+            if gate.shouldReroute(fix(100, accuracy: 10, speed: 1.2, x: Double(s) * 1.2, seconds: Double(s))) { first = s; break }
+        }
+        let s = try! XCTUnwrap(first)
+        XCTAssertGreaterThan(s, 150)
+        XCTAssertLessThan(s, 215)
+    }
+
+    func testNilSpeedUsesStepsLargerThanAccuracyAsTravel() {
+        var gate = RerouteGate(mode: .walk)
+        gate.routeInstalled(at: t0.addingTimeInterval(-60))
+        // Without a speed, steps under the accuracy are jitter and never accrue; steps over it do.
+        for s in 0..<200 { XCTAssertFalse(gate.shouldReroute(fix(100, accuracy: 10, speed: nil, x: s % 2 == 0 ? 0 : 5, seconds: Double(s))), "jitter \(s)") }
+        var rerouted = false
+        for s in 0..<100 where gate.shouldReroute(fix(100, accuracy: 10, speed: nil, x: 20 + Double(s) * 12, seconds: 200 + Double(s))) { rerouted = true; break }
+        XCTAssertTrue(rerouted)
     }
 
     func testDistanceToSegmentAndPolyline() {
