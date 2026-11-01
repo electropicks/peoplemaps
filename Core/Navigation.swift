@@ -4,6 +4,27 @@ public enum TurnDirection: Sendable, Equatable { case slightLeft, left, sharpLef
 
 public enum Maneuver: Sendable, Equatable { case depart, turn(TurnDirection), continueOnto, cross, arrive }
 
+extension Maneuver {
+    /// The SF Symbol the guidance banner draws for this maneuver; a turn's arrow points the way the instruction says.
+    public var symbolName: String {
+        switch self {
+        case .depart, .continueOnto: "arrow.up"
+        case .cross: "figure.walk"
+        case .arrive: "mappin.circle.fill"
+        case let .turn(direction):
+            switch direction {
+            case .slightLeft: "arrow.up.left"
+            case .left: "arrow.turn.up.left"
+            case .sharpLeft: "arrow.turn.down.left"
+            case .slightRight: "arrow.up.right"
+            case .right: "arrow.turn.up.right"
+            case .sharpRight: "arrow.turn.down.right"
+            case .uTurn: "arrow.uturn.left"
+            }
+        }
+    }
+}
+
 public struct NavigationStep: Sendable {
     public let maneuver: Maneuver
     public let instruction: String

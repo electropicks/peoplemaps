@@ -4,6 +4,7 @@ import CoreLocation
 final class PeoplemapsUITests: XCTestCase {
     /// `--location-granted` value: the app starts as if location were allowed with the device at Kerry Park.
     private static let atKerryPark = "47.6295,-122.3599"
+    private static let atBallardLibrary = "47.6698,-122.3843"
 
     /// Gas Works Park previewed from Current location at Kerry Park (location faked as allowed, no system prompt).
     @MainActor private func launch(slow: Bool = false, simulateRoute: Bool = false, fast: Bool = false) -> XCUIApplication {
@@ -84,9 +85,11 @@ final class PeoplemapsUITests: XCTestCase {
     // MARK: Real location (Simulator location injection and the system permission alert)
 
     private static let kerryPark = CLLocationCoordinate2D(latitude: 47.6295, longitude: -122.3599)
+    /// The Seattle Center lawn: the nearest drivable node, where a route from here starts, is about 143 m away.
+    private static let seattleCenterLawn = CLLocationCoordinate2D(latitude: 47.6213, longitude: -122.3510)
 
-    @MainActor private func setDevice(_ c: CLLocationCoordinate2D, course: Double = -1) {
-        XCUIDevice.shared.location = XCUILocation(location: CLLocation(coordinate: c, altitude: 50, horizontalAccuracy: 5, verticalAccuracy: 5,
+    @MainActor private func setDevice(_ c: CLLocationCoordinate2D, course: Double = -1, accuracy: Double = 5) {
+        XCUIDevice.shared.location = XCUILocation(location: CLLocation(coordinate: c, altitude: 50, horizontalAccuracy: accuracy, verticalAccuracy: 5,
                                                                          course: course, speed: course < 0 ? 0 : 8, timestamp: Date()))
     }
 
@@ -224,23 +227,69 @@ final class PeoplemapsUITests: XCTestCase {
         let side = (course + 90) * .pi / 180
         let off = CLLocationCoordinate2D(latitude: last.latitude + cos(side) * 150 / 111_000,
                                          longitude: last.longitude + sin(side) * 150 / 75_500)
+        // Keep the fixes coming until the route is replaced: a reroute needs a run of off-route fixes, and at
+        // least ten seconds since the route was installed.
         var sawRerouting = false
-        let deadline = Date().addingTimeInterval(10)
+        let deadline = Date().addingTimeInterval(25)
         var jitter = 0.0
-        while Date() < deadline {
+        while Date() < deadline, probe(app, "debug-route") == before {
             jitter += 0.00002
             setDevice(CLLocationCoordinate2D(latitude: off.latitude + jitter, longitude: off.longitude), course: course)
             if probe(app, "debug-nav-state") == "rerouting" || app.otherElements["guidance-rerouting"].exists { sawRerouting = true }
             Thread.sleep(forTimeInterval: 0.25)
         }
-        capture("10-after-forced-reroute", app: app)
+        capture("18-after-forced-reroute", app: app)
         let rerouted = probe(app, "debug-route") != before
         XCTAssertTrue(sawRerouting || rerouted, "Neither a rerouting state nor a new route appeared")
         let guiding = NSPredicate { _, _ in self.probe(app, "debug-nav-state") == "guiding" }
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: guiding, object: nil)], timeout: 20), .completed, "Guidance never resumed")
         XCTAssertTrue(rerouted, "Route was not replaced")
+        XCTAssertGreaterThanOrEqual(Int(probe(app, "debug-reroute-count")) ?? 0, 1, "Reroute count did not move")
+        XCTAssertEqual(probe(app, "debug-route-clears"), "0", "The followed route's line was emptied during the reroute")
         XCTAssertTrue(app.staticTexts["guidance-instruction"].exists)
         XCTAssertFalse(app.staticTexts["guidance-instruction"].label.isEmpty)
+    }
+
+    /// Routes start at a snapped node, so a trip can begin some way from where the line does: a dashed leader
+    /// bridges the gap, heading for the start is not treated as leaving the route, and the leader goes once on it.
+    @MainActor func testLeaderBridgesTheGapToASnappedStart() {
+        let app = launchAskingForLocation(answer: "Allow While Using App", at: Self.seattleCenterLawn)
+        showGasWorksRoutes(app)
+        startGuidanceReal(app)
+        let leader = NSPredicate { _, _ in (Int(self.probe(app, "debug-leader")) ?? 0) > 25 }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: leader, object: nil)], timeout: 10), .completed,
+                       "No leader at a start \(probe(app, "debug-leader")) m from the route")
+        // Calmer is the selected route here, so its line and leader hold the calmer green. (A fastest route is the palette's
+        // grey, by design: grey is not an unstyled state.) Both layers must carry the colour of the route's kind.
+        XCTAssertEqual(probe(app, "debug-line-style"), "calmer 248A3D leader 248A3D", "Line or leader not styled for the calmer route")
+        capture("19-leader-at-start", app: app)
+        let line = routePoints(app)
+        XCTAssertGreaterThan(line.count, 3, "Route readout missing")
+        for (point, course) in Self.samples(line, step: 20, limit: 120) { setDevice(point, course: course); Thread.sleep(forTimeInterval: 0.3) }
+        let gone = NSPredicate { _, _ in self.probe(app, "debug-leader") == "0" }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: gone, object: nil)], timeout: 10), .completed, "Leader stayed once on the route")
+        XCTAssertEqual(probe(app, "debug-reroute-count"), "0", "Heading for the start counted as a deviation")
+        XCTAssertEqual(probe(app, "debug-nav-state"), "guiding")
+    }
+
+    /// A fix on the route's line but with a poor error radius proves nothing: the engine snaps it, but the gate does not
+    /// count it as reaching the route, so the leader from the device's own position to the start stays.
+    @MainActor func testPoorAccuracyFixOnTheLineKeepsTheLeader() {
+        let app = launchAskingForLocation(answer: "Allow While Using App", at: Self.seattleCenterLawn)
+        showGasWorksRoutes(app)
+        startGuidanceReal(app)
+        let leader = NSPredicate { _, _ in (Int(self.probe(app, "debug-leader")) ?? 0) > 25 }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: leader, object: nil)], timeout: 10), .completed, "No leader at the start")
+        let line = routePoints(app)
+        XCTAssertGreaterThan(line.count, 3, "Route readout missing")
+        guard let (point, course) = Self.samples(line, step: 60, limit: 200).first else { return XCTFail("Route too short") }
+        for _ in 0..<5 { setDevice(point, course: course, accuracy: 40); Thread.sleep(forTimeInterval: 0.5) }
+        let held = Int(probe(app, "debug-leader")) ?? 0
+        XCTAssertGreaterThan(held, 25, "A poor fix on the line hid the leader")
+        // A good fix at the same place is on the route: the leader goes.
+        setDevice(point, course: course, accuracy: 5)
+        let gone = NSPredicate { _, _ in self.probe(app, "debug-leader") == "0" }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: gone, object: nil)], timeout: 10), .completed, "Leader stayed after a good fix on the route")
     }
 
     @MainActor func testBackgroundAndForegroundKeepsGuidance() {
@@ -278,6 +327,29 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["end-navigation"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
     }
+    /// The arrow the card draws must point the way its instruction says, at every moment of a whole simulated trip.
+    @MainActor func testGuidanceArrowMatchesInstructionThroughoutTrip() {
+        let app = launch(simulateRoute: true)
+        app.buttons["start-navigation"].tap()
+        let instruction = app.staticTexts["guidance-instruction"]
+        let arrow = app.descendants(matching: .any)["guidance-arrow"]
+        XCTAssertTrue(instruction.waitForExistence(timeout: 10))
+        XCTAssertTrue(arrow.waitForExistence(timeout: 10))
+        var checked = Set<String>(), mismatches: [String] = []
+        let deadline = Date().addingTimeInterval(150)
+        while Date() < deadline, !app.staticTexts["guidance-arrived"].exists {
+            // Three reads take a moment each: only compare a card that did not change between them.
+            let symbol = (arrow.value as? String) ?? "", text = instruction.label
+            guard (arrow.value as? String) == symbol, instruction.label == text else { continue }
+            for side in ["left", "right"] where text.lowercased().contains(side) {
+                checked.insert("\(side) \(symbol)")
+                if !symbol.hasSuffix(side) { mismatches.append("'\(text)' drew \(symbol)") }
+            }
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        XCTAssertTrue(mismatches.isEmpty, "Arrow disagrees with text: \(Set(mismatches))")
+        XCTAssertGreaterThan(checked.count, 1, "Too few turns seen to compare: \(checked)")
+    }
     @MainActor func testMuteButtonFlipsItsLabel() {
         let app = launch(simulateRoute: true)
         app.buttons["start-navigation"].tap()
@@ -288,6 +360,66 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertEqual(mute.label, "Mute voice")
         mute.tap()
         XCTAssertEqual(mute.label, "Unmute voice")
+    }
+    /// Simulated guidance from the Gas Works preview, waited for before any guidance button is tapped.
+    @MainActor private func startSimulatedGuidance(_ app: XCUIApplication) {
+        app.buttons["start-navigation"].tap()
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 10))
+    }
+    /// Drags across the middle of the screen, the free map between the turn card and the trip bar.
+    @MainActor private func panMap(_ app: XCUIApplication) {
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55))
+        let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
+        from.press(forDuration: 0.1, thenDragTo: to)
+    }
+    @MainActor private func waitUntilGone(_ element: XCUIElement, timeout: TimeInterval = 5) -> Bool {
+        let gone = NSPredicate { _, _ in !element.exists }
+        return XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: gone, object: nil)], timeout: timeout) == .completed
+    }
+    @MainActor func testGuidanceStartsHeadingUpAndCompassFlipsToNorthUp() {
+        let app = launch(simulateRoute: true)
+        startSimulatedGuidance(app)
+        let compass = app.buttons["guidance-compass"]
+        XCTAssertTrue(compass.waitForExistence(timeout: 5))
+        XCTAssertEqual(compass.label, "Heading up", "Heading-up is the default while guiding")
+        XCTAssertFalse(app.buttons["guidance-recenter"].exists, "Following shows no Re-centre")
+        compass.tap()
+        XCTAssertEqual(compass.label, "North up")
+        compass.tap()
+        XCTAssertEqual(compass.label, "Heading up")
+        XCTAssertFalse(app.buttons["guidance-recenter"].exists)
+    }
+    @MainActor func testPanningTheMapShowsRecentreWhichFollowsAgain() {
+        let app = launch(simulateRoute: true)
+        startSimulatedGuidance(app)
+        let recenter = app.buttons["guidance-recenter"]
+        XCTAssertFalse(recenter.exists)
+        panMap(app)
+        XCTAssertTrue(recenter.waitForExistence(timeout: 5), "A pan should stop following and offer Re-centre")
+        XCTAssertEqual(recenter.label, "Re-centre")
+        XCTAssertEqual(app.buttons["guidance-compass"].label, "Heading up", "A free look keeps the follow mode to return to")
+        capture("09-guidance-free-look", app: app)
+        recenter.tap()
+        XCTAssertTrue(waitUntilGone(recenter), "Re-centre should go once following again")
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].exists)
+        // The compass still toggles after a free look, and following stays on.
+        app.buttons["guidance-compass"].tap()
+        XCTAssertEqual(app.buttons["guidance-compass"].label, "North up")
+        XCTAssertFalse(recenter.exists)
+    }
+    @MainActor func testOverviewTogglesAndReturnsToFollowing() {
+        let app = launch(simulateRoute: true)
+        startSimulatedGuidance(app)
+        let overview = app.buttons["guidance-overview"]
+        XCTAssertTrue(overview.waitForExistence(timeout: 5))
+        XCTAssertEqual(overview.label, "Route overview")
+        overview.tap()
+        XCTAssertEqual(overview.label, "Follow my position")
+        XCTAssertFalse(app.buttons["guidance-recenter"].exists, "The overview is not a free look")
+        capture("10-guidance-overview", app: app)
+        overview.tap()
+        XCTAssertEqual(overview.label, "Route overview")
+        XCTAssertEqual(app.buttons["guidance-compass"].label, "Heading up")
     }
     @MainActor func testSimulatedGuidanceArrivesAndDoneReturnsHome() {
         let app = launch(simulateRoute: true, fast: true)
@@ -397,8 +529,18 @@ final class PeoplemapsUITests: XCTestCase {
             XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
         }
     }
+    /// Kerry Park to Gas Works has no calmer drive at any budget: the fastest route is already the calmest, so the
+    /// card adds nothing under the name (Docs/STRESS_MODEL.md, Time).
+    @MainActor func testPlaceCardSaysNothingWhenThereIsNoCalmerDrive() {
+        let app = launchHome(location: Self.atKerryPark)
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        let value = waitForEstimate(app)
+        XCTAssertNotNil(value.range(of: #"^\d+ min drive, "#, options: .regularExpression), value)
+        XCTAssertFalse(app.staticTexts["place-estimate"].exists)
+        XCTAssertFalse(app.staticTexts["place-estimate-loading"].exists)
+    }
     @MainActor func testPlaceCardEstimatesFromCurrentLocationInTheLastMode() {
-        let app = launchHome(location: Self.atKerryPark, extra: ["--slow-routing"])
+        let app = launchHome(location: Self.atBallardLibrary, extra: ["--slow-routing"])
         openPlace(app, "Gas Works", id: "relation/1047789")
         XCTAssertTrue(app.staticTexts["place-estimate-loading"].waitForExistence(timeout: 2), "A quiet placeholder while it computes")
         XCTAssertTrue(app.buttons["directions"].isHittable, "The estimate never blocks the card")
