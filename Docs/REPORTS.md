@@ -111,6 +111,7 @@ before the flag. A snapshot is the current moment only.
 // endpoint removed by the user in review; route replay is not possible, plan replay is
 null
 // exact position at flag time (only with the toggle on); otherwise the key is null
+// accuracy 0 to 10,000 m; course -1 to 360 degrees, or null when the fix has none
 { "lat": 47.63712, "lon": -122.35588, "accuracy": 8, "course": 71 }
 ```
 
@@ -126,6 +127,16 @@ null
   Addresses, pins and the user's position never carry an ID or a name. A
   public place ID lets the replay use the importer's own snap node
   (`Place.snap`), which is what the app used.
+  The ID must also match `^(node|way|relation)/\d{1,19}$`, the only form
+  `validate.ts` accepts (at most 32 characters). Any other ID is omitted, such
+  as the reroute start `Place(id: "current-location", category: "gps")` built
+  in `App/Navigation/OwnRouteProvider.swift`, or a `pin/…` ID
+  (`ReportEndpoint.publicPlaceID`). The key is omitted, not sent as `null`.
+  The Worker would also accept `"placeID": null` and passes it through, but
+  the app never sends it, so the stored body has one shape.
+- **`location.course`** is `null` when the fix has no heading (the key stays,
+  as `null`); otherwise -1 to 360, the range `validate.ts` accepts. `accuracy`
+  is 0 to 10,000.
 - Both forms are stored on the phone (exact plus the snapped version computed
   at flag time, while the graph is loaded), so the review screen can switch
   between them without recomputing. Only the chosen form is sent.
@@ -341,9 +352,9 @@ Body: the report (2.4); its `id` is the idempotency key
 - The Worker validates the shape (`Backend/src/validate.ts` mirrors 2.4:
   types, enum values, `note` length, `edgeIDs` and `wayIDs` non-empty and at
   most 2,000 entries, coordinates inside the coverage bounds plus 1 km, a
-  `location` and exact endpoints only when `exactLocations` is true). Failure
-  is `400 invalid_report` with `field`, a dotted path into the body such as
-  `request.origin.lat` or `spoken[1].text`.
+  `location` and exact endpoints only when `exactLocations` is true; the
+  length caps below). Failure is `400 invalid_report` with `field`, a dotted
+  path into the body such as `request.origin.lat` or `spoken[1].text`.
 - Stores the row (5.1) with `issue_state = held`, bumps the aggregate (5.2)
   and answers 202. Nothing goes to GitHub until a maintainer approves the
   report (6.1). The app shows "Sent, issue pending" with a "Check status"
@@ -359,6 +370,25 @@ Body: the report (2.4); its `id` is the idempotency key
   the row's current state, including the issue once the cron has filed it. A
   different body under the same `id` is a 409; the app regenerates the
   report with a new `id` only if the user edits and sends again.
+  The 409 is also returned when the same `id` arrives from a different
+  install, whatever the body: a send that timed out after the Worker stored
+  it, then retried after Rotate (8.3), is a new token for an old `id`. The
+  app does not treat it as success. It keeps the snapshot `flagged` with
+  `lastError: conflict` (`Core/ReportsClient.swift` has no 409 special case)
+  and the `id` unchanged, so an unedited re-send gets the same 409. Editing
+  the category, note or exact setting gives the snapshot a new `id` on the
+  next Send, which goes through. The old row stays on the server under the
+  old install and ages out at 90 days.
+- **Length caps**, counted in Unicode code points (`[...s].length`) by
+  `validate.ts`: `spoken[i].text` 1 to 500, `note` null or at most 280,
+  `app.version` and `app.build` 1 to 32,
+  `device.model` and `device.os` 1 to 64, `flaggedAt` 20, `id` a 36-character
+  UUID. `spoken` has at most 3 entries and `location.accuracy` is 0 to
+  10,000. `POST /v1/installs` checks the same `app.version` and `app.build`
+  caps (4.1) but counts UTF-16 code units (`String.length`), so a string with
+  characters outside the Basic Multilingual Plane is shorter there than the
+  same string here. The two agree for ASCII, which real version and build
+  strings are; see question 23.
 - Rate limit: `REPORTS_PER_DAY` per install (a `vars` value, 7.2: 20 in
   production, 50 in dev, so one tester can exercise the client), counted from
   the install's own rows in `reports` (`received_at` in the last 24 hours),
@@ -407,7 +437,10 @@ reason issues are held for approval and the body is minimised (6). The
 GitHub call comes first; if it
 fails, the rows stay and the response is `503 github_unavailable`, so a
 report is never gone from the phone while its issue is still public. The app
-then wipes its Keychain items ("Delete my reports" is also "start over").
+wipes its Keychain items only after a `204` from `DELETE /v1/installs/me`
+("Delete my reports" is also "start over"). On a `503` it keeps the install
+ID and token, so the user can tap Delete again; a wiped token could not
+authorise the retry. A 401 wipes them too (4.1), since that install is gone.
 Rate limit: the per-minute ceiling of 4.6.
 
 ### 4.5 Maintainer fetch of exact fields
@@ -1036,6 +1069,11 @@ never a number).
   days end. The confirmation says so and offers "Delete my reports" first;
   local copies sent under the old ID show "Sent under an earlier report
   ID".
+- A Send cut off by the app quitting or crashing leaves its snapshot at
+  `sending` on disk. On load the app reads every `sending` snapshot as
+  `flagged` with `lastError: interrupted` and the fields kept; the list shows
+  it as unsent. Re-sending reuses the `id`, so if the server did store the
+  first attempt the retry returns 200 (4.2), or 409 if the install changed.
 
 ### 8.4 UI test
 
@@ -1175,6 +1213,18 @@ document assumes until the owner says otherwise.
     route from the stored body through the OIDC route of question 3.
     Recommended: not now; the review screen and the policy say what the
     route shows, and approval (6.1) is the gate.
+
+23. **Install and report length checks differ.** `POST /v1/installs` counts
+    `app.version` and `app.build` in UTF-16 code units (`v.length` in
+    `installs.ts`) against 32; `validate.ts` counts code points against the
+    same 32. Only strings with characters outside the BMP differ, and real
+    version strings are ASCII. Follow-up: use `[...v].length` in `installs.ts`
+    so both sides agree. No code changed in this PR.
+24. **409 after Rotate.** A report whose send timed out and is re-sent after
+    Rotate keeps its `id`, so every unedited retry is a 409 (4.2). Follow-up:
+    have the app give the snapshot a new `id` when a 409 arrives (or when the
+    install changes), or have the Worker treat a different install as a
+    separate idempotency scope. Not decided.
 
 Considered, not chosen: TestFlight feedback read through the App Store
 Connect API as an interim with no backend at all (fine for one tester, but
