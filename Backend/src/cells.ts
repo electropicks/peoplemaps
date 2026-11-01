@@ -1,4 +1,4 @@
-// The 550 m aggregate grid of Docs/REPORTS.md 5.2: rows 0 to 12, columns 0 to 11.
+// The 550 m grid of Docs/REPORTS.md 5.2: rows 0 to 12, columns 0 to 11.
 const SOUTH = 47.615, WEST = -122.390, ROW_DEG = 0.005, COL_DEG = 0.0075;
 export const MAX_ROW = 12, MAX_COL = 11;
 

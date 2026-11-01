@@ -57,19 +57,9 @@ export async function authenticate(request: Request, deps: Deps): Promise<Instal
   return install;
 }
 
-/** Deletes every issue first, then every row in one batch; any GitHub failure removes nothing (4.4). */
+/** Every report of the install and the install itself, in one batch (4.4). */
 export async function deleteInstall(request: Request, deps: Deps): Promise<Response> {
   const install = await authenticate(request, deps);
-  const reports = await deps.store.reportsByInstall(install.id);
-  for (const r of reports) if (r.issue_node_id) await deleteIssueOrFail(deps, r.issue_node_id);
   await deps.store.deleteInstall(install.id);
   return json(204, null);
-}
-
-export async function deleteIssueOrFail(deps: Deps, nodeId: string): Promise<void> {
-  try {
-    await deps.github.deleteIssue(nodeId);
-  } catch {
-    throw new HttpError("github_unavailable", "GitHub did not delete the issue. Nothing was removed; try again later.");
-  }
 }

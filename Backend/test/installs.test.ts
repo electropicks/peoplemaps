@@ -101,44 +101,24 @@ describe("bearer tokens", () => {
 });
 
 describe("DELETE /v1/installs/me", () => {
-  it("deletes every issue, every report and the install", async () => {
-    const w = world({ holdForApproval: false });
+  it("deletes every report of the install and the install, and nobody else's", async () => {
+    const w = world();
     const { token } = await w.mint();
     const other = await w.mint();
     await w.send(token);
     await w.send(token, { ...fixture(), id: "11111111-2222-4333-8444-555555555555" });
     await w.send(other.token, { ...fixture(), id: "99999999-2222-4333-8444-555555555555" });
-    expect(w.gh.issues.size).toBe(3);
-    const res = await w.call("DELETE", "/v1/installs/me", { token });
-    expect(res.status).toBe(204);
-    expect(w.gh.issues.size).toBe(1);
-    expect(w.gh.requests.filter((r) => r.url.endsWith("/graphql"))).toHaveLength(2);
-    expect(w.rows("reports")).toHaveLength(1);
+    expect((await w.call("DELETE", "/v1/installs/me", { token })).status).toBe(204);
+    expect(w.rows("reports").map((r) => r.id)).toEqual(["99999999-2222-4333-8444-555555555555"]);
     expect(w.rows("installs")).toHaveLength(1);
     expect((await w.call("GET", "/v1/reports", { token })).status).toBe(401);
   });
 
-  it("removes nothing when GitHub fails, and a retry finishes the job", async () => {
-    const w = world({ holdForApproval: false });
-    const { token } = await w.mint();
-    await w.send(token);
-    w.gh.deleteStatus = 502;
-    const res = await w.call("DELETE", "/v1/installs/me", { token });
-    expect(res.status).toBe(503);
-    expect(await res.json()).toMatchObject({ error: "github_unavailable" });
-    expect(w.rows("reports")).toHaveLength(1);
-    expect(w.rows("installs")).toHaveLength(1);
-    w.gh.deleteStatus = 200;
-    expect((await w.call("DELETE", "/v1/installs/me", { token })).status).toBe(204);
-    expect(w.rows("reports")).toHaveLength(0);
-  });
-
-  it("deletes held reports without calling GitHub", async () => {
+  it("lets the same report be sent again under a new token", async () => {
     const w = world();
     const { token } = await w.mint();
     await w.send(token);
-    expect((await w.call("DELETE", "/v1/installs/me", { token })).status).toBe(204);
-    expect(w.gh.requests).toHaveLength(0);
-    expect(w.rows("reports")).toHaveLength(0);
+    await w.call("DELETE", "/v1/installs/me", { token });
+    expect((await w.send((await w.mint()).token)).status).toBe(201);
   });
 });

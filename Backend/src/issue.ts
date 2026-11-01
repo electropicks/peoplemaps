@@ -1,7 +1,7 @@
-import { cellOf } from "./cells";
+import { cellOf } from "./cells.ts";
 import type { Category, PublicReport, SnappedEndpoint } from "./validate";
 
-// Title, body and labels of the GitHub issue (Docs/REPORTS.md 6). Pure functions; the approval page previews with them.
+// Title, body and labels of the GitHub issue (Docs/REPORTS.md 6). Pure functions; `scripts/file-issue.ts` prints them.
 
 const WORDS: Record<Category, string> = {
   wrong_instruction: "Wrong instruction",
@@ -34,14 +34,14 @@ export function issueLabels(r: PublicReport): string[] {
 // A backtick inside a JSON string is written as `, so no value can close the fence.
 const fenced = (v: unknown) => "```json\n" + JSON.stringify(v, null, 2).replace(/`/g, "\\u0060") + "\n```";
 
-// The note is the sender's own text and is published as written, except that it cannot start a heading the parser
-// splits on, or open an HTML comment that would hide the rest of the body or fake the report marker.
+// The note is the sender's own text and is kept as written, except that it cannot start a heading or open an HTML
+// comment that would hide the rest of the body. The maintainer reads it before filing.
 function noteText(note: string | null): string {
   if (note === null || note.trim() === "") return "No note";
   return note.replace(/<!--/g, "&lt;!--").split(/\r?\n/).map((l) => (/^\s*#/.test(l) ? "\\" + l.trimStart() : l)).join("\n");
 }
 
-/** `### <Label>` sections in the issue form's order, the shape GitHub renders `.github/ISSUE_TEMPLATE/app-report.yml` into. */
+/** `### <Label>` sections, one per field a replay or a reader needs. */
 export function issueBody(r: PublicReport): string {
   const request = {
     mode: r.request.mode,
@@ -68,7 +68,7 @@ export function issueBody(r: PublicReport): string {
     ["Data version", r.route.dataVersion],
     ["App version", `${r.app.version} (${r.app.build})`],
     ["Flagged at", r.flaggedAt],
-    ["Route request", fenced(request) + (r.exactLocations ? "\n\nExact locations: available to maintainers (section 4.5)" : "")],
+    ["Route request", fenced(request)],
     ["Route", fenced(route)],
     ["Position", fenced(r.position)],
     ["Spoken instructions", fenced(r.spoken)],
@@ -77,17 +77,10 @@ export function issueBody(r: PublicReport): string {
   ];
   return [
     ...sections.map(([label, value]) => `### ${label}\n\n${value}`),
-    `<!-- report:${r.id} -->`,
-    "Filed by the PeopleMaps reports backend from a report the sender reviewed and sent. Times in the app are estimates; a calmer route is a preference, not a rating.",
+    "Filed by a maintainer from a report the sender reviewed and sent. Times in the app are estimates; a calmer route is a preference, not a rating.",
   ].join("\n\n") + "\n";
 }
 
 export function issueFor(r: PublicReport) {
   return { title: issueTitle(r), body: issueBody(r), labels: issueLabels(r) };
-}
-
-/** The report ID from the trailing marker, for 4.5 when the issue number is not in the database. */
-export function reportIDFromBody(body: string): string | null {
-  const all = [...body.matchAll(/<!-- report:([0-9A-Fa-f-]{36}) -->/g)];
-  return all.length ? all[all.length - 1][1] : null;
 }

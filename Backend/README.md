@@ -5,11 +5,12 @@ The Cloudflare Worker and D1 database behind in-app problem reports. The design,
 
 ## Layout
 
-- `src/index.ts` is the only Cloudflare-specific entry: it builds `Deps` from `env`, routes requests and runs the crons.
+- `src/index.ts` is the only Cloudflare-specific entry: it builds `Deps` from `env`, routes requests and runs the cron.
   `src/store-d1.ts` is the D1 shim. Every other module is a plain function over `Deps` (`src/deps.ts`).
-- `migrations/000N_name.sql`: never edited after they ship; a change is a new file.
-- `test/`: vitest under node, against `test/store-sqlite.ts` (node's built-in SQLite, in memory, migrations applied)
-  and `test/github.mock.ts` (a `fetch` mock that records each GitHub request).
+- `migrations/000N_name.sql`: never edited once applied to the deployed database; a change is a new file.
+- `scripts/file-issue.ts`: the hand-filing tool. `src/issue.ts` is pure and only this script imports it, so the Worker has
+  no GitHub code and needs no secret.
+- `test/`: vitest under node, against `test/store-sqlite.ts` (node's built-in SQLite, in memory, migrations applied).
 - `test/fixtures/parity/`: a report in, the public body and exact part out. `Tests/ReportsTests.swift` reads the same
   files, so `splitExact` and `Core/Reports.swift` drop exactly the same fields.
 
@@ -27,13 +28,11 @@ CI runs both in the `backend` job of `.github/workflows/ci.yml`.
 ## Run locally
 
 ```sh
-npm run dev         # wrangler dev --env dev on 0.0.0.0:8787, local D1
 npx wrangler d1 migrations apply peoplemaps-reports --local
+npm run dev         # wrangler dev on 0.0.0.0:8787, local D1
 ```
 
-The dev environment has `HOLD_FOR_APPROVAL` off and 50 reports per install per day. Put `GITHUB_TOKEN=…` in
-`.dev.vars` (gitignored) to file issues; without it reports are stored and answered `202` with the issue pending.
-The approval page is `/maintainer`.
+Put `REPORTS_PER_DAY=50` in `.dev.vars` (gitignored) if a tester needs a higher cap.
 
 ## Deploy
 
@@ -43,23 +42,24 @@ apply --remote` and `wrangler deploy` in the `deploy` job, which waits for appro
 
 Once, by hand, before the first deploy:
 
-1. `npx wrangler d1 create peoplemaps-reports --location wnam`, and commit the database ID in `wrangler.jsonc`.
-2. Put the real domain in `routes` (`reports.<our domain>`) and add the zone to the account.
-3. Create the GitHub Environment `production` with the maintainer as required reviewer, holding
-   `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit, D1: Edit) and `CLOUDFLARE_ACCOUNT_ID`. Not repository secrets.
-4. `npx wrangler secret put GITHUB_TOKEN` from the maintainer's machine, never through Actions: a fine-grained token
-   made by a repository admin, this repository only, Issues read and write, Metadata read, Administration read and
-   write (for `deleteIssue`). If a scratch-repository test shows `deleteIssue` works without Administration, drop it
-   and record the final scope here.
-5. The checks `Docs/REPORTS.md` asks for before release: deploy a throwaway Worker with the same `observability`
-   block and read what Workers Logs records (4.6); send mints from several regions to see how approximate
-   `RL_INSTALLS` is (4.6, `MintGate` if it lets clearly more through); confirm the wording of D1's daily-limit error
-   matches `LIMIT_ERROR` in `src/store-d1.ts`; check whether the zone's plan offers hourly WAF rate limits.
+1. Set the account's `workers.dev` subdomain once, and never rename the Worker: either changes the URL shipped apps call
+   (`https://peoplemaps-reports.<account-subdomain>.workers.dev`). Put that URL in the Release build setting
+   (`Docs/REPORTS.md` 7.5).
+2. Create the GitHub Environment `production` with the maintainer as required reviewer, holding `CLOUDFLARE_API_TOKEN`
+   (Workers Scripts: Edit, D1: Edit) and `CLOUDFLARE_ACCOUNT_ID`. Not repository secrets.
+3. Decide where the database lives (`Docs/REPORTS.md` question 25) while it is still empty.
+4. Before the privacy policy is published, send the deployed Worker some requests and read what Workers Logs and the
+   dashboard record (4.6).
 
-## Looking at the data
+## Reading reports and filing an issue
 
-Rows that failed ten times are `issue_state = 'failed'`:
+Reports stay in D1. Nothing reaches GitHub unless a maintainer files it (`Docs/REPORTS.md` 6). Exact locations are in
+`exact_json`; do not copy them anywhere.
 
 ```sh
-npx wrangler d1 execute peoplemaps-reports --remote --command "SELECT id, received_at, issue_error FROM reports WHERE issue_state = 'failed'"
+npx wrangler d1 execute peoplemaps-reports --remote --command "SELECT id, received_at, category, json_extract(public_json, '$.note') AS note FROM reports ORDER BY received_at DESC LIMIT 20"
+npm run file-issue -- <report-id>            # prints the title, labels and body; read it first
+npm run file-issue -- <report-id> --create   # files it with gh
 ```
+
+The first time, create the labels: `app-report`, `report:<category>` and `mode:<mode>`, with `gh label create`.

@@ -6,7 +6,8 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "dev": "wrangler dev --env dev --ip 0.0.0.0 --port 8787"
+    "dev": "wrangler dev --ip 0.0.0.0 --port 8787",
+    "file-issue": "node --experimental-strip-types --no-warnings scripts/file-issue.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261015.1",
