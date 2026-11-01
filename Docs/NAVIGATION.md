@@ -28,9 +28,19 @@ Screens: the "navigation" rows of the design canvas
    without the permission: browsing and comparing never ask.
 6. **Units follow the device locale** (feet/miles in the US) in both the
    banner and the voice.
-7. **Off-route thresholds:** 50 m driving, 30 m cycling and walking, using
-   Ferrostar's built-in reroute throttling (5 s, 50 m). A reroute keeps the
-   destination, mode, extra-time budget and calmer/fastest choice.
+7. **Off-route thresholds:** the engine flags a fix off-route at 50 m driving
+   and 30 m cycling and walking, measured from the current step. `RerouteGate`
+   (`Core/RerouteGate.swift`) decides which flagged fixes start a reroute: the
+   fix must be off by more than that base plus its own accuracy radius plus one
+   second of travel, for three fixes in a row; at least 10 s must have passed
+   since the route was installed; and while the user has not yet been on a
+   route (its first coordinate is a snapped node, up to 400 m off) only moving
+   away from it, or travelling past where it starts, counts. Ferrostar's own
+   throttling (5 s, 50 m) still applies underneath. A reroute keeps the
+   destination, mode, extra-time budget and calmer/fastest choice. The map
+   replaces the line in place when a reroute lands, and draws a dashed leader
+   from the puck to the route's first coordinate while they are more than 25 m
+   apart and the user has not been on the route.
 8. **Testing:** Debug builds can replay a route with Ferrostar's simulated
    location provider (`--simulate-route`), which the UI tests use. Real-road
    feel needs the user's iPhone.
