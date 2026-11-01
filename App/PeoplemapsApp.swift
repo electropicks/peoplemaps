@@ -3,31 +3,30 @@ import PeoplemapsCore
 
 @main
 struct PeoplemapsApp: App {
-    @State private var loaded: (graph: StreetGraph, router: NativeRouter, search: SearchIndex)?
-    @State private var error: String?
+    /// Home needs only the graph's bounds and search; the router builds behind it and routing requests wait for it.
+    private let ready: Result<(graph: StreetGraph, router: DeferredRouter, search: SearchIndex), Error>
+    init() {
+        ready = Result {
+            let header = try StreetGraph.bundledHeader()
+            return (header.boundsOnly, DeferredRouter { Self.holdForTests(); return NativeRouter(graph: try StreetGraph.bundled()) }, try SearchIndex.bundled(graphNodes: header.nodes))
+        }
+    }
+    /// UI tests pass `--hold-router` to keep the router from being ready, proving home never waits for it.
+    private nonisolated static func holdForTests() {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--hold-router") { Thread.sleep(forTimeInterval: 60) }
+        #endif
+    }
     var body: some Scene {
         WindowGroup {
             Group {
-                if let loaded { ExploreView(graph: loaded.graph, router: loaded.router, search: loaded.search) }
-                else if let error { ContentUnavailableView("Seattle data unavailable", systemImage: "map", description: Text(error)) }
-                else {
-                    ProgressView("Opening Seattle…")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color(uiColor: .mapLand), ignoresSafeAreaEdges: .all)
-                        .task { await load() }
+                switch ready {
+                case let .success(ready): ExploreView(graph: ready.graph, router: ready.router, search: ready.search)
+                case let .failure(error): ContentUnavailableView("Seattle data unavailable", systemImage: "map", description: Text(error.localizedDescription))
                 }
             }
             .tint(.calmer)
         }
-    }
-    private func load() async {
-        do {
-            loaded = try await Task.detached {
-                let graph = try StreetGraph.bundled()
-                return (graph, NativeRouter(graph: graph), try SearchIndex.bundled(graph: graph))
-            }.value
-        }
-        catch { self.error = error.localizedDescription }
     }
 }
 
@@ -114,7 +113,7 @@ enum Motion {
 
 #if DEBUG
 struct SlowTestRouter: RouteComputing {
-    let base: NativeRouter
+    let base: any RouteComputing
     func compare(_ request: RouteRequest) async throws -> RouteComparison {
         try await Task.sleep(for: .milliseconds(ProcessInfo.processInfo.arguments.contains("--slow-routing") ? 3000 : 150))
         return try await base.compare(request)

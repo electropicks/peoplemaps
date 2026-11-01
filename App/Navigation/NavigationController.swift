@@ -66,7 +66,7 @@ final class NavigationController {
         return text.prefix(1).lowercased() + text.dropFirst()
     }
 
-    @ObservationIgnored private let router: NativeRouter
+    @ObservationIgnored private let router: any RouteComputing
     @ObservationIgnored private var core: FerrostarCore?
     @ObservationIgnored private var subscription: AnyCancellable?
     @ObservationIgnored private var active: AdaptedRoute?
@@ -83,7 +83,7 @@ final class NavigationController {
     private(set) var keepingAwake = false
     var isPaused: Bool { paused }
 
-    init(router: NativeRouter) { self.router = router }
+    init(router: any RouteComputing) { self.router = router }
 
     /// Distance walked along a step before "Head north on…" gives way to the next maneuver.
     private static let setOffMeters = 40.0
