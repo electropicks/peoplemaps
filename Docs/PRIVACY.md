@@ -102,7 +102,8 @@ and a secret key for it. The ID links your reports together so you can delete
 them. It is not tied to you, your Apple ID or your phone, and it is not
 backed up or restored to another phone. In **Flagged moments** you can see it,
 or delete it with all your reports. There is no separate way to change it: after
-**Delete my reports**, your next report gets a new ID.
+**Delete my reports**, or if our server no longer recognises it, your next
+report gets a new ID.
 
 With the ID, our server keeps a scrambled copy of the key, your app version and
 build, and the hours it was created and last contacted. Once it has no reports
@@ -124,8 +125,8 @@ left, this record is deleted a year after the last contact, or at once with
    server never does this. An issue contains your report except for your exact
    start and destination, your GPS position and your report ID, with your start
    and destination shown only as half-kilometre squares. It can include your
-   sentence, which the maintainer may edit or leave out, the route's street list
-   and where along it you flagged. So someone with map data can still find the
+   sentence, the route's street list and where along it you flagged; the
+   maintainer may edit your sentence or leave out any of these. So someone with map data can still find the
    snapped corners where the route begins and ends, and where you were when you
    flagged, to within metres. Issues are public to anyone on the internet, and GitHub emails them to people who
    watch the project.
@@ -149,11 +150,11 @@ about a minute. We store nothing from them.
   and a send that was interrupted may have reached the server even though the
   phone doesn't show it as sent. If you edit such a report before sending again,
   the first copy stays on the server; only **Delete my reports** removes it.
-- **If the server doesn't recognise your ID**: the app tells you so and says
-  nothing was deleted, because it can't tell whether reports remain. This can
-  happen if the key on the phone is damaged. Those reports, if any, stay until
-  their 90 days end. Your ID stays on the phone until your next report, which
-  gets a new ID.
+- **If the server doesn't recognise your ID**: the app tells you so, and that it
+  can't confirm whether your reports were deleted. This can happen if an earlier
+  delete worked but the phone never heard back, or if the key on the phone is
+  damaged. Anything left expires within its 90 days. Your next report gets a
+  new ID.
 - **If you lose the phone**: the ID's key lives only on that phone, so without
   it, or if its Keychain is erased, your reports cannot be deleted from the app
   and stay until their 90 days end.
