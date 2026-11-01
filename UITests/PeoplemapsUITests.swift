@@ -77,6 +77,7 @@ final class PeoplemapsUITests: XCTestCase {
         let climbing = app.staticTexts["Climbing"]
         for _ in 0..<4 where !climbing.exists { app.collectionViews.firstMatch.swipeUp() }
         XCTAssertTrue(climbing.exists)
+        XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label CONTAINS ' km' OR label ENDSWITH ' m'")).count, 0, "Imperial units only")
         capture("03-route-evidence", app: app)
         app.buttons["close-details"].tap()
         app.buttons["Drive"].tap()
@@ -353,13 +354,20 @@ final class PeoplemapsUITests: XCTestCase {
     @MainActor func testMuteButtonFlipsItsLabel() {
         let app = launch(simulateRoute: true)
         app.buttons["start-navigation"].tap()
+        // The map buttons sit under the turn card, which appears and grows with the first instruction. A tap
+        // aimed before that lands on the card, so wait for the instruction like the other guidance tests do.
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 20))
         let mute = app.buttons["guidance-mute"]
         XCTAssertTrue(mute.waitForExistence(timeout: 10))
-        XCTAssertEqual(mute.label, "Unmute voice", "UI tests start muted")
-        mute.tap()
-        XCTAssertEqual(mute.label, "Mute voice")
-        mute.tap()
-        XCTAssertEqual(mute.label, "Unmute voice")
+        waitForLabel(mute, "Unmute voice", "UI tests start muted")
+        mute.tap(); waitForLabel(mute, "Mute voice")
+        mute.tap(); waitForLabel(mute, "Unmute voice")
+    }
+    /// Polls the label, so a read a frame early does not fail the test; the message shows what was seen.
+    @MainActor private func waitForLabel(_ element: XCUIElement, _ label: String, _ note: String = "") {
+        let changed = NSPredicate { _, _ in element.label == label }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: changed, object: nil)], timeout: 5), .completed,
+                       "Label is '\(element.label)', wanted '\(label)'. \(note)")
     }
     /// Simulated guidance from the Gas Works preview, waited for before any guidance button is tapped.
     @MainActor private func startSimulatedGuidance(_ app: XCUIApplication) {
@@ -545,7 +553,7 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["place-estimate-loading"].waitForExistence(timeout: 2), "A quiet placeholder while it computes")
         XCTAssertTrue(app.buttons["directions"].isHittable, "The estimate never blocks the card")
         let value = waitForEstimate(app)
-        XCTAssertNotNil(value.range(of: #"^\d+ min drive, [\d.]+ (miles|kilometres|feet|metres), estimate without live traffic$"#, options: .regularExpression), value)
+        XCTAssertNotNil(value.range(of: #"^\d+ min drive, [\d.]+ (miles?|feet), estimate without live traffic$"#, options: .regularExpression), value)
         // From Current location, the line under the name says only what the calmer route costs and gains.
         let estimate = app.staticTexts["place-estimate"]
         XCTAssertTrue(estimate.exists)
@@ -771,6 +779,59 @@ final class PeoplemapsUITests: XCTestCase {
         capture("14-search-apple-maps", app: app)
         app.buttons["cancel-search-home"].tap()
         XCTAssertFalse(lookup.exists)
+    }
+
+    @MainActor func testSearchResultShowsSourceAndEmptyStateStays() {
+        let app = launchHome()
+        app.buttons["search-field"].tap()
+        let field = app.textFields["search-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("park")
+        let result = app.buttons["result-relation/1047789"]
+        XCTAssertTrue(result.waitForExistence(timeout: 5))
+        // The visible source line, not just the VoiceOver label.
+        XCTAssertTrue(result.staticTexts["OpenStreetMap, Oct 2026"].exists, result.debugDescription)
+        XCTAssertTrue(result.label.hasSuffix(", OpenStreetMap, Oct 2026"), result.label)
+        app.buttons["cancel-search-home"].tap()
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("unfindableXYZ")
+        XCTAssertTrue(app.descendants(matching: .any)["search-empty"].waitForExistence(timeout: 5))
+    }
+
+    /// VoiceOver order (DESIGN section 7): name, category, address or area, source and date.
+    @MainActor func testAddressRowLabelOrder() {
+        let app = launchHome()
+        app.buttons["search-field"].tap()
+        let field = app.textFields["search-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("3400 Fremont Ave N")
+        let result = app.buttons["result-node/2652117839"]
+        XCTAssertTrue(result.waitForExistence(timeout: 5))
+        XCTAssertEqual(result.label, "3400 Fremont Avenue North, Address, Fremont, OpenStreetMap, Oct 2026")
+        XCTAssertTrue(result.staticTexts["Address \u{00B7} Fremont"].exists, result.debugDescription)
+        XCTAssertTrue(result.staticTexts["OpenStreetMap, Oct 2026"].exists)
+    }
+
+    /// Picker distances run from where the user is, not from the place being replaced, and are absent when that is unknown.
+    @MainActor func testPickerDistanceIsFromTheUser() {
+        let app = launch()
+        app.buttons["choose-origin"].tap()
+        pick(app, "Fremont Branch", id: "way/37058377")
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
+        app.buttons["choose-origin"].tap()
+        let gasWorks = app.buttons["place-recent-relation/1047789"]
+        XCTAssertTrue(gasWorks.waitForExistence(timeout: 5))
+        // The user is at Kerry Park, 1.6 mi from Gas Works; the start place (Fremont) is under a mile away.
+        let measured = NSPredicate { _, _ in gasWorks.label.contains("1.6 miles") }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: measured, object: nil)], timeout: 10), .completed, gasWorks.label)
+        capture("14b-picker-distance", app: app)
+        app.buttons["cancel-search"].tap()
+        // The destination picker doesn't know where the user is, so it shows no distances.
+        app.buttons["choose-destination"].tap()
+        let recent = app.buttons["place-recent-relation/1047789"]
+        XCTAssertTrue(recent.waitForExistence(timeout: 5))
+        XCTAssertFalse(recent.label.contains("mile") || recent.label.contains("feet"), recent.label)
     }
 
     @MainActor func testFavouritesAndDroppedPinInLandscape() {

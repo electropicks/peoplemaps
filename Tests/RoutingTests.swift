@@ -189,7 +189,7 @@ final class StressModelTests: XCTestCase {
         let comparison = RouteComparison(request: .init(origin: place, destination: place, mode: .drive, extraMinutes: 5),
             fastest: Route(edgeIDs: [1], coordinates: [], metrics: f, streetNames: []), calmer: Route(edgeIDs: [2], coordinates: [], metrics: c, streetNames: []),
             candidateCount: 2, originSnapMeters: 0, destinationSnapMeters: 0, snappedOrigin: place.coordinate, snappedDestination: place.coordinate)
-        XCTAssertEqual(comparison.reasons, ["2 fewer left turns across traffic without a signal", "Tradeoff: 0.6 km more on residential streets", "Tradeoff: 1 more turn"])
+        XCTAssertEqual(comparison.reasons, ["2 fewer left turns across traffic without a signal", "Tradeoff: 0.4 mi more on residential streets", "Tradeoff: 1 more turn"])
         XCTAssertEqual(comparison.extraTimeLabel, "+2 min", "11 min and 13 min cards must read +2, not +1")
     }
 }

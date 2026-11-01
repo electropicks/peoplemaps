@@ -2,18 +2,28 @@ name: CI
 
 on:
   pull_request:
+    # "labeled" exists only so adding the ui-tests label starts ui-tests; see the job conditions below.
     types: [opened, synchronize, reopened, labeled]
+    paths-ignore: ['Docs/**', '**/*.md', '.claude/**']
   push:
     branches: [main]
+    paths-ignore: ['Docs/**', '**/*.md', '.claude/**']
   workflow_dispatch:
 
+# A newer run on the same branch or PR cancels the older one, on main too; the newest commit always runs.
+# Docs-only pushes start no run, so they cancel nothing. Label events get their own groups so they never cancel a code run:
+# the ui-tests label has one per PR, any other label a group of its own (its jobs are all skipped).
 concurrency:
-  group: ci-${{ github.ref }}
+  group: >-
+    ${{ github.event.action == 'labeled'
+    && (github.event.label.name == 'ui-tests' && format('ci-ui-label-{0}', github.ref) || format('ci-other-label-{0}', github.run_id))
+    || format('ci-{0}', github.ref) }}
   cancel-in-progress: true
 
 jobs:
   # Cheap and fast: importer, data reproduction and Core's Swift tests, the same checks a cloud session runs.
   linux:
+    if: github.event.action != 'labeled'
     runs-on: ubuntu-latest
     container: swift:6.4.1-noble
     steps:
@@ -23,6 +33,7 @@ jobs:
 
   # The reports Worker (Backend/): handlers under node against in-memory SQLite. No Cloudflare account or secrets.
   backend:
+    if: github.event.action != 'labeled'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -38,8 +49,11 @@ jobs:
       - run: npm test
       - run: npx tsc --noEmit
 
-  # The iOS app build, on every PR. macOS minutes cost 10x, so the UI suite runs only when asked.
+  # The iOS app build, on every PR push (not on label events: the head already ran it). The UI suite runs only when asked,
+  # since it is the slowest job. Whether the xcode-27 runner is billed is unconfirmed: standard runners are free in a public
+  # repo, but this label is not one of GitHub's standard ones.
   ios-build:
+    if: github.event.action != 'labeled'
     runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
@@ -51,7 +65,7 @@ jobs:
 
   # Push to main, a manual run, or a PR labelled "ui-tests".
   ui-tests:
-    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ui-tests')
+    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'ui-tests') && (github.event.action != 'labeled' || github.event.label.name == 'ui-tests'))
     runs-on: xcode-27
     timeout-minutes: 40
     steps:
