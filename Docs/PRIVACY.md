@@ -14,6 +14,8 @@ one is wrong and gets fixed.
 - There are no accounts, no sign-in, no analytics, no ads, no tracking.
 - A report becomes a public issue on GitHub, minus your exact locations.
 - You can see, export and delete everything, on the phone and on our server.
+  The app contacts the server only when you tap Send, Check status or
+  Delete my reports.
 
 ## What the app keeps on your phone
 
@@ -27,17 +29,22 @@ one is wrong and gets fixed.
   whether to send them. The phone keeps the last 50. They are left out of
   iCloud and computer backups, so they do not follow you to a new phone.
 
-Location is used while guiding to show where you are and say the next turn.
-The app asks for it once, when you start a route, and uses it only while the
-app is on screen. It is not collected by us unless you send a report with
-exact locations on.
+The app asks for your location once, the first time the home map shows.
+While the app is open it uses your location to start routes and time
+estimates from where you are, and, while guiding, to show where you are on
+the map and say the next turn. It stops when the app leaves the screen. Your
+location is never collected by us, except inside a report you send with
+**Exact locations** turned on.
 
 ## What leaves your phone, and only when you tap Send
 
 Nothing is sent automatically. Flagging is silent and offline. Sending a
 report needs a connection and happens only from the **Flagged moments**
 list, after you have picked a category, optionally written one sentence, and
-looked at every field.
+looked at every field. The app contacts our server at exactly three moments,
+each one a button you tap: **Send**, **Check status** (shown while a sent
+report's issue is still being filed) and **Delete my reports**. Opening the
+list, launching the app and guiding never contact it.
 
 A report contains:
 
@@ -53,10 +60,12 @@ A report contains:
   you turn on **Exact locations** for that report. It is off by default.
   Turn it on when a snapped report would not show the problem, for example
   when the trouble is the first turn out of a driveway.
-- **Where along the route you were** when you flagged, as a step number and
-  a distance, not as a coordinate.
+- **Where along the route you were** when you flagged: a step number, a
+  distance along it, and which half-kilometre square of Seattle that point
+  is in. The square feeds the weekly counts below. Not a coordinate.
 - **The last three spoken instructions** and how many seconds before the
-  flag each was said.
+  flag each was said. Where the voice said your destination's name, the
+  report says "your destination" instead.
 - **What the app was doing**: guiding, rerouting, paused or arrived; how
   many reroutes; whether the voice was muted; which quality of voice; miles
   or kilometres.
@@ -98,17 +107,25 @@ them) or delete it with all your reports.
 
 The server does not store IP addresses, does not log requests, and sets no
 cookies. Cloudflare, as the host, sees your connection the way any website's
-host does in order to deliver it; we do not receive that.
+host does in order to deliver it; we do not receive that. Cloudflare also
+applies connection rate limits at its edge, so that one source cannot flood
+the server; those counts live in its memory for a minute and we store
+nothing from them.
 
 ## Deleting
 
 - **On the phone**: swipe a flagged moment away, or delete them all. This
   does not contact the server.
-- **On the server**: **Delete my reports** removes every report under your
-  ID and the ID itself. The public issues are edited to say "Report withdrawn
-  by its sender" with only the category and data version left, and are
-  closed. Comments other people wrote stay, and copies someone already made
-  are out of our hands.
+- **On the server**: **Delete my reports** shows how many sent reports it
+  will remove, asks you to confirm, then removes every report under your ID
+  and the ID itself. Each public issue is deleted outright, not edited or
+  closed, because GitHub keeps every edit of an issue viewable; comments on
+  it go with it. Copies others made are out of our hands.
+- **The restore copy**: Cloudflare keeps a copy of our database from the last
+  30 days that only we, the maintainers, can use to restore it after a
+  mistake. It is not reachable from the app or the server. So a deleted
+  report is completely gone 30 days after you delete it, and a report that
+  expired is gone 30 days after its 90 days.
 
 ## What we do not do
 
