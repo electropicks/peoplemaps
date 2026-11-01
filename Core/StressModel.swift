@@ -161,15 +161,21 @@ struct Junction {
 public enum StressModel {
     // MARK: Time (honest estimates; stress never changes them)
 
+    /// Free-flow driving speed in mph when no limit is posted. Seattle posts 25 on arterials and 20 on residential
+    /// streets, and 99.5% of non-service drive edges carry a `maxspeed`, so these rarely bind.
+    static let driveDefaultsMph: [String: Double] = ["motorway": 60, "motorway_link": 35, "trunk": 40, "trunk_link": 30,
+        "primary": 25, "primary_link": 25, "secondary": 25, "secondary_link": 25, "tertiary": 25, "tertiary_link": 25,
+        "residential": 20, "unclassified": 20, "living_street": 10, "service": 10]
+    /// `NativeRouter`'s A* heuristic assumes no drive edge is faster than 70 km/h; faster edges would make it inexact.
+    static let driveTopMph = 70 / 1.609_344
+
     static func seconds(_ e: GraphEdge, mode: TravelMode) -> Double {
         switch mode {
         case .drive:
-            let defaults: [String: Double] = ["motorway":70, "motorway_link":32, "trunk":50, "trunk_link":28,
-                "primary":35, "primary_link":22, "secondary":32, "secondary_link":20, "tertiary":28,
-                "tertiary_link":18, "residential":22, "unclassified":22, "living_street":12, "service":12]
-            let assumed = defaults[e.highway] ?? 18
-            let posted = (e.speedLimitMph ?? 100) * 1.609_344 * 0.8
-            return e.meters / (max(5, min(assumed, posted)) / 3.6)
+            // Free-flow time at the posted limit (else the class default). Slowing for signals, stops and turns is
+            // charged once, in `transitionSeconds`, so the speed carries no urban factor.
+            let mph = e.speedLimitMph ?? driveDefaultsMph[e.highway] ?? 15
+            return e.meters / (min(max(mph, 5), driveTopMph) * 0.447_04)
         case .bike:
             let kph = e.isRough ? 11.0 : e.facility == "sharedPath" ? 14 : 18
             // About 3 s per metre climbed (roughly 8 km/h up an 8% grade), a little back going down, capped at 32 km/h.
@@ -183,8 +189,12 @@ public enum StressModel {
     static func transitionSeconds(previous p: GraphEdge, next n: GraphEdge, turned: Bool, junction j: Junction, mode: TravelMode) -> Double {
         switch mode {
         case .drive:
-            let control: Double = switch p.control { case .signal: 12; case .stop, .allstop: 5; case .yield: 2; case nil: 0 }
-            return control + (turned ? 5 : 0)
+            // Expected delay: about half the signals are red for an average 30 s wait; a stop sign is a full stop
+            // and restart; an all-way stop adds waiting your turn; a turn means slowing through the corner. Leaving
+            // a local street at an unsigned cross street means slowing to look: the residential grid mostly has no signs.
+            let control: Double = switch p.control { case .signal: 15; case .allstop: 10; case .stop: 8; case .yield: 3; case nil: 0 }
+            let unsigned: Double = p.control == nil && j.legs >= 4 && (p.roadClass ?? .local) == .local ? 3 : 0
+            return control + unsigned + (turned ? 5 : 0)
         case .bike:
             let control: Double = switch p.control { case .signal: 8; case .stop, .allstop: 3; case .yield: 1; case nil: 0 }
             return control + (turned ? 2 : 0)
@@ -313,10 +323,11 @@ public enum StressModel {
             if !p.isHighway && n.isHighway { add(.freewayEntry, 30) }
             if n.movableBridge && !p.movableBridge { add(.movableBridge, 30) }
         case .bike:
+            // A signal costs more than a stop sign: waiting at a red beside traffic, versus a quick stop and go.
             switch p.control {
             case .stop: add(.stopSign, 10); waits = true
             case .allstop: add(.allWayStop, 10); waits = true
-            case .signal: add(.signal, 8); waits = true
+            case .signal: add(.signal, 14); waits = true
             case .yield: add(.yield, 4)
             case nil: break
             }

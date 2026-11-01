@@ -35,12 +35,11 @@ extension Place {
         guard let nearest, address == nil, kind == .place, !isDroppedPin, !isCurrentLocation else { return subtitle }
         return "\(categoryLabel) · Near \(nearest)"
     }
-    var symbol: String {
-        if kind == .address { return "mappin" }
-        return switch category {
-        case "park": "tree"; case "library": "books.vertical"; case "museum": "building.columns"
-        case "cafe": "cup.and.saucer"; case "viewpoint": "eye"; case Place.pinCategory: "mappin"
-        case Place.locationCategory: "location.fill"; default: "star"
-        }
+    var badge: PlaceBadge {
+        if isCurrentLocation { return .currentLocation }
+        if isDroppedPin { return .droppedPin }
+        if kind == .address { return .address }
+        return .category(PlaceCategory(raw: category))
     }
+    var symbol: String { badge.symbol(raw: category) }
 }
