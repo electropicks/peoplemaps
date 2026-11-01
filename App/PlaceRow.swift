@@ -14,23 +14,27 @@ struct PlaceRow: View {
     private var searching: Bool { !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var meters: Double? { near.map { $0.distance(to: place.coordinate) } }
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
                 CategoryBadge(badge: place.badge, raw: place.category)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(title).font(.body).foregroundStyle(.primary).lineLimit(2)
-                    Text(place.subtitle).font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
+                    Text(title).font(.body).foregroundStyle(.primary).lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                    Text(place.subtitle).font(.subheadline).foregroundStyle(.secondary)
                     if searching, let source = place.source {
-                        Text(source).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                        Text(source).font(.caption).foregroundStyle(.secondary)
                     }
+                    if typeSize.isAccessibilitySize, !selected, let distance { distance }
                 }
+                .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 if selected {
                     Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(.primary)
-                } else if let meters {
-                    Text(NavigationFormat.distance(meters)).font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
-                } else {
+                } else if !typeSize.isAccessibilitySize, let distance {
+                    distance
+                } else if meters == nil {
                     Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
                 }
             }
@@ -38,6 +42,10 @@ struct PlaceRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
+    }
+
+    private var distance: Text? {
+        meters.map { Text(NavigationFormat.distance($0)).font(.subheadline.monospacedDigit()).foregroundColor(.secondary) }
     }
 
     private var label: String {

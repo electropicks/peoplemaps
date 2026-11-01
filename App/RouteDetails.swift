@@ -99,7 +99,7 @@ struct AboutView: View {
                     Text("These are transparent preferences, not safety ratings. Times are estimates with no live traffic.").font(.footnote).foregroundStyle(.secondary)
                 } header: { header("What calmer means") }
                 Section {
-                    Text("\(graph.places.count) places and \(graph.edges.count.formatted()) directed street and path segments are bundled, with USGS elevation. Routing runs entirely on this device. No account is needed. PeopleMaps asks for your location once, when it first opens, and your location stays on this iPhone.")
+                    Text("\(graph.edges.count.formatted()) directed street and path segments are bundled, with USGS elevation. Routing runs entirely on this device. No account is needed. If you haven\u{2019}t answered yet, PeopleMaps asks to use your location when it opens. Your location stays on this iPhone.")
                     Text("Snapshot: 11 October 2026.").foregroundStyle(.secondary)
                     externalLink("OpenStreetMap contributors · ODbL 1.0", "https://www.openstreetmap.org/copyright")
                     NavigationLink("Acknowledgements") { AcknowledgementsView() }.accessibilityIdentifier("acknowledgements")

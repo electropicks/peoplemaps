@@ -9,15 +9,18 @@ struct PlacePicker: View {
     let saved: SavedPlacesStore
     /// Set for the origin: offers "Current location" unless location is denied.
     let location: LocationPermission?
+    /// Where distances are measured from when `location` can't say (the user's position, never the place being replaced).
+    var near: Coordinate?
     let onSelect: (Place) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
     @State private var access: LocationPermission.Access
     @State private var locating = false
     @State private var locationFailed = false
+    @State private var here: Coordinate?
 
-    init(title: String, search: SearchIndex, selected: Place?, saved: SavedPlacesStore, location: LocationPermission? = nil, onSelect: @escaping (Place) -> Void) {
-        self.title = title; self.search = search; self.selected = selected; self.saved = saved; self.location = location; self.onSelect = onSelect
+    init(title: String, search: SearchIndex, selected: Place?, saved: SavedPlacesStore, location: LocationPermission? = nil, near: Coordinate? = nil, onSelect: @escaping (Place) -> Void) {
+        self.title = title; self.search = search; self.selected = selected; self.saved = saved; self.location = location; self.near = near; self.onSelect = onSelect
         _access = State(initialValue: location?.access ?? .denied)
     }
 
@@ -48,7 +51,10 @@ struct PlacePicker: View {
                 }.padding(.horizontal, 16)
             }
             .scrollDismissesKeyboard(.interactively)
-            .background(Color(uiColor: .systemGroupedBackground))
+            .task {
+                guard let location, access == .granted, let c = await location.currentCoordinate() else { return }
+                here = Coordinate(lat: c.latitude, lon: c.longitude)
+            }
             .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() }.accessibilityIdentifier("cancel-search") } }
         }.tint(.primary)
@@ -58,13 +64,13 @@ struct PlacePicker: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(.footnote.weight(.semibold)).foregroundStyle(.secondary).padding(.leading, 16)
                 .accessibilityAddTraits(.isHeader)
-            PlaceList(places: places, query: query, selectedID: selected?.id, near: selected?.coordinate, identifier: { prefix + $0.id }) {
+            PlaceList(places: places, query: query, selectedID: selected?.id, near: here ?? near, identifier: { prefix + $0.id }) {
                 onSelect($0); dismiss()
             }
         }
     }
 
-    /// Asks for permission only here, on a tap. A refusal hides the row and is never raised again.
+    /// Reads the fix, asking for permission first if the user hasn\u{2019}t answered yet; a refusal hides the row.
     private func useCurrentLocation() {
         guard let location, !locating else { return }
         locating = true; locationFailed = false
