@@ -161,9 +161,10 @@ about a minute. We store nothing from them.
 - **Reports sent under an earlier ID**: if the key on the phone is damaged, your
   next report gets a new ID, and **Delete my reports** reaches only the new one.
   Reports sent under the earlier ID can't be deleted from the app. They stay on
-  the server until they expire, within 90 days of sending. The app doesn't say
-  that all your reports were deleted when copies under an earlier ID remain: it
-  says how many it deleted and how many it could not reach.
+  the server until they expire, within 90 days of sending. The app remembers that
+  an earlier ID may hold reports even after you remove them from the list or the
+  list drops them, and then it doesn't say that all your reports were deleted: it
+  says which ones it deleted and that it could not reach the others.
 - **If you lose the phone**: the ID's key lives only on that phone, so without
   it, or if its Keychain is erased, your reports cannot be deleted from the app
   and stay until their 90 days end.
