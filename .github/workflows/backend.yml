@@ -1,0 +1,54 @@
+name: Backend deploy
+
+# Deploys the reports Worker (Docs/REPORTS.md 7.3) after a merge to main. Pull requests never run this workflow; their
+# backend tests run in ci.yml. The deploy job waits for the maintainer's approval on the protected `production`
+# environment, which alone holds the Cloudflare secrets.
+on:
+  push:
+    branches: [main]
+    paths: [Backend/**, .github/workflows/backend.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npx tsc --noEmit
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency: backend-deploy
+    defaults:
+      run:
+        working-directory: Backend
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+      - run: npm ci
+      # Migrations first, so a deploy never runs against an older schema; a failed migration stops the deploy.
+      - run: npx wrangler d1 migrations apply peoplemaps-reports --remote
+      - run: npx wrangler deploy

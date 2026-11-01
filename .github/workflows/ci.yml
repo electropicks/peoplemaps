@@ -21,6 +21,23 @@ jobs:
       - run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev zlib1g-dev python3
       - run: Scripts/verify.sh
 
+  # The reports Worker (Backend/): handlers under node against in-memory SQLite. No Cloudflare account or secrets.
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npx tsc --noEmit
+
   # The iOS app build, on every PR. macOS minutes cost 10x, so the UI suite runs only when asked.
   ios-build:
     runs-on: macos-26
