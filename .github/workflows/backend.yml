@@ -1,7 +1,7 @@
 name: Backend deploy
 
-# Deploys the reports Worker (Docs/REPORTS.md 7.3) automatically after a merge to main, once the tests pass, or by hand for
-# the first deploy. Pull requests never run this workflow; their backend tests run in ci.yml. The `production` environment,
+# Deploys the reports Worker (Docs/REPORTS.md 7.3) automatically after a merge to main, once the tests pass, or by hand. The
+# very first deploy runs from the owner's Mac (Backend/README.md). Pull requests never run this workflow; their backend tests run in ci.yml. The `production` environment,
 # which only main can deploy to, alone holds the Cloudflare secrets. The deploy job is skipped until the repository variable
 # BACKEND_DEPLOY is `true`.
 on:
