@@ -87,11 +87,12 @@ are directional; shared paths are kept distinct. Grade tag coverage is reported
 but not scored because this slice has no reliable elevation model. No route
 is given a safety score or label.
 
-Times use assumed class speeds and simple junction delays. Driving caps a class
-assumption at 80% of a parsed posted speed when available. Cycling assumes
-18 km/h, 14 on shared paths, 11 on tagged rough surfaces. There is no calibration
-or live traffic. Signals add 12 seconds driving / 8 cycling; turns add 5 / 2.
-These constants are hypotheses, exposed in code for review, not empirical ETAs.
+Times use free-flow speeds (the posted limit when mapped, else a class default)
+and junction delays for signals, stops, unsigned cross streets and turns; the
+tables are in the Time section of `Docs/STRESS_MODEL.md`. Cycling assumes
+18 km/h, 14 on shared paths, 11 on tagged rough surfaces. There is no live
+traffic. Drive times were checked against one real trip; the constants remain
+hypotheses, exposed in code for review, not empirical ETAs.
 
 ## UI and lifecycle
 
