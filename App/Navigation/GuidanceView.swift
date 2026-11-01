@@ -24,7 +24,7 @@ struct GuidanceOverlay: View {
     let navigator: NavigationController
     let landscape: Bool
     /// Landscape card width; the card is also capped at 40% of the screen width.
-    let cardWidth: CGFloat?
+    let cardWidth: CGFloat
     let attribution: AnyView
     @Binding var camera: GuidanceCamera
     @Binding var muted: Bool
@@ -37,7 +37,9 @@ struct GuidanceOverlay: View {
     @State private var bottomEdge: CGFloat = .infinity
     @State private var leadingEdge: CGFloat = 0
     @State private var screen: CGSize = .zero
-    @ScaledMetric(relativeTo: .largeTitle) private var arrowSize = 52.0
+    @ScaledMetric(relativeTo: .largeTitle) private var scaledArrow = 52.0
+    /// Capped with the rest of the chrome (the environment cap below doesn't reach this view's own metrics).
+    private var arrowSize: CGFloat { min(scaledArrow, 80) }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @Namespace private var glassNS
@@ -69,6 +71,9 @@ struct GuidanceOverlay: View {
             shownAngle += delta
         }
         .onAppear { shownAngle = compassTarget; withAnimation(Motion.panel(reduceMotion)) { shown = true } }
+        .sensoryFeedback(.success, trigger: navigator.hasArrived) { _, arrived in arrived }
+        // Banner and trip bar stacked are taller than the screen past this size, so the chrome stops growing here.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     }
 
     /// Where the compass should point: against the map's heading while the map is turned, upright otherwise. A free look
@@ -94,7 +99,6 @@ struct GuidanceOverlay: View {
         VStack(spacing: 8) {
             if !navigator.hasArrived {
                 GlassEffectContainer(spacing: 8) {
-                    topChrome {
                     VStack(alignment: .leading, spacing: 8) {
                         if shown {
                             ZStack(alignment: .top) {
@@ -109,7 +113,6 @@ struct GuidanceOverlay: View {
                             Spacer(minLength: 0)
                             mapButtons
                         }
-                    }
                     }
                 }
                 .padding(.horizontal, 8).padding(.top, 4)
@@ -130,16 +133,11 @@ struct GuidanceOverlay: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    /// At accessibility sizes the banner and trip bar together are taller than the screen, so the top chrome scrolls.
-    @ViewBuilder private func topChrome<C: View>(@ViewBuilder _ content: () -> C) -> some View {
-        if typeSize.isAccessibilitySize { ScrollView { content() }.scrollBounceBehavior(.basedOnSize) } else { content() }
-    }
-
     // MARK: Landscape
 
     private var landscapeBody: some View {
         GeometryReader { geo in
-            let width = min(cardWidth ?? 360, geo.size.width * 0.4)
+            let width = min(cardWidth, geo.size.width * 0.4)
             GlassEffectContainer(spacing: 8) {
                 HStack(alignment: .top, spacing: 0) {
                     ScrollView {
@@ -215,7 +213,7 @@ struct GuidanceOverlay: View {
                     Text(navigator.thenText).fontWeight(.semibold).lineLimit(typeSize.isAccessibilitySize ? 4 : 2).fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                 }
-                .font(.subheadline).foregroundStyle(.secondary)
+                .font(.subheadline).foregroundStyle(Self.onGlass)
                 .padding(.horizontal, 18).padding(.vertical, 10).frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
                 .accessibilityElement(children: .combine).accessibilityIdentifier("guidance-then")
             }
@@ -239,7 +237,7 @@ struct GuidanceOverlay: View {
     }
 
     private static func chipSymbol(_ text: String) -> String {
-        text.localizedCaseInsensitiveContains("stop") ? "octagon" : "trafficlight"
+        text.localizedCaseInsensitiveContains("stop") ? "octagon" : "light.beacon.max"
     }
 
     // MARK: Rerouting
@@ -254,13 +252,13 @@ struct GuidanceOverlay: View {
                 ProgressView().controlSize(.large).tint(.calmerText).frame(width: 52, height: 52)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Finding a calmer way…").font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
-                    Text("You left the planned route").font(.subheadline).foregroundStyle(.secondary)
+                    Text("You left the planned route").font(.subheadline).foregroundStyle(Self.onGlass)
                 }
                 Spacer(minLength: 0)
             }
             .padding(.leading, 16).padding(.trailing, 18).padding(.vertical, 14)
             Divider().padding(.horizontal, 16)
-            Text("Works offline. No signal needed.").font(.subheadline).foregroundStyle(.secondary)
+            Text("Works offline. No signal needed.").font(.subheadline).foregroundStyle(Self.onGlass)
                 .padding(.horizontal, 18).frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
         }
         .accessibilityElement(children: .combine).accessibilityIdentifier("guidance-rerouting")
@@ -282,15 +280,15 @@ struct GuidanceOverlay: View {
         return VStack(alignment: .leading, spacing: 8) {
             if landscape {
                 stats(waiting)
-                Text(estimateNote(waiting)).font(.caption).foregroundStyle(.secondary).padding(.top, 6)
+                Text(estimateNote(waiting)).font(.caption).foregroundStyle(Self.onGlass).padding(.top, 6)
                 endButton(fullWidth: true)
             } else if typeSize.isAccessibilitySize {
                 stats(waiting)
                 endButton(fullWidth: true)
-                Text(estimateNote(waiting)).font(.caption).foregroundStyle(.secondary)
+                Text(estimateNote(waiting)).font(.caption).foregroundStyle(Self.onGlass)
             } else {
                 HStack(spacing: 12) { stats(waiting); endButton(fullWidth: false) }
-                Text(estimateNote(waiting)).font(.caption).foregroundStyle(.secondary)
+                Text(estimateNote(waiting)).font(.caption).foregroundStyle(Self.onGlass)
             }
         }
         .accessibilityElement(children: .contain).accessibilityIdentifier("trip-bar")
@@ -321,9 +319,9 @@ struct GuidanceOverlay: View {
         let layout = stacked ? AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8)) : AnyLayout(VStackLayout(alignment: .leading, spacing: 1))
         return layout {
             Text(value).font(.title3.weight(.semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
-                .foregroundStyle(waiting ? .secondary : .primary).accessibilityIdentifier(id)
+                .foregroundStyle(waiting ? Self.onGlass : Color.primary).accessibilityIdentifier(id)
                 .contentTransition(.numericText()).animation(Motion.content(reduceMotion), value: value)
-            Text(label).font(.footnote).foregroundStyle(.secondary)
+            Text(label).font(.footnote).foregroundStyle(Self.onGlass)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
@@ -331,8 +329,8 @@ struct GuidanceOverlay: View {
 
     private func endButton(fullWidth: Bool) -> some View {
         Button(role: .destructive, action: onEnd) {
-            Text("End").font(.body.weight(.semibold)).padding(.horizontal, 8)
-                .frame(minWidth: 48, maxWidth: fullWidth ? .infinity : nil, minHeight: 28)
+            Text("End").font(.body.weight(.semibold)).foregroundStyle(Self.endRed).padding(.horizontal, 8)
+                .frame(minWidth: 48, maxWidth: fullWidth ? .infinity : nil, minHeight: 44)
         }
         .buttonStyle(.bordered).buttonBorderShape(.capsule).tint(.red)
         .accessibilityIdentifier("end-navigation")
@@ -380,7 +378,7 @@ struct GuidanceOverlay: View {
             Image(systemName: "location.north.line.fill").rotationEffect(.degrees(shownAngle))
         }
         .accessibilityLabel(camera.courseUp ? "Heading up" : "North up")
-        .accessibilityHint(camera.courseUp ? "Turns the map north up" : "Turns the map to face your heading")
+        .accessibilityHint(camera.mode == .overview ? "Leaves the route overview" : camera.courseUp ? "Turns the map north up" : "Turns the map to face your heading")
         .accessibilityIdentifier("guidance-compass")
     }
 
@@ -423,7 +421,7 @@ struct GuidanceOverlay: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("You've arrived at \(name)").font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("guidance-arrived")
-                    Text(summary).font(.subheadline).foregroundStyle(.secondary).accessibilityIdentifier("arrival-summary")
+                    Text(summary).font(.subheadline).foregroundStyle(Self.onGlass).accessibilityIdentifier("arrival-summary")
                 }
                 Spacer(minLength: 0)
             }
@@ -446,11 +444,10 @@ struct GuidanceOverlay: View {
             }
             .buttonStyle(.glassProminent).buttonBorderShape(.capsule).tint(.directionsFill).controlSize(.large)
             .accessibilityIdentifier("done-navigation")
-            Text("Times are estimates. No live traffic.").font(.footnote).foregroundStyle(.secondary).padding(.horizontal, 4)
+            Text("Times are estimates. No live traffic.").font(.footnote).foregroundStyle(Self.onGlass).padding(.horizontal, 4)
             VoiceUpgradeTip()
         }
         .accessibilityElement(children: .contain).accessibilityIdentifier("arrival-card")
-        .sensoryFeedback(.success, trigger: navigator.hasArrived) { _, arrived in arrived }
     }
 
     #if DEBUG
@@ -459,6 +456,11 @@ struct GuidanceOverlay: View {
     #else
     static let exposesArrow = false
     #endif
+
+    /// Secondary text on glass: `.secondary` measures under 4.5:1 on it.
+    static let onGlass = Color.primary.opacity(0.75)
+    /// Red label for End: a darker red in light, a lighter one in dark, so it clears 4.5:1 on its tinted capsule over glass.
+    static let endRed = Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(red: 1, green: 0.5, blue: 0.47, alpha: 1) : UIColor(red: 0.69, green: 0.07, blue: 0.09, alpha: 1) })
 
     static func symbol(_ maneuver: Maneuver) -> String { maneuver.symbolName }
 }

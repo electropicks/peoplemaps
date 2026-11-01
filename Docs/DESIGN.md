@@ -413,8 +413,13 @@ screen.
   no live traffic" below. At accessibility sizes the three stats stack.
 
 Landscape: one leading glass card (banner, chip, trip stats, End), buttons
-trailing, as today but glass. Width `min(360, 40% of width)` instead of fixed
-330 (D6).
+trailing, as today but glass. Width `min(cardWidth, 40% of width)`, where
+`ExploreView` passes `cardWidth` = 330 (D6).
+
+At accessibility sizes the chrome's type stops growing at `accessibility2`: the
+banner and the stacked trip bar together fill the screen at larger sizes, which
+would push mute, compass and overview off it. Secondary text on glass uses
+`.primary` at 75% opacity, because `.secondary` measures under 4.5:1 there.
 
 ```
 ┌──────────────────────────────┐
@@ -437,10 +442,11 @@ trailing, as today but glass. Width `min(360, 40% of width)` instead of fixed
 Current: opaque bottom sheet, green check, notes list, Done
 (`nav-arrived.png`).
 
-Proposed: the persistent sheet returns at `.medium` with the arrival content:
-check badge (`directionsFill`), "You've arrived at Gas Works Park", summary
-line, trip notes in a `panelFill` group, **Done** as `.glassProminent`, "Times
-are estimates. No live traffic." and the voice tip. `.sensoryFeedback(.success)`.
+Decided, not the returning sheet: a bottom glass card inside `GuidanceView`, no
+grabber. Check badge (`directionsFill`), "You've arrived at Gas Works Park",
+summary line, trip notes in a `panelFill` group, **Done** as `.glassProminent`
+tinted `directionsFill`, "Times are estimates. No live traffic." and the voice
+tip. `.sensoryFeedback(.success)` fires on arrival.
 
 ### 4.9 About and Acknowledgements
 
