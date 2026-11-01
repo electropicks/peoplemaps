@@ -13,15 +13,13 @@
       "kind": "intersection",
       "lat": 47.6298,
       "lon": -122.35931,
-      "osmNode": 53070456,
-      "placeID": "way/37056567"
+      "osmNode": 53070456
     },
     "destination": {
       "kind": "intersection",
       "lat": 47.64521,
       "lon": -122.33498,
-      "osmNode": 53077201,
-      "placeID": "relation/1047789"
+      "osmNode": 53077201
     },
     "rerouted": false
   },
@@ -56,7 +54,7 @@
     "distanceToManeuver": 86.5,
     "remainingMeters": 2890.1,
     "remainingSeconds": 402.0,
-    "cell": "r4c4"
+    "cell": "r29c11"
   },
   "location": null,
   "spoken": [

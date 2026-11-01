@@ -39,7 +39,7 @@ home, and is what the app sends. Both are `Codable` in `Core/Reports.swift`.
 | `flaggedAt` | ISO 8601 | Ordering on the phone; sent rounded down to the hour, UTC | hour only |
 | `request.mode` | `walk`, `bike`, `drive` | Rebuild the `RouteRequest` | yes |
 | `request.extraMinutes` | 0 to 20 | Rebuild the `RouteRequest` | yes |
-| `request.preferences` | object or null | The "Calmer means" sheet (`Docs/DESIGN.md` 4.6); null until it lands | yes |
+| `request.preferences` | null | Always null for now; the Worker refuses anything else, because an open object could hold anything. The "Calmer means" sheet (`Docs/DESIGN.md` 4.6, #6) adds a strict shape when it lands | yes |
 | `request.origin`, `request.destination` | endpoint (2.2) | Rebuild the `RouteRequest`. Exact on the phone | snapped |
 | `request.rerouted` | bool | `origin` is where the engine rerouted, not where the trip began | yes |
 | `chosen` | `calmer` or `fastest` | Which route to compare a replay against | yes |
@@ -71,7 +71,7 @@ Contacts, Calendar or Photos, saved places, recents and favourites, and the trip
 
 ```jsonc
 // endpoint, snapped (the default)
-{ "kind": "intersection", "lat": 47.62980, "lon": -122.35931, "osmNode": 53070456, "placeID": "way/37056567" }
+{ "kind": "intersection", "lat": 47.62980, "lon": -122.35931, "osmNode": 53070456 }
 // endpoint, exact (only with the per-report toggle on); the snapped form rides along for public_json
 { "kind": "exact", "lat": 47.62950, "lon": -122.35990, "placeID": "way/37056567",
   "snapped": { "lat": 47.62980, "lon": -122.35931, "osmNode": 53070456 } }
@@ -85,8 +85,10 @@ null
   in its main connected component, with three or more road legs, or two if none has three. If none is within 400 m the
   endpoint becomes `null` and the review screen says "No intersection near the start; start removed". Coordinates are
   the node's, to five decimals.
-- **`placeID`** is kept only for a public named place, and only when it matches `^(node|way|relation)/\d{1,19}$`.
-  Addresses, pins and the user's position never carry an ID or a name. The key is omitted, not sent as `null`.
+- **`placeID`** names the exact place, such as a clinic, so it is an exact field: it is sent only on an exact endpoint and
+  stored only in `exact_json`. The Worker refuses it on a snapped endpoint (question 28). It is kept only for a public named
+  place, when it matches `^(node|way|relation)/\d{1,19}$`; addresses, pins and the user's position never carry one. The
+  key is omitted, not sent as `null`.
 - **`location`**: `accuracy` is 0 to 10,000 m; `course` is -1 to 360, or `null` when the fix has no heading.
 - Both forms are stored on the phone, so review can switch without recomputing. Only the chosen form is sent.
 
@@ -115,8 +117,8 @@ whitespace) before hashing, so order does not matter for idempotency. Example va
     "mode": "drive",
     "extraMinutes": 5,
     "preferences": null,
-    "origin": { "kind": "intersection", "lat": 47.62980, "lon": -122.35931, "osmNode": 53070456, "placeID": "way/37056567" },
-    "destination": { "kind": "intersection", "lat": 47.64521, "lon": -122.33498, "osmNode": 53077201, "placeID": "relation/1047789" },
+    "origin": { "kind": "intersection", "lat": 47.62980, "lon": -122.35931, "osmNode": 53070456 },
+    "destination": { "kind": "intersection", "lat": 47.64521, "lon": -122.33498, "osmNode": 53077201 },
     "rerouted": false
   },
   "chosen": "calmer",
@@ -130,7 +132,7 @@ whitespace) before hashing, so order does not matter for idempotency. Example va
     "stress": 318.5,
     "alternativeHash": "9b02…17cd"
   },
-  "position": { "stepIndex": 3, "shownStepIndex": 4, "distanceToManeuver": 86.5, "remainingMeters": 2890.1, "remainingSeconds": 402.0, "cell": "r4c4" },
+  "position": { "stepIndex": 3, "shownStepIndex": 4, "distanceToManeuver": 86.5, "remainingMeters": 2890.1, "remainingSeconds": 402.0, "cell": "r29c11" },
   "location": null,
   "spoken": [
     { "text": "In a quarter mile, turn left onto Dexter Avenue North", "secondsBefore": 41 },
@@ -148,8 +150,9 @@ whitespace) before hashing, so order does not matter for idempotency. Example va
 
 Not built yet. A small `peoplemaps-replay` target beside `RouteAudit` takes a report body (`public_json`, or the export):
 
-1. **Data version.** Compare `route.dataVersion` with `graphSHA256` in `Data/provenance.json`; on a mismatch, name the
-   commit that introduced it, from `git log -S`.
+1. **Data version.** Compare `route.dataVersion` with the graph's SHA-256. `graphSHA256` is only in the search index's meta
+   row today (`Scripts/build_search.py`). Naming the commit behind a mismatch with `git log -S` first needs the importer to
+   write it to `Data/provenance.json` too, which has not landed.
 2. **Plan replay**, always possible. Build the `Route` from `route.edgeIDs`, then `navigationPlan(mode:)`. Print the step
    at `position.shownStepIndex` and the spoken texts it would produce next to `spoken`, and check that the hash and
    metrics reproduce.
@@ -202,8 +205,8 @@ Send.
 
 Every other endpoint needs `Authorization: Bearer pm_…`. A token that matches no install is `401 unauthorized`: the
 install was deleted or never existed. The app wipes its two Keychain items and shows "Your report ID was reset". It
-mints a new token only inside a Send, then retries that send once; a 401 on "Check status" or "Delete my reports" ends
-there. No request mints a token on its own.
+mints a new token only inside a Send, then retries that send once; a 401 on "Check status" ends there, and on "Delete my
+reports" it counts as done (4.4). No request mints a token on its own.
 
 ### 4.2 Send a report
 
@@ -250,7 +253,13 @@ DELETE /v1/installs/me     204
 
 `DELETE /v1/installs/me` deletes every report of the install and the install row, in one D1 batch, and is the reset:
 "Delete my reports" is also "start over". The app wipes its Keychain items only after a `204`, or on a 401. On any other
-failure it keeps them, so the user can tap Delete again. A hand-filed issue (6) is not reached by these; see question 26.
+failure it keeps them, so the user can tap Delete again.
+
+**A 401 on `DELETE /v1/installs/me` counts as deleted.** If the `204` was lost, the retry gets a 401, and telling the user
+it failed would be wrong. A 401 in the Worker's JSON envelope means it holds no install for this token, and reports can
+only be reached through an install, so there is nothing left that this phone could delete. A 401 without that envelope,
+say from something in between, stays an error. The one case this misreads is a Keychain token that has been corrupted,
+where the old reports would remain until they expire; the phone could not have deleted them anyway. A hand-filed issue (6) is not reached by these; see question 26.
 
 ### 4.5 Before App Store release
 
@@ -262,9 +271,9 @@ TestFlight, and it budgets Workers Paid at $5 a month for the CPU it needs (ques
 - Minting a token needs no identity, so every per-install cap can be reset by minting again. The limits that hold against
   that are keyed by client IP at Cloudflare's edge, where our code and database never store it. Three Workers rate
   limiting bindings in `wrangler.jsonc`, 60-second windows: `RL_AUTH`, 10 per minute keyed on the token hash, for every
-  authenticated route; `RL_INSTALLS`, 2 per minute, and `RL_REPORTS`, 10 per minute, keyed on the bare `cf-connecting-ip`,
-  read only in `src/ratelimit.ts`, passed straight to the binding and never stored. Over a limit is `429 rate_limited`
-  with `Retry-After`.
+  authenticated route; `RL_INSTALLS`, 2 per minute, and `RL_REPORTS`, 10 per minute, keyed on `cf-connecting-ip`, or its /64
+  for IPv6, since one home or phone usually holds a whole /64. It is read only in `src/ratelimit.ts`, passed straight to the
+  binding and never stored. Over a limit is `429 rate_limited` with `Retry-After`.
 - The bindings are approximate and count per Cloudflare location, so a flood spread across locations gets more. The
   strict backstop is `INSTALLS_PER_HOUR` (60), counted from `installs.created_at` in the current hour.
 - **D1's Free daily limits** (5 million rows read, 100,000 rows written, enforced since 2026-09-01). Once spent, every
@@ -272,6 +281,11 @@ TestFlight, and it budgets Workers Paid at $5 a month for the CPU it needs (ques
   answers `503 storage_unavailable` with `Retry-After` set to 00:00 UTC, and the app keeps the report flagged with "The
   report server is full for today. Try again after <local time>." The report is not parked anywhere else, since a second
   store would need its own retention and its own line in the policy.
+- **D1's size limits** ("Exceeded maximum DB size." and the account storage limit) get the same 503, though only retention
+  or a maintainer frees them, not midnight.
+- **Accepted for now, at zero users.** Workers Free allows 100,000 requests a day, and D1 and that limit stop rather than
+  bill on a no-card account, so these are outages, not costs: a flood filling the free D1 database; one IP spending the
+  global mint ceiling; and unknown-token 401s counting against the daily requests. Fix them when there are users to lose.
 - Errors are `{ "error": code, "message": text, "field"?: path }`. Codes: `unauthorized` 401, `not_found` 404,
   `invalid_report` 400, `too_large` 413, `conflict` 409, `rate_limited` 429, `storage_unavailable` 503, `internal` 500.
 - The Worker never logs a request object, a header, an IP, a user agent or a body. `observability.enabled` and
@@ -317,9 +331,9 @@ Anything else a maintainer wants is in `public_json`: `json_extract(public_json,
 
 ### 5.2 The cell grid
 
-`position.cell` is a grid square about 550 m on a side over the coverage bounds: row `floor((lat - 47.615) / 0.005)`,
-col `floor((lon + 122.390) / 0.0075)` of the route point at flag time, clamped to rows 0 to 12 and columns 0 to 11. The
-Worker has no graph, so the app computes it; the Worker checks it is a cell of the grid and stores it in `public_json`.
+`position.cell` is a grid square about 550 m on a side over the all-Seattle box of `Docs/COVERAGE_SPIKE.md`, so growing the
+data does not change the grid: row `floor((lat - 47.49) / 0.005)`, col `floor((lon + 122.44) / 0.0075)` of the route point at
+flag time, clamped to rows 0 to 49 and columns 0 to 26. The Worker has no graph, so the app computes it; the Worker checks it is a cell of the grid and stores it in `public_json`.
 
 Aggregate counts over this grid are deferred, since nothing reads them. Keeping `position.cell` in the body lets them be
 rebuilt from any rows still held; rows deleted before then are not counted.
@@ -327,7 +341,7 @@ rebuilt from any rows still held; rows deleted before then are not counted.
 ### 5.3 Retention
 
 One cron, `17 3 * * *`: `DELETE FROM reports WHERE expires_at < now()`, and delete installs not seen for 365 days that
-have no reports. It logs one count.
+have no reports. It logs one count, and the handler awaits the job so a failure fails the invocation rather than vanishing.
 
 **Time Travel.** D1 keeps a restorable copy of the database for 7 days on the Workers Free plan and 30 on Paid. It cannot
 be shortened or turned off, and only the maintainers' Cloudflare account can restore from it. So a row deleted by the
@@ -356,7 +370,7 @@ with tests. The maintainer reads it first and edits or drops the note if it has 
 - **Body.** `### <Label>` sections: Category; What happened; Data version; App version; Flagged at; Route request; Route;
   Position; Spoken instructions; Navigation state; Device. Everything a replay needs is there.
 - **Omitted:** exact endpoints, `location`, the `exactLocations` flag, the install ID and report ID, and the snapped
-  endpoints' coordinates, `osmNode` and `placeID`: each endpoint shows as its cell.
+  endpoints' coordinates and `osmNode`: each endpoint shows as its cell.
 - **What coarsening does not hide.** `edgeIDs` and `wayIDs` stay, because the plan replay needs the whole route, and a
   route starts and ends at its snapped intersections. Anyone with the map data can read those corners off the first and
   last edges. The maintainer can cut the route from a sensitive issue; `Docs/PRIVACY.md` says this.
@@ -435,8 +449,9 @@ rights would let any workflow merged to `main` read `exact_json`, and the enviro
 
 ### 7.4 Versioning and rollout
 
-The API is `/v1/`. A field is added without a version bump; a field that changes meaning bumps `schema` and the Worker
-accepts both for one app release. The Worker is deployed before the app that needs it.
+The API is `/v1/`. The Worker refuses unknown keys (`validate.ts`), so a new field ships as optional on the Worker first,
+then in the app, with no version bump. A field that changes meaning bumps `schema` and the Worker accepts both for one app
+release.
 
 ### 7.5 How the app learns the base URL
 
@@ -495,7 +510,7 @@ nothing about the problem. The review shows `route.stress` because it shows ever
   updates the first snapshot.
 - The composer sends one report per tap, and a send in flight blocks a second tap. Failure shows the error in words ("No
   connection", "The server refused this report (invalid_report: note)", "Too many reports today") and keeps everything.
-- A 401 is handled as in 4.1. An interrupted Send is handled as in 4.2.
+- A 401 is handled as in 4.1 and 4.4. An interrupted Send is handled as in 4.2.
 - There is no way to change the report ID on its own. "Delete my reports" is the reset.
 
 ### 8.4 UI test
@@ -560,6 +575,11 @@ Numbers are stable, so code comments can cite them; gaps were resolved or remove
 27. **Check status.** Owner to decide. With no issue state it can only show that a report is still held and until when.
     Default: keep `GET /v1/reports`, since it is the sender's view of what the server holds, and decide when the screen is
     built. Dropping the button later removes one sentence from the policy.
+
+28. **`placeID` with exact off.** Default, and the owner may overrule it: sent and stored only with exact locations on (2.2),
+    since an OSM ID names the exact place while the policy says location is collected only then. The cost is that route
+    replay of a default report snaps by coordinate rather than using the importer's snap for that place; the plan replay is
+    unaffected.
 
 Considered, not chosen: TestFlight feedback through the App Store Connect API (no replay fields and no deletion by the
 sender); a stateless Worker writing to R2 with a lifecycle rule (no idempotency or per-install caps); client-side

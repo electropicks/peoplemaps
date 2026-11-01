@@ -25,9 +25,9 @@ describe("issue title", () => {
     expect(t).toBe("[app-report] Wrong instruction: step 4 (drive, a1b2c3d4e5f6)");
   });
   it("shows cells, never streets, for the other categories", () => {
-    expect(issueTitle(pub((r) => { r.category = "calmer_bad_choice"; }))).toBe("[app-report] Calmer route questioned: r2c4 → r6c7 (drive, a1b2c3d4e5f6)");
-    expect(issueTitle(pub((r) => { r.category = "map_data"; r.request.origin = null; }))).toBe("[app-report] Map data: removed → r6c7 (drive, a1b2c3d4e5f6)");
-    expect(issueTitle(pub((r) => { r.category = "other"; r.request.mode = "walk"; }))).toBe("[app-report] Other: r2c4 → r6c7 (walk, a1b2c3d4e5f6)");
+    expect(issueTitle(pub((r) => { r.category = "calmer_bad_choice"; }))).toBe("[app-report] Calmer route questioned: r27c10 → r31c14 (drive, a1b2c3d4e5f6)");
+    expect(issueTitle(pub((r) => { r.category = "map_data"; r.request.origin = null; }))).toBe("[app-report] Map data: removed → r31c14 (drive, a1b2c3d4e5f6)");
+    expect(issueTitle(pub((r) => { r.category = "other"; r.request.mode = "walk"; }))).toBe("[app-report] Other: r27c10 → r31c14 (walk, a1b2c3d4e5f6)");
   });
   it("shortens a long instruction", () => {
     const t = issueTitle(pub((r) => { r.spoken = [{ text: "word ".repeat(80), secondsBefore: 1 }]; }));
@@ -43,8 +43,8 @@ describe("issue body", () => {
     expect(headings).toEqual(["Category", "What happened", "Data version", "App version", "Flagged at", "Route request", "Route", "Position", "Spoken instructions", "Navigation state", "Device"]);
   });
   it("shows endpoints as cells, with no coordinates, nodes or place IDs", () => {
-    expect(body).toContain('"origin": "r2c4"');
-    expect(body).toContain('"destination": "r6c7"');
+    expect(body).toContain('"origin": "r27c10"');
+    expect(body).toContain('"destination": "r31c14"');
     for (const s of ["47.6298", "-122.35931", "47.64521", "53070456", "53077201", "way/37056567", "relation/1047789", "osmNode", "placeID", "exactLocations", "lat", "lon"]) {
       expect(body).not.toContain(s);
     }

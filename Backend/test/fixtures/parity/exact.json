@@ -65,7 +65,7 @@
       "distanceToManeuver": 86.5,
       "remainingMeters": 2890.1,
       "remainingSeconds": 402.0,
-      "cell": "r4c4"
+      "cell": "r29c11"
     },
     "location": {
       "lat": 47.63712,
@@ -114,8 +114,7 @@
         "kind": "intersection",
         "lat": 47.6298,
         "lon": -122.35931,
-        "osmNode": 53070456,
-        "placeID": "way/37056567"
+        "osmNode": 53070456
       },
       "destination": {
         "kind": "intersection",
@@ -156,7 +155,7 @@
       "distanceToManeuver": 86.5,
       "remainingMeters": 2890.1,
       "remainingSeconds": 402.0,
-      "cell": "r4c4"
+      "cell": "r29c11"
     },
     "location": null,
     "spoken": [

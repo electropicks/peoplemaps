@@ -24,6 +24,7 @@ macOS with Xcode only. In a cloud or Linux session, say so and leave the screens
 | `--location-granted LAT,LON` | with `--ui-testing`: location allowed at that spot, no prompt. Without it (and without `--real-location`) location counts as denied |
 | `--slow-routing` | 3 s router delay, to show loading states |
 | `--keep-saved` | keep favourites and recents between UI-test launches |
+| `--reduce-transparency` | debug builds: glass surfaces use the opaque Reduce Transparency fallback, without changing Settings |
 
 ## Capture
 

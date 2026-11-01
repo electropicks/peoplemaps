@@ -2,14 +2,14 @@ import type { Deps } from "./deps";
 import { HttpError, json } from "./errors";
 import { appVersion, authenticate, sha256Hex } from "./installs";
 import { limitByIP } from "./ratelimit";
-import type { ReportRow } from "./store";
+import type { ReportRow, ReportSummary } from "./store";
 import { addDays, hour } from "./time";
 import { canonical, readJSON, splitExact, validate } from "./validate";
 
 // POST, GET, DELETE /v1/reports (Docs/REPORTS.md 4.2 to 4.4).
 
 /** The 4.2 response shape. */
-export function receipt(r: ReportRow) {
+export function receipt(r: Pick<ReportSummary, "id" | "received_at" | "expires_at">) {
   return { id: r.id, receivedAt: r.received_at, expiresAt: r.expires_at };
 }
 

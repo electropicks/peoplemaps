@@ -1,6 +1,6 @@
-// The 550 m grid of Docs/REPORTS.md 5.2: rows 0 to 12, columns 0 to 11.
-const SOUTH = 47.615, WEST = -122.390, ROW_DEG = 0.005, COL_DEG = 0.0075;
-export const MAX_ROW = 12, MAX_COL = 11;
+// The 550 m grid of Docs/REPORTS.md 5.2, over the all-Seattle box of Docs/COVERAGE_SPIKE.md: rows 0 to 49, columns 0 to 26.
+const SOUTH = 47.49, WEST = -122.44, ROW_DEG = 0.005, COL_DEG = 0.0075;
+export const MAX_ROW = 49, MAX_COL = 26;
 
 export function isCell(s: unknown): s is string {
   if (typeof s !== "string") return false;

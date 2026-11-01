@@ -61,8 +61,8 @@ export default {
   fetch(request: Request, env: Env): Promise<Response> {
     return handle(request, depsFromEnv(env));
   },
-  // A failing day (D1 limits spent) catches up on the next run (4.6).
-  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(retention(depsFromEnv(env)));
+  // Awaited so a failure fails the invocation; a failing day (D1 limits spent) catches up on the next run (4.6).
+  async scheduled(_event: ScheduledController, env: Env): Promise<void> {
+    await retention(depsFromEnv(env));
   },
 } satisfies ExportedHandler<Env>;

@@ -212,3 +212,29 @@ final class NavigationSeattleTests: XCTestCase {
         XCTAssertTrue(plan.steps.contains { $0.maneuver == .cross })
     }
 }
+
+final class TurnArrowTests: XCTestCase {
+    /// Every turn the planner can make: the instruction words and the arrow name the same side and the same sharpness.
+    func testInstructionAndSymbolAgreeForEveryTurn() {
+        let cases: [(Double, side: String, text: String, symbol: String)] = [
+            (45, "left", "Turn slightly left onto Oak Ave", "arrow.up.left"),
+            (-45, "right", "Turn slightly right onto Oak Ave", "arrow.up.right"),
+            (90, "left", "Turn left onto Oak Ave", "arrow.turn.up.left"),
+            (-90, "right", "Turn right onto Oak Ave", "arrow.turn.up.right"),
+            (150, "left", "Make a sharp left onto Oak Ave", "arrow.turn.down.left"),
+            (-150, "right", "Make a sharp right onto Oak Ave", "arrow.turn.down.right"),
+            (178, "left", "Make a U-turn", "arrow.uturn.left"),
+            (-178, "left", "Make a U-turn", "arrow.uturn.left")]
+        for mode in [TravelMode.drive, .walk, .bike] {
+            for c in cases {
+                let step = Grid.turnRoute(c.0, mode: mode).steps[1]
+                XCTAssertEqual(step.instruction, c.text, "\(c.0) degrees, \(mode)")
+                XCTAssertEqual(step.maneuver.symbolName, c.symbol, "\(c.0) degrees, \(mode)")
+                if c.text != "Make a U-turn" {
+                    XCTAssertTrue(step.instruction.contains(c.side), "\(c.0): text names \(c.side)")
+                    XCTAssertTrue(step.maneuver.symbolName.hasSuffix(c.side), "\(c.0): symbol points \(c.side)")
+                }
+            }
+        }
+    }
+}

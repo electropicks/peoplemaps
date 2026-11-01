@@ -14,7 +14,7 @@ describe("POST /v1/reports", () => {
     expect(await res.json()).toEqual({ id: ID, receivedAt: "2026-10-31T21:00:00Z", expiresAt: "2027-01-29T21:00:00Z" });
     const [row] = w.rows("reports");
     expect(row).toMatchObject({ install_id: installID, category: "wrong_instruction", exact_json: null });
-    expect(JSON.parse(row.public_json as string).position.cell).toBe("r4c4");
+    expect(JSON.parse(row.public_json as string).position.cell).toBe("r29c11");
   });
 
   it("is idempotent on id: same body 200, reordered keys 200, changed body 409", async () => {
@@ -118,6 +118,15 @@ describe("GET /v1/reports", () => {
     expect(await res.json()).toEqual({ reports: [{ id: ID, receivedAt: "2026-10-31T21:00:00Z", expiresAt: "2027-01-29T21:00:00Z", category: "wrong_instruction" }] });
     expect((await w.call("GET", `/v1/reports/${ID}`, { token: a.token })).status).toBe(200);
     expect((await w.call("GET", `/v1/reports/${ID}`, { token: b.token })).status).toBe(404);
+  });
+});
+
+describe("reportsByInstall", () => {
+  it("loads only what the list shows, never the body or exact part", async () => {
+    const w = world();
+    const { token, installID } = await w.mint();
+    await w.send(token, exactCase.report);
+    expect(Object.keys((await w.deps.store.reportsByInstall(installID))[0]).sort()).toEqual(["category", "expires_at", "id", "received_at"]);
   });
 });
 

@@ -8,7 +8,7 @@ export const MODES = ["walk", "bike", "drive"] as const;
 export type Category = (typeof CATEGORIES)[number];
 export type Mode = (typeof MODES)[number];
 
-export interface SnappedEndpoint { kind: "intersection"; lat: number; lon: number; osmNode: number; placeID?: string | null }
+export interface SnappedEndpoint { kind: "intersection"; lat: number; lon: number; osmNode: number }
 export interface ExactEndpoint {
   kind: "exact"; lat: number; lon: number; placeID?: string | null;
   snapped: { lat: number; lon: number; osmNode: number };
@@ -23,7 +23,7 @@ export interface Report {
   category: Category;
   note: string | null;
   exactLocations: boolean;
-  request: { mode: Mode; extraMinutes: number; preferences: Record<string, unknown> | null; origin: Endpoint; destination: Endpoint; rerouted: boolean };
+  request: { mode: Mode; extraMinutes: number; preferences: null; origin: Endpoint; destination: Endpoint; rerouted: boolean };
   chosen: "calmer" | "fastest";
   route: {
     dataVersion: string; edgeIDs: number[]; wayIDs: number[]; hash: string;
@@ -95,9 +95,9 @@ function endpoint(v: unknown, path: string, exactAllowed: boolean): void {
   if (!isObj(v)) throw invalid(path, "Expected an endpoint or null.");
   const kind = oneOf(v.kind, join(path, "kind"), ["intersection", "exact"]);
   if (kind === "intersection") {
-    const o = obj(v, path, ["kind", "lat", "lon", "osmNode"], ["placeID"]);
+    // No placeID: it names the exact place, so it is an exact field (2.2).
+    const o = obj(v, path, ["kind", "lat", "lon", "osmNode"]);
     lat(o.lat, join(path, "lat")); lon(o.lon, join(path, "lon")); int(o.osmNode, join(path, "osmNode"), 1);
-    placeID(o, path);
     return;
   }
   if (!exactAllowed) throw invalid(join(path, "kind"), "Exact endpoints need exactLocations.");
@@ -129,7 +129,7 @@ export function validate(body: unknown): Report {
   const r = obj(b.request, "request", ["mode", "extraMinutes", "preferences", "origin", "destination", "rerouted"]);
   oneOf(r.mode, "request.mode", MODES);
   int(r.extraMinutes, "request.extraMinutes", 0, 20);
-  if (r.preferences !== null && !isObj(r.preferences)) throw invalid("request.preferences", "Expected an object or null.");
+  if (r.preferences !== null) throw invalid("request.preferences", "Expected null.");
   endpoint(r.origin, "request.origin", exact);
   endpoint(r.destination, "request.destination", exact);
   bool(r.rerouted, "request.rerouted");
@@ -187,9 +187,7 @@ export function canonical(v: unknown): string {
 
 function snapped(e: Endpoint): SnappedEndpoint | null {
   if (e === null || e.kind === "intersection") return e;
-  const out: SnappedEndpoint = { kind: "intersection", lat: e.snapped.lat, lon: e.snapped.lon, osmNode: e.snapped.osmNode };
-  if (e.placeID !== undefined) out.placeID = e.placeID;
-  return out;
+  return { kind: "intersection", lat: e.snapped.lat, lon: e.snapped.lon, osmNode: e.snapped.osmNode };
 }
 function exactOnly(e: Endpoint): ExactEndpoint | null {
   return e !== null && e.kind === "exact" ? e : null;

@@ -16,6 +16,8 @@ export interface ReportRow {
   category: string;
   public_json: string; exact_json: string | null;
 }
+/** What the sender can see of a report (4.3). Never the body or its exact part. */
+export type ReportSummary = Pick<ReportRow, "id" | "received_at" | "expires_at" | "category">;
 export interface RetentionCounts { reports: number; installs: number }
 
 const count = async (sql: Sql, q: string, ...p: unknown[]) => (await sql.all<{ n: number }>(q, ...p))[0]?.n ?? 0;
@@ -50,8 +52,8 @@ export class Store {
   async reportById(id: string): Promise<ReportRow | null> {
     return (await this.sql.all<ReportRow>("SELECT * FROM reports WHERE id = ?", id))[0] ?? null;
   }
-  reportsByInstall(installID: string): Promise<ReportRow[]> {
-    return this.sql.all<ReportRow>("SELECT * FROM reports WHERE install_id = ? ORDER BY received_at, id", installID);
+  reportsByInstall(installID: string): Promise<ReportSummary[]> {
+    return this.sql.all<ReportSummary>("SELECT id, received_at, expires_at, category FROM reports WHERE install_id = ? ORDER BY received_at, id", installID);
   }
   countReportsSince(installID: string, since: string): Promise<number> {
     return count(this.sql, "SELECT COUNT(*) AS n FROM reports WHERE install_id = ? AND received_at >= ?", installID, since);
