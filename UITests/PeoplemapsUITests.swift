@@ -259,9 +259,9 @@ final class PeoplemapsUITests: XCTestCase {
         let leader = NSPredicate { _, _ in (Int(self.probe(app, "debug-leader")) ?? 0) > 25 }
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: leader, object: nil)], timeout: 10), .completed,
                        "No leader at a start \(probe(app, "debug-leader")) m from the route")
-        // No calmer route was picked, so this is the fastest route: its line and leader are the palette's grey, styled
-        // rather than unstyled. Both layers must hold the colour of the route's kind.
-        XCTAssertEqual(probe(app, "debug-line-style"), "fastest 8E8E93 leader 8E8E93", "Line or leader not styled for the fastest route")
+        // Calmer is the selected route here, so its line and leader hold the calmer green. (A fastest route is the palette's
+        // grey, by design: grey is not an unstyled state.) Both layers must carry the colour of the route's kind.
+        XCTAssertEqual(probe(app, "debug-line-style"), "calmer 248A3D leader 248A3D", "Line or leader not styled for the calmer route")
         capture("11-leader-at-start", app: app)
         let line = routePoints(app)
         XCTAssertGreaterThan(line.count, 3, "Route readout missing")
