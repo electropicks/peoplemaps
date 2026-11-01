@@ -116,6 +116,18 @@ final class StressModelTests: XCTestCase {
         e.facility = "none"; XCTAssertEqual(StressModel.levelOfTrafficStress(e), 4)
         e.facility = "track"; XCTAssertEqual(StressModel.levelOfTrafficStress(e), 1)
     }
+    func testBikeSignalsCostMoreThanStopSigns() {
+        var stop = Fixture.northbound, allWay = Fixture.northbound, signal = Fixture.northbound
+        stop.control = .stop; allWay.control = .allstop; signal.control = .signal
+        let s = cost(stop, Fixture.continueNorth, mode: .bike), a = cost(allWay, Fixture.continueNorth, mode: .bike)
+        let l = cost(signal, Fixture.continueNorth, mode: .bike)
+        XCTAssertEqual(s[.stopSign].cost, 10)
+        XCTAssertEqual(a[.allWayStop].cost, 10)
+        XCTAssertEqual(l[.signal].cost, 14)
+        XCTAssertGreaterThan(l[.signal].cost, s[.stopSign].cost)
+        XCTAssertEqual(StressModel.transitionSeconds(previous: signal, next: Fixture.continueNorth, turned: false, junction: Junction(), mode: .bike), 8,
+                       "the time estimate is unchanged")
+    }
     func testBikeClimbingAndUnknownSurface() {
         var flat = Fixture.northbound, hill = Fixture.northbound, none = NoRecord()
         hill.climb = 10

@@ -323,10 +323,11 @@ public enum StressModel {
             if !p.isHighway && n.isHighway { add(.freewayEntry, 30) }
             if n.movableBridge && !p.movableBridge { add(.movableBridge, 30) }
         case .bike:
+            // A signal costs more than a stop sign: waiting at a red beside traffic, versus a quick stop and go.
             switch p.control {
             case .stop: add(.stopSign, 10); waits = true
             case .allstop: add(.allWayStop, 10); waits = true
-            case .signal: add(.signal, 8); waits = true
+            case .signal: add(.signal, 14); waits = true
             case .yield: add(.yield, 4)
             case nil: break
             }
