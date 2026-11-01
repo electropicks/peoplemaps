@@ -22,6 +22,12 @@ final class NavigationController {
     private(set) var remainingSeconds = 0.0
     private(set) var coordinate: Coordinate?
     private(set) var course: Double?
+    private(set) var speed: Double?
+    /// The course smoothed over recent fixes, in degrees from north, kept while the user is stopped so the map does
+    /// not swing back north at every light. Nil until the first known course.
+    private(set) var heading: Double?
+    /// Moving at 1 m/s or more (or at an unknown speed with a known course): the puck shows its heading only then.
+    private(set) var isMoving = false
     private(set) var isRerouting = false
     private(set) var hasArrived = false
     /// Geometry of the route being followed; `routeVersion` changes whenever it is replaced (start or reroute).
@@ -73,6 +79,17 @@ final class NavigationController {
 
     /// Distance walked along a step before "Head north on…" gives way to the next maneuver.
     private static let setOffMeters = 40.0
+    /// Below this the course is noise, so the puck shows no heading.
+    private static let movingSpeed = 1.0
+
+    /// Halfway from the last heading to the new course along the shorter arc; changes under 2° are ignored as jitter.
+    static func smoothed(_ heading: Double?, towards course: Double) -> Double {
+        guard let heading else { return course }
+        var delta = (course - heading).truncatingRemainder(dividingBy: 360)
+        if delta > 180 { delta -= 360 } else if delta < -180 { delta += 360 }
+        if abs(delta) < 2 { return heading }
+        return (heading + delta / 2 + 360).truncatingRemainder(dividingBy: 360)
+    }
 
     #if DEBUG
     static var simulating: Bool {
@@ -184,7 +201,8 @@ final class NavigationController {
         core = nil; location = nil; observer = nil; paused = false; arrivalHandled = false
         active = nil; known = [:]
         isActive = false; hasArrived = false; isRerouting = false
-        currentStep = nil; thenStep = nil; tripNotes = []; coordinate = nil; course = nil; routeGeometry = []; stepIndex = 0
+        currentStep = nil; thenStep = nil; tripNotes = []; coordinate = nil; course = nil; speed = nil; heading = nil; isMoving = false
+        routeGeometry = []; stepIndex = 0
         distanceToManeuver = 0; remainingMeters = 0; remainingSeconds = 0
     }
 
@@ -225,6 +243,9 @@ final class NavigationController {
         if let location = state.preferredUserLocation {
             coordinate = Coordinate(lat: location.coordinates.lat, lon: location.coordinates.lng)
             course = location.courseOverGround.map { Double($0.degrees) }
+            speed = location.speed?.value
+            isMoving = course != nil && (speed.map { $0 >= Self.movingSpeed } ?? true)
+            if isMoving, let course { heading = Self.smoothed(heading, towards: course) }
         }
         switch state.tripState {
         case .complete:
