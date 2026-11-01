@@ -121,6 +121,15 @@ describe("GET /v1/reports", () => {
   });
 });
 
+describe("reportsByInstall", () => {
+  it("loads only what the list shows, never the body or exact part", async () => {
+    const w = world();
+    const { token, installID } = await w.mint();
+    await w.send(token, exactCase.report);
+    expect(Object.keys((await w.deps.store.reportsByInstall(installID))[0]).sort()).toEqual(["category", "expires_at", "id", "received_at"]);
+  });
+});
+
 describe("DELETE /v1/reports/{id}", () => {
   it("deletes the row", async () => {
     const w = world();
