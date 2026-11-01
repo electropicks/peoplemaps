@@ -84,6 +84,8 @@ final class PeoplemapsUITests: XCTestCase {
     // MARK: Real location (Simulator location injection and the system permission alert)
 
     private static let kerryPark = CLLocationCoordinate2D(latitude: 47.6295, longitude: -122.3599)
+    /// The Seattle Center lawn: the nearest drivable node, where a route from here starts, is about 143 m away.
+    private static let seattleCenterLawn = CLLocationCoordinate2D(latitude: 47.6213, longitude: -122.3510)
 
     @MainActor private func setDevice(_ c: CLLocationCoordinate2D, course: Double = -1) {
         XCUIDevice.shared.location = XCUILocation(location: CLLocation(coordinate: c, altitude: 50, horizontalAccuracy: 5, verticalAccuracy: 5,
@@ -224,10 +226,12 @@ final class PeoplemapsUITests: XCTestCase {
         let side = (course + 90) * .pi / 180
         let off = CLLocationCoordinate2D(latitude: last.latitude + cos(side) * 150 / 111_000,
                                          longitude: last.longitude + sin(side) * 150 / 75_500)
+        // Keep the fixes coming until the route is replaced: a reroute needs a run of off-route fixes, and at
+        // least ten seconds since the route was installed.
         var sawRerouting = false
-        let deadline = Date().addingTimeInterval(10)
+        let deadline = Date().addingTimeInterval(25)
         var jitter = 0.0
-        while Date() < deadline {
+        while Date() < deadline, probe(app, "debug-route") == before {
             jitter += 0.00002
             setDevice(CLLocationCoordinate2D(latitude: off.latitude + jitter, longitude: off.longitude), course: course)
             if probe(app, "debug-nav-state") == "rerouting" || app.otherElements["guidance-rerouting"].exists { sawRerouting = true }
@@ -239,8 +243,29 @@ final class PeoplemapsUITests: XCTestCase {
         let guiding = NSPredicate { _, _ in self.probe(app, "debug-nav-state") == "guiding" }
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: guiding, object: nil)], timeout: 20), .completed, "Guidance never resumed")
         XCTAssertTrue(rerouted, "Route was not replaced")
+        XCTAssertGreaterThanOrEqual(Int(probe(app, "debug-reroute-count")) ?? 0, 1, "Reroute count did not move")
+        XCTAssertEqual(probe(app, "debug-route-clears"), "0", "The followed route's line was emptied during the reroute")
         XCTAssertTrue(app.staticTexts["guidance-instruction"].exists)
         XCTAssertFalse(app.staticTexts["guidance-instruction"].label.isEmpty)
+    }
+
+    /// Routes start at a snapped node, so a trip can begin some way from where the line does: a dashed leader
+    /// bridges the gap, heading for the start is not treated as leaving the route, and the leader goes once on it.
+    @MainActor func testLeaderBridgesTheGapToASnappedStart() {
+        let app = launchAskingForLocation(answer: "Allow While Using App", at: Self.seattleCenterLawn)
+        showGasWorksRoutes(app)
+        startGuidanceReal(app)
+        let leader = NSPredicate { _, _ in (Int(self.probe(app, "debug-leader")) ?? 0) > 25 }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: leader, object: nil)], timeout: 10), .completed,
+                       "No leader at a start \(probe(app, "debug-leader")) m from the route")
+        capture("11-leader-at-start", app: app)
+        let line = routePoints(app)
+        XCTAssertGreaterThan(line.count, 3, "Route readout missing")
+        for (point, course) in Self.samples(line, step: 20, limit: 120) { setDevice(point, course: course); Thread.sleep(forTimeInterval: 0.3) }
+        let gone = NSPredicate { _, _ in self.probe(app, "debug-leader") == "0" }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: gone, object: nil)], timeout: 10), .completed, "Leader stayed once on the route")
+        XCTAssertEqual(probe(app, "debug-reroute-count"), "0", "Heading for the start counted as a deviation")
+        XCTAssertEqual(probe(app, "debug-nav-state"), "guiding")
     }
 
     @MainActor func testBackgroundAndForegroundKeepsGuidance() {
