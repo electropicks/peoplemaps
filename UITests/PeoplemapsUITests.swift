@@ -4,6 +4,7 @@ import CoreLocation
 final class PeoplemapsUITests: XCTestCase {
     /// `--location-granted` value: the app starts as if location were allowed with the device at Kerry Park.
     private static let atKerryPark = "47.6295,-122.3599"
+    private static let atBallardLibrary = "47.6698,-122.3843"
 
     /// Gas Works Park previewed from Current location at Kerry Park (location faked as allowed, no system prompt).
     @MainActor private func launch(slow: Bool = false, simulateRoute: Bool = false, fast: Bool = false) -> XCUIApplication {
@@ -397,8 +398,18 @@ final class PeoplemapsUITests: XCTestCase {
             XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
         }
     }
+    /// Kerry Park to Gas Works has no calmer drive at any budget: the fastest route is already the calmest, so the
+    /// card adds nothing under the name (Docs/STRESS_MODEL.md, Time).
+    @MainActor func testPlaceCardSaysNothingWhenThereIsNoCalmerDrive() {
+        let app = launchHome(location: Self.atKerryPark)
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        let value = waitForEstimate(app)
+        XCTAssertNotNil(value.range(of: #"^\d+ min drive, "#, options: .regularExpression), value)
+        XCTAssertFalse(app.staticTexts["place-estimate"].exists)
+        XCTAssertFalse(app.staticTexts["place-estimate-loading"].exists)
+    }
     @MainActor func testPlaceCardEstimatesFromCurrentLocationInTheLastMode() {
-        let app = launchHome(location: Self.atKerryPark, extra: ["--slow-routing"])
+        let app = launchHome(location: Self.atBallardLibrary, extra: ["--slow-routing"])
         openPlace(app, "Gas Works", id: "relation/1047789")
         XCTAssertTrue(app.staticTexts["place-estimate-loading"].waitForExistence(timeout: 2), "A quiet placeholder while it computes")
         XCTAssertTrue(app.buttons["directions"].isHittable, "The estimate never blocks the card")
