@@ -8,9 +8,6 @@ public enum ReportCategory: String, Codable, CaseIterable, Sendable {
     case voiceTiming = "voice_timing", other
 }
 
-/// `issueState` of the 4.2 and 4.3 answers.
-public enum ReportIssueState: String, Codable, Sendable { case held, pending, opened, failed, rejected }
-
 /// The JSON the app sends, `POST /v1/reports` (2.4). Encode it with `ReportEncoder`, which keeps the 2.4 key order and
 /// writes the bytes JavaScript's `JSON.stringify` would.
 public struct Report: Codable, Equatable, Sendable {
@@ -276,9 +273,8 @@ public struct ReportSnapshot: Codable, Equatable, Sendable, Identifiable {
     public var lastError: String?
     public var sentAt: Date?
     public var serverID: String?
-    public var issueURL: String?
-    public var issueNumber: Int?
-    public var issueState: ReportIssueState?
+    /// When the server deletes it (4.2); the receipt's `expiresAt`.
+    public var expiresAt: String?
 
     public init(id: String = UUID().uuidString, flaggedAt: Date, request: Request, chosen: Report.Chosen, route: Report.Route,
                 position: Report.Position, location: Report.Location?, spoken: [Report.Spoken], nav: Report.Nav,
@@ -319,20 +315,13 @@ public struct ReportSnapshot: Codable, Equatable, Sendable, Identifiable {
 
 /// The 4.2 and 4.3 answer for one report.
 public struct ReportReceipt: Codable, Equatable, Sendable {
-    public struct Issue: Codable, Equatable, Sendable {
-        public var number: Int
-        public var url: String
-        public init(number: Int, url: String) { self.number = number; self.url = url }
-    }
     public var id: String
     public var receivedAt: String
-    public var issue: Issue?
-    public var issueState: ReportIssueState
     public var expiresAt: String
     /// Only in `GET /v1/reports` answers.
     public var category: ReportCategory?
-    public init(id: String, receivedAt: String, issue: Issue?, issueState: ReportIssueState, expiresAt: String, category: ReportCategory? = nil) {
-        self.id = id; self.receivedAt = receivedAt; self.issue = issue; self.issueState = issueState; self.expiresAt = expiresAt; self.category = category
+    public init(id: String, receivedAt: String, expiresAt: String, category: ReportCategory? = nil) {
+        self.id = id; self.receivedAt = receivedAt; self.expiresAt = expiresAt; self.category = category
     }
 }
 
@@ -360,8 +349,6 @@ public struct ReportStore: Codable, Equatable, Sendable {
     public var unsentCount: Int { snapshots.filter { $0.status == .flagged || $0.status == .sending }.count }
     /// Sent reports, the count "Delete my reports" shows (3).
     public var sentCount: Int { snapshots.filter { $0.status == .sent }.count }
-    /// "Check status" shows while a sent report's issue is pending.
-    public var hasPendingIssue: Bool { snapshots.contains { $0.status == .sent && $0.issueState != .opened && $0.issueState != .rejected } }
 
     public mutating func add(_ snapshot: ReportSnapshot) -> AddResult {
         if let last = snapshots.indices.last, snapshots[last].status == .flagged, snapshots[last].category == nil,
@@ -402,13 +389,6 @@ public struct ReportStore: Codable, Equatable, Sendable {
         return report
     }
 
-    /// After the install ID changes (Rotate, or the 401 wipe and re-mint): every unsent or failed row gets a new `id`, so a
-    /// send that timed out before the change cannot meet a 409 from the old install's row for ever (4.2). A send in
-    /// flight keeps its `id`; its body is already built.
-    public mutating func renewUnsentIDs() {
-        for i in snapshots.indices where snapshots[i].status == .flagged { snapshots[i].id = UUID().uuidString }
-    }
-
     /// Back to `flagged` with the fields kept and the error for the list (3).
     public mutating func sendFailed(id: String, error: String) {
         update(id) { $0.status = .flagged; $0.lastError = error }
@@ -416,8 +396,7 @@ public struct ReportStore: Codable, Equatable, Sendable {
 
     public mutating func sent(id: String, receipt: ReportReceipt, at date: Date) {
         update(id) {
-            $0.status = .sent; $0.sentAt = date; $0.serverID = receipt.id; $0.lastError = nil
-            $0.apply(receipt)
+            $0.status = .sent; $0.sentAt = date; $0.serverID = receipt.id; $0.lastError = nil; $0.expiresAt = receipt.expiresAt
         }
     }
 
@@ -425,7 +404,7 @@ public struct ReportStore: Codable, Equatable, Sendable {
     public mutating func apply(_ receipts: [ReportReceipt]) {
         for r in receipts {
             for i in snapshots.indices where snapshots[i].status == .sent && (snapshots[i].serverID ?? snapshots[i].id) == r.id {
-                snapshots[i].apply(r)
+                snapshots[i].expiresAt = r.expiresAt
             }
         }
     }
@@ -464,14 +443,6 @@ public struct ReportStore: Codable, Equatable, Sendable {
 }
 
 public enum ReportStoreError: Error, Equatable, Sendable { case notSendable }
-
-extension ReportSnapshot {
-    mutating func apply(_ r: ReportReceipt) {
-        issueState = r.issueState
-        issueNumber = r.issue?.number
-        issueURL = r.issue?.url
-    }
-}
 
 // MARK: - JSON
 

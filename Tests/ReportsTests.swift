@@ -225,15 +225,13 @@ final class ReportsTests: XCTestCase {
 
         store.sent(id: edited.id, receipt: receipt(edited.id), at: date("2026-10-31T21:05:00Z"))
         XCTAssertEqual(store[edited.id]?.status, .sent)
-        XCTAssertEqual(store[edited.id]?.issueState, .held)
-        XCTAssertTrue(store.hasPendingIssue)
+        XCTAssertEqual(store[edited.id]?.expiresAt, "2027-01-29T21:00:00Z")
         XCTAssertEqual(store.sentCount, 1)
         XCTAssertEqual(store.unsentCount, 0)
 
-        store.apply([receipt(edited.id, state: .opened, issue: 123), receipt("someone-else", state: .opened, issue: 124)])
-        XCTAssertEqual(store[edited.id]?.issueNumber, 123)
-        XCTAssertEqual(store[edited.id]?.issueURL, "https://github.com/electropicks/peoplemaps/issues/123")
-        XCTAssertFalse(store.hasPendingIssue)
+        store.apply([ReportReceipt(id: edited.id, receivedAt: "2026-10-31T21:00:00Z", expiresAt: "2027-02-01T00:00:00Z"),
+                     ReportReceipt(id: "someone-else", receivedAt: "2026-10-31T21:00:00Z", expiresAt: "2027-03-01T00:00:00Z")])
+        XCTAssertEqual(store[edited.id]?.expiresAt, "2027-02-01T00:00:00Z")
 
         store.withdrawAllSent()
         XCTAssertEqual(store[edited.id]?.status, .withdrawn)
@@ -263,69 +261,23 @@ final class ReportsTests: XCTestCase {
         #endif
     }
 
-    func testRenewUnsentIDsGivesFlaggedRowsNewIDsAndLeavesTheRest() throws {
-        var store = ReportStore()
-        let flagged = snapshot(at: 0), failed = snapshot(at: 10), sending = snapshot(at: 20), sent = snapshot(at: 30)
-        for s in [flagged, failed, sending, sent] { _ = store.add(s) }
-        _ = try store.beginSend(id: failed.id, category: .other, note: nil, exactLocations: false)
-        store.sendFailed(id: failed.id, error: ReportsError.noConnection.summary)
-        _ = try store.beginSend(id: sending.id, category: .other, note: nil, exactLocations: false)
-        _ = try store.beginSend(id: sent.id, category: .other, note: nil, exactLocations: false)
-        store.sent(id: sent.id, receipt: receipt(sent.id), at: Date())
-
-        store.renewUnsentIDs()
-        XCTAssertEqual(store.snapshots.count, 4)
-        XCTAssertNil(store[flagged.id])
-        XCTAssertNil(store[failed.id])
-        XCTAssertNotNil(store[sending.id])
-        XCTAssertNotNil(store[sent.id])
-        let renewed = store.snapshots.filter { $0.status == .flagged }
-        XCTAssertEqual(renewed.count, 2)
-        XCTAssertEqual(renewed.first { $0.lastError == "no_connection" }?.attempted, true, "the failure stays on the row")
-        let again = try store.beginSend(id: renewed[0].id, category: .other, note: nil, exactLocations: false)
-        XCTAssertEqual(again.id, renewed[0].id, "the new id is what is sent")
-    }
-
     // MARK: Client
 
     func testFirstSendMintsThenSends() async throws {
         let fake = FakeServer([
             .init(status: 201, body: #"{"installID":"8C2F0000-0000-4000-8000-000000000000","token":"pm_new"}"#),
-            .init(status: 202, body: Self.receiptJSON),
+            .init(status: 201, body: Self.receiptJSON),
         ])
         let creds = MemoryCredentials()
         let report = try reportToSend()
         let got = try await client(fake).send(report, credentials: creds)
-        XCTAssertEqual(got.issueState, .held)
-        XCTAssertNil(got.issue)
+        XCTAssertEqual(got.expiresAt, "2027-01-29T21:00:00Z")
         XCTAssertEqual(fake.requests.map(\.line), ["POST /v1/installs", "POST /v1/reports"])
         XCTAssertEqual(fake.requests[0].body, #"{"schema":1,"app":{"version":"0.1.0","build":"1"}}"#)
         XCTAssertNil(fake.requests[0].auth)
         XCTAssertEqual(fake.requests[1].auth, "Bearer pm_new")
         XCTAssertEqual(fake.requests[1].body, String(decoding: ReportEncoder.data(report), as: UTF8.self))
         XCTAssertEqual(creds.load()?.token, "pm_new")
-    }
-
-    func testRotateMintsSavesThenCallsOnRotated() async throws {
-        let fake = FakeServer([.init(status: 201, body: #"{"installID":"id-2","token":"pm_2"}"#)])
-        let creds = MemoryCredentials(.init(installID: "id-1", token: "pm_1"))
-        let rotated = Counter()
-        let fresh = try await client(fake).rotate(app: try reportToSend().app, credentials: creds) { rotated.bump() }
-        XCTAssertEqual(fresh.token, "pm_2")
-        XCTAssertEqual(creds.load()?.token, "pm_2")
-        XCTAssertEqual(rotated.value, 1)
-    }
-
-    func testRotateFailureLeavesCredentialsAndSkipsOnRotated() async throws {
-        let fake = FakeServer([.init(status: 503, body: #"{"error":"storage_unavailable","message":"x"}"#)])
-        let creds = MemoryCredentials(.init(installID: "id-1", token: "pm_1"))
-        let rotated = Counter()
-        do {
-            _ = try await client(fake).rotate(app: try reportToSend().app, credentials: creds) { rotated.bump() }
-            XCTFail("expected a 503")
-        } catch let e as ReportsError { XCTAssertEqual(e.serverCode, .storageUnavailable) }
-        XCTAssertEqual(creds.load()?.token, "pm_1")
-        XCTAssertEqual(rotated.value, 0)
     }
 
     func testA401OnSendResetsMintsAndRetriesOnce() async throws {
@@ -358,15 +310,14 @@ final class ReportsTests: XCTestCase {
     }
 
     func testCheckStatusReadsTheList() async throws {
-        let fake = FakeServer([.init(status: 200, body: #"{"reports":[{"id":"A","receivedAt":"2026-10-31T21:00:00Z","issue":{"number":123,"url":"https://github.com/electropicks/peoplemaps/issues/123"},"issueState":"opened","expiresAt":"2027-01-29T21:00:00Z","category":"map_data"}]}"#)])
+        let fake = FakeServer([.init(status: 200, body: #"{"reports":[{"id":"A","receivedAt":"2026-10-31T21:00:00Z","expiresAt":"2027-01-29T21:00:00Z","category":"map_data"}]}"#)])
         let list = try await client(fake).checkStatus(credentials: MemoryCredentials(.init(installID: "i", token: "pm_1")))
-        XCTAssertEqual(list, [.init(id: "A", receivedAt: "2026-10-31T21:00:00Z", issue: .init(number: 123, url: "https://github.com/electropicks/peoplemaps/issues/123"),
-                                    issueState: .opened, expiresAt: "2027-01-29T21:00:00Z", category: .mapData)])
+        XCTAssertEqual(list, [.init(id: "A", receivedAt: "2026-10-31T21:00:00Z", expiresAt: "2027-01-29T21:00:00Z", category: .mapData)])
     }
 
-    func testDeleteMyReportsKeepsTheIDWhenGitHubIsDown() async throws {
+    func testDeleteMyReportsKeepsTheIDWhenTheServerIsFull() async throws {
         let fake = FakeServer([
-            .init(status: 503, body: #"{"error":"github_unavailable","message":"GitHub did not delete the issue. Nothing was removed; try again later."}"#),
+            .init(status: 503, body: #"{"error":"storage_unavailable","message":"The report server is full for today."}"#),
             .init(status: 204),
         ])
         let creds = MemoryCredentials(.init(installID: "id-1", token: "pm_1"))
@@ -375,7 +326,7 @@ final class ReportsTests: XCTestCase {
             XCTFail("expected 503")
         } catch let ReportsError.server(e) {
             XCTAssertEqual(e.status, 503)
-            XCTAssertEqual(e.code, .githubUnavailable)
+            XCTAssertEqual(e.code, .storageUnavailable)
         }
         XCTAssertNotNil(creds.load(), "the reports can still be deleted later")
         try await client(fake).deleteMyReports(credentials: creds)
@@ -459,12 +410,10 @@ final class ReportsTests: XCTestCase {
         return try s.report()
     }
 
-    static let receiptJSON = #"{"id":"0B7A4C2E-9D1F-4E3A-8B6C-5D4E3F2A1B0C","receivedAt":"2026-10-31T21:00:00Z","issue":null,"issueState":"held","expiresAt":"2027-01-29T21:00:00Z"}"#
+    static let receiptJSON = #"{"id":"0B7A4C2E-9D1F-4E3A-8B6C-5D4E3F2A1B0C","receivedAt":"2026-10-31T21:00:00Z","expiresAt":"2027-01-29T21:00:00Z"}"#
 
-    private func receipt(_ id: String, state: ReportIssueState = .held, issue: Int? = nil) -> ReportReceipt {
-        ReportReceipt(id: id, receivedAt: "2026-10-31T21:00:00Z",
-                      issue: issue.map { .init(number: $0, url: "https://github.com/electropicks/peoplemaps/issues/\($0)") },
-                      issueState: state, expiresAt: "2027-01-29T21:00:00Z")
+    private func receipt(_ id: String) -> ReportReceipt {
+        ReportReceipt(id: id, receivedAt: "2026-10-31T21:00:00Z", expiresAt: "2027-01-29T21:00:00Z")
     }
 
     private func client(_ fake: FakeServer) -> ReportsClient { ReportsClient(baseURL: URL(string: "http://127.0.0.1:8787")!, transport: fake.transport) }

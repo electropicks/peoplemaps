@@ -22,9 +22,8 @@ public protocol ReportCredentialStore: Sendable {
 /// The error envelope of 4.6 with its HTTP status and `Retry-After` seconds.
 public struct ReportsServerError: Equatable, Sendable {
     public enum Code: String, Sendable {
-        case unauthorized, forbidden, notFound = "not_found", invalidReport = "invalid_report", tooLarge = "too_large"
-        case conflict, rateLimited = "rate_limited", githubUnavailable = "github_unavailable"
-        case storageUnavailable = "storage_unavailable", `internal`
+        case unauthorized, notFound = "not_found", invalidReport = "invalid_report", tooLarge = "too_large"
+        case conflict, rateLimited = "rate_limited", storageUnavailable = "storage_unavailable", `internal`
     }
     public var status: Int
     public var code: Code
@@ -94,15 +93,15 @@ public struct ReportsClient: Sendable {
 
     // MARK: Endpoints
 
-    /// `POST /v1/installs`, only from inside a Send or Rotate (4.1).
+    /// `POST /v1/installs`, only from inside a Send (4.1).
     public func mintInstall(app: Report.App) async throws -> ReportCredentials {
         let body = ReportJSON.object([("schema", .int(1)), ("app", .object([("version", .string(app.version)), ("build", .string(app.build))]))])
         return try decode(ReportCredentials.self, try await call("POST", "v1/installs", body: Data(ReportEncoder.string(body).utf8), expect: [201]))
     }
 
-    /// `POST /v1/reports`: 202 held, 201 filed (dev), 200 a retry of the same body.
+    /// `POST /v1/reports`: 201 stored, 200 a retry of the same body.
     public func send(_ report: Report, token: String) async throws -> ReportReceipt {
-        try decode(ReportReceipt.self, try await call("POST", "v1/reports", token: token, body: ReportEncoder.data(report), expect: [200, 201, 202]))
+        try decode(ReportReceipt.self, try await call("POST", "v1/reports", token: token, body: ReportEncoder.data(report), expect: [200, 201]))
     }
 
     /// `GET /v1/reports`.
@@ -116,12 +115,12 @@ public struct ReportsClient: Sendable {
         try decode(ReportReceipt.self, try await call("GET", "v1/reports/\(id)", token: token, expect: [200]))
     }
 
-    /// `DELETE /v1/reports/{id}`; `503 github_unavailable` means nothing was removed.
+    /// `DELETE /v1/reports/{id}`.
     public func deleteReport(id: String, token: String) async throws {
         _ = try await call("DELETE", "v1/reports/\(id)", token: token, expect: [204])
     }
 
-    /// `DELETE /v1/installs/me`; `503 github_unavailable` means nothing was removed.
+    /// `DELETE /v1/installs/me`.
     public func deleteInstall(token: String) async throws {
         _ = try await call("DELETE", "v1/installs/me", token: token, expect: [204])
     }
@@ -129,8 +128,7 @@ public struct ReportsClient: Sendable {
     // MARK: Taps (8.3)
 
     /// Send: mints on the first send; on a 401 calls `onReset` ("Your report ID was reset"), wipes the credentials,
-    /// mints and retries once.
-    /// `onReset` is also where the app calls `ReportStore.renewUnsentIDs()`.
+    /// mints and retries once. The old install's rows went with it, so unsent reports keep their IDs.
     public func send(_ report: Report, credentials: ReportCredentialStore, onReset: @Sendable () async -> Void = {}) async throws -> ReportReceipt {
         if let saved = credentials.load() {
             do { return try await send(report, token: saved.token) } catch let e as ReportsError where e.serverCode == .unauthorized {
@@ -147,20 +145,12 @@ public struct ReportsClient: Sendable {
         return try await wipingOn401(credentials) { try await reports(token: saved.token) }
     }
 
-    /// Delete my reports: `DELETE /v1/installs/me`, then the credentials go ("start over", 4.4). On
-    /// `503 github_unavailable` they stay, so the reports can still be deleted later. A 401 wipes them and ends there.
+    /// Delete my reports: `DELETE /v1/installs/me`, then the credentials go ("start over", 4.4). On any other failure they
+    /// stay, so the reports can still be deleted later. A 401 wipes them and ends there.
     public func deleteMyReports(credentials: ReportCredentialStore) async throws {
         guard let saved = credentials.load() else { throw ReportsError.noReportID }
         try await wipingOn401(credentials) { try await deleteInstall(token: saved.token) }
         credentials.wipe()
-    }
-
-    /// Rotate: a new install replaces both items (4.1). `onRotated` runs once the new credentials are saved; the app
-    /// calls `ReportStore.renewUnsentIDs()` there, as it does in `send`'s `onReset`.
-    public func rotate(app: Report.App, credentials: ReportCredentialStore, onRotated: @Sendable () async -> Void = {}) async throws -> ReportCredentials {
-        let fresh = try await mint(app: app, into: credentials)
-        await onRotated()
-        return fresh
     }
 
     private func mint(app: Report.App, into credentials: ReportCredentialStore) async throws -> ReportCredentials {
