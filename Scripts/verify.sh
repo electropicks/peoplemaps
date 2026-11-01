@@ -82,7 +82,7 @@ print(names[-1])')"
     xcrun xcresulttool get test-results summary --path "$bundle" 2>/dev/null | python3 -c '
 import json, sys
 for f in json.load(sys.stdin).get("testFailures", []):
-    print(f"  {f.get(\"testName\")}: {f.get(\"failureText\")}")' || true
+    print("  " + str(f.get("testName")) + ": " + str(f.get("failureText")))' || true
     return 1
   }
   step "UI tests on $ui" ui_tests
