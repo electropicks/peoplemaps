@@ -28,6 +28,10 @@ struct Guidance: Equatable {
     let calmer: Bool
     let destination: Coordinate
     let user: Coordinate?
+    /// The device's own fix, not snapped onto the route; the leader starts here. Nil falls back to `user`.
+    var rawUser: Coordinate?
+    /// The reroute gate has seen a good fix on the route: the leader is gone for the rest of this route.
+    var reachedRoute = false
     /// Smoothed course in degrees from north, kept while stopped; nil until known.
     var heading: Double?
     /// The puck shows its heading wedge only while moving.
@@ -98,11 +102,11 @@ struct SeattleMap: UIViewRepresentable {
         private var guidanceKey = ""
         private var guidanceMode = ""
         private var lastUser: Coordinate?
+        private var lastRaw: Coordinate?
+        private var lastReached = false
         private var lastHeading: Double?
         private var guidanceAnnotations: [MLNPointAnnotation] = []
         private var puck: MapPuck?
-        /// The route (by `guidanceKey`) the user has been on, so its leader is not drawn again when they leave it.
-        private var reachedKey = ""
         /// Puck-to-route gap under which no leader is drawn.
         private static let leaderMeters = RerouteGate.reachedMeters
         /// What the puck's wedge shows, re-applied when its view is rebuilt for a colour change.
@@ -263,7 +267,7 @@ struct SeattleMap: UIViewRepresentable {
                 clearRoutes(style)
                 guiding = true
                 map.removeAnnotations(endpoints + pinAnnotations + (userDot.map { [$0] } ?? []))
-                endpoints = []; pinAnnotations = []; pinKey = ""; userDot = nil; guidanceKey = ""; lastUser = nil; lastHeading = nil; cameraMode = nil; reachedKey = ""
+                endpoints = []; pinAnnotations = []; pinKey = ""; userDot = nil; guidanceKey = ""; lastUser = nil; lastHeading = nil; lastRaw = nil; lastReached = false; cameraMode = nil
                 followZoom = true
                 if g.user == nil { aim(at: g.coordinates[0], map: map, courseUp: false, heading: nil) }
             }
@@ -320,24 +324,23 @@ struct SeattleMap: UIViewRepresentable {
                 guidanceKey = key
             }
             let heading = g.moving ? g.heading : nil
-            if let user = g.user, user != lastUser || heading != lastHeading {
+            if let user = g.user, user != lastUser || heading != lastHeading || g.rawUser != lastRaw || g.reachedRoute != lastReached {
                 let reduce = latest?.reduceMotion ?? false
                 let tick = Motion.camera(reduce, min(1, max(0.1, Date().timeIntervalSince(lastFollow))))
                 lastFollow = Date()
                 placePuck(user, heading: heading, map: map, duration: tick)
                 if g.camera.isFollowing { aim(at: user, map: map, courseUp: g.camera.courseUp, heading: g.heading, tick: tick) }
-                drawLeader(from: user, g, style: style)
-                lastUser = user; lastHeading = heading
+                drawLeader(from: g.rawUser ?? user, g, style: style)
+                lastUser = user; lastHeading = heading; lastRaw = g.rawUser; lastReached = g.reachedRoute
             }
         }
 
-        /// A dashed leader from the puck to the route's first coordinate while they are apart and the user has not
-        /// been on the route yet: the start is a snapped node, so a trip can begin a block from where the line does.
+        /// A dashed leader from the device's own fix to the route's first coordinate while they are apart and the reroute gate
+        /// has not seen the user on the route (a good fix within `RerouteGate.reachedMeters`): the start is a snapped node, so a trip can begin a block from where the line does.
         private func drawLeader(from user: Coordinate, _ g: Guidance, style: MLNStyle) {
             let source = style.source(withIdentifier: "leader") as? MLNShapeSource
-            if reachedKey != guidanceKey, user.distance(toPolyline: g.coordinates) <= RerouteGate.reachedMeters { reachedKey = guidanceKey }
             let gap = g.coordinates.first.map { user.distance(to: $0) } ?? 0
-            let drawn = reachedKey != guidanceKey && gap > Self.leaderMeters
+            let drawn = !g.reachedRoute && gap > Self.leaderMeters
             if drawn, let first = g.coordinates.first {
                 var coords = [user, first].map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
                 source?.shape = MLNPolyline(coordinates: &coords, count: 2)

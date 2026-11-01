@@ -67,7 +67,7 @@ public struct RerouteGate: Sendable {
     /// Whether the user has reached the route since it was installed.
     public var hasReachedRoute: Bool { reached }
 
-    /// A fix and its straight distance from the route's line. Ends the approach phase only when `isOnRoute`.
+    /// A raw (unsnapped) fix's straight distance from the route's line, and its accuracy. Ends the approach phase only when `isOnRoute`.
     public mutating func observe(distanceToRoute: Double, accuracy: Double) {
         if Self.isOnRoute(distanceToRoute: distanceToRoute, accuracy: accuracy) { onRoute() }
     }

@@ -94,7 +94,8 @@ struct ExploreView: View {
     private var guidance: Guidance? {
         guard guiding, !navigator.routeGeometry.isEmpty else { return nil }
         return Guidance(version: navigator.routeVersion, coordinates: navigator.routeGeometry, calmer: navigator.calmerRoute,
-                        destination: navigator.routeGeometry.last!, user: navigator.coordinate, heading: navigator.heading, moving: navigator.isMoving,
+                        destination: navigator.routeGeometry.last!, user: navigator.coordinate, rawUser: navigator.rawCoordinate,
+                        reachedRoute: navigator.hasReachedRoute, heading: navigator.heading, moving: navigator.isMoving,
                         camera: camera, inset: guidanceInset)
     }
 

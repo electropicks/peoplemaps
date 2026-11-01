@@ -39,8 +39,11 @@ Screens: the "navigation" rows of the design canvas
    throttling (5 s, 50 m) still applies underneath. A reroute keeps the
    destination, mode, extra-time budget and calmer/fastest choice. The map
    replaces the line in place when a reroute lands, and draws a dashed leader
-   from the puck to the route's first coordinate while they are more than 25 m
-   apart and the user has not been on the route.
+   from the device's own fix to the route's first coordinate while they are more
+   than 25 m apart and the gate has not seen the user on the route. The gate
+   and the leader both read Ferrostar's raw `userLocation`, not the snapped one,
+   so "on the route" means a fix with accuracy of 25 m or better within 25 m of
+   the line; a poor fix keeps the leader.
 8. **Testing:** Debug builds can replay a route with Ferrostar's simulated
    location provider (`--simulate-route`), which the UI tests use. Real-road
    feel needs the user's iPhone.
