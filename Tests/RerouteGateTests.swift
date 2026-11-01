@@ -94,6 +94,39 @@ final class RerouteGateTests: XCTestCase {
         XCTAssertTrue(rerouted)
     }
 
+    func testPoorAccuracyFixDoesNotEndTheApproach() {
+        var gate = RerouteGate(mode: .drive)
+        gate.routeInstalled(at: t0.addingTimeInterval(-60))
+        gate.observe(distanceToRoute: 3, accuracy: 40)
+        XCTAssertFalse(gate.hasReachedRoute)
+        // Still approaching, so the later good fixes 143 m out are not a deviation.
+        for s in 0..<5 { XCTAssertFalse(gate.shouldReroute(fix(143, seconds: Double(s) * 2))) }
+    }
+
+    func testGoodFixWithin25MetresEndsTheApproach() {
+        var gate = RerouteGate(mode: .drive)
+        gate.routeInstalled(at: t0)
+        gate.observe(distanceToRoute: 25, accuracy: 25)
+        XCTAssertTrue(gate.hasReachedRoute)
+    }
+
+    func testGoodFixFarFromTheRouteDoesNotEndTheApproach() {
+        var gate = RerouteGate(mode: .drive)
+        gate.routeInstalled(at: t0)
+        gate.observe(distanceToRoute: 26, accuracy: 5)
+        XCTAssertFalse(gate.hasReachedRoute)
+        XCTAssertFalse(RerouteGate.isOnRoute(distanceToRoute: 100, accuracy: 5))
+    }
+
+    func testJitterWhileStandingStillIsNotTravel() {
+        var gate = RerouteGate(mode: .walk)
+        gate.routeInstalled(at: t0.addingTimeInterval(-60))
+        // 100 m gap; overdue needs 2 x 100 + threshold of travel. Twenty-metre wobbles at 30 m accuracy, speed 0.
+        for s in 0..<200 {
+            XCTAssertFalse(gate.shouldReroute(fix(100, accuracy: 30, speed: 0.2, x: s % 2 == 0 ? 0 : 20, seconds: Double(s))), "second \(s)")
+        }
+    }
+
     func testDistanceToSegmentAndPolyline() {
         let a = at(0, 0), b = at(100, 0)
         XCTAssertEqual(at(50, 30).distance(toSegment: a, b), 30, accuracy: 0.1)

@@ -55,7 +55,24 @@ public struct RerouteGate: Sendable {
         reached = false; run = 0; closest = .infinity; initialGap = nil; travelled = 0; last = nil
     }
 
-    /// The engine judged a fix on the route.
+    /// Metres from the route's line under which the user counts as on it. The map's leader line uses the same rule.
+    public static let reachedMeters = 25.0
+
+    /// Whether a fix is evidence of being on the route: a fix with a usable error radius, within `reachedMeters`.
+    /// A poor fix proves nothing either way, which is also how the engine's own check treats it.
+    public static func isOnRoute(distanceToRoute: Double, accuracy: Double) -> Bool {
+        accuracy >= 0 && accuracy <= reachedMeters && distanceToRoute <= reachedMeters
+    }
+
+    /// Whether the user has reached the route since it was installed.
+    public var hasReachedRoute: Bool { reached }
+
+    /// A fix and its straight distance from the route's line. Ends the approach phase only when `isOnRoute`.
+    public mutating func observe(distanceToRoute: Double, accuracy: Double) {
+        if Self.isOnRoute(distanceToRoute: distanceToRoute, accuracy: accuracy) { onRoute() }
+    }
+
+    /// The user is on the route: ends the approach phase and breaks any run of off-route fixes.
     public mutating func onRoute() {
         reached = true; run = 0
     }
@@ -63,7 +80,11 @@ public struct RerouteGate: Sendable {
     /// Whether this off-route fix should start a reroute.
     public mutating func shouldReroute(_ fix: Fix) -> Bool {
         let threshold = threshold(accuracy: fix.accuracy, speed: fix.speed)
-        if let last { travelled += last.distance(to: fix.coordinate) }
+        // Jitter while standing still is not progress: count a step only if it exceeds the fix's error or the user is moving.
+        if let last {
+            let step = last.distance(to: fix.coordinate)
+            if step > max(0, fix.accuracy) || (fix.speed ?? 0) > 0.5 { travelled += step }
+        }
         last = fix.coordinate
         if !reached {
             // Heading for a route that starts at a snapped node is not leaving it. Reroute only once the user is
