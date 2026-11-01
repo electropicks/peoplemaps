@@ -297,7 +297,11 @@ has less stress.
 | All six calm-weighted searches found this route | Already the calmest we found | By our estimates, every search found this route. | 7 / 3 / 0 |
 | Other routes compared, none with less stress | Already the calmest we found | Calmest of N routes compared, by our estimates. | 3 / 0 / 0 |
 | Less stress exists, but only beyond the limit | Calmest within this extra time | By our estimates, calmer routes take N+ min more. | 0 / 0 / 0 |
-| Less stress exists inside the limit, but under the floors or not worth its time | Best balance we found | By our estimates, other routes gain too little. | 4 / 3 / 2 |
+| Less stress exists inside the limit, but under the floors or not worth its time, and nothing beyond the limit clears them | Best balance we found | By our estimates, other routes gain too little. | 4 / 3 / 2 |
+| Too little gain inside the limit, but a route beyond it clears the floors and the price | Best balance within this extra time | By our estimates, a clearly calmer route takes N+ min more. | 0 / 0 / 0 |
+
+The last row needs a limit shorter than the sample's 10 minutes: Kerry Park to
+Gas Works by bike says it at 2 and 5 minutes, and offers the route at 10.
 
 These describe the candidates only. The search does not prove no calmer route
 exists, and the Why this route sheet says so.

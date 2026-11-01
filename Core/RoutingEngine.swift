@@ -43,8 +43,10 @@ public enum NoCalmerFinding: Sendable, Equatable {
     case calmestCompared(routes: Int)
     /// Routes with less stress exist, but only beyond the limit.
     case calmerTakesLonger(limitMinutes: Int)
-    /// Routes inside the limit have less stress, but too little for their time. This route is not the calmest, so it isn't called that.
+    /// Routes inside the limit have less stress, but too little for their time, and none beyond it does better. This route is not the calmest, so it isn't called that.
     case tooLittleGain
+    /// Routes inside the limit gain too little, but one beyond it is clearly calmer and would be offered with more time.
+    case clearlyCalmerTakesLonger(limitMinutes: Int)
 
     public var title: String {
         switch self {
@@ -52,6 +54,7 @@ public enum NoCalmerFinding: Sendable, Equatable {
         case .onlyRoute, .calmestCompared: "Already the calmest we found"
         case .calmerTakesLonger: "Calmest within this extra time"
         case .tooLittleGain: "Best balance we found"
+        case .clearlyCalmerTakesLonger: "Best balance within this extra time"
         }
     }
     public var detail: String {
@@ -61,6 +64,7 @@ public enum NoCalmerFinding: Sendable, Equatable {
         case let .calmestCompared(routes): "Calmest of \(routes) routes compared, by our estimates."
         case let .calmerTakesLonger(minutes): "By our estimates, calmer routes take \(minutes)+ min more."
         case .tooLittleGain: "By our estimates, other routes gain too little."
+        case let .clearlyCalmerTakesLonger(minutes): "By our estimates, a clearly calmer route takes \(minutes)+ min more."
         }
     }
 }
@@ -209,18 +213,24 @@ public final class NativeRouter: RouteComputing, Sendable {
     /// A quarter of the stress model's own one-for-one rate, which is the bias for calm (Docs/STRESS_MODEL.md).
     static let stressPerExtraSecond = 0.25
 
-    /// The candidate within the time budget that saves the most stress net of its extra time, if it is meaningfully
-    /// calmer and meaningfully different. Netting means each further minute must also earn its place.
+    /// Stress saved net of the extra time.
+    private static func worth(_ route: Route, fastest: Route) -> Double {
+        fastest.metrics.stress - route.metrics.stress - stressPerExtraSecond * (route.metrics.seconds - fastest.metrics.seconds)
+    }
+
+    /// Meaningfully different, meaningfully calmer and worth its time, whatever the time budget.
+    private static func isClearlyCalmer(_ route: Route, fastest: Route) -> Bool {
+        let base = fastest.metrics.stress
+        return route.edgeIDs != fastest.edgeIDs && route.metrics.stress < base * 0.95 && base - route.metrics.stress >= 30
+            && worth(route, fastest: fastest) > 0
+    }
+
+    /// The clearly calmer candidate within the time budget that saves the most stress net of its extra time.
+    /// Netting means each further minute must also earn its place.
     public static func selectCalmer(candidates: [Route], fastest: Route, extraMinutes: Int) -> Route? {
         let limit = fastest.metrics.seconds + Double(max(0, extraMinutes)) * 60
-        let base = fastest.metrics.stress
-        func worth(_ route: Route) -> Double {
-            base - route.metrics.stress - stressPerExtraSecond * (route.metrics.seconds - fastest.metrics.seconds)
-        }
-        return candidates.filter {
-            $0.edgeIDs != fastest.edgeIDs && $0.metrics.seconds <= limit + 0.000_001
-            && $0.metrics.stress < base * 0.95 && base - $0.metrics.stress >= 30 && worth($0) > 0
-        }.max { worth($0) < worth($1) }
+        return candidates.filter { $0.metrics.seconds <= limit + 0.000_001 && isClearlyCalmer($0, fastest: fastest) }
+            .max { worth($0, fastest: fastest) < worth($1, fastest: fastest) }
     }
 
     /// What the candidates show when `selectCalmer` offered none.
@@ -231,7 +241,9 @@ public final class NativeRouter: RouteComputing, Sendable {
         let calmer = others.filter { $0.metrics.stress < fastest.metrics.stress }
         guard !calmer.isEmpty else { return .calmestCompared(routes: others.count + 1) }
         let limit = fastest.metrics.seconds + Double(extraMinutes) * 60
-        return calmer.contains { $0.metrics.seconds <= limit + 0.000_001 } ? .tooLittleGain : .calmerTakesLonger(limitMinutes: extraMinutes)
+        guard calmer.contains(where: { $0.metrics.seconds <= limit + 0.000_001 }) else { return .calmerTakesLonger(limitMinutes: extraMinutes) }
+        let clearlyBeyond = calmer.contains { $0.metrics.seconds > limit + 0.000_001 && isClearlyCalmer($0, fastest: fastest) }
+        return clearlyBeyond ? .clearlyCalmerTakesLonger(limitMinutes: extraMinutes) : .tooLittleGain
     }
 
     func junction(at node: Int, previous: GraphEdge, next: GraphEdge) -> Junction {
