@@ -141,6 +141,28 @@ final class StressModelTests: XCTestCase {
         var r = Breakdown(); _ = StressModel.exposure(road, mode: .walk, arrivesAtRoad: false, into: &r)
         XCTAssertEqual(r[.noSidewalk].cost, 40, accuracy: 0.001)
     }
+    func testDriveTimesRunAtPostedSpeedAndChargeJunctionsOnce() {
+        var arterial = Fixture.westArterial; arterial.meters = 1000; arterial.maxspeed = "25 mph"
+        XCTAssertEqual(StressModel.seconds(arterial, mode: .drive), 1000 / (25 * 0.447_04), accuracy: 0.01, "posted limit, no urban factor")
+        var unposted = Fixture.northbound; unposted.meters = 1000
+        XCTAssertEqual(StressModel.seconds(unposted, mode: .drive), 1000 / (20 * 0.447_04), accuracy: 0.01, "residential default is 20 mph")
+        var freeway = Fixture.edge(from: 0, to: 1, way: 5, highway: "motorway", meters: 1000); freeway.maxspeed = "60 mph"
+        XCTAssertEqual(StressModel.seconds(freeway, mode: .drive), 1000 / (70 / 3.6), accuracy: 0.01, "never faster than the router's A* bound")
+        var signal = Fixture.northbound; signal.control = .signal
+        let plain = Junction(legs: 4), straight = StressModel.transitionSeconds(previous: signal, next: Fixture.continueNorth, turned: false, junction: plain, mode: .drive)
+        XCTAssertEqual(straight, 15)
+        XCTAssertEqual(StressModel.transitionSeconds(previous: signal, next: Fixture.westArterial, turned: true, junction: plain, mode: .drive), 20)
+        for (control, seconds) in [(TrafficControl.stop, 8.0), (.allstop, 10), (.yield, 3)] {
+            var controlled = Fixture.northbound; controlled.control = control
+            XCTAssertEqual(StressModel.transitionSeconds(previous: controlled, next: Fixture.continueNorth, turned: false, junction: plain, mode: .drive), seconds,
+                           "\(control)")
+        }
+        XCTAssertEqual(StressModel.transitionSeconds(previous: Fixture.northbound, next: Fixture.continueNorth, turned: false, junction: plain, mode: .drive), 3,
+                       "an unsigned cross street on a local street costs a look")
+        XCTAssertEqual(StressModel.transitionSeconds(previous: Fixture.northbound, next: Fixture.continueNorth, turned: false, junction: Junction(legs: 3), mode: .drive), 0)
+        XCTAssertEqual(StressModel.transitionSeconds(previous: Fixture.westArterial, next: Fixture.eastArterial, turned: false, junction: plain, mode: .drive), 0,
+                       "arterials have the right of way")
+    }
     func testTimesArePositiveAndHillsSlowWalking() {
         var hill = Fixture.northbound; hill.climb = 10
         for mode in TravelMode.allCases { XCTAssertGreaterThan(StressModel.seconds(Fixture.northbound, mode: mode), 0) }

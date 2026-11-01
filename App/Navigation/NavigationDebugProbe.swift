@@ -11,6 +11,17 @@ final class MapDebug {
     var routeClears = 0
     /// Length of the dashed leader from the puck to the route's first coordinate, 0 when none is drawn.
     var leaderMeters = 0.0
+    /// The followed route's name and the colours its line and leader layers hold, e.g. `fastest 8E8E93 leader 8E8E93`.
+    var lineStyle = ""
+}
+
+extension UIColor {
+    /// `RRGGBB` of the colour in the light scheme, for the probe.
+    var hexString: String {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        resolvedColor(with: UITraitCollection(userInterfaceStyle: .light)).getRed(&r, green: &g, blue: &b, alpha: &a)
+        return String(format: "%02X%02X%02X", Int(r * 255 + 0.5), Int(g * 255 + 0.5), Int(b * 255 + 0.5))
+    }
 }
 
 /// Invisible, accessible readouts for the UI tests. Only added in Debug builds launched with `--ui-testing`.
@@ -53,6 +64,7 @@ struct NavigationDebugProbe: View {
             probe("debug-reroute-count", String(navigator.rerouteCount))
             probe("debug-route-clears", String(map.routeClears))
             probe("debug-leader", String(Int(map.leaderMeters.rounded())))
+            probe("debug-line-style", map.lineStyle)
         }
         .frame(width: 1, height: 7).allowsHitTesting(false)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

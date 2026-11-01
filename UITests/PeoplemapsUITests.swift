@@ -4,6 +4,7 @@ import CoreLocation
 final class PeoplemapsUITests: XCTestCase {
     /// `--location-granted` value: the app starts as if location were allowed with the device at Kerry Park.
     private static let atKerryPark = "47.6295,-122.3599"
+    private static let atBallardLibrary = "47.6698,-122.3843"
 
     /// Gas Works Park previewed from Current location at Kerry Park (location faked as allowed, no system prompt).
     @MainActor private func launch(slow: Bool = false, simulateRoute: Bool = false, fast: Bool = false) -> XCUIApplication {
@@ -258,6 +259,9 @@ final class PeoplemapsUITests: XCTestCase {
         let leader = NSPredicate { _, _ in (Int(self.probe(app, "debug-leader")) ?? 0) > 25 }
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: leader, object: nil)], timeout: 10), .completed,
                        "No leader at a start \(probe(app, "debug-leader")) m from the route")
+        // No calmer route was picked, so this is the fastest route: its line and leader are the palette's grey, styled
+        // rather than unstyled. Both layers must hold the colour of the route's kind.
+        XCTAssertEqual(probe(app, "debug-line-style"), "fastest 8E8E93 leader 8E8E93", "Line or leader not styled for the fastest route")
         capture("11-leader-at-start", app: app)
         let line = routePoints(app)
         XCTAssertGreaterThan(line.count, 3, "Route readout missing")
@@ -313,6 +317,66 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertEqual(mute.label, "Mute voice")
         mute.tap()
         XCTAssertEqual(mute.label, "Unmute voice")
+    }
+    /// Simulated guidance from the Gas Works preview, waited for before any guidance button is tapped.
+    @MainActor private func startSimulatedGuidance(_ app: XCUIApplication) {
+        app.buttons["start-navigation"].tap()
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 10))
+    }
+    /// Drags across the middle of the screen, the free map between the turn card and the trip bar.
+    @MainActor private func panMap(_ app: XCUIApplication) {
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55))
+        let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
+        from.press(forDuration: 0.1, thenDragTo: to)
+    }
+    @MainActor private func waitUntilGone(_ element: XCUIElement, timeout: TimeInterval = 5) -> Bool {
+        let gone = NSPredicate { _, _ in !element.exists }
+        return XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: gone, object: nil)], timeout: timeout) == .completed
+    }
+    @MainActor func testGuidanceStartsHeadingUpAndCompassFlipsToNorthUp() {
+        let app = launch(simulateRoute: true)
+        startSimulatedGuidance(app)
+        let compass = app.buttons["guidance-compass"]
+        XCTAssertTrue(compass.waitForExistence(timeout: 5))
+        XCTAssertEqual(compass.label, "Heading up", "Heading-up is the default while guiding")
+        XCTAssertFalse(app.buttons["guidance-recenter"].exists, "Following shows no Re-centre")
+        compass.tap()
+        XCTAssertEqual(compass.label, "North up")
+        compass.tap()
+        XCTAssertEqual(compass.label, "Heading up")
+        XCTAssertFalse(app.buttons["guidance-recenter"].exists)
+    }
+    @MainActor func testPanningTheMapShowsRecentreWhichFollowsAgain() {
+        let app = launch(simulateRoute: true)
+        startSimulatedGuidance(app)
+        let recenter = app.buttons["guidance-recenter"]
+        XCTAssertFalse(recenter.exists)
+        panMap(app)
+        XCTAssertTrue(recenter.waitForExistence(timeout: 5), "A pan should stop following and offer Re-centre")
+        XCTAssertEqual(recenter.label, "Re-centre")
+        XCTAssertEqual(app.buttons["guidance-compass"].label, "Heading up", "A free look keeps the follow mode to return to")
+        capture("09-guidance-free-look", app: app)
+        recenter.tap()
+        XCTAssertTrue(waitUntilGone(recenter), "Re-centre should go once following again")
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].exists)
+        // The compass still toggles after a free look, and following stays on.
+        app.buttons["guidance-compass"].tap()
+        XCTAssertEqual(app.buttons["guidance-compass"].label, "North up")
+        XCTAssertFalse(recenter.exists)
+    }
+    @MainActor func testOverviewTogglesAndReturnsToFollowing() {
+        let app = launch(simulateRoute: true)
+        startSimulatedGuidance(app)
+        let overview = app.buttons["guidance-overview"]
+        XCTAssertTrue(overview.waitForExistence(timeout: 5))
+        XCTAssertEqual(overview.label, "Route overview")
+        overview.tap()
+        XCTAssertEqual(overview.label, "Follow my position")
+        XCTAssertFalse(app.buttons["guidance-recenter"].exists, "The overview is not a free look")
+        capture("10-guidance-overview", app: app)
+        overview.tap()
+        XCTAssertEqual(overview.label, "Route overview")
+        XCTAssertEqual(app.buttons["guidance-compass"].label, "Heading up")
     }
     @MainActor func testSimulatedGuidanceArrivesAndDoneReturnsHome() {
         let app = launch(simulateRoute: true, fast: true)
@@ -422,8 +486,18 @@ final class PeoplemapsUITests: XCTestCase {
             XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
         }
     }
+    /// Kerry Park to Gas Works has no calmer drive at any budget: the fastest route is already the calmest, so the
+    /// card adds nothing under the name (Docs/STRESS_MODEL.md, Time).
+    @MainActor func testPlaceCardSaysNothingWhenThereIsNoCalmerDrive() {
+        let app = launchHome(location: Self.atKerryPark)
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        let value = waitForEstimate(app)
+        XCTAssertNotNil(value.range(of: #"^\d+ min drive, "#, options: .regularExpression), value)
+        XCTAssertFalse(app.staticTexts["place-estimate"].exists)
+        XCTAssertFalse(app.staticTexts["place-estimate-loading"].exists)
+    }
     @MainActor func testPlaceCardEstimatesFromCurrentLocationInTheLastMode() {
-        let app = launchHome(location: Self.atKerryPark, extra: ["--slow-routing"])
+        let app = launchHome(location: Self.atBallardLibrary, extra: ["--slow-routing"])
         openPlace(app, "Gas Works", id: "relation/1047789")
         XCTAssertTrue(app.staticTexts["place-estimate-loading"].waitForExistence(timeout: 2), "A quiet placeholder while it computes")
         XCTAssertTrue(app.buttons["directions"].isHittable, "The estimate never blocks the card")

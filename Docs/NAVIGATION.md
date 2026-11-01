@@ -45,6 +45,30 @@ Screens: the "navigation" rows of the design canvas
    location provider (`--simulate-route`), which the UI tests use. Real-road
    feel needs the user's iPhone.
 
+## Camera and heading while guiding
+
+Added 1 November 2026, after a drive where a north-up map and a plain dot gave no
+sense of direction.
+
+- **The puck shows its heading.** A translucent wedge behind the blue dot points
+  along the course Ferrostar snapped to the route, smoothed halfway towards each
+  new fix along the shorter arc (changes under 2° are ignored). It fades out below
+  1 m/s or when the course is unknown; an unknown speed with a known course (the
+  simulated provider) counts as moving.
+- **Four camera modes** (`GuidanceCamera` in `App/SeattleMap.swift`):
+  `followCourseUp` is the default: the map turns to the heading and the puck sits
+  a third of the way up the free map area. `followNorthUp` keeps north at the top
+  with the puck centred. `overview` fits the whole route, north-up. `free` begins
+  when the user pans, pinches or double-taps: following stops and the map stays
+  where they left it. The map keeps the last heading while the user is stopped,
+  so it never swings back north at a light.
+- **Controls.** The compass button (`guidance-compass`) flips heading-up and
+  north-up and resumes following; its glyph points north on screen. The overview
+  button toggles the fitted view. In `free`, a "Re-centre" pill
+  (`guidance-recenter`) returns to the follow mode the user left, as Apple Maps
+  does. Camera turns animate with `Motion.camera`: a cut under Reduce Motion and
+  `--ui-testing`.
+
 ## Stages
 
 Each stage builds, passes `./Scripts/test.sh`, and is reviewed before the next.
