@@ -1220,11 +1220,13 @@ document assumes until the owner says otherwise.
     same 32. Only strings with characters outside the BMP differ, and real
     version strings are ASCII. Follow-up: use `[...v].length` in `installs.ts`
     so both sides agree. No code changed in this PR.
+    **Decided and done:** `installs.ts` counts code points (`backend/reports-worker`, PR #16).
 24. **409 after Rotate.** A report whose send timed out and is re-sent after
     Rotate keeps its `id`, so every unedited retry is a 409 (4.2). Follow-up:
     have the app give the snapshot a new `id` when a 409 arrives (or when the
     install changes), or have the Worker treat a different install as a
     separate idempotency scope. Not decided.
+    **Decided and done:** the app gives every unsent or failed snapshot a new `id` after Rotate or the 401 re-mint (`ReportStore.renewUnsentIDs()`, `core/reports-client`, PR #18); the Worker is unchanged.
 
 Considered, not chosen: TestFlight feedback read through the App Store
 Connect API as an interim with no backend at all (fine for one tester, but
