@@ -38,6 +38,17 @@ final class PlaceCategoryTests: XCTestCase {
         XCTAssertEqual(PlaceCategory(raw: "Therapist"), .health)
     }
 
+    func testLongTail() {
+        let expected: [(String, PlaceCategory)] = [
+            ("coffee", .coffee), ("hospital", .health), ("zoo", .sights), ("toys", .shops), ("travel_agency", .services),
+            ("kitchen", .shops), ("plants", .shops), ("flooring", .shops), ("townhall", .services), ("courthouse", .services),
+            ("swimming_pool", .sport), ("golf_course", .sport), ("cinema", .sights), ("greengrocer", .food),
+            ("beverages", .shops), ("stripclub", .nightlife), ("motel", .transit), ("hearing_aids", .health),
+        ]
+        for (raw, group) in expected { XCTAssertEqual(PlaceCategory(raw: raw), group, raw) }
+        for raw in ["proposed", "vacant", "street_vendor", "shelter"] { XCTAssertEqual(PlaceCategory(raw: raw), .services, raw) }
+    }
+
     func testUnknownIsServices() {
         XCTAssertEqual(PlaceCategory(raw: "no_such_category"), .services)
         XCTAssertEqual(PlaceCategory(raw: ""), .services)

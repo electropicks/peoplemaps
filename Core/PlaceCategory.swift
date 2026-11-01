@@ -26,7 +26,8 @@ public enum PlaceCategory: String, CaseIterable, Sendable {
                   "beverages", "toys", "electronics", "cosmetics", "hardware", "stationery", "games", "video_games",
                   "comics", "mall", "shop", "yarn", "houseware", "kitchenware", "fashion_accessories", "perfumery",
                   "art_materials", "bed", "tyres", "car_parts", "motorcycle", "hifi", "car", "lighting", "tiles", "carpet",
-                  "general"]),
+                  "general",
+                  "kitchen", "bridal", "window_blind", "rugs", "posters", "printer_ink", "video", "vacuum_cleaner", "upholstery", "flooring", "fireplace", "glass", "cabinets", "building_supply", "bathroom_supply_store", "bathroom_furnishing", "canvas", "computer", "clock", "plants", "pottery", "nutrition_supplements", "herbalist", "esoteric", "concrete", "hairdresser_supply", "erotic", "pawnbroker", "marine_supply", "ship_chandler", "university_bookstore", "charity"]),
         (.parks, ["park", "garden", "wood", "water", "playground", "nature_reserve", "beach", "dog_park", "peak",
                   "paddling_pool", "fishing"]),
         (.sport, ["fitness_centre", "sports_centre", "pitch", "stadium", "swimming_pool", "dojo", "golf_course",
@@ -44,7 +45,8 @@ public enum PlaceCategory: String, CaseIterable, Sendable {
                      "student_accommodation", "dry_cleaning", "kindergarten", "tattoo", "copyshop", "storage_rental",
                      "parcel_locker", "animal_boarding", "laundry", "fire_station", "tailor", "pet_grooming",
                      "music_school", "car_wash", "yes", "studio", "research_institute", "locksmith", "college",
-                     "childcare", "university", "ticket", "hackerspace", "give_box", "police", "spa", "unknown"]),
+                     "childcare", "university", "ticket", "hackerspace", "give_box", "police", "spa", "unknown",
+                     "travel_agency", "telecommunication", "repair", "rental", "motorcycle_repair", "social_club", "signs", "sign", "shoe_repair", "self_storage", "recycling", "funeral_directors", "delivery_locker", "coworking_space", "townhall", "study_lounge", "social_centre", "rug_cleaning", "printing", "post_depot", "plumbing", "mailing_center", "makerspace", "financial_advice", "courthouse", "conference_centre", "car_detail", "boat_repair", "apartment", "manufacturer", "driving_school", "sauna", "public_bath", "prep_school", "trade_school", "training", "classes", "cooking_school", "tool_library", "electronics_repair", "psychic", "animal_shelter", "animal_service"]),
     ]
 
     /// The SF Symbol for a badge of this group; `raw` picks a more specific one for transit and sights.
