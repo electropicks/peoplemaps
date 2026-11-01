@@ -29,7 +29,7 @@ struct ExploreView: View {
     @State private var destination: Place?
     /// The last mode used; the place card's estimate uses it too.
     @State private var mode: TravelMode = .drive
-    @State private var budget = 5
+    @State private var budget = 10
     @State private var selectedCalmer = true
     @State private var sheet: Sheet?
     @State private var screen = Screen.home
@@ -572,7 +572,7 @@ struct ExploreView: View {
                 ForEach(TravelMode.displayOrder) { Text($0.title).tag($0) }
             }.pickerStyle(.segmented)
             VStack(alignment: .leading, spacing: landscape ? 4 : 6) {
-                Text("Extra time you'd spend for an easier route").font(.footnote).foregroundStyle(.secondary)
+                Text("Most extra time for a calmer route").font(.footnote).foregroundStyle(.secondary)
                 Picker("Extra time", selection: $budget) {
                     ForEach([0, 2, 5, 10], id: \.self) { Text($0 == 0 ? "None" : "\($0) min").tag($0) }
                 }.pickerStyle(.segmented)
@@ -661,7 +661,7 @@ struct ExploreView: View {
                         Image(systemName: "equal.circle").font(.title3).foregroundStyle(.secondary)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("No calmer route").font(.headline)
-                            Text("Nothing easier within this extra time.").font(.footnote).foregroundStyle(.secondary)
+                            Text("Nothing clearly calmer within this extra time.").font(.footnote).foregroundStyle(.secondary)
                         }
                         Spacer(minLength: 0)
                     }.padding(.horizontal, 14).padding(.vertical, 10).frame(minHeight: rowHeight)

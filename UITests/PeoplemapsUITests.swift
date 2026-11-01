@@ -65,6 +65,7 @@ final class PeoplemapsUITests: XCTestCase {
         let x = ["Drive", "Cycle", "Walk"].map { app.buttons[$0].frame.midX }
         XCTAssertEqual(x, x.sorted(), "Mode order")
         XCTAssertTrue(app.buttons["Drive"].isSelected)
+        XCTAssertTrue(app.buttons["10 min"].isSelected, "The default leans to calm")
         app.buttons["None"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["no-alternative"].waitForExistence(timeout: 10))
         app.buttons["5 min"].tap()

@@ -26,7 +26,7 @@ struct RouteDetails: View {
                 } header: {
                     Text(comparison.calmer == nil ? "Why one route" : "Why the calmer route")
                 } footer: {
-                    Text("The extra-time limit is applied to unrounded estimates. \(comparison.candidateCount) distinct candidates were compared; the search does not guarantee the calmest possible route.")
+                    Text("The extra-time limit is a maximum, applied to unrounded estimates. A slower route must also remove enough estimated stress to be worth its extra time. \(comparison.candidateCount) distinct candidates were compared; the search does not guarantee the calmest possible route.")
                 }
                 Section {
                     metricsRow("Time", comparison.fastest.duration, comparison.calmer?.duration)
@@ -95,7 +95,7 @@ struct AboutView: View {
         NavigationStack {
             List {
                 Section("A map with room for people") {
-                    Text("Choose a little more time when a route asks less of you. No sponsored ranking. Clear reasons. Your time budget.")
+                    Text("Spend extra time when a route clearly asks less of you. Times and stress are estimates. No sponsored ranking. Clear reasons. Your time limit.")
                     Text("Peoplemaps is a working name for a Seattle proof of concept.").font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("Open foundations") {
