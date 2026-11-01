@@ -28,11 +28,11 @@ public struct Report: Codable, Equatable, Sendable {
 
     /// An endpoint as sent (2.2): the snapped intersection, or the exact point with its snapped form riding along.
     public enum Endpoint: Codable, Equatable, Sendable {
-        case intersection(Intersection, placeID: String?)
+        case intersection(Intersection)
         case exact(lat: Double, lon: Double, placeID: String?, snapped: Intersection)
 
         public var snappedForm: Endpoint {
-            if case let .exact(_, _, placeID, snapped) = self { return .intersection(snapped, placeID: placeID) }
+            if case let .exact(_, _, _, snapped) = self { return .intersection(snapped) }
             return self
         }
         var isExact: Bool { if case .exact = self { true } else { false } }
@@ -41,10 +41,9 @@ public struct Report: Codable, Equatable, Sendable {
         public init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             let lat = try c.decode(Double.self, forKey: .lat), lon = try c.decode(Double.self, forKey: .lon)
-            let placeID = try c.decodeIfPresent(String.self, forKey: .placeID)
             switch try c.decode(String.self, forKey: .kind) {
-            case "intersection": self = .intersection(try Intersection(from: decoder), placeID: placeID)
-            case "exact": self = .exact(lat: lat, lon: lon, placeID: placeID, snapped: try c.decode(Intersection.self, forKey: .snapped))
+            case "intersection": self = .intersection(try Intersection(from: decoder))
+            case "exact": self = .exact(lat: lat, lon: lon, placeID: try c.decodeIfPresent(String.self, forKey: .placeID), snapped: try c.decode(Intersection.self, forKey: .snapped))
             default: throw DecodingError.dataCorruptedError(forKey: .kind, in: c, debugDescription: "Unknown endpoint kind.")
             }
         }
@@ -55,12 +54,11 @@ public struct Report: Codable, Equatable, Sendable {
         public var mode: TravelMode
         public var extraMinutes: Int
         /// Null until the "Calmer means" sheet lands (Docs/DESIGN.md 4.6).
-        public var preferences: ReportJSON?
         public var origin: Endpoint?
         public var destination: Endpoint?
         public var rerouted: Bool
-        public init(mode: TravelMode, extraMinutes: Int, preferences: ReportJSON? = nil, origin: Endpoint?, destination: Endpoint?, rerouted: Bool) {
-            self.mode = mode; self.extraMinutes = extraMinutes; self.preferences = preferences
+        public init(mode: TravelMode, extraMinutes: Int, origin: Endpoint?, destination: Endpoint?, rerouted: Bool) {
+            self.mode = mode; self.extraMinutes = extraMinutes
             self.origin = origin; self.destination = destination; self.rerouted = rerouted
         }
     }
@@ -186,11 +184,11 @@ public struct Report: Codable, Equatable, Sendable {
     }
 }
 
-/// The 550 m grid of 5.2, as `Backend/src/cells.ts` computes it: rows 0 to 12, columns 0 to 11.
+/// The 550 m grid of 5.2, as `Backend/src/cells.ts` computes it: rows 0 to 49, columns 0 to 26.
 public enum ReportCell {
     public static func of(lat: Double, lon: Double) -> String {
-        let row = min(12, max(0, Int(((lat - 47.615) / 0.005).rounded(.down))))
-        let col = min(11, max(0, Int(((lon + 122.390) / 0.0075).rounded(.down))))
+        let row = min(49, max(0, Int(((lat - 47.49) / 0.005).rounded(.down))))
+        let col = min(26, max(0, Int(((lon + 122.44) / 0.0075).rounded(.down))))
         return "r\(row)c\(col)"
     }
 }
@@ -222,9 +220,10 @@ public struct ReportEndpoint: Codable, Equatable, Sendable {
     }
 
     /// The form that is sent: null without a snap, the snapped intersection by default, the exact point when asked.
+    /// The place ID names the exact place, so it only goes with the exact point (2.2).
     public func sent(exact: Bool) -> Report.Endpoint? {
         guard let snapped else { return nil }
-        return exact ? .exact(lat: lat, lon: lon, placeID: placeID, snapped: snapped) : .intersection(snapped, placeID: placeID)
+        return exact ? .exact(lat: lat, lon: lon, placeID: placeID, snapped: snapped) : .intersection(snapped)
     }
 }
 
@@ -235,12 +234,11 @@ public struct ReportSnapshot: Codable, Equatable, Sendable, Identifiable {
     public struct Request: Codable, Equatable, Sendable {
         public var mode: TravelMode
         public var extraMinutes: Int
-        public var preferences: ReportJSON?
         public var origin: ReportEndpoint?
         public var destination: ReportEndpoint?
         public var rerouted: Bool
-        public init(mode: TravelMode, extraMinutes: Int, preferences: ReportJSON? = nil, origin: ReportEndpoint?, destination: ReportEndpoint?, rerouted: Bool) {
-            self.mode = mode; self.extraMinutes = extraMinutes; self.preferences = preferences
+        public init(mode: TravelMode, extraMinutes: Int, origin: ReportEndpoint?, destination: ReportEndpoint?, rerouted: Bool) {
+            self.mode = mode; self.extraMinutes = extraMinutes
             self.origin = origin; self.destination = destination; self.rerouted = rerouted
         }
     }
@@ -290,7 +288,7 @@ public struct ReportSnapshot: Codable, Equatable, Sendable, Identifiable {
         if let note, note.unicodeScalars.count > Report.noteLimit { throw BuildError.noteTooLong }
         return Report(
             id: id, flaggedAt: Report.hour(flaggedAt), category: category, note: note, exactLocations: exactLocations,
-            request: .init(mode: request.mode, extraMinutes: request.extraMinutes, preferences: request.preferences,
+            request: .init(mode: request.mode, extraMinutes: request.extraMinutes,
                            origin: originRemoved ? nil : request.origin?.sent(exact: exactLocations),
                            destination: destinationRemoved ? nil : request.destination?.sent(exact: exactLocations),
                            rerouted: request.rerouted),
@@ -613,22 +611,18 @@ extension Report.Intersection {
 
 extension Report.Endpoint {
     public var json: ReportJSON {
-        var place: [(String, ReportJSON)] = []
-        if let placeID { place = [("placeID", .string(placeID))] }
         switch self {
-        case let .intersection(node, _): return .object([("kind", .string("intersection"))] + node.members + place)
-        case let .exact(lat, lon, _, snapped):
+        case let .intersection(node): return .object([("kind", .string("intersection"))] + node.members)
+        case let .exact(lat, lon, placeID, snapped):
+            let place: [(String, ReportJSON)] = placeID.map { [("placeID", .string($0))] } ?? []
             return .object([("kind", .string("exact")), ("lat", .number(lat)), ("lon", .number(lon))] + place + [("snapped", .object(snapped.members))])
         }
-    }
-    var placeID: String? {
-        switch self { case let .intersection(_, id), let .exact(_, _, id, _): id }
     }
 }
 
 extension Report.Request {
     var json: ReportJSON {
-        .object([("mode", .string(mode.rawValue)), ("extraMinutes", .int(Int64(extraMinutes))), ("preferences", preferences ?? .null),
+        .object([("mode", .string(mode.rawValue)), ("extraMinutes", .int(Int64(extraMinutes))), ("preferences", .null),
                  ("origin", origin?.json ?? .null), ("destination", destination?.json ?? .null), ("rerouted", .bool(rerouted))])
     }
 }

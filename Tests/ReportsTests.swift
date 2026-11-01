@@ -89,10 +89,10 @@ final class ReportsTests: XCTestCase {
         s.category = .mapData
         let report = try s.report()
         XCTAssertNil(report.location)
-        XCTAssertEqual(report.request.origin, .intersection(.init(lat: 47.6298, lon: -122.35931, osmNode: 53070456), placeID: "way/37056567"))
+        XCTAssertEqual(report.request.origin, .intersection(.init(lat: 47.6298, lon: -122.35931, osmNode: 53070456)))
         let text = String(decoding: ReportEncoder.data(report), as: UTF8.self)
         XCTAssertTrue(text.contains("\"location\":null"))
-        XCTAssertFalse(text.contains("\"exact\"") || text.contains("snapped") || text.contains("47.6295") || text.contains("47.63712"))
+        XCTAssertFalse(text.contains("\"exact\"") || text.contains("snapped") || text.contains("47.6295") || text.contains("47.63712") || text.contains("placeID"))
     }
 
     func testRemovedOrUnsnappedEndpointsAreNull() throws {
@@ -138,11 +138,12 @@ final class ReportsTests: XCTestCase {
     }
 
     func testCellMatchesTheWorkerGrid() {
-        XCTAssertEqual(ReportCell.of(lat: 47.63712, lon: -122.35588), "r4c4")
-        XCTAssertEqual(ReportCell.of(lat: 47.615, lon: -122.390), "r0c0")
-        XCTAssertEqual(ReportCell.of(lat: 47.60, lon: -122.40), "r0c0")
-        XCTAssertEqual(ReportCell.of(lat: 47.678, lon: -122.300), "r12c11")
-        XCTAssertEqual(ReportCell.of(lat: 47.70, lon: -122.20), "r12c11")
+        XCTAssertEqual(ReportCell.of(lat: 47.63712, lon: -122.35588), "r29c11")
+        XCTAssertEqual(ReportCell.of(lat: 47.6298, lon: -122.35931), "r27c10")
+        XCTAssertEqual(ReportCell.of(lat: 47.49, lon: -122.44), "r0c0")
+        XCTAssertEqual(ReportCell.of(lat: 47.74, lon: -122.24), "r49c26")
+        XCTAssertEqual(ReportCell.of(lat: 47.40, lon: -122.50), "r0c0")
+        XCTAssertEqual(ReportCell.of(lat: 47.80, lon: -122.20), "r49c26")
     }
 
     // MARK: Encoder
@@ -315,6 +316,23 @@ final class ReportsTests: XCTestCase {
         XCTAssertEqual(list, [.init(id: "A", receivedAt: "2026-10-31T21:00:00Z", expiresAt: "2027-01-29T21:00:00Z", category: .mapData)])
     }
 
+    func testDeleteMyReportsFinishesWhenTheRetryAfterALostResponseGetsA401() async throws {
+        let fake = FakeServer([.init(status: 401, body: #"{"error":"unauthorized","message":"gone"}"#)])
+        let creds = MemoryCredentials(.init(installID: "id-1", token: "pm_1"))
+        try await client(fake).deleteMyReports(credentials: creds)
+        XCTAssertNil(creds.load())
+        XCTAssertEqual(fake.requests.map(\.line), ["DELETE /v1/installs/me"])
+    }
+
+    func testDeleteMyReportsKeepsTheIDOnA401ThatIsNotTheWorkers() async throws {
+        let fake = FakeServer([.init(status: 401, body: "<html>Sign in to this network</html>")])
+        let creds = MemoryCredentials(.init(installID: "id-1", token: "pm_1"))
+        do { try await client(fake).deleteMyReports(credentials: creds); XCTFail("expected a failure") } catch {
+            guard case ReportsError.unexpected = error else { return XCTFail("\(error)") }
+        }
+        XCTAssertNotNil(creds.load())
+    }
+
     func testDeleteMyReportsKeepsTheIDWhenTheServerIsFull() async throws {
         let fake = FakeServer([
             .init(status: 503, body: #"{"error":"storage_unavailable","message":"The report server is full for today."}"#),
@@ -396,7 +414,7 @@ final class ReportsTests: XCTestCase {
                          wayIDs: [6392710, 6392711, 428156930, 6410023],
                          hash: "cf1a9c409d0a8ca747e439107aaa6193dec61dcaf5335b234234cc71fa53dec8", meters: 5230.4, seconds: 744.2, stress: 318.5,
                          alternativeHash: "99963c16902f033f95e42ab58ca1e33ce9de06c663657007faf4d6b8a7f6b05d"),
-            position: .init(stepIndex: 3, shownStepIndex: 4, distanceToManeuver: 86.5, remainingMeters: 2890.1, remainingSeconds: 402, cell: "r4c4"),
+            position: .init(stepIndex: 3, shownStepIndex: 4, distanceToManeuver: 86.5, remainingMeters: 2890.1, remainingSeconds: 402, cell: "r29c11"),
             location: .init(lat: 47.63712, lon: -122.35588, accuracy: 8, course: 71),
             spoken: [.init(text: "In a quarter mile, turn left onto Dexter Avenue North", secondsBefore: 41),
                      .init(text: "Turn left onto Dexter Avenue North", secondsBefore: 6)],
