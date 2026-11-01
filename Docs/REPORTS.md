@@ -386,8 +386,8 @@ Body: the report (2.4); its `id` is the idempotency key
   UUID. `spoken` has at most 3 entries and `location.accuracy` is 0 to
   10,000. `POST /v1/installs` checks the same `app.version` and `app.build`
   caps (4.1) but counts UTF-16 code units (`String.length`), so a string with
-  characters outside the Basic Multilingual Plane is shorter there than the
-  same string here. The two agree for ASCII, which real version and build
+  characters outside the Basic Multilingual Plane counts longer there (two
+  units each) than here, so the install check is the stricter one. The two agree for ASCII, which real version and build
   strings are; see question 23.
 - Rate limit: `REPORTS_PER_DAY` per install (a `vars` value, 7.2: 20 in
   production, 50 in dev, so one tester can exercise the client), counted from
