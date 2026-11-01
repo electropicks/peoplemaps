@@ -263,9 +263,13 @@ final class NavigationController {
             if let plan = active?.plan { stepIndex = plan.steps.count - 1; currentStep = plan.steps.last; thenStep = nil }
         case .idle:
             break
-        case let .navigating(_, _, _, remaining, _, progress, _, deviation, _, spoken, _):
+        case let .navigating(_, _, _, remaining, _, progress, _, _, _, spoken, _):
             guard let plan = active?.plan else { return }
-            if case .noDeviation = deviation { gate.onRoute() }
+            // Not the engine's `.noDeviation`: it also means "fix too poor to judge", which says nothing about the route.
+            if let fix = state.preferredUserLocation {
+                gate.observe(distanceToRoute: Coordinate(lat: fix.coordinates.lat, lon: fix.coordinates.lng).distance(toPolyline: routeGeometry),
+                             accuracy: fix.horizontalAccuracy)
+            }
             if let spoken, !spoken.text.isEmpty { lastSpoken = SpokenText.normalize(spoken.text) }
             hasArrived = false
             distanceToManeuver = progress.distanceToNextManeuver
