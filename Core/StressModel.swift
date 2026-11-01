@@ -63,15 +63,15 @@ public enum Factor: String, CaseIterable, Sendable, Comparable {
         }
     }
 
-    /// An amount of this factor for a table cell: a count, kilometres, or metres climbed.
+    /// An amount of this factor for a table cell: a count, a distance, or feet climbed.
     public func formatted(_ amount: Double) -> String {
-        self == .climb ? "\(Int(amount.rounded())) m" : isExposure ? String(format: "%.1f km", amount / 1000) : "\(Int(amount.rounded()))"
+        self == .climb ? DistanceFormat.climb(amount) : isExposure ? DistanceFormat.distance(amount) : "\(Int(amount.rounded()))"
     }
 
-    /// Plain-language description of an amount of this factor: a count, metres, or metres of climbing.
+    /// Plain-language description of an amount of this factor: a count, a distance, or feet of climbing.
     public func describe(_ amount: Double) -> String {
-        if self == .climb { return "\(Int(amount.rounded())) m of climbing" }
-        if isExposure { return "\(String(format: "%.1f", amount / 1000)) km \(exposurePhrase)" }
+        if self == .climb { return "\(DistanceFormat.climb(amount)) of climbing" }
+        if isExposure { return "\(DistanceFormat.distance(amount)) \(exposurePhrase)" }
         let n = Int(amount.rounded())
         let (one, many) = eventPhrase
         return "\(n) \(n == 1 ? one : many)"
