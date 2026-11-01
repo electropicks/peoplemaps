@@ -60,7 +60,7 @@ struct RouteDetails: View {
             }.listStyle(.insetGrouped)
                 .navigationTitle("Behind the routes").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() }.accessibilityIdentifier("close-details") } }
-        }.presentationDetents([.medium, .large])
+        }.tint(.primary).presentationDetents([.medium, .large])
     }
     private var modeNote: String {
         switch comparison.request.mode {
@@ -111,7 +111,7 @@ struct AboutView: View {
             }.listStyle(.insetGrouped)
                 .navigationTitle("About PeopleMaps").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() }.accessibilityIdentifier("close-about") } }
-        }.presentationDetents([.large])
+        }.tint(.primary).presentationDetents([.large])
     }
     private func header(_ title: String) -> some View {
         Text(title).font(.footnote.weight(.semibold)).textCase(nil).accessibilityAddTraits(.isHeader)

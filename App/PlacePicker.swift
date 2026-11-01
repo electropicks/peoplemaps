@@ -51,7 +51,7 @@ struct PlacePicker: View {
             .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() }.accessibilityIdentifier("cancel-search") } }
-        }
+        }.tint(.primary)
     }
 
     private func section(_ title: String, _ places: [Place], prefix: String) -> some View {

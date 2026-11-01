@@ -20,7 +20,7 @@ struct PlaceRow: View {
                 CategoryBadge(badge: place.badge, raw: place.category)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title).font(.body).foregroundStyle(.primary).lineLimit(2)
-                    Text(place.subtitle).font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
+                    Text(place.subtitle).font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
                     if searching, let source = place.source {
                         Text(source).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                     }
