@@ -38,8 +38,8 @@ Put `REPORTS_PER_DAY=50` in `.dev.vars` (gitignored) if a tester needs a higher 
 
 `.github/workflows/backend.yml` runs on a push to `main` that touches `Backend/`: tests, then `wrangler d1 migrations
 apply --remote` and `wrangler deploy` in the `deploy` job. Deploys run automatically from `main` once the tests pass, with
-no approval step, and never from a pull request, or by hand with `gh workflow run backend.yml --ref main`. The job is skipped until the repository variable `BACKEND_DEPLOY` is
-`true`.
+no approval step, and can also be started by hand with `gh workflow run backend.yml --ref main`. A pull request never
+deploys. The job is skipped until the repository variable `BACKEND_DEPLOY` is `true`.
 
 Once, by hand, in this order, before the first deploy:
 
