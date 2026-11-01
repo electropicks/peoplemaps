@@ -30,7 +30,7 @@ public struct Route: Sendable, Identifiable {
     public var id: String { edgeIDs.map(String.init).joined(separator: "-") }
     public var minutes: Int { max(1, Int(ceil(metrics.seconds / 60))) }
     public var duration: String { "\(minutes) min" }
-    public var distance: String { String(format: "%.1f km", metrics.meters / 1000) }
+    public var distance: String { DistanceFormat.distance(metrics.meters) }
 
     /// Share of this route's length that also lies on `other`.
     func overlap(with other: Route) -> Double {
@@ -93,7 +93,9 @@ extension Factor {
     func change(_ amount: Double, more: Bool) -> String {
         let text = describe(amount)
         if self == .climb { return text.replacingOccurrences(of: " of climbing", with: more ? " more climbing" : " less climbing") }
-        if isExposure { return text.replacingOccurrences(of: " km ", with: more ? " km more " : " km less ") }
+        if isExposure, let unit = text.range(of: " mi ") ?? text.range(of: " ft ") {
+            return text.replacingCharacters(in: unit, with: text[unit].dropLast() + (more ? " more " : " less "))
+        }
         let n = text.prefix { $0 != " " }
         return "\(n) \(more ? "more" : "fewer")\(text.dropFirst(n.count))"
     }
