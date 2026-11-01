@@ -9,7 +9,7 @@ struct GuidanceOverlay: View {
     let landscape: Bool
     let cardWidth: CGFloat
     let attribution: AnyView
-    @Binding var overview: Bool
+    @Binding var camera: GuidanceCamera
     @Binding var muted: Bool
     /// Space the chrome covers, in screen points, so the map can centre the puck in what is left.
     let onInsets: (UIEdgeInsets) -> Void
@@ -37,6 +37,7 @@ struct GuidanceOverlay: View {
         .animation(Motion.content(reduceMotion), value: navigator.isRerouting)
         .animation(Motion.content(reduceMotion), value: navigator.calmNote)
         .animation(Motion.panel(reduceMotion), value: navigator.hasArrived)
+        .animation(Motion.content(reduceMotion), value: camera)
         .onAppear { withAnimation(Motion.panel(reduceMotion)) { shown = true } }
     }
 
@@ -76,6 +77,7 @@ struct GuidanceOverlay: View {
                     .onAppear { topEdge = 52 }
             }
             Spacer(minLength: 0)
+            if camera.mode == .free, !navigator.hasArrived { recenterPill.padding(.bottom, 8).transition(.opacity.combined(with: .scale(scale: 0.9))) }
             HStack { attribution; Spacer() }.padding(.horizontal, 12)
             ZStack(alignment: .bottom) {
                 if navigator.hasArrived { arrivalSheet.transition(Motion.edge(.bottom, reduce: reduceMotion)) }
@@ -118,6 +120,7 @@ struct GuidanceOverlay: View {
                 Spacer(minLength: 16)
                 VStack(alignment: .trailing) {
                     mapButtons
+                    if camera.mode == .free, !navigator.hasArrived { recenterPill.padding(.top, 8).transition(.opacity.combined(with: .scale(scale: 0.9))) }
                     Spacer()
                     attribution
                 }.padding(.vertical, 12).padding(.trailing, 16)
@@ -276,37 +279,58 @@ struct GuidanceOverlay: View {
         }.buttonStyle(.plain).accessibilityIdentifier("end-navigation")
     }
 
-    // MARK: Map button
+    // MARK: Map buttons
 
     private var mapButtons: some View {
         Group {
-            if landscape { VStack(spacing: 8) { muteButton; overviewButton } }
-            else { HStack(spacing: 8) { muteButton; overviewButton } }
+            if landscape { VStack(spacing: 8) { muteButton; compassButton; overviewButton } }
+            else { HStack(spacing: 8) { muteButton; compassButton; overviewButton } }
         }
+    }
+
+    private func mapButton(_ action: @escaping () -> Void, @ViewBuilder label: () -> some View) -> some View {
+        Button(action: action) { label().font(.system(size: 19)).frame(width: 44, height: 44).contentShape(Rectangle()) }
+            .buttonStyle(.plain).foregroundStyle(.primary)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .shadow(color: .black.opacity(0.12), radius: 8, y: 1)
     }
 
     private var muteButton: some View {
-        Button { withAnimation(Motion.content(reduceMotion)) { muted.toggle() } } label: {
-            Image(systemName: muted ? "speaker.slash.fill" : "speaker.wave.2.fill").font(.system(size: 19))
-                .contentTransition(.symbolEffect(.replace))
-                .frame(width: 44, height: 44).contentShape(Rectangle())
+        mapButton({ withAnimation(Motion.content(reduceMotion)) { muted.toggle() } }) {
+            Image(systemName: muted ? "speaker.slash.fill" : "speaker.wave.2.fill").contentTransition(.symbolEffect(.replace))
         }
-        .buttonStyle(.plain).foregroundStyle(.primary)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.12), radius: 8, y: 1)
         .accessibilityLabel(muted ? "Unmute voice" : "Mute voice").accessibilityIdentifier("guidance-mute")
     }
 
+    /// A compass that points north on screen, so it reads upright when the map is north-up and turns with it heading-up.
+    private var compassButton: some View {
+        mapButton({ withAnimation(Motion.content(reduceMotion)) { camera.toggleHeading() } }) {
+            Image(systemName: "location.north.line.fill")
+                .rotationEffect(.degrees(camera.isTurned ? -(navigator.heading ?? 0) : 0))
+        }
+        .accessibilityLabel(camera.courseUp ? "Heading up" : "North up")
+        .accessibilityHint(camera.courseUp ? "Turns the map north up" : "Turns the map to face your heading")
+        .accessibilityIdentifier("guidance-compass")
+    }
+
     private var overviewButton: some View {
-        Button { withAnimation(Motion.content(reduceMotion)) { overview.toggle() } } label: {
-            Image(systemName: overview ? "location.fill" : "arrow.up.left.and.arrow.down.right").font(.system(size: 19))
-                .contentTransition(.symbolEffect(.replace))
-                .frame(width: 44, height: 44).contentShape(Rectangle())
+        let overview = camera.mode == .overview
+        return mapButton({ withAnimation(Motion.content(reduceMotion)) { camera.toggleOverview() } }) {
+            Image(systemName: overview ? "location.fill" : "arrow.up.left.and.arrow.down.right").contentTransition(.symbolEffect(.replace))
+        }
+        .accessibilityLabel(overview ? "Follow my position" : "Route overview").accessibilityIdentifier("guidance-overview")
+    }
+
+    /// Shown after the user pans or pinches; returns to the follow mode they left, as Apple Maps does.
+    private var recenterPill: some View {
+        Button { withAnimation(Motion.content(reduceMotion)) { camera.recenter() } } label: {
+            Label("Re-centre", systemImage: "location").font(.body.weight(.semibold))
+                .padding(.horizontal, 16).frame(minHeight: 44).contentShape(Capsule())
         }
         .buttonStyle(.plain).foregroundStyle(.primary)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .background(.regularMaterial, in: Capsule())
         .shadow(color: .black.opacity(0.12), radius: 8, y: 1)
-        .accessibilityLabel(overview ? "Follow my position" : "Route overview").accessibilityIdentifier("guidance-overview")
+        .accessibilityLabel("Re-centre").accessibilityHint("Follows your position again").accessibilityIdentifier("guidance-recenter")
     }
 
     // MARK: Arrival

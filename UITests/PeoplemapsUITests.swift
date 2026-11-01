@@ -290,6 +290,66 @@ final class PeoplemapsUITests: XCTestCase {
         mute.tap()
         XCTAssertEqual(mute.label, "Unmute voice")
     }
+    /// Simulated guidance from the Gas Works preview, waited for before any guidance button is tapped.
+    @MainActor private func startSimulatedGuidance(_ app: XCUIApplication) {
+        app.buttons["start-navigation"].tap()
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 10))
+    }
+    /// Drags across the middle of the screen, the free map between the turn card and the trip bar.
+    @MainActor private func panMap(_ app: XCUIApplication) {
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55))
+        let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
+        from.press(forDuration: 0.1, thenDragTo: to)
+    }
+    @MainActor private func waitUntilGone(_ element: XCUIElement, timeout: TimeInterval = 5) -> Bool {
+        let gone = NSPredicate { _, _ in !element.exists }
+        return XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: gone, object: nil)], timeout: timeout) == .completed
+    }
+    @MainActor func testGuidanceStartsHeadingUpAndCompassFlipsToNorthUp() {
+        let app = launch(simulateRoute: true)
+        startSimulatedGuidance(app)
+        let compass = app.buttons["guidance-compass"]
+        XCTAssertTrue(compass.waitForExistence(timeout: 5))
+        XCTAssertEqual(compass.label, "Heading up", "Heading-up is the default while guiding")
+        XCTAssertFalse(app.buttons["guidance-recenter"].exists, "Following shows no Re-centre")
+        compass.tap()
+        XCTAssertEqual(compass.label, "North up")
+        compass.tap()
+        XCTAssertEqual(compass.label, "Heading up")
+        XCTAssertFalse(app.buttons["guidance-recenter"].exists)
+    }
+    @MainActor func testPanningTheMapShowsRecentreWhichFollowsAgain() {
+        let app = launch(simulateRoute: true)
+        startSimulatedGuidance(app)
+        let recenter = app.buttons["guidance-recenter"]
+        XCTAssertFalse(recenter.exists)
+        panMap(app)
+        XCTAssertTrue(recenter.waitForExistence(timeout: 5), "A pan should stop following and offer Re-centre")
+        XCTAssertEqual(recenter.label, "Re-centre")
+        XCTAssertEqual(app.buttons["guidance-compass"].label, "Heading up", "A free look keeps the follow mode to return to")
+        capture("09-guidance-free-look", app: app)
+        recenter.tap()
+        XCTAssertTrue(waitUntilGone(recenter), "Re-centre should go once following again")
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].exists)
+        // The compass still toggles after a free look, and following stays on.
+        app.buttons["guidance-compass"].tap()
+        XCTAssertEqual(app.buttons["guidance-compass"].label, "North up")
+        XCTAssertFalse(recenter.exists)
+    }
+    @MainActor func testOverviewTogglesAndReturnsToFollowing() {
+        let app = launch(simulateRoute: true)
+        startSimulatedGuidance(app)
+        let overview = app.buttons["guidance-overview"]
+        XCTAssertTrue(overview.waitForExistence(timeout: 5))
+        XCTAssertEqual(overview.label, "Route overview")
+        overview.tap()
+        XCTAssertEqual(overview.label, "Follow my position")
+        XCTAssertFalse(app.buttons["guidance-recenter"].exists, "The overview is not a free look")
+        capture("10-guidance-overview", app: app)
+        overview.tap()
+        XCTAssertEqual(overview.label, "Route overview")
+        XCTAssertEqual(app.buttons["guidance-compass"].label, "Heading up")
+    }
     @MainActor func testSimulatedGuidanceArrivesAndDoneReturnsHome() {
         let app = launch(simulateRoute: true, fast: true)
         app.buttons["start-navigation"].tap()
