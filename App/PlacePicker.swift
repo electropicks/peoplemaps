@@ -50,14 +50,15 @@ struct PlacePicker: View {
             .scrollDismissesKeyboard(.interactively)
             .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.accessibilityIdentifier("cancel-search") } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() }.accessibilityIdentifier("cancel-search") } }
         }
     }
 
     private func section(_ title: String, _ places: [Place], prefix: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.footnote).textCase(.uppercase).foregroundStyle(.secondary).padding(.leading, 16)
-            PlaceList(places: places, query: query, selectedID: selected?.id, identifier: { prefix + $0.id }) {
+            Text(title).font(.footnote.weight(.semibold)).foregroundStyle(.secondary).padding(.leading, 16)
+                .accessibilityAddTraits(.isHeader)
+            PlaceList(places: places, query: query, selectedID: selected?.id, near: selected?.coordinate, identifier: { prefix + $0.id }) {
                 onSelect($0); dismiss()
             }
         }
@@ -90,30 +91,29 @@ struct CurrentLocationRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Image(systemName: "location.fill").font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
-                    .frame(width: 32, height: 32).background(Color(uiColor: .systemBlue), in: Circle())
+                CategoryBadge(badge: .currentLocation)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Current location").font(.body).foregroundStyle(.primary)
                     if locating || failed {
                         Text(failed ? "Couldn\u{2019}t find where you are. Try again." : "Finding where you are\u{2026}")
-                            .font(.footnote).foregroundStyle(.secondary)
+                            .font(.subheadline).foregroundStyle(.secondary)
                     }
                 }
                 Spacer(minLength: 0)
                 if locating { ProgressView() }
-                else if selected { Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(.tint) }
+                else if selected { Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(.primary) }
             }
-            .padding(.horizontal, 14).frame(minHeight: 52).contentShape(Rectangle())
+            .padding(.horizontal, 14).padding(.vertical, 6).frame(minHeight: 52).contentShape(Rectangle())
             .animation(Motion.content(reduceMotion), value: locating)
             .animation(Motion.content(reduceMotion), value: failed)
         }
         .buttonStyle(.plain)
-        .background(.panelFill, in: RoundedRectangle(cornerRadius: 12))
+        .background(.panelFill, in: RoundedRectangle(cornerRadius: Layout.groupRadius))
         .accessibilityIdentifier("place-current-location")
     }
 }
 
-/// Native-style search field: gray rounded field, magnifier, clear button.
+/// Native-style search field: tertiary-fill capsule (no glass on the glass sheet), magnifier, clear button.
 struct SearchField: View {
     @Binding var text: String
     var placeholder = "Search places"
@@ -130,7 +130,7 @@ struct SearchField: View {
             }
         }
         .padding(.horizontal, 12).frame(height: 44)
-        .background(Color(uiColor: .tertiarySystemFill), in: RoundedRectangle(cornerRadius: 12))
+        .background(.fill.tertiary, in: Capsule())
     }
 
     @ViewBuilder private var field: some View {
@@ -142,13 +142,11 @@ struct SearchField: View {
 struct EmptySearch: View {
     let count: Int
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").font(.system(size: 36, weight: .light)).foregroundStyle(.secondary)
-            Text("No places match in this Seattle area").font(.headline).multilineTextAlignment(.center)
-            Text("PeopleMaps searches \(count.formatted()) places and addresses in this offline area.").font(.subheadline).foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+        ContentUnavailableView {
+            Label("No places match in this Seattle area", systemImage: "magnifyingglass")
+        } description: {
+            Text("PeopleMaps searches \(count.formatted()) places and addresses in this offline area.")
         }
-        .frame(maxWidth: .infinity).padding(.horizontal, 24)
         .accessibilityElement(children: .combine).accessibilityIdentifier("search-empty")
     }
 }

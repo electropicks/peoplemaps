@@ -20,7 +20,7 @@ struct RouteDetails: View {
                                 .foregroundStyle(tradeoff ? .secondary : .primary)
                         } icon: {
                             Image(systemName: tradeoff ? "minus" : "checkmark").fontWeight(.semibold)
-                                .foregroundStyle(tradeoff ? Color.secondary : Color.calmer)
+                                .foregroundStyle(tradeoff ? Color.secondary : Color.calmerText)
                         }
                     }
                 } header: {
@@ -46,7 +46,7 @@ struct RouteDetails: View {
                     Text("Ordered by how much each adds to the fastest route's stress.")
                 }
                 Section("Good to know") {
-                    Text("This is a route-comparison prototype, not turn-by-turn navigation. No route is labeled safe; \"calmer\" means fewer of the things listed above.")
+                    Text("No route is labeled safe; \"calmer\" means fewer of the things listed above.")
                     Text("Times use assumed speeds, hills and junction delays. They do not include live traffic, closures, parking, signal timing, or verified travel times.")
                     Text(modeNote)
                     Text("Hills come from a 5 m USGS ground model; bridges and tunnels are interpolated between their ends.")
@@ -59,7 +59,7 @@ struct RouteDetails: View {
                 }
             }.listStyle(.insetGrouped)
                 .navigationTitle("Behind the routes").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.accessibilityIdentifier("close-details") } }
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() }.accessibilityIdentifier("close-details") } }
         }.presentationDetents([.medium, .large])
     }
     private var modeNote: String {
@@ -94,24 +94,46 @@ struct AboutView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("A map with room for people") {
-                    Text("Choose a little more time when a route asks less of you. No sponsored ranking. Clear reasons. Your time budget.")
-                    Text("Peoplemaps is a working name for a Seattle proof of concept.").font(.footnote).foregroundStyle(.secondary)
-                }
-                Section("Open foundations") {
-                    Text("Native SwiftUI · MapLibre Native · Ferrostar · OpenStreetMap")
-                    Text("\(graph.places.count) places and \(graph.edges.count.formatted()) directed street and path segments are bundled, with USGS elevation. Routing runs entirely on this device. No account is needed. Location is asked for only when you start guidance, and it stays on this iPhone.")
-                    Link("OpenStreetMap contributors · ODbL 1.0", destination: URL(string: "https://www.openstreetmap.org/copyright")!)
+                Section {
+                    Text("Routes with fewer stressful turns, for a few minutes more. Driving avoids lefts and crossings without a signal, stop-and-go, confusing junctions and hill starts. Cycling avoids riding in traffic, busy crossings and climbs. Walking avoids unmarked crossings of busy streets, missing sidewalks and hills.")
+                    Text("These are transparent preferences, not safety ratings. Times are estimates with no live traffic.").font(.footnote).foregroundStyle(.secondary)
+                } header: { header("What calmer means") }
+                Section {
+                    Text("\(graph.places.count) places and \(graph.edges.count.formatted()) directed street and path segments are bundled, with USGS elevation. Routing runs entirely on this device. No account is needed. PeopleMaps asks for your location once, when it first opens, and your location stays on this iPhone.")
+                    Text("Snapshot: 11 October 2026.").foregroundStyle(.secondary)
+                    externalLink("OpenStreetMap contributors · ODbL 1.0", "https://www.openstreetmap.org/copyright")
                     NavigationLink("Acknowledgements") { AcknowledgementsView() }.accessibilityIdentifier("acknowledgements")
-                }
-                Section("Seattle, with boundaries") {
-                    Text("Snapshot: 11 October 2026. Coverage: north of Denny Way through southern Green Lake, from east Ballard to the University District. Map detail stops at the extract boundary.")
-                    Text("Missing restrictions, conditional access, temporary closures, and entrances can affect feasibility. Unsupported turn-restriction forms are conservatively excluded. This prototype has not been field validated.")
-                    Text("Driving avoids lefts and crossings without a signal, stop-and-go, confusing junctions and hill starts. Cycling avoids riding in traffic, busy crossings and climbs. Walking avoids unmarked crossings of busy streets, missing sidewalks and hills. These are transparent preferences, not safety ratings.")
-                }
+                } header: { header("Data") }
+                Section {
+                    Text("North of Denny Way through southern Green Lake, from east Ballard to the University District. Map detail stops at the extract boundary.")
+                    Text("Missing restrictions, conditional access, temporary closures, and entrances can affect feasibility. Unsupported turn-restriction forms are conservatively excluded. This prototype has not been field validated.").foregroundStyle(.secondary)
+                } header: { header("Coverage") }
             }.listStyle(.insetGrouped)
-                .navigationTitle("About Peoplemaps").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-        }.presentationDetents([.medium, .large])
+                .navigationTitle("About PeopleMaps").navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() }.accessibilityIdentifier("close-about") } }
+        }.presentationDetents([.large])
     }
+    private func header(_ title: String) -> some View {
+        Text(title).font(.footnote.weight(.semibold)).textCase(nil).accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// An external link in label colour with the arrow-out glyph, not the global tint.
+struct ExternalLink: View {
+    let title: String
+    let url: URL
+    var font: Font = .body
+    var body: some View {
+        Link(destination: url) {
+            HStack {
+                Text(title).font(font)
+                Spacer(minLength: 8)
+                Image(systemName: "arrow.up.forward").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+            }
+        }.foregroundStyle(.primary)
+    }
+}
+
+private func externalLink(_ title: String, _ url: String) -> some View {
+    ExternalLink(title: title, url: URL(string: url)!)
 }

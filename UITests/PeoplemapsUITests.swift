@@ -773,6 +773,22 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertFalse(lookup.exists)
     }
 
+    @MainActor func testSearchResultShowsSourceAndEmptyStateStays() {
+        let app = launchHome()
+        app.buttons["search-field"].tap()
+        let field = app.textFields["search-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("park")
+        let result = app.buttons["result-relation/1047789"]
+        XCTAssertTrue(result.waitForExistence(timeout: 5))
+        XCTAssertTrue(result.label.contains("OpenStreetMap"), result.label)
+        app.buttons["cancel-search-home"].tap()
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("unfindableXYZ")
+        XCTAssertTrue(app.descendants(matching: .any)["search-empty"].waitForExistence(timeout: 5))
+    }
+
     @MainActor func testFavouritesAndDroppedPinInLandscape() {
         let app = launchHome()
         openPlace(app, "Fremont Branch", id: "way/37058377")
