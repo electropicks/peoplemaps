@@ -37,18 +37,28 @@ Put `REPORTS_PER_DAY=50` in `.dev.vars` (gitignored) if a tester needs a higher 
 ## Deploy
 
 `.github/workflows/backend.yml` runs on a push to `main` that touches `Backend/`: tests, then `wrangler d1 migrations
-apply --remote` and `wrangler deploy` in the `deploy` job, which waits for approval on the GitHub Environment
-`production`. Never from a pull request.
+apply --remote` and `wrangler deploy` in the `deploy` job. Deploys run automatically from `main` once the tests pass, with
+no approval step, and never from a pull request. The job is skipped until the repository variable `BACKEND_DEPLOY` is
+`true`.
 
-Once, by hand, before the first deploy:
+Once, by hand, in this order, before the first deploy:
 
 1. Set the account's `workers.dev` subdomain once, and never rename the Worker: either changes the URL shipped apps call
    (`https://peoplemaps-reports.<account-subdomain>.workers.dev`). Put that URL in the Release build setting
    (`Docs/REPORTS.md` 7.5).
-2. Create the GitHub Environment `production` with the maintainer as required reviewer, holding `CLOUDFLARE_API_TOKEN`
-   (Workers Scripts: Edit, D1: Edit) and `CLOUDFLARE_ACCOUNT_ID`. Not repository secrets.
-3. Decide where the database lives (`Docs/REPORTS.md` question 25) while it is still empty.
-4. Before the privacy policy is published, send the deployed Worker some requests and read what Workers Logs and the
+2. Replace the database with one pinned to the US (`Docs/REPORTS.md` question 25). A jurisdiction can only be set at
+   creation:
+
+   ```sh
+   npx wrangler d1 create peoplemaps-reports --jurisdiction=us
+   ```
+
+   Put the new ID in `database_id` in `wrangler.jsonc`, then delete the old, empty database.
+3. Add `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit, D1: Edit) and `CLOUDFLARE_ACCOUNT_ID` to the GitHub Environment
+   `production`, which has no reviewers and deploys only from `main`. Not repository secrets.
+4. Last, set the repository variable (not an environment variable, which a job's `if` cannot see): `gh variable set
+   BACKEND_DEPLOY --body true`. The next push to `main` that touches `Backend/` deploys.
+5. Before the privacy policy is published, send the deployed Worker some requests and read what Workers Logs and the
    dashboard record (4.6).
 
 ## Reading reports and filing an issue
