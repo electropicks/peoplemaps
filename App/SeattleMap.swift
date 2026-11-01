@@ -183,6 +183,7 @@ struct SeattleMap: UIViewRepresentable {
                 for id in ["calmer-casing", "calmer"] { (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = shape(c?.calmer) }
                 let opacities = ["fastest": latest.selectedCalmer && c?.calmer != nil ? 0.55 : 1.0, "calmer": latest.selectedCalmer ? 1.0 : 0.4]
                 // New routes fade in over the opacity transition; switching calmer and fastest crossfades the same way.
+                raiseRoute(latest.selectedCalmer ? "calmer" : "fastest", style)
                 if appearing { setRouteOpacity(style) { _ in 0 } }
                 let apply: () -> Void = { [weak self] in self?.setRouteOpacity(style) { opacities[$0] ?? 1 } }
                 if appearing { DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { apply() } } else { apply() }
@@ -242,6 +243,20 @@ struct SeattleMap: UIViewRepresentable {
             for id in ["fastest", "calmer"] {
                 for layer in [id, id + "-casing"] { (style.layer(withIdentifier: layer) as? MLNLineStyleLayer)?.lineOpacity = NSExpression(forConstantValue: value(id)) }
             }
+        }
+
+        /// The selected route draws on top, so it stays visible where the two nearly overlap.
+        private func raiseRoute(_ id: String, _ style: MLNStyle) {
+            guard let leader = style.layer(withIdentifier: "leader") else { return }
+            for layerID in [id + "-casing", id] {
+                guard let layer = style.layer(withIdentifier: layerID) else { continue }
+                style.removeLayer(layer)
+                style.insertLayer(layer, below: leader)
+            }
+            #if DEBUG
+            let drawn = style.layers.map(\.identifier)
+            MapDebug.shared.topRoute = (drawn.firstIndex(of: "fastest") ?? -1) > (drawn.firstIndex(of: "calmer") ?? -1) ? "fastest" : "calmer"
+            #endif
         }
 
         /// A fitted camera is centred on its bounds, so it needs the same padding it was fitted with; following uses the content inset.

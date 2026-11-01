@@ -13,6 +13,8 @@ final class MapDebug {
     var leaderMeters = 0.0
     /// The followed route's name and the colours its line and leader layers hold, e.g. `fastest 8E8E93 leader 8E8E93`.
     var lineStyle = ""
+    /// Which route line the map draws above the other in the preview.
+    var topRoute = ""
 }
 
 extension UIColor {
@@ -65,8 +67,9 @@ struct NavigationDebugProbe: View {
             probe("debug-route-clears", String(map.routeClears))
             probe("debug-leader", String(Int(map.leaderMeters.rounded())))
             probe("debug-line-style", map.lineStyle)
+            probe("debug-top-route", map.topRoute)
         }
-        .frame(width: 1, height: 7).allowsHitTesting(false)
+        .frame(width: 1, height: 9).allowsHitTesting(false)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
