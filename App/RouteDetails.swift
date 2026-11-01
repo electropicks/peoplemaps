@@ -19,14 +19,15 @@ struct RouteDetails: View {
                             Text(tradeoff ? "Costs you " + reason.dropFirst("Tradeoff: ".count) : reason)
                                 .foregroundStyle(tradeoff ? .secondary : .primary)
                         } icon: {
-                            Image(systemName: tradeoff ? "minus" : "checkmark").fontWeight(.semibold)
-                                .foregroundStyle(tradeoff ? Color.secondary : Color.calmerText)
+                            // With no calmer route the reason is a finding, not a benefit.
+                            Image(systemName: tradeoff ? "minus" : comparison.calmer == nil ? "info.circle" : "checkmark").fontWeight(.semibold)
+                                .foregroundStyle(tradeoff || comparison.calmer == nil ? Color.secondary : Color.calmerText)
                         }
                     }
                 } header: {
                     Text(comparison.calmer == nil ? "Why one route" : "Why the calmer route")
                 } footer: {
-                    Text("The extra-time limit is a maximum, applied to unrounded estimates. A slower route must also remove enough estimated stress to be worth its extra time. \(comparison.candidateCount) distinct candidates were compared; the search does not guarantee the calmest possible route.")
+                    Text("The extra-time limit is a maximum, applied to unrounded estimates. A slower route must also remove enough estimated stress to be worth its extra time. \(comparison.candidateCount == 1 ? "1 distinct route was found" : "\(comparison.candidateCount) distinct candidates were compared"); the search does not guarantee the calmest possible route.")
                 }
                 Section {
                     metricsRow("Time", comparison.fastest.duration, comparison.calmer?.duration)

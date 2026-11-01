@@ -660,7 +660,7 @@ struct ExploreView: View {
                     HStack(spacing: 12) {
                         Image(systemName: "equal.circle").font(.title3).foregroundStyle(.secondary)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(comparison.noCalmer.title).font(.headline)
+                            Text(comparison.noCalmer.title).font(.headline).fixedSize(horizontal: false, vertical: true)
                             Text(comparison.noCalmer.detail).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(minLength: 0)
