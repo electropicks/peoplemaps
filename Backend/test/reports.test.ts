@@ -28,7 +28,7 @@ describe("POST /v1/reports", () => {
     expect((await w.send(token, reordered)).status).toBe(200);
     const changed = await w.send(token, { ...fixture(), note: "Different." });
     expect(changed.status).toBe(409);
-    expect(await changed.json()).toEqual({ error: "conflict", message: `Report ${ID} was already sent with different content.` });
+    expect(await changed.json()).toEqual({ error: "conflict", message: `Report ${ID} already exists and cannot be stored again.` });
     expect(w.rows("reports")).toHaveLength(1);
   });
 

@@ -52,7 +52,7 @@ export async function sendReport(request: Request, deps: Deps): Promise<Response
 
 function retry(existing: ReportRow, installID: string, bodyHash: string): Response {
   if (existing.install_id !== installID || existing.body_hash !== bodyHash) {
-    throw new HttpError("conflict", `Report ${existing.id} was already sent with different content.`);
+    throw new HttpError("conflict", `Report ${existing.id} already exists and cannot be stored again.`);
   }
   return json(200, receipt(existing));
 }
