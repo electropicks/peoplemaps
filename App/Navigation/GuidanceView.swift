@@ -1,6 +1,22 @@
 import SwiftUI
 import PeoplemapsCore
 
+/// `floatingSurface` plus a hairline when Reduce Transparency makes it opaque, so a panel stays distinct from a dark map.
+private struct GlassSurface<S: Shape>: ViewModifier {
+    let shape: S
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var contrast
+
+    func body(content: Content) -> some View {
+        content.floatingSurface(in: shape)
+            .overlay { if (reduceTransparency || GlassFlags.reduceTransparency) && contrast != .increased { shape.stroke(Color(uiColor: .separator), lineWidth: 1) } }
+    }
+}
+
+private extension View {
+    func glassSurface<S: Shape>(in shape: S) -> some View { modifier(GlassSurface(shape: shape)) }
+}
+
 /// Guidance chrome on Liquid Glass (`Docs/DESIGN.md` 4.7, 4.8): turn banner with a "Then:" row, calm-note chip,
 /// trip bar, rerouting state and arrival card. Portrait floats glass at the top and bottom; landscape uses one
 /// leading glass card. Text that must be read sits straight on glass only when short; notes sit on `panelFill`.
@@ -78,6 +94,7 @@ struct GuidanceOverlay: View {
         VStack(spacing: 8) {
             if !navigator.hasArrived {
                 GlassEffectContainer(spacing: 8) {
+                    topChrome {
                     VStack(alignment: .leading, spacing: 8) {
                         if shown {
                             ZStack(alignment: .top) {
@@ -92,6 +109,7 @@ struct GuidanceOverlay: View {
                             Spacer(minLength: 0)
                             mapButtons
                         }
+                    }
                     }
                 }
                 .padding(.horizontal, 8).padding(.top, 4)
@@ -110,6 +128,11 @@ struct GuidanceOverlay: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    /// At accessibility sizes the banner and trip bar together are taller than the screen, so the top chrome scrolls.
+    @ViewBuilder private func topChrome<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        if typeSize.isAccessibilitySize { ScrollView { content() }.scrollBounceBehavior(.basedOnSize) } else { content() }
     }
 
     // MARK: Landscape
@@ -139,7 +162,7 @@ struct GuidanceOverlay: View {
                     .frame(width: width)
                     .frame(maxHeight: geo.size.height + geo.safeAreaInsets.bottom - 24)
                     .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                    .floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .glassSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
                     .padding(.vertical, 12).padding(.leading, 12)
                     .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxX } action: { leadingEdge = $0 }
                     .offset(x: shown || reduceMotion ? 0 : -(width + 24)).opacity(shown ? 1 : 0)
@@ -159,7 +182,7 @@ struct GuidanceOverlay: View {
     // MARK: Turn card
 
     private var turnCard: some View {
-        turnContent.floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        turnContent.glassSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 
     private var turnContent: some View {
@@ -189,7 +212,7 @@ struct GuidanceOverlay: View {
                 HStack(spacing: 8) {
                     Text("Then:")
                     if let then = navigator.thenStep { Image(systemName: Self.symbol(then.maneuver)).font(.subheadline.weight(.bold)).accessibilityHidden(true) }
-                    Text(navigator.thenText).fontWeight(.semibold).lineLimit(2)
+                    Text(navigator.thenText).fontWeight(.semibold).lineLimit(typeSize.isAccessibilitySize ? 4 : 2).fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                 }
                 .font(.subheadline).foregroundStyle(.secondary)
@@ -211,7 +234,7 @@ struct GuidanceOverlay: View {
         if onGlass {
             label.background(.panelFill, in: Capsule()).accessibilityElement(children: .combine).accessibilityIdentifier("guidance-calm-note")
         } else {
-            label.floatingSurface(in: Capsule()).accessibilityElement(children: .combine).accessibilityIdentifier("guidance-calm-note")
+            label.glassSurface(in: Capsule()).accessibilityElement(children: .combine).accessibilityIdentifier("guidance-calm-note")
         }
     }
 
@@ -222,7 +245,7 @@ struct GuidanceOverlay: View {
     // MARK: Rerouting
 
     private var reroutingCard: some View {
-        reroutingContent.floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        reroutingContent.glassSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 
     private var reroutingContent: some View {
@@ -248,7 +271,7 @@ struct GuidanceOverlay: View {
     private var tripBar: some View {
         tripContent
             .padding(16)
-            .floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .glassSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
             .padding(.horizontal, 8).padding(.bottom, 4)
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { bottomEdge = $0 }
     }
@@ -294,8 +317,10 @@ struct GuidanceOverlay: View {
     }
 
     private func stat(_ value: String, _ label: String, id: String, waiting: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(value).font(.title2.weight(.semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
+        let stacked = typeSize.isAccessibilitySize
+        let layout = stacked ? AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8)) : AnyLayout(VStackLayout(alignment: .leading, spacing: 1))
+        return layout {
+            Text(value).font(.title3.weight(.semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
                 .foregroundStyle(waiting ? .secondary : .primary).accessibilityIdentifier(id)
                 .contentTransition(.numericText()).animation(Motion.content(reduceMotion), value: value)
             Text(label).font(.footnote).foregroundStyle(.secondary)
@@ -307,9 +332,9 @@ struct GuidanceOverlay: View {
     private func endButton(fullWidth: Bool) -> some View {
         Button(role: .destructive, action: onEnd) {
             Text("End").font(.body.weight(.semibold)).padding(.horizontal, 8)
-                .frame(minWidth: 56, maxWidth: fullWidth ? .infinity : nil, minHeight: 32)
+                .frame(minWidth: 48, maxWidth: fullWidth ? .infinity : nil, minHeight: 28)
         }
-        .buttonStyle(.bordered).buttonBorderShape(.capsule).tint(.red).controlSize(.large)
+        .buttonStyle(.bordered).buttonBorderShape(.capsule).tint(.red)
         .accessibilityIdentifier("end-navigation")
     }
 
@@ -325,7 +350,7 @@ struct GuidanceOverlay: View {
             mapDivider
             overviewButton
         }
-        .floatingSurface(in: Capsule())
+        .glassSurface(in: Capsule())
     }
 
     private var mapDivider: some View {
@@ -372,7 +397,7 @@ struct GuidanceOverlay: View {
         Button { withAnimation(Motion.content(reduceMotion)) { camera.recenter() } } label: {
             Label("Re-centre", systemImage: "location").font(.body.weight(.semibold)).padding(.horizontal, 6)
         }
-        .buttonStyle(.glass).buttonBorderShape(.capsule).controlSize(.large)
+        .buttonStyle(.glass).buttonBorderShape(.capsule).controlSize(.large).foregroundStyle(.primary)
         .accessibilityLabel("Re-centre").accessibilityHint("Follows your position again").accessibilityIdentifier("guidance-recenter")
     }
 
@@ -381,7 +406,7 @@ struct GuidanceOverlay: View {
     private var arrivalSheet: some View {
         arrivalContent
             .padding(16)
-            .floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .glassSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
             .padding(.horizontal, 8).padding(.bottom, 4)
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { bottomEdge = $0 }
     }
