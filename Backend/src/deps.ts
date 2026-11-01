@@ -21,7 +21,7 @@ export function parseVars(env: Record<string, unknown>): Vars {
   };
   return {
     retentionDays: n("RETENTION_DAYS", 90),
-    reportsPerDay: n("REPORTS_PER_DAY", 20),
+    reportsPerDay: n("REPORTS_PER_DAY", 5),
     installsPerHour: n("INSTALLS_PER_HOUR", 60),
   };
 }
