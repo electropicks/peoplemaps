@@ -145,11 +145,12 @@ public struct ReportsClient: Sendable {
         return try await wipingOn401(credentials) { try await reports(token: saved.token) }
     }
 
-    /// Delete my reports: `DELETE /v1/installs/me`, then the credentials go ("start over", 4.4). On any other failure they
-    /// stay, so the reports can still be deleted later. A 401 wipes them and ends there.
+    /// Delete my reports: `DELETE /v1/installs/me`, then the credentials go ("start over", 4.4). A 401 from the Worker counts
+    /// as deleted: the retry after a lost 204 looks just like it, and the token is no use either way. A 401 without the
+    /// Worker's JSON is some other server (`.unexpected`) and, like any other failure, keeps them to try again later.
     public func deleteMyReports(credentials: ReportCredentialStore) async throws {
         guard let saved = credentials.load() else { throw ReportsError.noReportID }
-        try await wipingOn401(credentials) { try await deleteInstall(token: saved.token) }
+        do { try await deleteInstall(token: saved.token) } catch let e as ReportsError where e.serverCode == .unauthorized {}
         credentials.wipe()
     }
 
