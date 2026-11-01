@@ -244,7 +244,7 @@ Body: the report (2.4); its `id` is the idempotency key
   a 409. The message must not claim the content differs (4.2 wording); the app treats it like any 409.
 - A Send cut off by the app quitting reads as `flagged` with `lastError: interrupted` on load; re-sending reuses the
   `id`, so if the server stored the first attempt the retry gets 200.
-- Rate limit: `REPORTS_PER_DAY` per install, counted from its own rows in the last 24 hours, plus the edge limits (4.6).
+- Rate limit: `REPORTS_PER_DAY` (5) per install, counted from its own rows in the last 24 hours, plus the edge limits (4.6).
 
 ### 4.3 Read own reports
 
@@ -329,7 +329,8 @@ TestFlight, and it budgets Workers Paid at $5 a month for the CPU it needs (ques
   that are keyed by client IP at Cloudflare's edge, where our code and database never store it. Three Workers rate
   limiting bindings in `wrangler.jsonc`, 60-second windows: `RL_AUTH`, 10 per minute keyed on the token hash, for every
   authenticated route; `RL_INSTALLS`, 2 per minute, and `RL_REPORTS`, 10 per minute, keyed on `cf-connecting-ip`, or its /64
-  for IPv6, since one home or phone usually holds a whole /64. It is read only in `src/ratelimit.ts`, passed straight to the
+  for IPv6, since one home or phone usually holds a whole /64. `POST /v1/reports` checks `RL_REPORTS` before it looks up
+  the token, so a flood of made-up tokens meets the IP limit first. It is read only in `src/ratelimit.ts`, passed straight to the
   binding and never stored. Over a limit is `429 rate_limited` with `Retry-After`.
 - The bindings are approximate and count per Cloudflare location, so a flood spread across locations gets more. The
   strict backstop is `INSTALLS_PER_HOUR` (60), counted from `installs.created_at` in the current hour.
@@ -423,7 +424,9 @@ npm run file-issue -- <report-id> --create   # files it with gh
 ```
 
 `Backend/scripts/file-issue.ts` reads `public_json` with wrangler and builds the issue with `src/issue.ts`, pure functions
-with tests. The maintainer reads it first and edits or drops the note if it has a name or address in it.
+with tests. The maintainer reads it first and edits or drops the note if it has a name or address in it. The note is shown in a
+fenced block (longer than any backtick run in it, so it cannot close the fence), and `@` and `#` in a quoted instruction
+in the title are made inert, so sender text cannot mention a user or link an issue when the maintainer files it.
 
 - **Title.** `[app-report] <Category words>: "<last spoken text>" (<mode>, <dataVersion>)` for instruction and voice
   categories, or `step <shownStepIndex>` when nothing was spoken or the trip had arrived. For the others,
@@ -480,7 +483,7 @@ Handlers are plain functions, `(request, deps) => Response`. None imports anythi
   "workers_dev": true,
   "preview_urls": false,
   "observability": { "enabled": false, "logs": { "invocation_logs": false } },
-  "vars": { "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "20", "INSTALLS_PER_HOUR": "60" },
+  "vars": { "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "5", "INSTALLS_PER_HOUR": "60" },
   "d1_databases": [{ "binding": "DB", "database_name": "peoplemaps-reports", "database_id": "22e78664-ede8-40dd-80bf-7e2b0e7ec41f", "migrations_dir": "migrations" }],
   "ratelimits": [
     { "name": "RL_AUTH", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
