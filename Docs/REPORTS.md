@@ -509,7 +509,8 @@ release.
 
 `App/Info.plist` gets `PeoplemapsReportsURL` with the value `$(PEOPLEMAPS_REPORTS_URL)`. `Scripts/generate_project.py`
 sets it per configuration: Debug `http://127.0.0.1:8787`, Release
-`https://peoplemaps-reports.<account-subdomain>.workers.dev`. `Core` takes `baseURL`, so nothing else names the host.
+`https://peoplemaps-reports.peoplemaps.workers.dev`. `Core` takes `baseURL`, so nothing else names the host. Once a build
+ships, neither the account's `peoplemaps` subdomain nor the Worker's name may be renamed: either changes the URL it calls.
 `App/Info.plist` also gets `NSAllowsLocalNetworking`, which only relaxes local addresses (question 2).
 
 In Debug builds the UserDefaults key `PeoplemapsReportsURL` overrides the plist value, set by the launch argument
@@ -585,7 +586,7 @@ Any note in an issue is public text, so it must only ever reach a model as fence
 
 Numbers are stable, so code comments can cite them; gaps were resolved or removed.
 
-1. **Worker URL.** Decided: `peoplemaps-reports.<account-subdomain>.workers.dev` for now, with no custom domain (7.5). The
+1. **Worker URL.** Decided: `peoplemaps-reports.peoplemaps.workers.dev` for now, with no custom domain (7.5). The
    account subdomain is set once and the Worker is never renamed, since either changes the URL shipped apps call. To move
    later: add the new host in `routes` and keep `workers_dev: true` (wrangler turns it off when `routes` is set otherwise),
    so the Worker serves both; point the Release URL at the new host; and turn `workers_dev` off only once
