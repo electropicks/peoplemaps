@@ -96,7 +96,8 @@ null
 
 The report is the snapshot plus `category` (`wrong_instruction`, `calmer_bad_choice`, `map_data`, `voice_timing`,
 `other`), `note` (0 to 280 characters or null, in the user's words) and `exactLocations` (per report, default false).
-`sentAt`, `serverID` and `expiresAt` stay on the phone as the receipt.
+`sentAt`, `serverID`, `expiresAt` and `sentInstallID` (the public install ID it was sent under, 3) stay on the phone as the
+receipt.
 
 The install ID and token are not report fields. The ID travels in the bearer token, never in the body.
 
@@ -179,8 +180,13 @@ trip is best-effort.
 - **Export.** The JSON exactly as it would be sent, in the share sheet as `report-<id>.json`. The review screen shows the
   same bytes, pretty-printed.
 - **Delete.** Swipe to delete one snapshot; "Delete all flagged moments" deletes the file. Neither contacts the server.
-  "Delete my reports" (4.4) shows the count of local `sent` snapshots, calls `DELETE /v1/installs/me` on confirmation and,
-  once the server has deleted them, marks local copies `withdrawn`.
+  "Delete my reports" (4.4) reaches only reports sent under the current report ID. It shows the count of local `sent`
+  snapshots recorded under the current ID, calls `DELETE /v1/installs/me` on confirmation and, once the server has
+  deleted them, marks those copies `withdrawn`. A snapshot sent under an earlier ID (after a reset, say because the key
+  was damaged) stays `sent`: the app cannot delete it from the server, and it expires within 90 days of sending.
+- **Which ID.** Each `sent` snapshot records the public install ID it was sent under (`sentInstallID`). The bearer
+  token is never stored on a snapshot. Like the install ID elsewhere (2.4), it is not part of the export or the sent
+  body. A snapshot stored before this field existed has none, and the app does not claim it is under the current ID.
 - **Network.** No request is automatic: not when the list opens, not at launch, not on a timer. The client contacts the
   server only on Send, "Check status" (`GET /v1/reports`) and "Delete my reports". Each is one explicit tap.
 - **Backups.** The `reports/` folder is marked `isExcludedFromBackup`, because it holds exact coordinates.
@@ -220,7 +226,7 @@ POST /v1/reports
 Body: the report (2.4); its `id` is the idempotency key
 201 { "id": "6F1D…", "receivedAt": "2026-10-31T21:00:00Z", "expiresAt": "2027-01-29T21:00:00Z" }   // stored
 200 { same shape }                                                                                 // a retry with the same id and body
-409 { "error": "conflict", "message": "Report 6F1D… was already sent with different content." }
+409 { "error": "conflict", "message": "Report 6F1D… already exists and cannot be stored again." }
 503 { "error": "storage_unavailable", "message": "…" }, Retry-After on the daily limits only      // D1 refused the write (4.6); nothing kept
 ```
 
@@ -233,7 +239,9 @@ Body: the report (2.4); its `id` is the idempotency key
 - **Idempotent** on the body's `id`, over the canonical hash, so key order and whitespace cannot cause a conflict. A
   different body under the same `id`, or the same `id` from another install, is a 409. The app keeps the snapshot
   `flagged` with `lastError: conflict`; editing the category, note or exact setting gives it a new `id` on the next Send.
-  A 401 cannot lead here: the old install's rows went with it, so a re-send under a new token is simply new.
+  A 401 after a normal delete cannot lead here, since the install's rows went with it. A damaged key is different: the
+  old rows stay for up to 90 days, so re-sending a report under a new ID while the old ID still holds the same `id` gets
+  a 409. The message must not claim the content differs (4.2 wording); the app treats it like any 409.
 - A Send cut off by the app quitting reads as `flagged` with `lastError: interrupted` on load; re-sending reuses the
   `id`, so if the server stored the first attempt the retry gets 200.
 - Rate limit: `REPORTS_PER_DAY` per install, counted from its own rows in the last 24 hours, plus the edge limits (4.6).
@@ -259,19 +267,34 @@ DELETE /v1/installs/me     204
 `DELETE /v1/installs/me` deletes every report of the install and the install row, in one D1 batch, and is the reset:
 "Delete my reports" is also "start over".
 
+**Delete reaches the current report ID only.** If the phone's key was damaged, the next Send resets the ID (4.1) while the
+old ID's reports stay on the server until they expire, up to 90 days after sending. The app cannot delete those: it has
+no key for the old ID. So "Delete my reports" counts, deletes and marks `withdrawn` only the local `sent` copies
+recorded under the current ID. Copies under an earlier ID stay `sent`.
+
 **Only a `204` means deleted.** A retry after a lost `204` gets a 401, but so does a damaged token whose reports are still
 on the server, and nothing in a 401 tells them apart. So the app does not claim either.
 
 | "Delete my reports" gets | Result | Keychain | Local copies | The user is told |
 |---|---|---|---|---|
-| `204` | `deleted` | wiped | `withdrawn` | "Your reports and report ID were deleted from our server." |
+| `204` | `deleted` | wiped | `withdrawn` if sent under the current ID; copies under an earlier ID stay `sent` | "Your reports and report ID were deleted from our server." when no local `sent` copy remains; otherwise the wording below |
 | Worker's 401 | `notRecognized` | kept | stay `sent` | "Our server doesn't recognise this report ID, so we can't confirm whether your reports were deleted. Anything left expires within its 90 days." |
 | Anything else, including a 401 without the envelope | throws | kept | stay `sent` | the error in words; the user can tap Delete again |
 
-"Check status" keeps everything on a 401 too and shows the same words. The credentials stay after a 401 because wiping them
-gains nothing and could lose the only way to delete, if the 401 was a passing fault. The user is
-not stuck: the next Send gets the same 401, resets the ID and mints a new one (4.1). Local copies stay `sent`, since nothing
-confirms they were deleted.
+"Check status" keeps everything on a 401 too and shows the same words. Delete and Check status keep the credentials after a 401, since neither
+needs a new ID and the 401 could be a passing fault, so the key stays for another try. Send resets on the same 401 because a
+new report needs a working ID. The user is not stuck: the next Send gets the same 401, resets the ID and mints a new one
+(4.1). Local copies stay `sent`, since nothing confirms they were deleted, and once the ID resets they are under an earlier
+ID, so a later Delete does not reach them.
+
+**Wording after a `204` when copies under an earlier ID remain.** The confirmation must not claim all reports were deleted
+when local `sent` copies under an earlier ID remain. It says: "Deleted 1 report under your current report ID. 2 other
+reports were sent under an earlier report ID. We can't delete those from the app, and they expire within 90 days of
+sending." The numbers are the count marked `withdrawn` and the count left `sent`; "report" is singular for 1. If none were
+marked (every `sent` copy is under an earlier ID), the first sentence reads "No reports were sent under your current
+report ID." The pre-delete confirmation counts only current-ID copies, and when others exist it adds "N more were sent under
+an earlier report ID and can't be deleted from the app." It never says "safe", and it says "can't confirm" where it doesn't
+know.
 
 A hand-filed issue (6) is not reached by these; see question 26.
 
@@ -476,9 +499,9 @@ turned on for debugging.
 Workers: Editor and D1: Edit, and is narrowed to the `peoplemaps-reports` Worker once that exists. "Workers Scripts: Edit" is
 the legacy name for Editor. Editor can deploy but cannot create or delete a Worker, and creating one needs product-level
 Admin ([Workers roles](https://developers.cloudflare.com/workers/authorization/workers/)), so the first deploy runs by hand
-(7.3). It and `CLOUDFLARE_ACCOUNT_ID` are environment secrets of the GitHub Environment `production`, not repository secrets. That environment has no required
-reviewer and only `main` can deploy to it, so a workflow on any other branch cannot read them. A workflow merged to `main`
-can, and that token has D1 edit rights, so it could read `exact_json`: merging to `main` is the only gate.
+(7.3). It and `CLOUDFLARE_ACCOUNT_ID` are environment secrets of the GitHub Environment `production`, not repository
+secrets. That environment has no required reviewer and only `main` can deploy to it, so a workflow on any other branch
+cannot read them. A workflow merged to `main` can, and that token has D1 edit rights, so it could read `exact_json`: merging to `main` is the only gate.
 
 ### 7.3 Tests, local run, CI, deploy
 
@@ -555,7 +578,8 @@ public GitHub issue from it by hand: your note, the route, which starts and ends
 you flagged, but never your exact start and destination, GPS position or report ID. Exact locations stay off unless you
 turn them on; nothing has left this phone yet." The note field asks not to put names or addresses in it. The "Delete my
 reports" confirmation: "This phone remembers 3 sent reports. Delete every report under your report ID, and the ID, from our
-server? This does not remove a public issue a maintainer has already filed." The flag button says
+server? This does not remove a public issue a maintainer has already filed." The count is of copies under the current ID
+only; the after-delete wording is in 4.4. The flag button says
 nothing about the problem. The review shows `route.stress` because it shows every byte; no other screen shows a score.
 
 ### 8.3 Behaviour details

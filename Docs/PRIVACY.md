@@ -124,10 +124,11 @@ left, this record is deleted a year after the last contact, or at once with
    start and destination, your GPS position and your report ID, with your start
    and destination shown only as half-kilometre squares. It can include your
    sentence, the route's street list and where along it you flagged; the
-   maintainer may edit your sentence or leave out any of these. So someone with map data can still find the
-   snapped corners where the route begins and ends, and where you were when you
-   flagged, to within metres. Issues are public to anyone on the internet, and GitHub emails them to people who
-   watch the project.
+   maintainer may edit your sentence or leave out any of these. So someone with
+   map data can still find the snapped corners where the route begins and ends,
+   and where you were when you flagged, to within metres. Issues are public to
+   anyone on the internet, and GitHub emails them to people who watch the
+   project.
 
 We never store or log IP addresses; Cloudflare necessarily sees them to
 deliver traffic. The server does not log requests or their headers, has
@@ -142,9 +143,10 @@ about a minute. We store nothing from them.
 - **On the phone**: swipe a flagged moment away, or delete them all. This
   does not contact the server.
 - **On the server**: **Delete my reports** shows how many sent reports this
-  phone remembers, asks you to confirm, then removes every report under your ID
-  and the ID itself. The server can hold more than the number shown: the phone
-  keeps only its last 50 moments, a moment you swiped away is no longer counted,
+  phone remembers under your current report ID, asks you to confirm, then
+  removes every report under that ID and the ID itself. It reaches only
+  reports sent under your current ID (see below). The server can hold more than
+  the number shown: the phone keeps only its last 50 moments, a moment you swiped away is no longer counted,
   and a send that was interrupted may have reached the server even though the
   phone doesn't show it as sent. If you edit such a report before sending again,
   the first copy stays on the server; only **Delete my reports** removes it.
@@ -153,6 +155,12 @@ about a minute. We store nothing from them.
   delete worked but the phone never heard back, or if the key on the phone is
   damaged. Anything left expires within its 90 days. Your next report gets a
   new ID.
+- **Reports sent under an earlier ID**: if the key on the phone is damaged, your
+  next report gets a new ID, and **Delete my reports** reaches only the new one.
+  Reports sent under the earlier ID can't be deleted from the app. They stay on
+  the server until they expire, within 90 days of sending. The app doesn't say
+  that all your reports were deleted when copies under an earlier ID remain: it
+  says how many it deleted and how many it could not reach.
 - **If you lose the phone**: the ID's key lives only on that phone, so without
   it, or if its Keychain is erased, your reports cannot be deleted from the app
   and stay until their 90 days end.
