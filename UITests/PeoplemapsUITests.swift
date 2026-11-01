@@ -77,6 +77,7 @@ final class PeoplemapsUITests: XCTestCase {
         let climbing = app.staticTexts["Climbing"]
         for _ in 0..<4 where !climbing.exists { app.collectionViews.firstMatch.swipeUp() }
         XCTAssertTrue(climbing.exists)
+        XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label CONTAINS ' km' OR label ENDSWITH ' m'")).count, 0, "Imperial units only")
         capture("03-route-evidence", app: app)
         app.buttons["close-details"].tap()
         app.buttons["Drive"].tap()
@@ -552,7 +553,7 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["place-estimate-loading"].waitForExistence(timeout: 2), "A quiet placeholder while it computes")
         XCTAssertTrue(app.buttons["directions"].isHittable, "The estimate never blocks the card")
         let value = waitForEstimate(app)
-        XCTAssertNotNil(value.range(of: #"^\d+ min drive, [\d.]+ (miles|kilometres|feet|metres), estimate without live traffic$"#, options: .regularExpression), value)
+        XCTAssertNotNil(value.range(of: #"^\d+ min drive, [\d.]+ (miles?|feet), estimate without live traffic$"#, options: .regularExpression), value)
         // From Current location, the line under the name says only what the calmer route costs and gains.
         let estimate = app.staticTexts["place-estimate"]
         XCTAssertTrue(estimate.exists)
