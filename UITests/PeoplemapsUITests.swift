@@ -434,6 +434,16 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["done-navigation"].tap()
         XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 10))
     }
+    @MainActor func testLandscapeGuidanceKeepsEndAndMuteHittable() {
+        let app = launch(simulateRoute: true)
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        startSimulatedGuidance(app)
+        XCTAssertTrue(app.buttons["end-navigation"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["end-navigation"].isHittable, "End must be reachable in the landscape card")
+        XCTAssertTrue(app.buttons["guidance-mute"].isHittable, "Mute must be reachable in the trailing capsule")
+        capture("11-guidance-landscape", app: app)
+    }
     @MainActor func testSearchEmptyCancelAndSelection() {
         let app = launch()
         let before = app.buttons["choose-origin"].label

@@ -1,13 +1,14 @@
 import SwiftUI
 import PeoplemapsCore
 
-/// Guidance chrome, per the "navigation" rows of the design canvas: turn card with a "Then:" row, calm-note chip,
-/// trip bar, rerouting state and arrival summary. Portrait floats cards at the top and bottom; landscape uses one
-/// leading card like the rest of the app.
+/// Guidance chrome on Liquid Glass (`Docs/DESIGN.md` 4.7, 4.8): turn banner with a "Then:" row, calm-note chip,
+/// trip bar, rerouting state and arrival card. Portrait floats glass at the top and bottom; landscape uses one
+/// leading glass card. Text that must be read sits straight on glass only when short; notes sit on `panelFill`.
 struct GuidanceOverlay: View {
     let navigator: NavigationController
     let landscape: Bool
-    let cardWidth: CGFloat
+    /// Landscape card width; the card is also capped at 40% of the screen width.
+    let cardWidth: CGFloat?
     let attribution: AnyView
     @Binding var camera: GuidanceCamera
     @Binding var muted: Bool
@@ -22,6 +23,12 @@ struct GuidanceOverlay: View {
     @State private var screen: CGSize = .zero
     @ScaledMetric(relativeTo: .largeTitle) private var arrowSize = 52.0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @Namespace private var glassNS
+    /// Heading the map was turned to when a free look began; the map stays there, so the compass does too.
+    @State private var frozenHeading: Double?
+    /// The compass angle on screen, unwrapped so it always turns the short way round.
+    @State private var shownAngle = 0.0
     /// Cards slide in from their edges once the overlay is on screen.
     @State private var shown = false
 
@@ -38,7 +45,21 @@ struct GuidanceOverlay: View {
         .animation(Motion.content(reduceMotion), value: navigator.calmNote)
         .animation(Motion.panel(reduceMotion), value: navigator.hasArrived)
         .animation(Motion.content(reduceMotion), value: camera)
-        .onAppear { withAnimation(Motion.panel(reduceMotion)) { shown = true } }
+        .animation(Motion.content(reduceMotion), value: shownAngle)
+        .onChange(of: camera.mode) { _, mode in frozenHeading = mode == .free ? navigator.heading : nil }
+        .onChange(of: compassTarget) { _, target in
+            var delta = (target - shownAngle).truncatingRemainder(dividingBy: 360)
+            if delta > 180 { delta -= 360 } else if delta < -180 { delta += 360 }
+            shownAngle += delta
+        }
+        .onAppear { shownAngle = compassTarget; withAnimation(Motion.panel(reduceMotion)) { shown = true } }
+    }
+
+    /// Where the compass should point: against the map's heading while the map is turned, upright otherwise. A free look
+    /// that began heading-up keeps the heading the map was left at.
+    private var compassTarget: Double {
+        guard camera.isTurned else { return 0 }
+        return -((camera.mode == .free ? frozenHeading : nil) ?? navigator.heading ?? 0)
     }
 
     private func report() {
@@ -56,17 +77,21 @@ struct GuidanceOverlay: View {
     private var portraitBody: some View {
         VStack(spacing: 8) {
             if !navigator.hasArrived {
-                VStack(alignment: .leading, spacing: 8) {
-                    if shown {
-                        ZStack(alignment: .top) {
-                            if navigator.isRerouting { reroutingCard.transition(.opacity) } else { turnCard.transition(.opacity) }
+                GlassEffectContainer(spacing: 8) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if shown {
+                            ZStack(alignment: .top) {
+                                if navigator.isRerouting { reroutingCard.transition(.opacity) } else { turnCard.transition(.opacity) }
+                            }
+                            .transition(Motion.edge(.top, reduce: reduceMotion))
                         }
-                        .transition(Motion.edge(.top, reduce: reduceMotion))
-                    }
-                    HStack(alignment: .top) {
-                        if !navigator.isRerouting, let note = navigator.calmNote { chip(note).id(note).transition(.opacity.combined(with: .scale(scale: 0.9))) }
-                        Spacer(minLength: 0)
-                        mapButtons
+                        HStack(alignment: .top) {
+                            if !navigator.isRerouting, let note = navigator.calmNote {
+                                chip(note).id(note).glassEffectID("calm-note", in: glassNS).transition(.opacity)
+                            }
+                            Spacer(minLength: 0)
+                            mapButtons
+                        }
                     }
                 }
                 .padding(.horizontal, 8).padding(.top, 4)
@@ -91,50 +116,50 @@ struct GuidanceOverlay: View {
 
     private var landscapeBody: some View {
         GeometryReader { geo in
-            HStack(alignment: .top, spacing: 0) {
-                ScrollView {
-                    ZStack(alignment: .top) {
-                        if navigator.hasArrived {
-                            arrivalContent.padding(14).transition(.opacity)
-                        } else {
-                            VStack(alignment: .leading, spacing: 0) {
-                                ZStack(alignment: .top) {
-                                    if navigator.isRerouting { reroutingContent.transition(.opacity) } else { turnContent.transition(.opacity) }
+            let width = min(cardWidth ?? 360, geo.size.width * 0.4)
+            GlassEffectContainer(spacing: 8) {
+                HStack(alignment: .top, spacing: 0) {
+                    ScrollView {
+                        ZStack(alignment: .top) {
+                            if navigator.hasArrived {
+                                arrivalContent.padding(16).transition(.opacity)
+                            } else {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    ZStack(alignment: .top) {
+                                        if navigator.isRerouting { reroutingContent.transition(.opacity) } else { turnContent.transition(.opacity) }
+                                    }
+                                    if !navigator.isRerouting, let note = navigator.calmNote { chip(note, onGlass: true).id(note).padding(.horizontal, 16).padding(.top, 10).transition(.opacity) }
+                                    tripContent.padding(16)
                                 }
-                                if !navigator.isRerouting, let note = navigator.calmNote { chip(note).id(note).padding(.horizontal, 14).padding(.top, 10).transition(.opacity) }
-                                tripContent.padding(14)
+                                .transition(.opacity)
                             }
-                            .transition(.opacity)
                         }
                     }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .frame(width: width)
+                    .frame(maxHeight: geo.size.height + geo.safeAreaInsets.bottom - 24)
+                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .padding(.vertical, 12).padding(.leading, 12)
+                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxX } action: { leadingEdge = $0 }
+                    .offset(x: shown || reduceMotion ? 0 : -(width + 24)).opacity(shown ? 1 : 0)
+                    Spacer(minLength: 16)
+                    VStack(alignment: .trailing) {
+                        mapButtons
+                        if camera.mode == .free, !navigator.hasArrived { recenterPill.padding(.top, 8).transition(.opacity.combined(with: .scale(scale: 0.9))) }
+                        Spacer()
+                        attribution
+                    }.padding(.vertical, 12).padding(.trailing, 16)
                 }
-                .scrollBounceBehavior(.basedOnSize)
-                .frame(width: cardWidth)
-                .frame(maxHeight: geo.size.height + geo.safeAreaInsets.bottom - 24)
-                .background(.panel, in: RoundedRectangle(cornerRadius: 14))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .shadow(color: .black.opacity(0.14), radius: 16, y: 2)
-                .padding(.vertical, 12).padding(.leading, 12)
-                .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxX } action: { leadingEdge = $0 }
-                .offset(x: shown || reduceMotion ? 0 : -(cardWidth + 24)).opacity(shown ? 1 : 0)
-                Spacer(minLength: 16)
-                VStack(alignment: .trailing) {
-                    mapButtons
-                    if camera.mode == .free, !navigator.hasArrived { recenterPill.padding(.top, 8).transition(.opacity.combined(with: .scale(scale: 0.9))) }
-                    Spacer()
-                    attribution
-                }.padding(.vertical, 12).padding(.trailing, 16)
+                .ignoresSafeArea(.container, edges: .bottom)
             }
-            .ignoresSafeArea(.container, edges: .bottom)
         }
     }
 
     // MARK: Turn card
 
     private var turnCard: some View {
-        VStack(spacing: 0) { turnContent }
-            .background(.panel, in: RoundedRectangle(cornerRadius: 20)).clipShape(RoundedRectangle(cornerRadius: 20))
-            .shadow(color: .black.opacity(0.14), radius: 16, y: 2)
+        turnContent.floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 
     private var turnContent: some View {
@@ -148,7 +173,7 @@ struct GuidanceOverlay: View {
                     .accessibilityIdentifier("guidance-arrow")
                 VStack(alignment: .leading, spacing: 2) {
                     Text(NavigationFormat.distance(navigator.distanceToManeuver)).font(.largeTitle.bold()).monospacedDigit()
-                        .lineLimit(1).minimumScaleFactor(0.6)
+                        .lineLimit(1).minimumScaleFactor(0.8)
                         .contentTransition(.numericText(value: -navigator.distanceToManeuver))
                         .accessibilityIdentifier("guidance-distance")
                     Text(navigator.instruction).font(.title3.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
@@ -160,6 +185,7 @@ struct GuidanceOverlay: View {
             }
             .padding(.leading, 16).padding(.trailing, 18).padding(.vertical, 14)
             if navigator.thenStep != nil {
+                Divider().padding(.horizontal, 16)
                 HStack(spacing: 8) {
                     Text("Then:")
                     if let then = navigator.thenStep { Image(systemName: Self.symbol(then.maneuver)).font(.subheadline.weight(.bold)).accessibilityHidden(true) }
@@ -168,22 +194,25 @@ struct GuidanceOverlay: View {
                 }
                 .font(.subheadline).foregroundStyle(.secondary)
                 .padding(.horizontal, 18).padding(.vertical, 10).frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
-                .background(.panelFill)
                 .accessibilityElement(children: .combine).accessibilityIdentifier("guidance-then")
             }
         }
         .accessibilityElement(children: .contain).accessibilityIdentifier("guidance-card")
     }
 
-    private func chip(_ text: String) -> some View {
-        HStack(spacing: 7) {
+    /// A glass capsule, or with `onGlass` (inside the landscape card) a `panelFill` capsule, since glass doesn't go on glass.
+    @ViewBuilder private func chip(_ text: String, onGlass: Bool = false) -> some View {
+        let label = HStack(spacing: 7) {
             Image(systemName: Self.chipSymbol(text)).font(.footnote.weight(.semibold)).accessibilityHidden(true)
             Text(text).font(.footnote.weight(.semibold))
         }
         .foregroundStyle(.calmerText)
-        .padding(.horizontal, 12).frame(minHeight: 30)
-        .background(.panel, in: Capsule()).shadow(color: .black.opacity(0.12), radius: 8, y: 1)
-        .accessibilityElement(children: .combine).accessibilityIdentifier("guidance-calm-note")
+        .padding(.horizontal, 12).frame(minHeight: 34)
+        if onGlass {
+            label.background(.panelFill, in: Capsule()).accessibilityElement(children: .combine).accessibilityIdentifier("guidance-calm-note")
+        } else {
+            label.floatingSurface(in: Capsule()).accessibilityElement(children: .combine).accessibilityIdentifier("guidance-calm-note")
+        }
     }
 
     private static func chipSymbol(_ text: String) -> String {
@@ -193,16 +222,13 @@ struct GuidanceOverlay: View {
     // MARK: Rerouting
 
     private var reroutingCard: some View {
-        VStack(spacing: 0) { reroutingContent }
-            .background(.panel, in: RoundedRectangle(cornerRadius: 20)).clipShape(RoundedRectangle(cornerRadius: 20))
-            .shadow(color: .black.opacity(0.14), radius: 16, y: 2)
+        reroutingContent.floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 
     private var reroutingContent: some View {
         VStack(spacing: 0) {
             HStack(spacing: 14) {
-                ProgressView().controlSize(.large).tint(.calmerText)
-                    .frame(width: 60, height: 60).background(.panelFill, in: RoundedRectangle(cornerRadius: 16))
+                ProgressView().controlSize(.large).tint(.calmerText).frame(width: 52, height: 52)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Finding a calmer way…").font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
                     Text("You left the planned route").font(.subheadline).foregroundStyle(.secondary)
@@ -210,8 +236,9 @@ struct GuidanceOverlay: View {
                 Spacer(minLength: 0)
             }
             .padding(.leading, 16).padding(.trailing, 18).padding(.vertical, 14)
+            Divider().padding(.horizontal, 16)
             Text("Works offline. No signal needed.").font(.subheadline).foregroundStyle(.secondary)
-                .padding(.horizontal, 18).frame(maxWidth: .infinity, minHeight: 40, alignment: .leading).background(.panelFill)
+                .padding(.horizontal, 18).frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
         }
         .accessibilityElement(children: .combine).accessibilityIdentifier("guidance-rerouting")
     }
@@ -219,10 +246,9 @@ struct GuidanceOverlay: View {
     // MARK: Trip bar
 
     private var tripBar: some View {
-        VStack(spacing: 0) { tripContent }
-            .padding(14)
-            .background(.panel, in: RoundedRectangle(cornerRadius: 22))
-            .shadow(color: .black.opacity(0.14), radius: 16, y: 2)
+        tripContent
+            .padding(16)
+            .floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
             .padding(.horizontal, 8).padding(.bottom, 4)
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { bottomEdge = $0 }
     }
@@ -235,6 +261,10 @@ struct GuidanceOverlay: View {
                 stats(waiting)
                 Text(estimateNote(waiting)).font(.caption).foregroundStyle(.secondary).padding(.top, 6)
                 endButton(fullWidth: true)
+            } else if typeSize.isAccessibilitySize {
+                stats(waiting)
+                endButton(fullWidth: true)
+                Text(estimateNote(waiting)).font(.caption).foregroundStyle(.secondary)
             } else {
                 HStack(spacing: 12) { stats(waiting); endButton(fullWidth: false) }
                 Text(estimateNote(waiting)).font(.caption).foregroundStyle(.secondary)
@@ -254,7 +284,8 @@ struct GuidanceOverlay: View {
 
     private func stats(_ waiting: Bool) -> some View {
         let arrival = Date().addingTimeInterval(navigator.remainingSeconds)
-        return HStack(alignment: .top, spacing: 10) {
+        let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(alignment: .top, spacing: 10))
+        return layout {
             stat(waiting ? "–" : arrival.formatted(date: .omitted, time: .shortened), "arrival", id: "trip-arrival", waiting: waiting)
             stat(waiting ? "–" : "\(NavigationFormat.minutes(navigator.remainingSeconds)) min", "left", id: "trip-minutes", waiting: waiting)
             stat(waiting ? "–" : NavigationFormat.distance(navigator.remainingMeters), "left", id: "trip-distance", waiting: waiting)
@@ -264,7 +295,7 @@ struct GuidanceOverlay: View {
 
     private func stat(_ value: String, _ label: String, id: String, waiting: Bool) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(value).font(.title2.weight(.semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
+            Text(value).font(.title2.weight(.semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
                 .foregroundStyle(waiting ? .secondary : .primary).accessibilityIdentifier(id)
                 .contentTransition(.numericText()).animation(Motion.content(reduceMotion), value: value)
             Text(label).font(.footnote).foregroundStyle(.secondary)
@@ -274,27 +305,36 @@ struct GuidanceOverlay: View {
     }
 
     private func endButton(fullWidth: Bool) -> some View {
-        Button(action: onEnd) {
-            Text("End").font(.body.weight(.semibold)).foregroundStyle(.primary)
-                .padding(.horizontal, 20).frame(minWidth: 72, maxWidth: fullWidth ? .infinity : nil, minHeight: 44)
-                .background(Color(uiColor: .tertiarySystemFill), in: Capsule()).contentShape(Capsule())
-        }.buttonStyle(.plain).accessibilityIdentifier("end-navigation")
+        Button(role: .destructive, action: onEnd) {
+            Text("End").font(.body.weight(.semibold)).padding(.horizontal, 8)
+                .frame(minWidth: 56, maxWidth: fullWidth ? .infinity : nil, minHeight: 32)
+        }
+        .buttonStyle(.bordered).buttonBorderShape(.capsule).tint(.red).controlSize(.large)
+        .accessibilityIdentifier("end-navigation")
     }
 
     // MARK: Map buttons
 
+    /// Mute, compass and overview in one glass capsule (vertical in landscape), 44 pt plain buttons with dividers.
     private var mapButtons: some View {
-        Group {
-            if landscape { VStack(spacing: 8) { muteButton; compassButton; overviewButton } }
-            else { HStack(spacing: 8) { muteButton; compassButton; overviewButton } }
+        let layout = landscape ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
+        return layout {
+            muteButton
+            mapDivider
+            compassButton
+            mapDivider
+            overviewButton
         }
+        .floatingSurface(in: Capsule())
+    }
+
+    private var mapDivider: some View {
+        Divider().frame(width: landscape ? 24 : nil, height: landscape ? nil : 24)
     }
 
     private func mapButton(_ action: @escaping () -> Void, @ViewBuilder label: () -> some View) -> some View {
         Button(action: action) { label().font(.system(size: 19)).frame(width: 44, height: 44).contentShape(Rectangle()) }
             .buttonStyle(.plain).foregroundStyle(.primary)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-            .shadow(color: .black.opacity(0.12), radius: 8, y: 1)
     }
 
     private var muteButton: some View {
@@ -305,10 +345,14 @@ struct GuidanceOverlay: View {
     }
 
     /// A compass that points north on screen, so it reads upright when the map is north-up and turns with it heading-up.
+    /// In the overview the tap only leaves the overview; it doesn't also flip the orientation.
     private var compassButton: some View {
-        mapButton({ withAnimation(Motion.content(reduceMotion)) { camera.toggleHeading() } }) {
-            Image(systemName: "location.north.line.fill")
-                .rotationEffect(.degrees(camera.isTurned ? -(navigator.heading ?? 0) : 0))
+        mapButton({
+            withAnimation(Motion.content(reduceMotion)) {
+                if camera.mode == .overview { camera.toggleOverview() } else { camera.toggleHeading() }
+            }
+        }) {
+            Image(systemName: "location.north.line.fill").rotationEffect(.degrees(shownAngle))
         }
         .accessibilityLabel(camera.courseUp ? "Heading up" : "North up")
         .accessibilityHint(camera.courseUp ? "Turns the map north up" : "Turns the map to face your heading")
@@ -326,27 +370,19 @@ struct GuidanceOverlay: View {
     /// Shown after the user pans or pinches; returns to the follow mode they left, as Apple Maps does.
     private var recenterPill: some View {
         Button { withAnimation(Motion.content(reduceMotion)) { camera.recenter() } } label: {
-            Label("Re-centre", systemImage: "location").font(.body.weight(.semibold))
-                .padding(.horizontal, 16).frame(minHeight: 44).contentShape(Capsule())
+            Label("Re-centre", systemImage: "location").font(.body.weight(.semibold)).padding(.horizontal, 6)
         }
-        .buttonStyle(.plain).foregroundStyle(.primary)
-        .background(.regularMaterial, in: Capsule())
-        .shadow(color: .black.opacity(0.12), radius: 8, y: 1)
+        .buttonStyle(.glass).buttonBorderShape(.capsule).controlSize(.large)
         .accessibilityLabel("Re-centre").accessibilityHint("Follows your position again").accessibilityIdentifier("guidance-recenter")
     }
 
     // MARK: Arrival
 
     private var arrivalSheet: some View {
-        VStack(spacing: 16) {
-            Capsule().fill(Color(uiColor: .systemGray3)).frame(width: 36, height: 5).accessibilityHidden(true)
-            arrivalContent
-        }
-        .padding(.horizontal, 16).padding(.top, 6).padding(.bottom, 8)
-        .background {
-            UnevenRoundedRectangle(topLeadingRadius: 14, topTrailingRadius: 14).fill(.panel)
-                .shadow(color: .black.opacity(0.08), radius: 12, y: -1).ignoresSafeArea(edges: .bottom)
-        }
+        arrivalContent
+            .padding(16)
+            .floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .padding(.horizontal, 8).padding(.bottom, 4)
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { bottomEdge = $0 }
     }
 
@@ -357,7 +393,7 @@ struct GuidanceOverlay: View {
         return VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 14) {
                 Image(systemName: "checkmark").font(.system(size: 22, weight: .bold)).foregroundStyle(.white)
-                    .frame(width: 48, height: 48).background(Color(red: 0x1F / 255, green: 0x7A / 255, blue: 0x3A / 255), in: Circle())
+                    .frame(width: 48, height: 48).background(.directionsFill, in: Circle())
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("You've arrived at \(name)").font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
@@ -377,17 +413,19 @@ struct GuidanceOverlay: View {
                         }.padding(.horizontal, 14).padding(.vertical, 12).frame(minHeight: 52)
                     }
                 }
-                .background(.panelFill, in: RoundedRectangle(cornerRadius: 12))
+                .background(.panelFill, in: RoundedRectangle(cornerRadius: Layout.groupRadius, style: .continuous))
                 .accessibilityElement(children: .contain).accessibilityIdentifier("arrival-notes")
             }
             Button(action: onDone) {
-                Text("Done").font(.body.weight(.semibold)).frame(maxWidth: .infinity).frame(height: 50)
-                    .foregroundStyle(.directionsText).background(.directionsFill, in: RoundedRectangle(cornerRadius: 12)).contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityIdentifier("done-navigation")
+                Text("Done").font(.body.weight(.semibold)).foregroundStyle(.directionsText).frame(maxWidth: .infinity, minHeight: 32)
+            }
+            .buttonStyle(.glassProminent).buttonBorderShape(.capsule).tint(.directionsFill).controlSize(.large)
+            .accessibilityIdentifier("done-navigation")
             Text("Times are estimates. No live traffic.").font(.footnote).foregroundStyle(.secondary).padding(.horizontal, 4)
             VoiceUpgradeTip()
         }
         .accessibilityElement(children: .contain).accessibilityIdentifier("arrival-card")
+        .sensoryFeedback(.success, trigger: navigator.hasArrived) { _, arrived in arrived }
     }
 
     #if DEBUG

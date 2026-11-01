@@ -400,13 +400,16 @@ screen.
   (no glass on glass, no opaque strip).
 - **Calm chip** below the banner, leading: glass capsule, `octagon` /
   `trafficlight` + text in `calmerText` semibold (see 2, "On glass").
-- **Mute + overview**: a horizontal glass capsule, trailing, same row as the
-  chip; banner, chip and buttons share one `GlassEffectContainer` so they
-  merge/morph as the chip appears.
+- **Mute, compass + overview**: one horizontal glass capsule (vertical in
+  landscape), trailing, same row as the chip: three 44×44 plain buttons with
+  dividers. The compass turns with the map's heading and, in the overview,
+  only leaves the overview. Banner, chip and buttons share one
+  `GlassEffectContainer` so they merge/morph as the chip appears.
 - **Rerouting**: same banner, "Finding a calmer way…" with a spinner; copy
   unchanged.
 - **Trip bar**: glass, bottom. Arrival · min left · distance left, End as a
-  `.glass` capsule button (destructive role, red label), caption "Estimate,
+  `.bordered` capsule button (destructive role, red tint; not glass, since it
+  sits on glass), caption "Estimate,
   no live traffic" below. At accessibility sizes the three stats stack.
 
 Landscape: one leading glass card (banner, chip, trip stats, End), buttons
