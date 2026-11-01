@@ -89,8 +89,8 @@ being special-cased. Across the four audited drive trips, estimates fell by 9
 to 17 percent and three of the four fastest routes changed: with speeds at the
 posted limit and junctions dearer, the search now prefers through roads with
 fewer stops, which is also what a local does. Kerry Park to Gas Works now
-runs over the Fremont Bridge instead of Aurora, and its fastest route is
-already the calmest the map can see.
+runs over the Fremont Bridge instead of Aurora, and no other route the search
+finds gains enough to offer.
 
 **The 70 km/h cap.** `NativeRouter`'s A* heuristic divides straight-line
 distance by 70 km/h, and A* is only exact when no edge is faster than that. So
@@ -275,10 +275,32 @@ or steer these. It only filters their results afterwards, so 2, 5 and 10 minutes
 cost the same router time; "None" runs the fastest search alone.
 
 **Selection** (`NativeRouter.selectCalmer`). A candidate can be the calmer route
-when it fits the limit (default 10 minutes), has at least 5% and 30 equivalent
-seconds less stress than the fastest route, shares under 90% of its length with
-it, and removes more than 15 equivalent seconds of stress per extra minute. Of
-those, the one with the most `stress saved − 0.25 × extra seconds` wins.
+when it is a different route from the fastest, fits the limit (default 10
+minutes), has at least 5% and 30 equivalent seconds less stress, and removes more
+than 15 equivalent seconds of stress per extra minute. Of those, the one with the
+most `stress saved − 0.25 × extra seconds` wins.
+
+**Nearly identical routes count.** The owner's call: "yes show them, the goal is
+that users trust that the route were giving them is the best option even if its
+exactly the same as the fastest route." A rule that hid any route sharing 90% of
+its length with the fastest is gone, because one block can be the whole point:
+DIY Tea Lab to Lassi and Spice by car shares 96% with the fastest route, costs
+seconds, and takes stress from 668 to 366.
+
+**When no calmer route qualifies** (`NoCalmerFinding`), the preview says what the
+router knows, and only that. "Calmest" is claimed only when no route it compared
+has less stress.
+
+| What the router saw | Title | Detail | Sampled trips, drive / bike / walk |
+| --- | --- | --- | ---: |
+| Extra time is None, so only the fastest search ran | Fastest route only | Extra time is None, so nothing else was checked. | not in the sample |
+| All six calm-weighted searches found this route | Already the calmest we found | By our estimates, every search found this route. | 7 / 3 / 0 |
+| Other routes compared, none with less stress | Already the calmest we found | Calmest of N routes compared, by our estimates. | 3 / 0 / 0 |
+| Less stress exists, but only beyond the limit | Calmest within this extra time | By our estimates, calmer routes take N+ min more. | 0 / 0 / 0 |
+| Less stress exists inside the limit, but under the floors or not worth its time | Best balance we found | By our estimates, other routes gain too little. | 4 / 3 / 2 |
+
+These describe the candidates only. The search does not prove no calmer route
+exists, and the Why this route sheet says so.
 
 **What the app shows first.** When a calmer route exists the preview lists it
 first and selects it, resetting on every new request, and Start follows the
@@ -304,17 +326,22 @@ is for trips that show a calmer route; stress saved is against the fastest route
 | --- | --- | ---: | ---: | ---: |
 | Drive | old, 5 min | 126 | 1.5 / 3.0 / 4.6 | 335 (44%) |
 | Drive | old, 10 min | 126 | 1.7 / 3.7 / 8.0 | 343 (45%) |
-| Drive | **new, 10 min** | 126 | 1.5 / 3.1 / 8.0 | 343 (44%) |
+| Drive | **new, 10 min** | 136 | 1.3 / 3.0 / 8.0 | 313 (44%) |
 | Bike | old, 5 min | 142 | 2.1 / 4.4 / 5.0 | 908 (49%) |
 | Bike | old, 10 min | 143 | 3.3 / 8.4 / 9.5 | 1016 (54%) |
-| Bike | **new, 10 min** | 143 | 2.9 / 8.1 / 9.3 | 1016 (53%) |
+| Bike | **new, 10 min** | 144 | 2.9 / 8.1 / 9.3 | 1016 (53%) |
 | Walk | old, 5 min | 146 | 3.3 / 4.6 / 5.0 | 504 (50%) |
 | Walk | old, 10 min | 148 | 5.7 / 9.0 / 10.0 | 639 (59%) |
 | Walk | **new, 10 min** | 148 | 5.1 / 8.4 / 9.7 | 639 (59%) |
 
+"Old" is the least stressful candidate, with the 90% overlap rule; "new" is the
+rule above. Dropping the overlap rule adds 10 drive trips and 1 bike trip, and
+changes the pick on 4 more drives. The drive median falls because those added
+trips often save less, not because any trip got worse.
+
 Against the old rule at 10 minutes, the new one keeps nearly all the extra calm
-for less time: mean stress change from the old 5 minute default of −5, −106 and
-−99 (drive, bike, walk) rather than −6, −108 and −104, at a mean of 0.11, 1.46
+for less time: mean stress change from the old 5 minute default of −18, −107 and
+−99 (drive, bike, walk) rather than −6, −108 and −104, at a mean of 0.12, 1.47
 and 2.02 extra minutes rather than 0.24, 1.68 and 2.50. Trips that end up less
 calm than the old default give up at most 39 equivalent seconds. A limit beyond
 10 adds little: at 20 minutes under the old rule, drive is unchanged, bike saves
@@ -328,8 +355,6 @@ calm than the old default give up at most 39 equivalent seconds. A limit beyond
   frontier). The extra-time control moves along that curve instantly.
 - **Budget in minutes or percent.** The thread asked for a "least complicated"
   button within about 125% of the fastest time. Offer both.
-- **Real alternatives only.** A calmer route must differ meaningfully in path,
-  not just one block.
 - **Say the trade both ways.** Show the 2 or 3 biggest differences, benefits
   and costs together: "Avoids 2 unsignalled lefts on Aurora · +3 min · 1 more
   turn." Each factor says whether it came from map data or was estimated.
