@@ -458,7 +458,7 @@ Handlers are plain functions, `(request, deps) => Response`. None imports anythi
   "preview_urls": false,
   "observability": { "enabled": false, "logs": { "invocation_logs": false } },
   "vars": { "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "20", "INSTALLS_PER_HOUR": "60" },
-  "d1_databases": [{ "binding": "DB", "database_name": "peoplemaps-reports", "database_id": "979b9c50-a12a-40d2-a31a-315a4b276204", "migrations_dir": "migrations" }],
+  "d1_databases": [{ "binding": "DB", "database_name": "peoplemaps-reports", "database_id": "22e78664-ede8-40dd-80bf-7e2b0e7ec41f", "migrations_dir": "migrations" }],
   "ratelimits": [
     { "name": "RL_AUTH", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
     { "name": "RL_INSTALLS", "namespace_id": "1002", "simple": { "limit": 2, "period": 60 } },
@@ -472,8 +472,11 @@ The database ID is not a secret. `preview_urls` stays explicit, because since wr
 `workers_dev`, and each version's URL would be public. `invocation_logs` stays false even if `observability` is later
 turned on for debugging.
 
-**Secrets.** The Worker has none. `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit, D1: Edit) and `CLOUDFLARE_ACCOUNT_ID` are
-environment secrets of the GitHub Environment `production`, not repository secrets. That environment has no required
+**Secrets.** The Worker has none. `CLOUDFLARE_API_TOKEN` is an account-owned token, from the Account API Tokens page, with
+Workers: Editor and D1: Edit, and is narrowed to the `peoplemaps-reports` Worker once that exists. "Workers Scripts: Edit" is
+the legacy name for Editor. Editor can deploy but cannot create or delete a Worker, and creating one needs product-level
+Admin ([Workers roles](https://developers.cloudflare.com/workers/authorization/workers/)), so the first deploy runs by hand
+(7.3). It and `CLOUDFLARE_ACCOUNT_ID` are environment secrets of the GitHub Environment `production`, not repository secrets. That environment has no required
 reviewer and only `main` can deploy to it, so a workflow on any other branch cannot read them. A workflow merged to `main`
 can, and that token has D1 edit rights, so it could read `exact_json`: merging to `main` is the only gate.
 
@@ -489,8 +492,11 @@ can, and that token has D1 edit rights, so it could read `exact_json`: merging t
   run automatically from `main` after the tests pass, with no approval step, on the GitHub Environment `production`.
 - The deploy job runs only when the repository variable `BACKEND_DEPLOY` is `true`, so merging before the setup is done
   leaves `main` green with the job skipped. It must be a repository variable, since a job's `if` cannot see an
-  environment's variables. Set it last, after the `us` database (question 25) and the secrets. The first deploy is then
-  `gh workflow run backend.yml --ref main`, with no dummy push; the environment refuses any other branch.
+  environment's variables. Set it last.
+- The first deploy and first remote migration run once by hand from the owner's logged-in Mac, from `main` after this stack
+  merges, because the CI token cannot create a Worker (7.2). The order is in `Backend/README.md`: secrets, first deploy, narrow
+  the token, then `BACKEND_DEPLOY`. After that, CI deploys, and `gh workflow run backend.yml --ref main` starts a deploy with
+  no dummy push; the environment refuses any other branch.
 - `Scripts/verify.sh` does not cover the backend; the verify skill has a row for it.
 
 ### 7.4 Versioning and rollout
@@ -608,14 +614,10 @@ Numbers are stable, so code comments can cite them; gaps were resolved or remove
     to Paid makes Time Travel 30 days, and the policy changes in the same PR (5.3).
 21. **Endpoints in a filed issue.** Default: coarsened to the 550 m cell (6), with the route-ends caveat stated there and in
     `Docs/PRIVACY.md`.
-25. **Data location.** Decided: pinned to the US. A jurisdiction can only be set at creation, and the current database
-    (`979b9c50-a12a-40d2-a31a-315a4b276204`, empty) has only a `wnam` location hint, which Cloudflare says is not a guarantee.
-    So before the first deploy it is replaced, and the old one goes first because the name is taken: while it is still
-    empty, `npx wrangler d1 delete peoplemaps-reports`, then `npx wrangler d1 create peoplemaps-reports --jurisdiction=us`
-    (wrangler, since the Cloudflare connector cannot set a jurisdiction), then the new ID in `Backend/wrangler.jsonc`. Not
-    done yet; it waits for a Cloudflare token, and `BACKEND_DEPLOY` stays off until then (7.3). A jurisdiction
-    covers where the database runs and stores data; the Worker itself still runs at the Cloudflare location nearest the
-    sender.
+25. **Data location.** Decided and done: the database (`22e78664-ede8-40dd-80bf-7e2b0e7ec41f`) was created with
+    `wrangler d1 create peoplemaps-reports --jurisdiction=us`, and `wrangler d1 info` reports that jurisdiction. It can only
+    be set at creation. A jurisdiction covers where the database runs and stores data; the Worker itself still runs at the
+    Cloudflare location nearest the sender.
 26. **Deleting after a hand-filed issue.** Decided: an issue carries no report ID, so "Delete my reports" cannot find it, and
     the policy says so. A maintainer removes a hand-filed issue on request. Filing is rare and a maintainer has read it first.
 27. **Check status.** Decided for now: keep `GET /v1/reports`, since it is the sender's view of what the server holds, though
