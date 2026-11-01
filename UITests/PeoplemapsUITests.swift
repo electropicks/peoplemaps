@@ -238,7 +238,7 @@ final class PeoplemapsUITests: XCTestCase {
             if probe(app, "debug-nav-state") == "rerouting" || app.otherElements["guidance-rerouting"].exists { sawRerouting = true }
             Thread.sleep(forTimeInterval: 0.25)
         }
-        capture("10-after-forced-reroute", app: app)
+        capture("18-after-forced-reroute", app: app)
         let rerouted = probe(app, "debug-route") != before
         XCTAssertTrue(sawRerouting || rerouted, "Neither a rerouting state nor a new route appeared")
         let guiding = NSPredicate { _, _ in self.probe(app, "debug-nav-state") == "guiding" }
@@ -262,7 +262,7 @@ final class PeoplemapsUITests: XCTestCase {
         // Calmer is the selected route here, so its line and leader hold the calmer green. (A fastest route is the palette's
         // grey, by design: grey is not an unstyled state.) Both layers must carry the colour of the route's kind.
         XCTAssertEqual(probe(app, "debug-line-style"), "calmer 248A3D leader 248A3D", "Line or leader not styled for the calmer route")
-        capture("11-leader-at-start", app: app)
+        capture("19-leader-at-start", app: app)
         let line = routePoints(app)
         XCTAssertGreaterThan(line.count, 3, "Route readout missing")
         for (point, course) in Self.samples(line, step: 20, limit: 120) { setDevice(point, course: course); Thread.sleep(forTimeInterval: 0.3) }
