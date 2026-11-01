@@ -1137,3 +1137,53 @@ Built last, after the backend has filed real issues.
 12. **Install pruning.** Installs with no reports for a year are deleted
     (5.3); the app will mint a new ID on the next send and say so.
     Recommended: keep.
+
+Owner decisions from the backend platform review. Each default is what this
+document assumes until the owner says otherwise.
+
+13. **Zero cost.** Literal: no card on any account. Default yes, which rules
+    out AWS, Fly.io, Supabase Pro, Firebase and a VPS. App Attest (19) is
+    the one planned exception.
+14. **Public IP claim.** "We never store or log IP addresses; Cloudflare
+    necessarily sees them to deliver traffic." Default: that sentence, and
+    nothing stronger, once the test Worker check of 4.6 backs it.
+15. **Deleting public issues.** Default: within an hour of the request. 4.4
+    deletes at once or fails visibly with `503 github_unavailable`, which
+    meets it; the policy says GitHub-side copies cannot be recalled.
+16. **Filing.** Default: hold every report for one-tap maintainer approval
+    (6.1) at a few reports a day; revisit if volume makes that a chore.
+17. **API domain.** Default: we own a domain and the first release points at
+    `reports.<our domain>` (7.5), so leaving Cloudflare is a DNS change.
+18. **Server language.** Default: TypeScript. `src/validate.ts`'s
+    `splitExact` and the issue builder must drop exactly what
+    `Core/Reports.swift` drops, so shared fixtures in
+    `Backend/test/fixtures/parity/` (a report in, the expected public body
+    and exact part out) are read by both `Tests/ReportsTests.swift` and
+    `test/validate.test.ts`.
+19. **App Attest.** Default: required before App Store release, not for
+    TestFlight; budget Workers Paid at $5 a month for the CPU it needs
+    (4.5). Moving to Paid makes Time Travel 30 days, and the policy changes
+    in the same PR (5.3).
+20. **Rotated install ID.** Default: does not find old reports; they age out
+    at 90 days (8.3).
+21. **Endpoints in the issue.** Default: coarsened to the 550 m cell (6),
+    with the route-ends caveat stated there and in `Docs/PRIVACY.md`.
+22. **Trimming the published route.** Coarsening (21) does not hide the
+    route's ends. Hiding them means publishing the route without the edges
+    inside the origin and destination cells; the Worker has no graph, so the
+    app would send the trim points, and the pipeline would need the full
+    route from the stored body through the OIDC route of question 3.
+    Recommended: not now; the review screen and the policy say what the
+    route shows, and approval (6.1) is the gate.
+
+Considered, not chosen: TestFlight feedback read through the App Store
+Connect API as an interim with no backend at all (fine for one tester, but
+no replay fields and no deletion by the sender); a stateless Worker writing
+each report to R2 with a 90-day lifecycle rule and no database (simpler, but
+no idempotency, per-install caps or aggregates without rebuilding them);
+client-side encryption of the exact fields to a maintainer key, so no vendor
+restore window ever holds them in plaintext (worth revisiting if exact
+locations get common; it moves key handling onto the maintainers); and an
+OHTTP relay in front of the Worker so Cloudflare never sees client IPs
+(needs a second, independent operator and is out of proportion at this
+volume).
