@@ -14,7 +14,8 @@ public struct ReportCredentials: Codable, Equatable, Sendable {
 
 /// How "Delete my reports" ended (4.4). Only `deleted`, from a real 204, may say that reports were deleted.
 public enum ReportDeleteResult: Equatable, Sendable {
-    /// Credentials wiped, so mark local copies `withdrawn`.
+    /// Credentials wiped. Mark only the local copies sent under the deleted ID `withdrawn` (`withdrawAllSent(installID:)`);
+    /// copies under an earlier ID are still on the server and stay `sent`, so the confirmation must not say all were deleted.
     case deleted
     /// A 401: the server does not know this ID, so we can't confirm whether reports remain. Credentials kept until the next Send resets them.
     case notRecognized
@@ -136,7 +137,8 @@ public struct ReportsClient: Sendable {
     // MARK: Taps (8.3)
 
     /// Send: mints on the first send; on a 401 calls `onReset` ("Your report ID was reset"), wipes the credentials,
-    /// mints and retries once. The old install's rows went with it, so unsent reports keep their IDs.
+    /// mints and retries once. After a normal delete the old rows are gone, so unsent reports keep their IDs. A damaged
+    /// key leaves them on the server for up to 90 days, and a re-sent ID the old install holds gets a 409.
     public func send(_ report: Report, credentials: ReportCredentialStore, onReset: @Sendable () async -> Void = {}) async throws -> ReportReceipt {
         if let saved = credentials.load() {
             do { return try await send(report, token: saved.token) } catch let e as ReportsError where e.serverCode == .unauthorized {

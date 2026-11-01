@@ -186,7 +186,7 @@ final class ReportsTests: XCTestCase {
         _ = try store.beginSend(id: sending, category: .other, note: nil, exactLocations: false)
         for id in [sentFirst, sentLater] {
             _ = try store.beginSend(id: id, category: .other, note: nil, exactLocations: false)
-            store.sent(id: id, receipt: receipt(id), at: Date())
+            store.sent(id: id, receipt: receipt(id), installID: "id-1", at: Date())
         }
         store.withdraw(id: sentLater)
 
@@ -224,19 +224,64 @@ final class ReportsTests: XCTestCase {
         XCTAssertNotEqual(edited.id, s.id, "an edit after a send attempt is a new report")
         XCTAssertEqual(store.snapshots.count, 1)
 
-        store.sent(id: edited.id, receipt: receipt(edited.id), at: date("2026-10-31T21:05:00Z"))
+        store.sent(id: edited.id, receipt: receipt(edited.id), installID: "id-1", at: date("2026-10-31T21:05:00Z"))
         XCTAssertEqual(store[edited.id]?.status, .sent)
         XCTAssertEqual(store[edited.id]?.expiresAt, "2027-01-29T21:00:00Z")
-        XCTAssertEqual(store.sentCount, 1)
+        XCTAssertEqual(store.sentCount(installID: "id-1"), 1)
+        XCTAssertEqual(store[edited.id]?.sentInstallID, "id-1")
         XCTAssertEqual(store.unsentCount, 0)
 
         store.apply([ReportReceipt(id: edited.id, receivedAt: "2026-10-31T21:00:00Z", expiresAt: "2027-02-01T00:00:00Z"),
                      ReportReceipt(id: "someone-else", receivedAt: "2026-10-31T21:00:00Z", expiresAt: "2027-03-01T00:00:00Z")])
         XCTAssertEqual(store[edited.id]?.expiresAt, "2027-02-01T00:00:00Z")
 
-        store.withdrawAllSent()
+        XCTAssertEqual(store.withdrawAllSent(installID: "id-1"), 1)
         XCTAssertEqual(store[edited.id]?.status, .withdrawn)
-        XCTAssertEqual(store.sentCount, 0)
+        XCTAssertEqual(store.sentCount(installID: "id-1"), 0)
+    }
+
+    func testADamagedKeyThenAResetDoesNotWithdrawTheOldCopy() async throws {
+        let creds = MemoryCredentials(.init(installID: "id-1", token: "pm_1"))
+        var store = ReportStore()
+        let old = snapshot(), new = snapshot(at: 60)
+        _ = store.add(old); _ = store.add(new)
+        _ = try store.beginSend(id: old.id, category: .other, note: nil, exactLocations: false)
+        store.sent(id: old.id, receipt: receipt(old.id), installID: "id-1", at: Date())
+
+        let lost = try await client(FakeServer([Self.unauthorized])).deleteMyReports(credentials: creds)
+        XCTAssertEqual(lost, .notRecognized)
+        XCTAssertEqual(creds.load()?.installID, "id-1")
+
+        let fake = FakeServer([Self.unauthorized, .init(status: 201, body: #"{"installID":"id-2","token":"pm_2"}"#), .init(status: 201, body: Self.receiptJSON)])
+        let report = try store.beginSend(id: new.id, category: .other, note: nil, exactLocations: false)
+        let got = try await client(fake).send(report, credentials: creds)
+        store.sent(id: new.id, receipt: got, installID: creds.load()!.installID, at: Date())
+        XCTAssertEqual(store.sentCount(installID: "id-2"), 1, "the confirmation counts only the new ID")
+        XCTAssertEqual(store.sentUnderEarlierID(than: "id-2"), 1)
+
+        let deleted = try await client(FakeServer([.init(status: 204)])).deleteMyReports(credentials: creds)
+        XCTAssertEqual(deleted, .deleted)
+        XCTAssertEqual(store.withdrawAllSent(installID: "id-2"), 1)
+        XCTAssertEqual(store[old.id]?.status, .sent, "still on the server under id-1 for up to 90 days")
+        XCTAssertEqual(store[new.id]?.status, .withdrawn)
+        XCTAssertEqual(store.sentCount(installID: "id-2"), 0)
+        XCTAssertEqual(store.sentUnderEarlierID(than: "id-2"), 1)
+    }
+
+    func testACopyStoredBeforeTheIDWasRecordedIsNeverUnderTheCurrentID() throws {
+        var store = ReportStore()
+        let s = snapshot()
+        _ = store.add(s)
+        _ = try store.beginSend(id: s.id, category: .other, note: nil, exactLocations: false)
+        store.sent(id: s.id, receipt: receipt(s.id), installID: "id-1", at: Date())
+        var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(store)) as! [[String: Any]]
+        json[0].removeValue(forKey: "sentInstallID")
+        var loaded = try JSONDecoder().decode(ReportStore.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertEqual(loaded[s.id]?.status, .sent)
+        XCTAssertNil(loaded[s.id]?.sentInstallID)
+        XCTAssertEqual(loaded.sentCount(installID: "id-1"), 0)
+        XCTAssertEqual(loaded.withdrawAllSent(installID: "id-1"), 0)
+        XCTAssertEqual(loaded[s.id]?.status, .sent)
     }
 
     func testSavesAnArrayAndAnInterruptedSendLoadsAsFailed() throws {

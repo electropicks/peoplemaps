@@ -272,6 +272,9 @@ public struct ReportSnapshot: Codable, Equatable, Sendable, Identifiable {
     public var serverID: String?
     /// When the server deletes it (4.2); the receipt's `expiresAt`.
     public var expiresAt: String?
+    /// The public install ID it was sent under, never the token. Nil on a copy stored before this field existed, which is
+    /// never counted as being under the current ID (4.4).
+    public var sentInstallID: String?
 
     public init(id: String = UUID().uuidString, flaggedAt: Date, request: Request, chosen: Report.Chosen, route: Report.Route,
                 position: Report.Position, location: Report.Location?, spoken: [Report.Spoken], nav: Report.Nav,
@@ -345,7 +348,10 @@ public struct ReportStore: Codable, Equatable, Sendable {
     /// Moments not yet sent, for the count at home.
     public var unsentCount: Int { snapshots.filter { $0.status == .flagged || $0.status == .sending }.count }
     /// Sent reports, the count "Delete my reports" shows (3).
-    public var sentCount: Int { snapshots.filter { $0.status == .sent }.count }
+    /// Sent copies under `installID`, the count "Delete my reports" shows and withdraws (4.4).
+    public func sentCount(installID: String) -> Int { snapshots.filter { $0.status == .sent && $0.sentInstallID == installID }.count }
+    /// Sent copies the current ID can't delete: sent under an earlier ID, or before the ID was recorded.
+    public func sentUnderEarlierID(than installID: String) -> Int { snapshots.filter { $0.status == .sent && $0.sentInstallID != installID }.count }
 
     public mutating func add(_ snapshot: ReportSnapshot) -> AddResult {
         if let last = snapshots.indices.last, snapshots[last].status == .flagged, snapshots[last].category == nil,
@@ -391,9 +397,10 @@ public struct ReportStore: Codable, Equatable, Sendable {
         update(id) { $0.status = .flagged; $0.lastError = error }
     }
 
-    public mutating func sent(id: String, receipt: ReportReceipt, at date: Date) {
+    public mutating func sent(id: String, receipt: ReportReceipt, installID: String, at date: Date) {
         update(id) {
             $0.status = .sent; $0.sentAt = date; $0.serverID = receipt.id; $0.lastError = nil; $0.expiresAt = receipt.expiresAt
+            $0.sentInstallID = installID
         }
     }
 
@@ -408,8 +415,15 @@ public struct ReportStore: Codable, Equatable, Sendable {
 
     /// After a server-side delete; the rows stay until the user removes them (3).
     public mutating func withdraw(id: String) { update(id) { if $0.status == .sent { $0.status = .withdrawn } } }
-    public mutating func withdrawAllSent() {
-        for i in snapshots.indices where snapshots[i].status == .sent { snapshots[i].status = .withdrawn }
+    /// After a `204` for `installID`: only copies sent under it. Copies under an earlier ID are still on the server and
+    /// stay `sent`. Returns how many were withdrawn.
+    @discardableResult
+    public mutating func withdrawAllSent(installID: String) -> Int {
+        var n = 0
+        for i in snapshots.indices where snapshots[i].status == .sent && snapshots[i].sentInstallID == installID {
+            snapshots[i].status = .withdrawn; n += 1
+        }
+        return n
     }
 
     private mutating func update(_ id: String, _ change: (inout ReportSnapshot) -> Void) {
