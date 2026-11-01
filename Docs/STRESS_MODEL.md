@@ -208,7 +208,7 @@ facility and parking. Seattle's OSM data has the inputs: lanes (99%), maxspeed
 | Left turn on an arterial without a signal | 90 | At a signal: 15 |
 | Leaving a bike facility onto a street with no facility | 20 | Network gaps |
 | Stop sign | 10 | Stopping costs a cyclist momentum, more than it costs a driver |
-| Signal | 8 | Expected cost |
+| Signal | 14 | Waiting at a red beside traffic, then pulling away from it. Dearer than a stop sign (10), which is a quick stop and go. Stress only: the time estimate still adds 8 s |
 | Stop or signal on an uphill grade over 6% | +20 | **Needs elevation data**; restarting uphill is the worst kind of stop |
 | Turn (a decision) | 4 | |
 | Movable bridge | 15 | |
