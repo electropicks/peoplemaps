@@ -90,6 +90,14 @@ describe("bearer tokens", () => {
     }
   });
 
+  it("needs a token on every route except minting (4)", async () => {
+    const w = world();
+    const id = "0B7A4C2E-9D1F-4E3A-8B6C-5D4E3F2A1B0C";
+    const routes = [["DELETE", "/v1/installs/me"], ["POST", "/v1/reports"], ["GET", "/v1/reports"], ["GET", `/v1/reports/${id}`], ["DELETE", `/v1/reports/${id}`]];
+    for (const [method, path] of routes) expect((await w.call(method, path)).status, `${method} ${path}`).toBe(401);
+    for (const [method, path] of [["GET", "/"], ["GET", "/health"], ["GET", "/v1/installs"]]) expect((await w.call(method, path)).status, `${method} ${path}`).toBe(404);
+  });
+
   it("keys RL_AUTH on the token hash", async () => {
     const w = world();
     const { token } = await w.mint();
