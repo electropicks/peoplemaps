@@ -4,7 +4,7 @@ import XCTest
 final class SearchTests: XCTestCase {
     static let graph = try! StreetGraph.bundled()
     static let directory = FileManager.default.temporaryDirectory.appendingPathComponent("peoplemaps-search-tests")
-    static let index = try! SearchIndex.bundled(graph: graph, directory: directory)
+    static let index = try! SearchIndex.bundled(graphNodes: graph.nodes.count, directory: directory)
     static let fremont = Coordinate(lat: 47.651, lon: -122.350)
     private var index: SearchIndex { Self.index }
 
@@ -15,7 +15,7 @@ final class SearchTests: XCTestCase {
         XCTAssertTrue(index.search("  ,. ").isEmpty)
     }
     func testReopeningReusesTheInflatedFile() throws {
-        let again = try SearchIndex.bundled(graph: Self.graph, directory: Self.directory)
+        let again = try SearchIndex.bundled(graphNodes: Self.graph.nodes.count, directory: Self.directory)
         XCTAssertEqual(again.count, index.count)
         let files = try FileManager.default.contentsOfDirectory(atPath: Self.directory.path).filter { $0.hasPrefix("seattle-search-") }
         XCTAssertEqual(files.count, 1)

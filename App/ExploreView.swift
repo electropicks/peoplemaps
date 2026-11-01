@@ -69,7 +69,7 @@ struct ExploreView: View {
         return .standard
     }()
 
-    init(graph: StreetGraph, router: NativeRouter, search: SearchIndex) {
+    init(graph: StreetGraph, router: any RouteComputing, search: SearchIndex) {
         self.graph = graph; self.search = search
         #if DEBUG
         let computing: any RouteComputing = ProcessInfo.processInfo.arguments.contains("--ui-testing") ? SlowTestRouter(base: router) : router

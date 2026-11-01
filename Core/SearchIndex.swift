@@ -20,11 +20,11 @@ public final class SearchIndex: @unchecked Sendable {
     private var vocabulary: [(term: String, docs: Int)]?
     private var last: (key: String, results: [Place])?
 
-    /// The bundled index, inflated once into `directory` (Caches by default) and reused on later launches.
-    public static func bundled(graph: StreetGraph? = nil, directory: URL? = nil) throws -> SearchIndex {
+    /// The bundled index, opened without the decoded graph (`graphNodes` is the header's node count), inflated once into `directory` (Caches by default) and reused on later launches.
+    public static func bundled(graphNodes: Int? = nil, directory: URL? = nil) throws -> SearchIndex {
         guard let url = Bundle.module.url(forResource: "seattle-search.sqlite", withExtension: "gz") else { throw RoutingError.missingData }
         let folder = try directory ?? FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        return try SearchIndex(gzipped: try Data(contentsOf: url), graphNodeCount: graph?.nodes.count, directory: folder)
+        return try SearchIndex(gzipped: try Data(contentsOf: url), graphNodeCount: graphNodes, directory: folder)
     }
 
     public init(gzipped: Data, graphNodeCount: Int?, directory: URL) throws {

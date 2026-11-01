@@ -628,6 +628,24 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["search-field"].isHittable)
         capture("06-home-landscape", app: app)
     }
+    @MainActor func testHomeAndSearchWorkWhileTheRouterIsStillLoading() {
+        let app = launchHome(location: Self.atKerryPark, extra: ["--hold-router"])
+        XCTAssertFalse(app.staticTexts["Opening Seattle…"].exists)
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        // Routing waits for the router, with the usual loading states and a way out.
+        XCTAssertTrue(app.staticTexts["place-estimate-loading"].exists)
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["cancel-route"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["route-fastest"].exists)
+        app.buttons["cancel-route"].tap()
+        XCTAssertFalse(app.buttons["cancel-route"].waitForExistence(timeout: 1))
+    }
+    @MainActor func testAboutCountsSegmentsFromTheGraphFile() {
+        let app = launchHome(extra: ["--hold-router"])
+        app.buttons["about"].tap()
+        let counted = app.staticTexts.containing(NSPredicate(format: "label MATCHES %@", #"^[\d,]{5,} directed street and path segments are bundled.*"#)).firstMatch
+        XCTAssertTrue(counted.waitForExistence(timeout: 5), "A real count while the graph is still loading")
+    }
     @MainActor func testAboutShowsAcknowledgementsAndLicences() {
         let app = launchHome()
         app.buttons["about"].tap()

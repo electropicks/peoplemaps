@@ -90,6 +90,8 @@ struct RouteDetails: View {
 
 struct AboutView: View {
     let graph: StreetGraph
+    /// The launch graph holds only its bounds, so the count comes from the graph file.
+    @State private var edgeCount: Int?
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         NavigationStack {
@@ -99,7 +101,7 @@ struct AboutView: View {
                     Text("These are transparent preferences, not safety ratings. Times are estimates with no live traffic.").font(.footnote).foregroundStyle(.secondary)
                 } header: { header("What calmer means") }
                 Section {
-                    Text("\(graph.edges.count.formatted()) directed street and path segments are bundled, with USGS elevation. Routing runs entirely on this device. No account is needed. If you haven\u{2019}t answered yet, PeopleMaps asks to use your location when it opens. Your location stays on this iPhone.")
+                    Text("\(edgeCount.map { "\($0.formatted()) directed" } ?? "Directed") street and path segments are bundled, with USGS elevation. Routing runs entirely on this device. No account is needed. If you haven\u{2019}t answered yet, PeopleMaps asks to use your location when it opens. Your location stays on this iPhone.")
                     Text("Snapshot: 11 October 2026.").foregroundStyle(.secondary)
                     externalLink("OpenStreetMap contributors · ODbL 1.0", "https://www.openstreetmap.org/copyright")
                     NavigationLink("Acknowledgements") { AcknowledgementsView() }.accessibilityIdentifier("acknowledgements")
@@ -109,6 +111,7 @@ struct AboutView: View {
                     Text("Missing restrictions, conditional access, temporary closures, and entrances can affect feasibility. Unsupported turn-restriction forms are conservatively excluded. This prototype has not been field validated.").foregroundStyle(.secondary)
                 } header: { header("Coverage") }
             }.listStyle(.insetGrouped)
+                .task { edgeCount = graph.edges.isEmpty ? await Task.detached { try? StreetGraph.bundledEdgeCount() }.value : graph.edges.count }
                 .navigationTitle("About PeopleMaps").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() }.accessibilityIdentifier("close-about") } }
         }.tint(.primary).presentationDetents([.large])
