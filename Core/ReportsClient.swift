@@ -14,9 +14,10 @@ public struct ReportCredentials: Codable, Equatable, Sendable {
 
 /// How "Delete my reports" ended (4.4). Only `deleted`, from a real 204, may say that reports were deleted.
 public enum ReportDeleteResult: Equatable, Sendable {
-    /// Credentials wiped. Mark only the local copies sent under the deleted ID `withdrawn` (`withdrawAllSent(installID:)`);
-    /// copies under an earlier ID are still on the server and stay `sent`, so the confirmation must not say all were deleted.
-    case deleted
+    /// Credentials wiped; `installID` is the one that was deleted. Mark only the local copies sent under it `withdrawn`
+    /// (`withdrawAllSent(installID:)`). Copies under an earlier ID are still on the server and stay `sent`, so unless
+    /// `ReportStore.earlierIDMayHoldReports` is false the confirmation must not say all were deleted.
+    case deleted(installID: String)
     /// A 401: the server does not know this ID, so we can't confirm whether reports remain. Credentials kept until the next Send resets them.
     case notRecognized
 }
@@ -72,6 +73,12 @@ public struct ReportsHTTPResponse: Sendable {
     public var body: Data
     public var retryAfter: String?
     public init(status: Int, body: Data = Data(), retryAfter: String? = nil) { self.status = status; self.body = body; self.retryAfter = retryAfter }
+}
+
+/// A stored report and the install ID it was stored under, to record on the snapshot (`ReportStore.sent`).
+public struct ReportSent: Equatable, Sendable {
+    public var receipt: ReportReceipt
+    public var installID: String
 }
 
 public struct ReportsClient: Sendable {
@@ -139,14 +146,16 @@ public struct ReportsClient: Sendable {
     /// Send: mints on the first send; on a 401 calls `onReset` ("Your report ID was reset"), wipes the credentials,
     /// mints and retries once. After a normal delete the old rows are gone, so unsent reports keep their IDs. A damaged
     /// key leaves them on the server for up to 90 days, and a re-sent ID the old install holds gets a 409.
-    public func send(_ report: Report, credentials: ReportCredentialStore, onReset: @Sendable () async -> Void = {}) async throws -> ReportReceipt {
+    /// Returns the ID it sent under, so callers never read the Keychain again.
+    public func send(_ report: Report, credentials: ReportCredentialStore, onReset: @Sendable () async -> Void = {}) async throws -> ReportSent {
         if let saved = credentials.load() {
-            do { return try await send(report, token: saved.token) } catch let e as ReportsError where e.serverCode == .unauthorized {
+            do { return ReportSent(receipt: try await send(report, token: saved.token), installID: saved.installID) } catch let e as ReportsError where e.serverCode == .unauthorized {
                 await onReset()
                 credentials.wipe()
             }
         }
-        return try await send(report, token: try await mint(app: report.app, into: credentials).token)
+        let fresh = try await mint(app: report.app, into: credentials)
+        return ReportSent(receipt: try await send(report, token: fresh.token), installID: fresh.installID)
     }
 
     /// Check status: `GET /v1/reports`. Nothing mints (4.1), and a 401 throws with the credentials kept (4.4).
@@ -161,7 +170,7 @@ public struct ReportsClient: Sendable {
         guard let saved = credentials.load() else { throw ReportsError.noReportID }
         do { try await deleteInstall(token: saved.token) } catch let e as ReportsError where e.serverCode == .unauthorized { return .notRecognized }
         credentials.wipe()
-        return .deleted
+        return .deleted(installID: saved.installID)
     }
 
     private func mint(app: Report.App, into credentials: ReportCredentialStore) async throws -> ReportCredentials {

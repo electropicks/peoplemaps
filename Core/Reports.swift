@@ -339,15 +339,39 @@ public struct ReportStore: Codable, Equatable, Sendable {
 
     public private(set) var snapshots: [ReportSnapshot]
 
-    public init(snapshots: [ReportSnapshot] = []) { self.snapshots = snapshots }
-    public init(from decoder: Decoder) throws { snapshots = try [ReportSnapshot](from: decoder) }
-    public func encode(to encoder: Encoder) throws { try snapshots.encode(to: encoder) }
+    /// Set when a send begins under the current report ID. The server may then hold reports whether or not any row is
+    /// left on the phone (swiped away, evicted by the limit, or cut off), so rows alone can't say it holds none (4.4).
+    public private(set) var currentIDMayHoldReports: Bool
+    /// Set when the report ID is reset while the old one `currentIDMayHoldReports`. Never cleared: the app has no key to
+    /// delete those reports, so "Delete my reports" may not say that everything was deleted.
+    public private(set) var earlierIDMayHoldReports: Bool
+
+    public init(snapshots: [ReportSnapshot] = [], currentIDMayHoldReports: Bool = false, earlierIDMayHoldReports: Bool = false) {
+        self.snapshots = snapshots
+        self.currentIDMayHoldReports = currentIDMayHoldReports
+        self.earlierIDMayHoldReports = earlierIDMayHoldReports
+    }
+
+    private struct Persisted: Codable { var snapshots: [ReportSnapshot]; var currentIDMayHoldReports: Bool; var earlierIDMayHoldReports: Bool }
+
+    public init(from decoder: Decoder) throws {
+        if let p = try? Persisted(from: decoder) {
+            self.init(snapshots: p.snapshots, currentIDMayHoldReports: p.currentIDMayHoldReports, earlierIDMayHoldReports: p.earlierIDMayHoldReports)
+        } else {
+            // The bare array of an earlier file: judge from its rows, as far as they can say.
+            let rows = try [ReportSnapshot](from: decoder)
+            self.init(snapshots: rows, currentIDMayHoldReports: rows.contains { $0.attempted || $0.status == .sent },
+                      earlierIDMayHoldReports: rows.contains { $0.status == .sent && $0.sentInstallID == nil })
+        }
+    }
+    public func encode(to encoder: Encoder) throws {
+        try Persisted(snapshots: snapshots, currentIDMayHoldReports: currentIDMayHoldReports, earlierIDMayHoldReports: earlierIDMayHoldReports).encode(to: encoder)
+    }
 
     public subscript(id: String) -> ReportSnapshot? { snapshots.first { $0.id == id } }
 
     /// Moments not yet sent, for the count at home.
     public var unsentCount: Int { snapshots.filter { $0.status == .flagged || $0.status == .sending }.count }
-    /// Sent reports, the count "Delete my reports" shows (3).
     /// Sent copies under `installID`, the count "Delete my reports" shows and withdraws (4.4).
     public func sentCount(installID: String) -> Int { snapshots.filter { $0.status == .sent && $0.sentInstallID == installID }.count }
     /// Sent copies the current ID can't delete: sent under an earlier ID, or before the ID was recorded.
@@ -375,6 +399,7 @@ public struct ReportStore: Codable, Equatable, Sendable {
     }
 
     public mutating func remove(id: String) { snapshots.removeAll { $0.id == id } }
+    /// Empties the list. The two flags stay: the server still holds what was sent.
     public mutating func removeAll() { snapshots.removeAll() }
 
     /// Review and Send: sets the fields and `sending`, and returns the body to send. Fails without touching the row.
@@ -389,6 +414,7 @@ public struct ReportStore: Codable, Equatable, Sendable {
         let report = try s.report()
         s.status = .sending; s.attempted = true; s.lastError = nil
         snapshots[i] = s
+        currentIDMayHoldReports = true
         return report
     }
 
@@ -415,11 +441,18 @@ public struct ReportStore: Codable, Equatable, Sendable {
 
     /// After a server-side delete; the rows stay until the user removes them (3).
     public mutating func withdraw(id: String) { update(id) { if $0.status == .sent { $0.status = .withdrawn } } }
+    /// The report ID was reset (`send`'s `onReset`): if a send began under the old one, it may still hold reports.
+    public mutating func idWasReset() {
+        if currentIDMayHoldReports { earlierIDMayHoldReports = true }
+        currentIDMayHoldReports = false
+    }
+
     /// After a `204` for `installID`: only copies sent under it. Copies under an earlier ID are still on the server and
     /// stay `sent`. Returns how many were withdrawn.
     @discardableResult
     public mutating func withdrawAllSent(installID: String) -> Int {
         var n = 0
+        currentIDMayHoldReports = false
         for i in snapshots.indices where snapshots[i].status == .sent && snapshots[i].sentInstallID == installID {
             snapshots[i].status = .withdrawn; n += 1
         }
