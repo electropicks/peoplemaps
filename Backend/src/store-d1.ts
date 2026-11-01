@@ -1,14 +1,14 @@
 import { StorageUnavailable } from "./errors";
 import type { Sql, Statement } from "./store";
 
-// D1's documented errors once the Free plan's daily row limits are spent (4.6). Anything else is an ordinary failure (500).
-const LIMIT_ERROR = /free tier daily row (read|write) limit/;
+// D1's documented errors once its daily row or size limits are reached (4.6). Anything else is an ordinary failure (500).
+const LIMIT_ERROR = /free tier daily row (read|write) limit|Exceeded maximum DB size|maximum account storage limit/;
 
 async function guard<T>(f: () => Promise<T>): Promise<T> {
   try {
     return await f();
   } catch (e) {
-    if (e instanceof Error && LIMIT_ERROR.test(e.message)) throw new StorageUnavailable("D1 limits spent");
+    if (e instanceof Error && LIMIT_ERROR.test(e.message)) throw new StorageUnavailable("D1 limits reached");
     throw e;
   }
 }

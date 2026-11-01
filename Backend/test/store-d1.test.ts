@@ -17,6 +17,11 @@ describe("D1 limit errors", () => {
       await expect(sql.batch([])).rejects.toBeInstanceOf(StorageUnavailable);
     });
   }
+  for (const message of ["Exceeded maximum DB size.", "Your account has exceeded D1's maximum account storage limit, please contact Cloudflare to raise your limit"]) {
+    it(`turns "${message.slice(0, 30)}…" into StorageUnavailable`, async () => {
+      await expect(refusing(`D1_ERROR: ${message}`).run("INSERT")).rejects.toBeInstanceOf(StorageUnavailable);
+    });
+  }
   it("leaves other errors that mention a limit alone", async () => {
     for (const message of ["D1 DB exceeded its CPU time limit and was reset.", "D1 query result exceeded the maximum response size limit of 50 MB", "UNIQUE constraint failed: reports.id"]) {
       await expect(refusing(message).all("SELECT 1")).rejects.toThrow(message);
