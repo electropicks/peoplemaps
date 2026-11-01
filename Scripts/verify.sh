@@ -28,7 +28,9 @@ step "importer tests" python3 Scripts/test_importer.py
 # The shipped data must be exactly what the importer produces from the archived snapshots.
 reproduce() {
   local out; out="$(mktemp -d)"
-  python3 Scripts/import_osm.py --out "$out" > "$out/import.log" 2>&1 || { tail -20 "$out/import.log"; return 1; }
+  # BinaryGraphTests reuses this run's output (graph.json and the binary graph) instead of running the importer again.
+  export PEOPLEMAPS_IMPORT_DIR="$out"
+  python3 Scripts/import_osm.py --out "$out" --json-graph "$out/graph.json" > "$out/import.log" 2>&1 || { tail -20 "$out/import.log"; return 1; }
   local bad=0 files=(seattle-graph.bin seattle-map.geojson)
   # The search index's bytes depend on the SQLite version, so it is compared only where that matches the shipped build.
   local built shipped
