@@ -353,13 +353,20 @@ final class PeoplemapsUITests: XCTestCase {
     @MainActor func testMuteButtonFlipsItsLabel() {
         let app = launch(simulateRoute: true)
         app.buttons["start-navigation"].tap()
+        // The map buttons sit under the turn card, which appears and grows with the first instruction. A tap
+        // aimed before that lands on the card, so wait for the instruction like the other guidance tests do.
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 20))
         let mute = app.buttons["guidance-mute"]
         XCTAssertTrue(mute.waitForExistence(timeout: 10))
-        XCTAssertEqual(mute.label, "Unmute voice", "UI tests start muted")
-        mute.tap()
-        XCTAssertEqual(mute.label, "Mute voice")
-        mute.tap()
-        XCTAssertEqual(mute.label, "Unmute voice")
+        waitForLabel(mute, "Unmute voice", "UI tests start muted")
+        mute.tap(); waitForLabel(mute, "Mute voice")
+        mute.tap(); waitForLabel(mute, "Unmute voice")
+    }
+    /// Polls the label, so a read a frame early does not fail the test; the message shows what was seen.
+    @MainActor private func waitForLabel(_ element: XCUIElement, _ label: String, _ note: String = "") {
+        let changed = NSPredicate { _, _ in element.label == label }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: changed, object: nil)], timeout: 5), .completed,
+                       "Label is '\(element.label)', wanted '\(label)'. \(note)")
     }
     /// Simulated guidance from the Gas Works preview, waited for before any guidance button is tapped.
     @MainActor private func startSimulatedGuidance(_ app: XCUIApplication) {
