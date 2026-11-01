@@ -57,6 +57,7 @@ Once, by hand, in this order, for the first deploy:
 
    ```sh
    cd Backend
+   npm ci              # so npx uses the pinned wrangler
    npx wrangler d1 migrations apply peoplemaps-reports --remote
    npx wrangler deploy
    ```
