@@ -16,8 +16,8 @@ estimates, unknown is said to be unknown), `Docs/NAVIGATION.md` and
 
 Decided, not open: Cloudflare Workers and D1 in `Backend/`, served from a
 domain we own (7.5) and written so the handlers do not depend on either
-(7.1); one GitHub issue
-per sent report, filed by the Worker, labelled `app-report`; a silent
+(7.1); one GitHub issue per sent report, filed by the Worker only after a
+maintainer approves it with one tap (6.1), labelled `app-report`; a silent
 "Flag this moment" button during guidance and a "Flagged moments" list at home;
 no accounts, a random per-install ID; endpoints snapped to the nearest street
 intersection unless the user turns on exact locations for that report; raw
@@ -45,7 +45,8 @@ Non-goals:
 - Crash reporting, analytics, usage metrics of any kind.
 - Accounts, sign-in, email, push notifications about a report's progress.
 - Screenshots or audio. A snapshot is numbers and text we already have.
-- App Attest or any device attestation. Noted as later hardening in 4.5.
+- App Attest or any device attestation in the first TestFlight builds. It is
+  required before App Store release (4.5).
 - Reports while the app is offline. Flagging is offline; sending needs a
   connection and says so.
 
@@ -229,8 +230,12 @@ swift run -c release peoplemaps-replay report.json        # prints a JSON result
    `Place(id: "report/origin", name: "", lat:, lon:, category: "report")`
    with an empty `snap`, so the router snaps by coordinate, which for an
    intersection endpoint is the node itself at 0 m; a place that is only in
-   the search index falls back to this too. Run `compute`, pick `chosen`,
-   compare hashes. Print `match`, or `differs` with the way-ID sequences side
+   the search index falls back to this too. A report parsed from an issue
+   has each endpoint only as a cell (6); the parser then sets the origin to
+   the start node of the first edge in `edgeIDs` and the destination to the
+   end node of the last, which is where the app's route began and ended, and
+   leaves an endpoint the issue shows as removed `null`. Run `compute`, pick
+   `chosen`, compare hashes. Print `match`, or `differs` with the way-ID sequences side
    by side and both routes' metrics.
 
 **What snapping loses.** A snapped endpoint moves the start or end to a
@@ -307,9 +312,11 @@ Body: { "schema": 1, "app": { "version": "0.1.0", "build": "1" } }
   stored as `installs.app_version` ("0.1.0 (1)") and updated from each
   accepted report's `app`, so a maintainer can tell which builds still send.
 - The app calls this once, on the first Send, not at launch, so an install
-  that never sends anything never contacts the server. Rotate (4.4) calls it
+  that never sends anything never contacts the server. Rotate (8.3) calls it
   again and replaces both Keychain items.
-- Rate limit: per client IP at the edge, 4.6.
+- Rate limit: per client IP at the edge, plus a global hourly ceiling on
+  mints, 4.6. This is the route an abuser hits to reset every per-install
+  cap, so it has the tightest limits.
 
 Every other endpoint needs `Authorization: Bearer pm_…`. A token that does
 not match an install is `401 unauthorized`: the old install was deleted
@@ -324,10 +331,11 @@ mints a token on its own.
 ```
 POST /v1/reports
 Body: the report (2.4); its `id` is the idempotency key
-201 { "id": "6F1D…", "receivedAt": "2026-10-31T21:00:00Z", "issue": { "number": 123, "url": "https://github.com/electropicks/peoplemaps/issues/123" }, "expiresAt": "2027-01-29T21:00:00Z" }
-202 { "id": "6F1D…", "receivedAt": "…", "issue": null, "expiresAt": "…" }   // stored; issue to be filed by the retry cron (5.3)
+202 { "id": "6F1D…", "receivedAt": "2026-10-31T21:00:00Z", "issue": null, "issueState": "held", "expiresAt": "2027-01-29T21:00:00Z" }   // stored; filed after approval (6.1)
+201 { "id": "6F1D…", "receivedAt": "…", "issue": { "number": 123, "url": "https://github.com/electropicks/peoplemaps/issues/123" }, "issueState": "opened", "expiresAt": "…" }   // only with HOLD_FOR_APPROVAL off (dev)
 200 { the row's current state, same shape }                                // a retry with the same id and body
 409 { "error": "conflict", "message": "Report 6F1D… was already sent with different content." }
+503 { "error": "storage_unavailable", "message": "…" } + Retry-After            // D1 refused the write (4.6); nothing kept
 ```
 
 - The Worker validates the shape (`Backend/src/validate.ts` mirrors 2.4:
@@ -336,10 +344,14 @@ Body: the report (2.4); its `id` is the idempotency key
   `location` and exact endpoints only when `exactLocations` is true). Failure
   is `400 invalid_report` with `field`, a dotted path into the body such as
   `request.origin.lat` or `spoken[1].text`.
-- Stores the row (5.1), bumps the aggregate (5.2), then files the issue (6)
-  unless the day's issue cap is reached (4.6). If GitHub fails or the cap is
-  reached, the row stays `issue_state = pending` and the response is 202;
-  the app shows "Sent, issue pending" with a "Check status" button (3).
+- Stores the row (5.1) with `issue_state = held`, bumps the aggregate (5.2)
+  and answers 202. Nothing goes to GitHub until a maintainer approves the
+  report (6.1). The app shows "Sent, issue pending" with a "Check status"
+  button (3); that line covers held, waiting for the daily cap and GitHub
+  being down alike, since to the sender they are the same: accepted, not
+  public yet. With `HOLD_FOR_APPROVAL` off (the dev environment only, 7.2)
+  the Worker files at once and answers 201, or 202 with `pending` if GitHub
+  fails or the cap is reached.
 - Idempotent on the body's `id`; there is no separate header. The Worker
   canonicalises the body (sorted keys, no whitespace) and hashes that; it
   never compares the app's bytes, so key order and whitespace cannot cause a
@@ -360,7 +372,10 @@ GET /v1/reports/{id}       200 { one element of the same shape } | 404 not_found
 ```
 
 Only the sender's install. Each element is the 4.2 body (`id`,
-`receivedAt`, `issue`, `expiresAt`) with `category` added. Called only from
+`receivedAt`, `issue`, `issueState`, `expiresAt`) with `category` added.
+`issueState` is `held`, `pending`, `opened`, `failed` or `rejected` (5.1);
+the app shows `rejected` as "Sent, not published" and the rest that are not
+`opened` as "Sent, issue pending". Called only from
 the "Check status" button (3); nothing calls it when the list opens, and
 "Delete my reports" does not call it either, since the count it shows is
 local. Never returns the body; the phone has it.
@@ -378,8 +393,18 @@ row itself, in one D1 batch, and each report's issue the same way. An issue
 is deleted outright with the GraphQL `deleteIssue` mutation (`issue_node_id`
 from 5.1), not edited or closed: GitHub keeps every edit of an issue body
 publicly viewable in its history, so editing would withdraw nothing. Deleting
-takes the issue's comments with it. Copies people already made cannot be
-recalled, and `Docs/PRIVACY.md` says so. The GitHub call comes first; if it
+takes the issue's comments with it. The REST API has no issue delete, and
+`deleteIssue` succeeds only for an actor with admin rights on the repository,
+which sets the token's scope (6). A report still held or rejected (6.1) has
+no issue, so its delete is only the row.
+
+Deleting an issue is not erasure. GH Archive and other mirrors of GitHub's
+public event stream record the issue body when it is opened, GitHub emails
+the body to everyone watching the repository, and search engines and other
+caches may hold a copy. None of these can be recalled by us or by GitHub.
+`Docs/PRIVACY.md` and the delete confirmation (8.2) say so; this is the main
+reason issues are held for approval and the body is minimised (6). The
+GitHub call comes first; if it
 fails, the rows stay and the response is `503 github_unavailable`, so a
 report is never gone from the phone while its issue is still public. The app
 then wipes its Keychain items ("Delete my reports" is also "start over").
@@ -403,9 +428,13 @@ Authorization: Bearer <the maintainer's own GitHub token>
 - This is for people. The automatic pipeline (9) replays from the issue and
   never calls this endpoint; see open question 3 for giving Actions access
   without a secret.
-- **Later hardening, not now:** App Attest on `POST /v1/installs`, so a
-  token can only be minted by a genuine copy of the app. The install flow
-  already has the one round trip it would need.
+- **Before App Store release, not for the first TestFlight builds:** App
+  Attest on `POST /v1/installs`, so a token can only be minted by a genuine
+  copy of the app. The install flow already has the one round trip it would
+  need. Verifying an attestation will not fit the Free plan's 10 ms CPU per
+  request, and the one edge library found lists Workers support as unknown,
+  so this step budgets Workers Paid at $5 a month (open question 19) and
+  measures the CPU cost before it ships.
 
 ### 4.6 Rate limits, errors, what is not kept
 
@@ -426,18 +455,47 @@ Authorization: Bearer <the maintainer's own GitHub token>
   per hour, reports 30 per IP per hour), and the Worker stops reading the IP
   at all; otherwise the bindings stay. Exceeding a limit is `429 rate_limited`
   with `Retry-After`.
+- **The mint route** is where a flood starts, since a fresh token resets
+  every per-install cap. Besides `RL_INSTALLS` it has a global ceiling,
+  `INSTALLS_PER_HOUR` (`vars`, 60), counted from `installs.created_at` in the
+  current hour (one indexed count, strictly consistent); over it, `429
+  rate_limited` until the hour turns. The binding counts per Cloudflare
+  location and is approximate, so a flood spread across locations gets more
+  than 2 a minute per IP. Before release a test sends mints from several
+  regions; if the binding lets through clearly more than its limit, the
+  per-IP limit moves to one Durable Object, `MintGate`, that every mint passes
+  through: it counts mints per client IP per minute in memory, clears the
+  map every minute, never writes an IP to its storage, and is exact rather
+  than per location. SQLite-backed Durable Objects are on the Free plan;
+  check that again when this is built.
 - A global daily cap on issues filed, `ISSUE_DAILY_CAP` (`vars`, 200), counted
-  from `reports.issue_filed_at` today (UTC). Reports over the cap are
-  accepted (202) and stay `pending`; the retry cron (5.3) files them the next
-  day, oldest first. This bounds what a flood can put on GitHub in a day
-  without refusing anyone's report. The per-install daily cap (4.2) comes
-  from the install's own rows.
+  from `reports.issue_filed_at` today (UTC). Approved reports over the cap
+  stay `pending`; the retry cron (5.3) files them the next day, oldest first.
+  This bounds what a flood can put on GitHub in a day without refusing
+  anyone's report. The per-install daily cap (4.2) comes from the install's
+  own rows.
+- **Degrade mode: accepted, issue pending.** Whenever the row is stored but
+  no issue exists yet (held, approved over the daily cap, GitHub down), the
+  send answers 202 with `"issue": null` and the app shows "Sent, issue
+  pending" (4.2). That is the normal state, not an error. D1's Free daily
+  limits (5 million rows read, 100,000 rows written, enforced since
+  2026-09-01) are different: once spent, every query fails until 00:00 UTC,
+  and a report costs about ten row writes with its indexes and aggregate, so
+  a flood that gets past the limits above can spend them. Then nothing can
+  be stored, and the Worker does not pretend otherwise: `POST /v1/reports`
+  and `POST /v1/installs` answer `503 storage_unavailable` with
+  `Retry-After` set to 00:00 UTC, and the app keeps the report flagged with
+  "The report server is full for today. Try again after <local time>." The
+  report is not parked in KV, R2 or memory, since a second store would need
+  its own retention and its own line in the policy. Both crons fail that day
+  and catch up on their next run.
 - Errors are `{ "error": code, "message": text, "field"?: path }`. `field`
   is a dotted path into the request body (`request.origin.lat`,
   `spoken[1].text`). Codes: `unauthorized` 401, `forbidden` 403, `not_found`
   404, `invalid_report` 400, `too_large` 413, `conflict` 409, `rate_limited`
-  429, `github_unavailable` 503 (on 4.4 and 4.5; sends get a 202 instead),
-  `internal` 500.
+  429, `github_unavailable` 503 (on 4.4, 4.5 and approval; sends get a 202
+  instead), `storage_unavailable` 503 (D1 limits spent, above), `internal`
+  500.
 - The Worker never logs a request object, a header, an IP, a user agent or a
   body. `observability.enabled` is false and
   `observability.logs.invocation_logs` is false in `wrangler.jsonc` (7.2), so
@@ -471,6 +529,7 @@ CREATE TABLE installs (
   created_at    TEXT NOT NULL,                    -- ISO 8601, hour precision
   last_seen_at  TEXT NOT NULL                     -- hour precision; set on every authenticated request; for pruning idle installs
 );
+CREATE INDEX installs_created ON installs(created_at);  -- the hourly mint ceiling (4.6)
 
 CREATE TABLE reports (
   id             TEXT PRIMARY KEY,                -- report UUID from the app; the idempotency key
@@ -483,19 +542,21 @@ CREATE TABLE reports (
   data_version   TEXT NOT NULL,
   app_version    TEXT NOT NULL,
   cell           TEXT NOT NULL,                   -- aggregate cell of the flag point (5.2)
-  public_json    TEXT NOT NULL,                   -- the body with exact fields removed; what the issue shows
+  public_json    TEXT NOT NULL,                   -- the body with exact fields removed; the issue is built from it, coarser still (6)
   exact_json     TEXT,                            -- {origin, destination, location} when exactLocations; else NULL
   issue_number   INTEGER,
   issue_node_id  TEXT,                            -- GraphQL node ID, for deleteIssue (4.4)
   issue_url      TEXT,
   issue_filed_at TEXT,                            -- hour precision; counts against the daily cap (4.6)
-  issue_state    TEXT NOT NULL DEFAULT 'pending', -- pending | opened | failed; a deleted report has no row
+  issue_state    TEXT NOT NULL DEFAULT 'held',    -- held | pending | opened | failed | rejected (6.1); a deleted report has no row
+  reviewed_by    TEXT,                            -- GitHub login that approved or rejected it (6.1)
   issue_attempts INTEGER NOT NULL DEFAULT 0,
   issue_error    TEXT                             -- last GitHub status code and message, no request data
 );
 CREATE INDEX reports_install ON reports(install_id);
 CREATE INDEX reports_expires ON reports(expires_at);
 CREATE INDEX reports_pending ON reports(issue_state) WHERE issue_state = 'pending';
+CREATE INDEX reports_held ON reports(received_at) WHERE issue_state = 'held';
 CREATE INDEX reports_filed ON reports(issue_filed_at) WHERE issue_filed_at IS NOT NULL;
 CREATE UNIQUE INDEX reports_issue ON reports(issue_number) WHERE issue_number IS NOT NULL;
 
@@ -553,6 +614,9 @@ Two schedules in `wrangler.jsonc`, one `scheduled` handler switching on
   try to file the issue (6). A cap hold does not count as an attempt. After
   10 failures the row goes `failed` and a maintainer sees it in
   `wrangler d1 execute`; the app shows "Sent, issue pending" until then.
+  `held` rows are never filed by the cron; only an approval (6.1) moves a
+  row to `pending`. A held report nobody approves expires at 90 days like
+  any other.
 
 **Time Travel.** D1 keeps a restorable copy of the database (Cloudflare's
 Time Travel) for 7 days on the Workers Free plan and 30 days on Workers Paid.
@@ -566,12 +630,49 @@ changes the policy text in the same PR, and so does moving to another host.
 
 ## 6. The GitHub issue
 
-The Worker files one issue per accepted report with its `GITHUB_TOKEN`
-(a fine-grained token: this repository only, Issues read and write, nothing
-else). Deleting an issue (4.4) is an administrator action on GitHub, so the
-token is issued by a repository admin; the Worker's tests include a delete so
-a token without that right fails before it ships. The app never holds a
-GitHub token.
+The Worker files one issue per approved report (6.1) with its
+`GITHUB_TOKEN`. Deleting an issue (4.4) uses the GraphQL `deleteIssue`
+mutation, which only an actor with admin rights on the repository can run,
+so the token is a fine-grained token created by a repository admin, for this
+repository only, with Issues read and write, Metadata read, and
+Administration read and write. Administration write is far more than filing
+issues needs (it can change repository settings), which is why the token
+lives only as a Worker secret (7.2) and is never given to Actions. If the
+delete test against a scratch repository shows `deleteIssue` works from an
+admin's token with Issues write alone, Administration is dropped; the first
+deploy settles it, and the scope is written into `Backend/README.md`. The
+app never holds a GitHub token.
+
+### 6.1 Held for approval
+
+Nothing is filed automatically. A sent report is stored `held` (4.2), and
+the Worker files it only after a maintainer taps Approve. At a few reports a
+day this is one tap each, and it means a note with a name, an address or
+abuse in it never reaches GitHub, where deletion does not erase (4.4).
+
+```
+GET  /maintainer                              a static page, no data in it
+GET  /v1/maintainer/held                      200 { "reports": [ { "id", "receivedAt", "category", "issuePreview": { "title", "body" } } ] }
+POST /v1/maintainer/reports/{id}/approve      200 { "issueState": "opened" | "pending", "issue"? } | 404 | 409 not held
+POST /v1/maintainer/reports/{id}/reject       200 { "issueState": "rejected" } | 404 | 409 not held
+```
+
+- Same authentication as 4.5: the maintainer's own GitHub token, checked for
+  `write`, `maintain` or `admin`, then dropped. `reviewed_by` (5.1) records
+  the login.
+- `/maintainer` is one HTML page served by the Worker (`src/maintainer.ts`),
+  same origin, so there is still no CORS. It asks for the token, keeps it in
+  `sessionStorage`, lists held reports oldest first with the exact title and
+  body the issue would get, and has Approve and Reject on each. The preview
+  is built by the same `src/issue.ts` functions as the real issue.
+- Approve sets `pending` and files at once within the daily cap (4.6);
+  over the cap or with GitHub down it stays `pending` for the retry cron
+  (5.3). Reject sets `rejected`: the row is kept until it expires, so the
+  sender can still see "Sent, not published" and delete it, but it is never
+  filed. Exact fields are not on the page; 4.5 is still the only way to them.
+- `HOLD_FOR_APPROVAL` (`vars`, 7.2) is `"true"` in production and `"false"`
+  in the dev environment, so a tester exercises the whole send-to-issue path
+  without a reviewer.
 
 **Issue form** `.github/ISSUE_TEMPLATE/app-report.yml` (added by the
 pipeline task). People can also file it by hand, so one parser serves both.
@@ -631,18 +732,20 @@ for instruction and voice categories, with the instruction taken from the
 last `spoken` text or, when none or when `nav.state` is `arrived`,
 "step <shownStepIndex>". The arrived rule is belt and braces for 2.1: the
 title never carries an arrival utterance. For
-`calmer_bad_choice`: `[app-report] Calmer route questioned: <first way ID> → <last way ID> (<mode>, <dataVersion>)`.
+`calmer_bad_choice`: `[app-report] Calmer route questioned: <origin cell> → <destination cell> (<mode>, <dataVersion>)`,
+the 550 m cells of 5.2, never a street name.
 For `map_data` and `other` the same with "Map data" or "Other". Category
 words: Wrong instruction, Calmer route questioned, Map data, Voice or timing,
 Other.
 
 **Body.** Category; What happened (the note, or "No note"); Data version;
 App version; Flagged at (the hour, UTC, as sent); Route request (mode, extra
-minutes, preferences, the snapped endpoints as sent, `rerouted`); Route
+minutes, preferences, each endpoint as its 550 m cell only, or `removed`, `rerouted`); Route
 (`chosen`, `dataVersion`, `hash`, `alternativeHash`, `meters`, `seconds`,
 `stress`, `wayIDs`, `edgeIDs`); Position; Spoken instructions; Navigation
 state; Device. Everything the replay (2.5) needs is in the body; the parser
-in 9 fills `exactLocations: false` and `location: null`. A trailing HTML
+in 9 fills `exactLocations: false` and `location: null`, and takes the
+endpoints from the route's first and last nodes (2.5 step 3). A trailing HTML
 comment `<!-- report:<id> -->` carries the report ID so 4.5 can find the row
 by issue number even if the DB index is lost; the ID is random and says
 nothing about the sender. A line at the end: "Filed by the PeopleMaps
@@ -651,12 +754,22 @@ are estimates; a calmer route is a preference, not a rating."
 
 **Omitted from the issue, even when stored:** exact endpoints, exact
 `location`, the `exactLocations` flag, the install ID, the receipt time
-beyond the hour. If the user
+beyond the hour, and the snapped endpoints' coordinates, `osmNode` and
+`placeID`: each endpoint is shown as its cell (`r<row>c<col>`, computed by
+the Worker from the snapped coordinates with the 5.2 formula). If the user
 turned exact locations on, the issue says "Exact locations: available to
-maintainers (section 4.5)" under Route request, and the endpoints shown are
-the `snapped` forms the app sends inside each exact endpoint (2.2), so
-`public_json` always has intersection endpoints and `exact_json` has the
-rest.
+maintainers (section 4.5)" under Route request. `public_json` always has
+the snapped intersection endpoints (the `snapped` forms the app sends inside
+each exact endpoint, 2.2), and `exact_json` has the rest.
+
+**What coarsening does not hide.** `edgeIDs` and `wayIDs` stay in the issue
+because the plan replay needs the whole route, and a route starts and ends at
+its snapped intersections. Anyone with the map data can read those two
+corners off the first and last edges. Coarsening keeps coordinates, place
+names and IDs out of the text and the title; it does not make the ends of the
+route unknowable. Section 8.2 and `Docs/PRIVACY.md` say this, and removing an
+endpoint in review removes it from the request, not from the route. Trimming
+the published route is open question 22.
 
 **Labels.** `app-report`, `report:<category>`, `mode:<mode>`. The pipeline
 adds `triage:*` (9). A deleted report's issue is deleted, not relabelled
@@ -682,11 +795,11 @@ Backend/
   src/store-d1.ts         the shim over the D1 binding
   src/installs.ts         POST /v1/installs, DELETE /v1/installs/me, token hashing
   src/reports.ts          POST, GET, DELETE /v1/reports
-  src/maintainer.ts       GET /v1/maintainer/issues/{n}/report
+  src/maintainer.ts       GET /v1/maintainer/issues/{n}/report, the approval routes and page (6.1)
   src/validate.ts         schema check of 2.4; also `canonical(body)` and `splitExact(body)`
   src/issue.ts            title and body builders (6), pure functions
   src/github.ts           create and delete issues; the only module that reads GITHUB_TOKEN
-  src/ratelimit.ts        the three bindings of 4.6; the only module that reads cf-connecting-ip
+  src/ratelimit.ts        the three bindings and the mint ceiling of 4.6; the only module that reads cf-connecting-ip
   src/cells.ts            cell validation (5.2)
   src/retention.ts        the two cron jobs
   src/errors.ts           the error envelope
@@ -711,8 +824,8 @@ container) is a new shim and a new entry file, not a rewrite.
   "preview_urls": false,
   "routes": [{ "pattern": "reports.<our domain>", "custom_domain": true }],
   "observability": { "enabled": false, "logs": { "invocation_logs": false } },
-  "vars": { "GITHUB_REPO": "electropicks/peoplemaps", "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "20", "ISSUE_DAILY_CAP": "200" },
-  "env": { "dev": { "vars": { "GITHUB_REPO": "electropicks/peoplemaps", "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "50", "ISSUE_DAILY_CAP": "200" } } },
+  "vars": { "GITHUB_REPO": "electropicks/peoplemaps", "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "20", "ISSUE_DAILY_CAP": "200", "INSTALLS_PER_HOUR": "60", "HOLD_FOR_APPROVAL": "true" },
+  "env": { "dev": { "vars": { "GITHUB_REPO": "electropicks/peoplemaps", "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "50", "ISSUE_DAILY_CAP": "200", "INSTALLS_PER_HOUR": "60", "HOLD_FOR_APPROVAL": "false" } } },
   "d1_databases": [{ "binding": "DB", "database_name": "peoplemaps-reports", "database_id": "<filled in after wrangler d1 create>", "migrations_dir": "migrations" }],
   "unsafe": { "bindings": [
     { "name": "RL_AUTH", "type": "ratelimit", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
@@ -736,8 +849,8 @@ this account) and `CLOUDFLARE_ACCOUNT_ID` are environment secrets of the
 GitHub Environment `production` (7.3), not repository secrets: a repository
 secret with D1 edit rights would let any workflow merged to `main` read
 `exact_json`, and the environment's required reviewer stops that. One Worker
-secret, `GITHUB_TOKEN`, a fine-grained token issued by a repository admin
-with Issues read and write (it must be able to delete issues, 4.4), set with
+secret, `GITHUB_TOKEN`, the fine-grained admin-issued token of 6 (it must
+be able to run `deleteIssue`, 4.4), set with
 `wrangler secret put GITHUB_TOKEN` from the maintainer's machine, never
 through Actions. Nothing else.
 
@@ -757,8 +870,13 @@ through Actions. Nothing else.
   body (409); a retry after the cron filed the issue returns it; validation
   of each field with its `field` path; exact fields split out of
   `public_json`; issue title and body for each category, and the arrived
-  title; a GitHub 500 leaves `pending` and the cron files it; the daily
-  issue cap holds the rest for the cron; delete calls `deleteIssue` and
+  title; a send is stored `held` and nothing reaches GitHub; approve files
+  it and reject never does, both only with maintainer permission; the issue
+  body and title show endpoints as cells and no coordinates, node or place
+  IDs; a GitHub 500 leaves `pending` and the cron files it; the daily
+  issue cap holds the rest for the cron; the hourly mint ceiling returns
+  429; a store that throws D1's limit error gives `503 storage_unavailable`
+  and keeps nothing; delete calls `deleteIssue` and
   removes rows, and a failed delete removes nothing; retention deletes by
   date, including `maintainer_reads`; the maintainer route with and without
   permission; the rate-limit bindings are called with the IP and nothing
@@ -884,8 +1002,14 @@ uses the stub (8.4).
 
 Follows the product rules. The composer never asks whether a route was safe;
 the category reads "The calmer route was a bad choice". The review screen
-header: "This becomes a public issue on GitHub. Exact locations stay off
-unless you turn them on; nothing has left this phone yet." The flag button
+header: "After a maintainer approves it, this becomes a public issue on
+GitHub. Your start and destination show only as half-kilometre squares, but
+the route itself starts and ends at the snapped corners. Exact locations
+stay off unless you turn them on; nothing has left this phone yet." The
+"Delete my reports" confirmation: "Delete 3 sent reports and your report ID
+from our server? Their public GitHub issues are deleted too, but copies
+made before that, such as GitHub's public activity archives and emails to
+people watching the project, cannot be recalled." The flag button
 during guidance says nothing about the problem; the user explains at home.
 The review screen shows `route.stress` because the review shows every byte;
 the number is a maintainer artefact for the replay, and no other screen in
@@ -906,14 +1030,19 @@ never a number).
   "Your report ID was reset". A 401 on Check status or Delete my reports
   shows the same message, wipes the Keychain items and stops; nothing mints
   outside a Send (4.1).
-- Rotate: mints a new install; old reports keep their old ID server-side
-  until "Delete my reports" is used; the UI says so.
+- Rotate: mints a new install. A rotated ID does not find old reports: the
+  old token is gone from the Keychain, so those reports can no longer be
+  checked or deleted from the phone, and they are deleted when their 90
+  days end. The confirmation says so and offers "Delete my reports" first;
+  local copies sent under the old ID show "Sent under an earlier report
+  ID".
 
 ### 8.4 UI test
 
 Under `--ui-testing`, `ReportsClient` registers a `URLProtocol` stub for the
 base URL that answers `POST /v1/installs` with a fixed token, `POST
-/v1/reports` with `201` and issue 123, and `DELETE` with `204`, and records
+/v1/reports` with `201` and issue 123 (the dev answer of 4.2, so the
+receipt path is covered without a reviewer), and `DELETE` with `204`, and records
 every request body. `NavigationDebugProbe` gains `debug-last-report`, the
 body of the last stubbed `POST /v1/reports`. The test in
 `UITests/PeoplemapsUITests.swift`:

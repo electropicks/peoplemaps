@@ -12,7 +12,8 @@ one is wrong and gets fixed.
 - Nothing leaves your phone unless you tap **Send** on a report you have
   read.
 - There are no accounts, no sign-in, no analytics, no ads, no tracking.
-- A report becomes a public issue on GitHub, minus your exact locations.
+- A report you send is read by a maintainer first. If they approve it, it
+  becomes a public issue on GitHub, minus your exact locations.
 - You can see, export and delete everything, on the phone and on our server.
   The app contacts the server only when you tap Send, Check status or
   Delete my reports.
@@ -54,8 +55,12 @@ A report contains:
   see.
 - **Your start and destination, snapped to the nearest street
   intersection.** An intersection is a public map feature, not your door.
-  It can still be the corner nearest your home or work, so if that worries
-  you, remove either endpoint before sending; the report is still useful.
+  It can still be the corner nearest your home or work. The public issue
+  shows each one only as a half-kilometre square, but the route's street
+  list starts and ends at those corners, so someone with map data can still
+  find them. Removing an endpoint before sending takes it out of the report
+  but not out of the route. If the route's start or end worries you, do not
+  send that report.
 - **Exact start, destination and your position when you flagged**, only if
   you turn on **Exact locations** for that report. It is off by default.
   Turn it on when a snapped report would not show the problem, for example
@@ -86,8 +91,10 @@ The first time you send a report, the app asks our server for a random ID
 and a secret key for it. The ID links your reports together so you can delete
 them. It is not tied to you, your Apple ID or your phone, and it is not
 backed up or restored to another phone. In **Flagged moments** you can see
-it, get a new one (older reports stay under the old one until you delete
-them) or delete it with all your reports.
+it, get a new one, or delete it with all your reports. If you get a new one,
+the app can no longer check or delete reports sent under the old one; they
+are deleted when their 90 days end. To remove them sooner, use **Delete my
+reports** before getting a new ID.
 
 ## Where a report goes
 
@@ -100,11 +107,16 @@ them) or delete it with all your reports.
    reports of each category, for each travel mode, in each square of about
    half a kilometre, per week. Counts say nothing about a person and are
    kept.
-2. **A public GitHub issue** at `github.com/electropicks/peoplemaps`. The
-   server files it for you. It contains everything in the report except
-   exact locations and your report ID. Issues are public to anyone on the
-   internet. A later automated step may replay the route from the issue and
-   propose a fix.
+2. **A public GitHub issue** at `github.com/electropicks/peoplemaps`, only
+   after a project maintainer has read the report and approved it. Until
+   then nothing about it is public; a report they decline is never
+   published and is deleted after its 90 days. The server files the issue
+   for you. It contains everything in the report except exact locations and
+   your report ID, with your start and destination shown only as
+   half-kilometre squares (but see above: the route still begins and ends
+   at the snapped corners). Issues are public to anyone on the internet,
+   and GitHub emails them to people who watch the project. A later
+   automated step may replay the route from the issue and propose a fix.
 
 We never store or log IP addresses; Cloudflare necessarily sees them to
 deliver traffic. The server does not log requests or their headers, has
@@ -123,7 +135,13 @@ nothing from them.
   will remove, asks you to confirm, then removes every report under your ID
   and the ID itself. Each public issue is deleted outright, not edited or
   closed, because GitHub keeps every edit of an issue viewable; comments on
-  it go with it. Copies others made are out of our hands.
+  it go with it. Deleting an issue is not erasing it. Copies made while it
+  was public stay where they are, and neither we nor GitHub can recall
+  them: public archives of GitHub activity (such as GH Archive) record an
+  issue when it is opened, GitHub has already emailed it to people watching
+  the project, and search engines and other caches may hold it. This is why
+  a maintainer reads every report before it is published, and why the issue
+  leaves out your exact locations.
 - **The restore copy**: Cloudflare keeps a restorable copy of our database
   from the last 7 days that only we, the maintainers, can use to undo a
   mistake. We cannot shorten it or turn it off. It is not reachable from the
