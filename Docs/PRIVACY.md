@@ -7,9 +7,9 @@ ever disagree, the engineering document is the one being built from and this
 one is wrong and gets fixed.
 
 > **Draft, not published.** Two things to settle first (`Docs/REPORTS.md`): what
-> Cloudflare's logs record, checked on the deployed server (4.6), and "in the
-> United States" below, since the database was created with a location hint,
-> which Cloudflare says is not a guarantee (question 25).
+> Cloudflare's logs record, checked on the deployed server (4.6), and the
+> database's location below, which holds only if question 25 settles on the
+> `us` jurisdiction. Today's location hint is not a guarantee.
 
 ## The short version
 
@@ -21,8 +21,8 @@ one is wrong and gets fixed.
   is published automatically. A maintainer may file a useful report as a public
   GitHub issue by hand, without your exact locations or report ID.
 - You can see, export and delete everything on the phone, and delete what you
-  sent from our server. The app contacts the server only when you tap Send,
-  Check status or Delete my reports.
+  sent from our server (see Deleting for the limits). The app contacts the
+  server only when you tap Send, Check status or Delete my reports.
 
 ## What the app keeps on your phone
 
@@ -65,13 +65,16 @@ A report contains:
   before sending takes it out of the request but not out of the route, whose
   street list starts and ends at those corners. If the route's start or end
   worries you, do not send that report.
-- **Exact start, destination and your position when you flagged**, only if
+- **Exact start, destination and your position when you flagged**, and the map
+  ID of a named place you started from or went to, only if
   you turn on **Exact locations** for that report. It is off by default.
   Turn it on when a snapped report would not show the problem, for example
   when the trouble is the first turn out of a driveway.
 - **Where along the route you were** when you flagged: a step number, a
   distance along it, and which half-kilometre square of Seattle that point
-  is in. Not a coordinate.
+  is in. This is not a GPS reading, but together with the route's street list
+  it places you to within metres of where you flagged, and a public issue
+  includes all of it.
 - **The last three spoken instructions** and how many seconds before the
   flag each was said. Where the voice said your destination's name, the
   report says "your destination" instead.
@@ -98,13 +101,20 @@ backed up or restored to another phone. In **Flagged moments** you can see it,
 or delete it with all your reports. There is no separate way to change it: after
 **Delete my reports**, your next report gets a new ID.
 
+With the ID, our server keeps a scrambled copy of the key, your app version and
+build, and the hours it was created and last contacted. Once it has no reports
+left, this record is deleted a year after the last contact, or at once with
+**Delete my reports**.
+
 ## Where a report goes
 
-1. **Our server**, a Cloudflare Worker and database in the United States, run by
-   the people who make PeopleMaps. It stores the report for 90 days. Exact
+1. **Our server**, run by the people who make PeopleMaps: a Cloudflare Worker,
+   which runs at whichever Cloudflare location is nearest you, and a database in
+   the United States. It stores the report for 90 days. Exact
    locations are kept apart from the rest, and only people with access to the
-   project's Cloudflare account can read them. After 90 days the report is
-   deleted, and Cloudflare can still restore it for 7 more days (see Deleting).
+   project's Cloudflare account can read them. The daily cleanup deletes
+   the report within about a day after its 90 days, and Cloudflare can still
+   restore it for 7 more days (see Deleting).
 2. **A public GitHub issue**, only if a maintainer reads your report, finds it
    useful and files one by hand at `github.com/electropicks/peoplemaps`. The
    server never does this. An issue contains your report except for your exact
@@ -117,20 +127,25 @@ or delete it with all your reports. There is no separate way to change it: after
 
 We never store or log IP addresses; Cloudflare necessarily sees them to
 deliver traffic. The server does not log requests or their headers, has
-Cloudflare's per-request logging turned off, and sets no cookies. Cloudflare
-sees your connection the way any website's host does; we do not receive
-that. Cloudflare also
-applies connection rate limits at its edge, so that one source cannot flood
-the server; those counts live in its memory for a minute and we store
-nothing from them.
+Cloudflare's per-request logging turned off, and sets no cookies. When you send
+a report or get a report ID, the server reads your IP address, or its first half
+for the newer IPv6 kind, only to hand it to Cloudflare's rate limiter, so that
+one source cannot flood the server. Those counts live in Cloudflare's memory for
+about a minute. We store nothing from them.
 
 ## Deleting
 
 - **On the phone**: swipe a flagged moment away, or delete them all. This
   does not contact the server.
-- **On the server**: **Delete my reports** shows how many sent reports it will
-  remove, asks you to confirm, then removes every report under your ID and the
-  ID itself.
+- **On the server**: **Delete my reports** shows how many sent reports this
+  phone remembers, asks you to confirm, then removes every report under your ID
+  and the ID itself. That can be more than the number shown, since the phone
+  keeps only its last 50 moments. If a send is interrupted and you edit the
+  report before sending again, the first copy may also be on the server; only
+  **Delete my reports** removes it.
+- **If you lose the phone**: the ID's key lives only on that phone, so without
+  it, or if its Keychain is erased, your reports cannot be deleted from the app
+  and stay until their 90 days end.
 - **A public issue**: deleting does not reach an issue a maintainer has already
   filed. It carries no report ID, so it cannot be matched to you automatically.
   You can ask us to remove one through the project's GitHub issues. Removing an
@@ -142,7 +157,7 @@ nothing from them.
   from the last 7 days that only we, the maintainers, can use to undo a
   mistake. We cannot shorten it or turn it off. It is not reachable from the
   app or the server. So a deleted report is completely gone from Cloudflare
-  7 days after you delete it, and a report that expired is gone 7 days after
+  7 days after you delete it, and a report that expired is gone about 8 days after
   its 90 days. If we move to Cloudflare's paid plan the window becomes 30
   days, and if we move to another host it changes again; either way this
   policy changes first, with a new version number.
