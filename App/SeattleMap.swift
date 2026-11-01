@@ -76,6 +76,10 @@ struct SeattleMap: UIViewRepresentable {
         private var lastUser: Coordinate?
         private var guidanceAnnotations: [MLNPointAnnotation] = []
         private var puck: MapPuck?
+        /// The route (by `guidanceKey`) the user has been on, so its leader is not drawn again when they leave it.
+        private var reachedKey = ""
+        /// Puck-to-route gap under which no leader is drawn.
+        private static let leaderMeters = 25.0
         /// The first fit after launch cuts; later ones glide.
         private var hasFitted = false
         /// Following zooms back in after the overview or when guidance starts.
@@ -114,6 +118,14 @@ struct SeattleMap: UIViewRepresentable {
                 layer.lineOpacityTransition = MLNTransition(duration: 0.25, delay: 0)
                 style.addLayer(layer)
             }
+            // Dashed line from the puck to a route that starts some way off, in the route's colour.
+            let leaderSource = MLNShapeSource(identifier: "leader", shape: nil, options: nil)
+            style.addSource(leaderSource)
+            let leader = MLNLineStyleLayer(identifier: "leader", source: leaderSource)
+            leader.lineWidth = NSExpression(forConstantValue: 4.5)
+            leader.lineDashPattern = NSExpression(forConstantValue: [1.5, 1.5])
+            leader.lineOpacity = NSExpression(forConstantValue: 0.9)
+            style.addLayer(leader)
             let places: [(String, Double, Double)] = [("BALLARD",47.668,-122.382),("FREMONT",47.652,-122.351),("WALLINGFORD",47.663,-122.335),("QUEEN ANNE",47.637,-122.360),("LAKE UNION",47.639,-122.335),("UNIVERSITY\nDISTRICT",47.665,-122.313)]
             labels = places.map { title, lat, lon in
                 let annotation = MapLabel(); annotation.title = title
@@ -211,15 +223,18 @@ struct SeattleMap: UIViewRepresentable {
                 (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = nil
                 (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineOpacity = NSExpression(forConstantValue: 1.0)
             }
+            #if DEBUG
+            if guiding { MapDebug.shared.routeClears += 1 }
+            #endif
         }
 
         /// Guidance draws the followed route, the destination and the puck, and keeps the map centred on the puck, north-up.
         private func updateGuidance(_ g: Guidance, map: MLNMapView, style: MLNStyle) {
             if !guiding {
+                clearRoutes(style)
                 guiding = true
                 map.removeAnnotations(endpoints + pinAnnotations + (userDot.map { [$0] } ?? []))
-                endpoints = []; pinAnnotations = []; pinKey = ""; userDot = nil; guidanceKey = ""; lastUser = nil
-                clearRoutes(style)
+                endpoints = []; pinAnnotations = []; pinKey = ""; userDot = nil; guidanceKey = ""; lastUser = nil; reachedKey = ""
                 followZoom = true
                 if g.user == nil { follow(g.coordinates[0], map: map, puck: false) }
             }
@@ -243,11 +258,17 @@ struct SeattleMap: UIViewRepresentable {
                 }
             }
             if key != guidanceKey {
-                clearRoutes(style)
+                // A reroute replaces the line in place: the new shape goes in, and only the other pair is emptied.
+                // Until the replacement arrives the previous route stays drawn.
                 let prefix = g.calmer ? "calmer" : "fastest"
                 var coords = g.coordinates.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
                 let line = coords.count > 1 ? MLNPolyline(coordinates: &coords, count: UInt(coords.count)) : nil
                 for id in [prefix, prefix + "-casing"] { (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = line }
+                let other = g.calmer ? "fastest" : "calmer"
+                if (style.source(withIdentifier: other) as? MLNShapeSource)?.shape != nil {
+                    for id in [other, other + "-casing"] { (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = nil }
+                }
+                (style.layer(withIdentifier: "leader") as? MLNLineStyleLayer)?.lineColor = constant(g.calmer ? .calmer : .fastest)
                 map.removeAnnotations(guidanceAnnotations)
                 let end = MapDestination()
                 end.coordinate = CLLocationCoordinate2D(latitude: g.destination.lat, longitude: g.destination.lon)
@@ -255,10 +276,29 @@ struct SeattleMap: UIViewRepresentable {
                 map.addAnnotations(guidanceAnnotations)
                 guidanceKey = key
             }
-            if !g.overview, let user = g.user, user != lastUser {
-                follow(user, map: map)
+            if let user = g.user, user != lastUser {
+                if !g.overview { follow(user, map: map) }
+                drawLeader(from: user, g, style: style)
                 lastUser = user
             }
+        }
+
+        /// A dashed leader from the puck to the route's first coordinate while they are apart and the user has not
+        /// been on the route yet: the start is a snapped node, so a trip can begin a block from where the line does.
+        private func drawLeader(from user: Coordinate, _ g: Guidance, style: MLNStyle) {
+            let source = style.source(withIdentifier: "leader") as? MLNShapeSource
+            if reachedKey != guidanceKey, user.distance(toPolyline: g.coordinates) <= Self.leaderMeters { reachedKey = guidanceKey }
+            let gap = g.coordinates.first.map { user.distance(to: $0) } ?? 0
+            let drawn = reachedKey != guidanceKey && gap > Self.leaderMeters
+            if drawn, let first = g.coordinates.first {
+                var coords = [user, first].map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+                source?.shape = MLNPolyline(coordinates: &coords, count: 2)
+            } else {
+                source?.shape = nil
+            }
+            #if DEBUG
+            MapDebug.shared.leaderMeters = drawn ? gap : 0
+            #endif
         }
 
         /// Glides the puck and the map together between position updates, so following looks continuous.
@@ -293,6 +333,10 @@ struct SeattleMap: UIViewRepresentable {
             guidanceAnnotations = []; puck = nil; lastUser = nil; guidanceKey = ""; guidanceMode = ""; lastFollow = .distantPast; zoomUntil = .distantPast
             map.contentInset = .zero
             clearRoutes(style)
+            (style.source(withIdentifier: "leader") as? MLNShapeSource)?.shape = nil
+            #if DEBUG
+            MapDebug.shared.leaderMeters = 0
+            #endif
             routeKey = ""; focusKey = ""; pinKey = ""
         }
 
@@ -320,6 +364,7 @@ struct SeattleMap: UIViewRepresentable {
             for (id, color) in [("fastest-casing", UIColor.systemBackground), ("fastest", .fastest), ("calmer-casing", .systemBackground), ("calmer", .calmer)] {
                 (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineColor = constant(color)
             }
+            (style.layer(withIdentifier: "leader") as? MLNLineStyleLayer)?.lineColor = constant(latest?.guidance?.calmer == true ? .calmer : .fastest)
             // Annotation views are drawn once, so re-add them to pick up the new colours.
             let extras: [MLNPointAnnotation] = guidanceAnnotations + (puck.map { [$0] } ?? []) + (userDot.map { [$0] } ?? [])
             map.removeAnnotations(labels + endpoints + pinAnnotations + extras)
