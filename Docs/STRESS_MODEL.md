@@ -5,7 +5,7 @@ Implemented 27 October 2026 in `Core/StressModel.swift`, with data from
 per-turn cost (sidewalk geometry makes turn counts noise), and the whole-route
 factors (stop-and-go clusters, short freeway hops, side-street shortcuts) are
 scored on each candidate but are not visible to the search itself. Drive times
-were recalibrated on 1 November 2026 against a real trip (see Time).
+were recalibrated on 31 October 2026 against a real trip (see Time).
 
 ## What we are optimizing
 
@@ -56,7 +56,7 @@ what slow a Seattle driver down, and they are counted where they happen.
 
 | Road | Free-flow speed (mph) | Note |
 | --- | --- | --- |
-| Any road with a posted limit | the posted limit | 98% of drivable edges have `maxspeed`; Seattle posts 25 on arterials and 20 on residential streets |
+| Any road with a posted limit | the posted limit | 99.5% of non-service drive edges (89% of all drive edges) have `maxspeed`; Seattle posts 25 on arterials and 20 on residential streets |
 | motorway | 60 | capped at 43 (70 km/h), see below |
 | motorway_link | 35 | |
 | trunk | 40 | Aurora |
@@ -110,7 +110,7 @@ is the one most worth adding when real arrival times are recorded.
 18 km/h on streets, 14 on shared paths, 11 on tagged rough surfaces, plus
 about 3 s per metre climbed and a little back on descents, never faster than
 32 km/h. Signals add 8 s, stop signs 3, yields 1, turns 2. Checked on
-1 November 2026: these are km/h as intended, so bike times were left alone.
+31 October 2026: these are km/h as intended, so bike times were left alone.
 
 ### Walk
 
@@ -187,7 +187,7 @@ same distance by about 100 equivalent seconds, even at equal time.
 Built on Level of Traffic Stress (LTS), the standard method from Mekuria,
 Furth and Nixon (2012). It rates each street 1 to 4 from lanes, speed, bike
 facility and parking. Seattle's OSM data has the inputs: lanes (99%), maxspeed
-(98%), cycleway tags (54% of arterials) and parking (about 35% of arterials).
+(99.5% of non-service drive edges), cycleway tags (54% of arterials) and parking (about 35% of arterials).
 
 ### Exposure
 
