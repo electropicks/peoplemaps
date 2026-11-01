@@ -6,10 +6,8 @@ information. The engineering details are in `Docs/REPORTS.md`; if the two
 ever disagree, the engineering document is the one being built from and this
 one is wrong and gets fixed.
 
-> **Draft, not published.** Two things to settle first (`Docs/REPORTS.md`): what
-> Cloudflare's logs record, checked on the deployed server (4.6), and "kept in
-> the United States" below, which is untrue until the database is replaced
-> (question 25).
+> **Draft, not published.** One thing to settle first (`Docs/REPORTS.md`): what
+> Cloudflare's logs record, checked on the deployed server (4.6).
 
 ## The short version
 
