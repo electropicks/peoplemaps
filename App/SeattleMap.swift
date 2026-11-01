@@ -104,7 +104,7 @@ struct SeattleMap: UIViewRepresentable {
         /// The route (by `guidanceKey`) the user has been on, so its leader is not drawn again when they leave it.
         private var reachedKey = ""
         /// Puck-to-route gap under which no leader is drawn.
-        private static let leaderMeters = 25.0
+        private static let leaderMeters = RerouteGate.reachedMeters
         /// What the puck's wedge shows, re-applied when its view is rebuilt for a colour change.
         private var puckHeading: Double?
         private var cameraMode: GuidanceCamera.Mode?
@@ -335,13 +335,13 @@ struct SeattleMap: UIViewRepresentable {
         /// been on the route yet: the start is a snapped node, so a trip can begin a block from where the line does.
         private func drawLeader(from user: Coordinate, _ g: Guidance, style: MLNStyle) {
             let source = style.source(withIdentifier: "leader") as? MLNShapeSource
-            if reachedKey != guidanceKey, user.distance(toPolyline: g.coordinates) <= Self.leaderMeters { reachedKey = guidanceKey }
+            if reachedKey != guidanceKey, user.distance(toPolyline: g.coordinates) <= RerouteGate.reachedMeters { reachedKey = guidanceKey }
             let gap = g.coordinates.first.map { user.distance(to: $0) } ?? 0
             let drawn = reachedKey != guidanceKey && gap > Self.leaderMeters
             if drawn, let first = g.coordinates.first {
                 var coords = [user, first].map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
                 source?.shape = MLNPolyline(coordinates: &coords, count: 2)
-            } else {
+            } else if source?.shape != nil {
                 source?.shape = nil
             }
             #if DEBUG
