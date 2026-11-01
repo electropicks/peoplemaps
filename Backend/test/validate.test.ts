@@ -131,6 +131,10 @@ describe("splitExact parity fixtures", () => {
       const out = splitExact(validate(c.report));
       expect(out.public).toEqual(c.public);
       expect(out.exact).toEqual(c.exact);
+      // The bytes the Worker stores (`public_json`, `exact_json`) and the body it read, which the Swift side matches exactly.
+      expect(JSON.stringify(c.report)).toBe(c.reportJSON);
+      expect(JSON.stringify(out.public)).toBe(c.publicJSON);
+      expect(out.exact ? JSON.stringify(out.exact) : null).toBe(c.exactJSON);
       const text = JSON.stringify(out.public);
       expect(text).not.toContain('"exact"');
       expect(text).not.toContain('"snapped"');
