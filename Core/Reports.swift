@@ -402,6 +402,13 @@ public struct ReportStore: Codable, Equatable, Sendable {
         return report
     }
 
+    /// After the install ID changes (Rotate, or the 401 wipe and re-mint): every unsent or failed row gets a new `id`, so a
+    /// send that timed out before the change cannot meet a 409 from the old install's row for ever (4.2). A send in
+    /// flight keeps its `id`; its body is already built.
+    public mutating func renewUnsentIDs() {
+        for i in snapshots.indices where snapshots[i].status == .flagged { snapshots[i].id = UUID().uuidString }
+    }
+
     /// Back to `flagged` with the fields kept and the error for the list (3).
     public mutating func sendFailed(id: String, error: String) {
         update(id) { $0.status = .flagged; $0.lastError = error }

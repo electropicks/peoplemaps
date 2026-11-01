@@ -130,6 +130,7 @@ public struct ReportsClient: Sendable {
 
     /// Send: mints on the first send; on a 401 calls `onReset` ("Your report ID was reset"), wipes the credentials,
     /// mints and retries once.
+    /// `onReset` is also where the app calls `ReportStore.renewUnsentIDs()`.
     public func send(_ report: Report, credentials: ReportCredentialStore, onReset: @Sendable () async -> Void = {}) async throws -> ReportReceipt {
         if let saved = credentials.load() {
             do { return try await send(report, token: saved.token) } catch let e as ReportsError where e.serverCode == .unauthorized {
@@ -154,9 +155,12 @@ public struct ReportsClient: Sendable {
         credentials.wipe()
     }
 
-    /// Rotate: a new install replaces both items (4.1).
-    public func rotate(app: Report.App, credentials: ReportCredentialStore) async throws -> ReportCredentials {
-        try await mint(app: app, into: credentials)
+    /// Rotate: a new install replaces both items (4.1). `onRotated` runs once the new credentials are saved; the app
+    /// calls `ReportStore.renewUnsentIDs()` there, as it does in `send`'s `onReset`.
+    public func rotate(app: Report.App, credentials: ReportCredentialStore, onRotated: @Sendable () async -> Void = {}) async throws -> ReportCredentials {
+        let fresh = try await mint(app: app, into: credentials)
+        await onRotated()
+        return fresh
     }
 
     private func mint(app: Report.App, into credentials: ReportCredentialStore) async throws -> ReportCredentials {

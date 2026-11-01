@@ -263,6 +263,29 @@ final class ReportsTests: XCTestCase {
         #endif
     }
 
+    func testRenewUnsentIDsGivesFlaggedRowsNewIDsAndLeavesTheRest() throws {
+        var store = ReportStore()
+        let flagged = snapshot(at: 0), failed = snapshot(at: 10), sending = snapshot(at: 20), sent = snapshot(at: 30)
+        for s in [flagged, failed, sending, sent] { _ = store.add(s) }
+        _ = try store.beginSend(id: failed.id, category: .other, note: nil, exactLocations: false)
+        store.sendFailed(id: failed.id, error: ReportsError.noConnection.summary)
+        _ = try store.beginSend(id: sending.id, category: .other, note: nil, exactLocations: false)
+        _ = try store.beginSend(id: sent.id, category: .other, note: nil, exactLocations: false)
+        store.sent(id: sent.id, receipt: receipt(sent.id), at: Date())
+
+        store.renewUnsentIDs()
+        XCTAssertEqual(store.snapshots.count, 4)
+        XCTAssertNil(store[flagged.id])
+        XCTAssertNil(store[failed.id])
+        XCTAssertNotNil(store[sending.id])
+        XCTAssertNotNil(store[sent.id])
+        let renewed = store.snapshots.filter { $0.status == .flagged }
+        XCTAssertEqual(renewed.count, 2)
+        XCTAssertEqual(renewed.first { $0.lastError == "no_connection" }?.attempted, true, "the failure stays on the row")
+        let again = try store.beginSend(id: renewed[0].id, category: .other, note: nil, exactLocations: false)
+        XCTAssertEqual(again.id, renewed[0].id, "the new id is what is sent")
+    }
+
     // MARK: Client
 
     func testFirstSendMintsThenSends() async throws {
@@ -281,6 +304,28 @@ final class ReportsTests: XCTestCase {
         XCTAssertEqual(fake.requests[1].auth, "Bearer pm_new")
         XCTAssertEqual(fake.requests[1].body, String(decoding: ReportEncoder.data(report), as: UTF8.self))
         XCTAssertEqual(creds.load()?.token, "pm_new")
+    }
+
+    func testRotateMintsSavesThenCallsOnRotated() async throws {
+        let fake = FakeServer([.init(status: 201, body: #"{"installID":"id-2","token":"pm_2"}"#)])
+        let creds = MemoryCredentials(.init(installID: "id-1", token: "pm_1"))
+        let rotated = Counter()
+        let fresh = try await client(fake).rotate(app: try reportToSend().app, credentials: creds) { rotated.bump() }
+        XCTAssertEqual(fresh.token, "pm_2")
+        XCTAssertEqual(creds.load()?.token, "pm_2")
+        XCTAssertEqual(rotated.value, 1)
+    }
+
+    func testRotateFailureLeavesCredentialsAndSkipsOnRotated() async throws {
+        let fake = FakeServer([.init(status: 503, body: #"{"error":"storage_unavailable","message":"x"}"#)])
+        let creds = MemoryCredentials(.init(installID: "id-1", token: "pm_1"))
+        let rotated = Counter()
+        do {
+            _ = try await client(fake).rotate(app: try reportToSend().app, credentials: creds) { rotated.bump() }
+            XCTFail("expected a 503")
+        } catch let e as ReportsError { XCTAssertEqual(e.serverCode, .storageUnavailable) }
+        XCTAssertEqual(creds.load()?.token, "pm_1")
+        XCTAssertEqual(rotated.value, 0)
     }
 
     func testA401OnSendResetsMintsAndRetriesOnce() async throws {
