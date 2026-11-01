@@ -152,6 +152,11 @@ final class StressModelTests: XCTestCase {
         let plain = Junction(legs: 4), straight = StressModel.transitionSeconds(previous: signal, next: Fixture.continueNorth, turned: false, junction: plain, mode: .drive)
         XCTAssertEqual(straight, 15)
         XCTAssertEqual(StressModel.transitionSeconds(previous: signal, next: Fixture.westArterial, turned: true, junction: plain, mode: .drive), 20)
+        for (control, seconds) in [(TrafficControl.stop, 8.0), (.allstop, 10), (.yield, 3)] {
+            var controlled = Fixture.northbound; controlled.control = control
+            XCTAssertEqual(StressModel.transitionSeconds(previous: controlled, next: Fixture.continueNorth, turned: false, junction: plain, mode: .drive), seconds,
+                           "\(control)")
+        }
         XCTAssertEqual(StressModel.transitionSeconds(previous: Fixture.northbound, next: Fixture.continueNorth, turned: false, junction: plain, mode: .drive), 3,
                        "an unsigned cross street on a local street costs a look")
         XCTAssertEqual(StressModel.transitionSeconds(previous: Fixture.northbound, next: Fixture.continueNorth, turned: false, junction: Junction(legs: 3), mode: .drive), 0)
