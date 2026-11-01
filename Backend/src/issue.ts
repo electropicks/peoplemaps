@@ -1,4 +1,4 @@
-import { cellOf } from "./cells";
+import { cellOf } from "./cells.ts";
 import type { Category, PublicReport, SnappedEndpoint } from "./validate";
 
 // Title, body and labels of the GitHub issue (Docs/REPORTS.md 6). Pure functions; `scripts/file-issue.ts` prints them.

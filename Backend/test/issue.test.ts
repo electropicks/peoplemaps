@@ -1,3 +1,5 @@
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { issueBody, issueFor, issueLabels, issueTitle } from "../src/issue";
 import { splitExact, validate, type PublicReport } from "../src/validate";
@@ -76,5 +78,14 @@ describe("issue body", () => {
   it("labels by category and mode", () => {
     expect(issueLabels(pub())).toEqual(["app-report", "report:wrong_instruction", "mode:drive"]);
     expect(issueFor(pub()).labels).toHaveLength(3);
+  });
+});
+
+describe("scripts/file-issue.ts", () => {
+  it("loads under node's type stripping and refuses a bad ID before touching wrangler", () => {
+    const script = join(import.meta.dirname, "..", "scripts", "file-issue.ts");
+    const run = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", script, "x' OR 1=1 --"], { encoding: "utf8" });
+    expect(run.stderr).toContain("usage:");
+    expect(run.status).toBe(2);
   });
 });
