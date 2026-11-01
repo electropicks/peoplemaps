@@ -46,7 +46,7 @@ struct ExploreView: View {
     @State private var recenter = 0
     @State private var panelHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
-    @State private var overview = false
+    @State private var camera = GuidanceCamera()
     @State private var guidanceInset = UIEdgeInsets.zero
     @State private var permission = LocationPermission()
     @State private var asking = false
@@ -94,7 +94,8 @@ struct ExploreView: View {
     private var guidance: Guidance? {
         guard guiding, !navigator.routeGeometry.isEmpty else { return nil }
         return Guidance(version: navigator.routeVersion, coordinates: navigator.routeGeometry, calmer: navigator.calmerRoute,
-                        destination: navigator.routeGeometry.last!, user: navigator.coordinate, overview: overview, inset: guidanceInset)
+                        destination: navigator.routeGeometry.last!, user: navigator.coordinate, heading: navigator.heading, moving: navigator.isMoving,
+                        camera: camera, inset: guidanceInset)
     }
 
     /// Asks once, after the map shows on first launch, then takes a fix when allowed. Coming back to the app reads the
@@ -137,7 +138,7 @@ struct ExploreView: View {
     }
 
     private func beginNavigation(_ comparison: RouteComparison) {
-        overview = false; guidanceInset = .zero
+        camera = GuidanceCamera(); guidanceInset = .zero
         navigator.start(comparison: comparison, useCalmer: selectedCalmer && comparison.calmer != nil, muted: voiceMuted)
         if navigator.isActive { screen = .navigating }
     }
@@ -181,12 +182,12 @@ struct ExploreView: View {
         GeometryReader { geo in
             ZStack {
                 SeattleMap(comparison: screen == .preview ? session.comparison : nil, selectedCalmer: selectedCalmer, recenter: recenter, selected: mapSelection,
-                           user: userInCoverage, coverage: coverage, onLongPress: dropPin, guidance: guidance, padding: mapPadding(geo))
+                           user: userInCoverage, coverage: coverage, onLongPress: dropPin, guidance: guidance, onCameraGesture: { camera.pan() }, padding: mapPadding(geo))
                     .ignoresSafeArea()
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(screen == .preview ? "Seattle offline map. Routes are also described in the panel." : "Seattle offline map")
                 if screen == .navigating {
-                    GuidanceOverlay(navigator: navigator, landscape: landscape, cardWidth: cardWidth, attribution: AnyView(attribution), overview: $overview, muted: $voiceMuted,
+                    GuidanceOverlay(navigator: navigator, landscape: landscape, cardWidth: cardWidth, attribution: AnyView(attribution), camera: $camera, muted: $voiceMuted,
                                     onInsets: { guidanceInset = $0 }, onEnd: endNavigation, onDone: finishNavigation)
                         .transition(.opacity)
                 } else if landscape { landscapeLayout(geo).transition(.opacity) } else { portraitLayout(geo).transition(.opacity) }
