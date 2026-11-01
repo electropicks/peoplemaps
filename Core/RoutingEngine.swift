@@ -31,12 +31,37 @@ public struct Route: Sendable, Identifiable {
     public var minutes: Int { max(1, Int(ceil(metrics.seconds / 60))) }
     public var duration: String { "\(minutes) min" }
     public var distance: String { String(format: "%.1f km", metrics.meters / 1000) }
+}
 
-    /// Share of this route's length that also lies on `other`.
-    func overlap(with other: Route) -> Double {
-        guard metrics.meters > 0, edgeMeters.count == edgeIDs.count else { return 0 }
-        let shared = Set(other.edgeIDs)
-        return zip(edgeIDs, edgeMeters).filter { shared.contains($0.0) }.reduce(0) { $0 + $1.1 } / metrics.meters
+/// What the router actually knows when it offers no calmer route. Each case claims only what it compared.
+public enum NoCalmerFinding: Sendable, Equatable {
+    /// Extra time is None, so only the fastest search ran.
+    case notChecked
+    /// Every search, including those favouring calm, found this one route.
+    case onlyRoute
+    /// Other routes were compared and none has less stress.
+    case calmestCompared(routes: Int)
+    /// Routes with less stress exist, but only beyond the limit.
+    case calmerTakesLonger(limitMinutes: Int)
+    /// Routes inside the limit have less stress, but too little for their time. This route is not the calmest, so it isn't called that.
+    case tooLittleGain
+
+    public var title: String {
+        switch self {
+        case .notChecked: "Fastest route only"
+        case .onlyRoute, .calmestCompared: "Already the calmest we found"
+        case .calmerTakesLonger: "Calmest within this extra time"
+        case .tooLittleGain: "Best balance we found"
+        }
+    }
+    public var detail: String {
+        switch self {
+        case .notChecked: "Extra time is None, so nothing else was checked."
+        case .onlyRoute: "By our estimates, every search found this route."
+        case let .calmestCompared(routes): "Calmest of \(routes) routes compared, by our estimates."
+        case let .calmerTakesLonger(minutes): "By our estimates, calmer routes take \(minutes)+ min more."
+        case .tooLittleGain: "By our estimates, other routes gain too little."
+        }
     }
 }
 
@@ -49,11 +74,13 @@ public struct RouteComparison: Sendable {
     public let destinationSnapMeters: Double
     public let snappedOrigin: Coordinate
     public let snappedDestination: Coordinate
+    /// Meaningful only when `calmer` is nil.
+    public let noCalmer: NoCalmerFinding
     public init(request: RouteRequest, fastest: Route, calmer: Route?, candidateCount: Int, originSnapMeters: Double,
-                destinationSnapMeters: Double, snappedOrigin: Coordinate, snappedDestination: Coordinate) {
+                destinationSnapMeters: Double, snappedOrigin: Coordinate, snappedDestination: Coordinate, noCalmer: NoCalmerFinding = .notChecked) {
         self.request = request; self.fastest = fastest; self.calmer = calmer; self.candidateCount = candidateCount
         self.originSnapMeters = originSnapMeters; self.destinationSnapMeters = destinationSnapMeters
-        self.snappedOrigin = snappedOrigin; self.snappedDestination = snappedDestination
+        self.snappedOrigin = snappedOrigin; self.snappedDestination = snappedDestination; self.noCalmer = noCalmer
     }
 
     public var extraSeconds: Double { max(0, (calmer?.metrics.seconds ?? fastest.metrics.seconds) - fastest.metrics.seconds) }
@@ -66,7 +93,7 @@ public struct RouteComparison: Sendable {
 
     /// The biggest differences between the two routes, benefits first, then what the calmer route costs you.
     public var reasons: [String] {
-        guard let calmer else { return ["No calmer route was found that is worth the extra time. Stress and times are estimates."] }
+        guard let calmer else { return [noCalmer.detail] }
         let f = fastest.metrics.breakdown, c = calmer.metrics.breakdown
         let diffs = Factor.allCases.filter { !$0.isUnknown }.map { (factor: $0, cost: f[$0].cost - c[$0].cost, amount: f[$0].amount - c[$0].amount) }
             .filter { $0.factor.isNoticeable(abs($0.amount)) }
@@ -172,7 +199,8 @@ public final class NativeRouter: RouteComputing, Sendable {
         let calmer = Self.selectCalmer(candidates: candidates, fastest: fastest, extraMinutes: request.extraMinutes)
         return RouteComparison(request: request, fastest: fastest, calmer: calmer, candidateCount: candidates.count,
                                originSnapMeters: start.distance, destinationSnapMeters: end.distance,
-                               snappedOrigin: graph.nodes[start.node].coordinate, snappedDestination: graph.nodes[end.node].coordinate)
+                               snappedOrigin: graph.nodes[start.node].coordinate, snappedDestination: graph.nodes[end.node].coordinate,
+                               noCalmer: Self.noCalmerFinding(candidates: candidates, fastest: fastest, extraMinutes: request.extraMinutes))
     }
 
     /// Stress a slower route must remove per extra second to be worth it: 15 equivalent seconds per extra minute.
@@ -189,8 +217,19 @@ public final class NativeRouter: RouteComputing, Sendable {
         }
         return candidates.filter {
             $0.edgeIDs != fastest.edgeIDs && $0.metrics.seconds <= limit + 0.000_001
-            && $0.metrics.stress < base * 0.95 && base - $0.metrics.stress >= 30 && $0.overlap(with: fastest) < 0.9 && worth($0) > 0
+            && $0.metrics.stress < base * 0.95 && base - $0.metrics.stress >= 30 && worth($0) > 0
         }.max { worth($0) < worth($1) }
+    }
+
+    /// What the candidates show when `selectCalmer` offered none.
+    public static func noCalmerFinding(candidates: [Route], fastest: Route, extraMinutes: Int) -> NoCalmerFinding {
+        guard extraMinutes > 0 else { return .notChecked }
+        let others = candidates.filter { $0.edgeIDs != fastest.edgeIDs }
+        guard !others.isEmpty else { return .onlyRoute }
+        let calmer = others.filter { $0.metrics.stress < fastest.metrics.stress }
+        guard !calmer.isEmpty else { return .calmestCompared(routes: others.count + 1) }
+        let limit = fastest.metrics.seconds + Double(extraMinutes) * 60
+        return calmer.contains { $0.metrics.seconds <= limit + 0.000_001 } ? .tooLittleGain : .calmerTakesLonger(limitMinutes: extraMinutes)
     }
 
     func junction(at node: Int, previous: GraphEdge, next: GraphEdge) -> Junction {

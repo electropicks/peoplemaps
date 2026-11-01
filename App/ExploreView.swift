@@ -660,8 +660,8 @@ struct ExploreView: View {
                     HStack(spacing: 12) {
                         Image(systemName: "equal.circle").font(.title3).foregroundStyle(.secondary)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("No calmer route").font(.headline)
-                            Text("Nothing clearly calmer within this extra time.").font(.footnote).foregroundStyle(.secondary)
+                            Text(comparison.noCalmer.title).font(.headline)
+                            Text(comparison.noCalmer.detail).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(minLength: 0)
                     }.padding(.horizontal, 14).padding(.vertical, 10).frame(minHeight: rowHeight)

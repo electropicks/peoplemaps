@@ -66,8 +66,16 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertEqual(x, x.sorted(), "Mode order")
         XCTAssertTrue(app.buttons["Drive"].isSelected)
         XCTAssertTrue(app.buttons["10 min"].isSelected, "The default leans to calm")
+        // Routes with less stress exist here but gain too little, so this one must not be called the calmest.
+        let finding = app.descendants(matching: .any)["no-alternative"]
+        XCTAssertTrue(finding.waitForExistence(timeout: 10))
+        XCTAssertTrue(finding.label.contains("Best balance we found"), finding.label)
+        XCTAssertTrue(finding.label.contains("estimates"), finding.label)
+        XCTAssertFalse(finding.label.localizedCaseInsensitiveContains("calmest"), finding.label)
+        XCTAssertFalse(finding.label.localizedCaseInsensitiveContains("safe"), finding.label)
         app.buttons["None"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["no-alternative"].waitForExistence(timeout: 10))
+        let unchecked = NSPredicate { _, _ in finding.exists && finding.label.contains("nothing else was checked") }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: unchecked, object: nil)], timeout: 10), .completed, "None says it did not look")
         app.buttons["5 min"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
         app.buttons["Cycle"].tap()
@@ -530,8 +538,8 @@ final class PeoplemapsUITests: XCTestCase {
             XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
         }
     }
-    /// Kerry Park to Gas Works has no calmer drive at any budget: the fastest route is already the calmest, so the
-    /// card adds nothing under the name (Docs/STRESS_MODEL.md, Time).
+    /// Kerry Park to Gas Works has no calmer drive to offer at any budget: the routes with less stress gain too little,
+    /// so the card adds nothing under the name (Docs/STRESS_MODEL.md, Time).
     @MainActor func testPlaceCardSaysNothingWhenThereIsNoCalmerDrive() {
         let app = launchHome(location: Self.atKerryPark)
         openPlace(app, "Gas Works", id: "relation/1047789")
