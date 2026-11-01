@@ -14,12 +14,15 @@ Read with `.claude/skills/product-rules/SKILL.md` (no "safe", times are
 estimates, unknown is said to be unknown), `Docs/NAVIGATION.md` and
 `Docs/ARCHITECTURE.md`.
 
-Decided, not open: Cloudflare Workers and D1 in `Backend/`; one GitHub issue
+Decided, not open: Cloudflare Workers and D1 in `Backend/`, served from a
+domain we own (7.5) and written so the handlers do not depend on either
+(7.1); one GitHub issue
 per sent report, filed by the Worker, labelled `app-report`; a silent
 "Flag this moment" button during guidance and a "Flagged moments" list at home;
 no accounts, a random per-install ID; endpoints snapped to the nearest street
 intersection unless the user turns on exact locations for that report; raw
-reports kept 90 days, aggregates after; no IP addresses stored; replay in
+reports kept 90 days (plus Cloudflare's restore window, 5.3), aggregates
+after; no IP addresses stored or logged; replay in
 `Core` is the point.
 
 ## 1. Goals and non-goals
@@ -417,10 +420,11 @@ Authorization: Bearer <the maintainer's own GitHub token>
   the client IP. The binding's period is 10 or 60 seconds, so the key is the
   bare `cf-connecting-ip` value, read in `src/ratelimit.ts` and passed
   straight to the binding; it is never hashed into a column, logged or kept
-  past the call. Once the Worker has a custom domain (open question 1) the
-  same two limits move to a WAF rate-limiting rule on the zone, with hourly
-  windows (installs 5 per IP per hour, reports 30 per IP per hour), and the
-  Worker stops reading the IP at all. Exceeding a limit is `429 rate_limited`
+  past the call. The Worker is on our own domain from the first release
+  (7.5), so if the zone's plan offers hourly windows at no cost, the same
+  two limits move to a WAF rate-limiting rule on the zone (installs 5 per IP
+  per hour, reports 30 per IP per hour), and the Worker stops reading the IP
+  at all; otherwise the bindings stay. Exceeding a limit is `429 rate_limited`
   with `Retry-After`.
 - A global daily cap on issues filed, `ISSUE_DAILY_CAP` (`vars`, 200), counted
   from `reports.issue_filed_at` today (UTC). Reports over the cap are
@@ -435,11 +439,19 @@ Authorization: Bearer <the maintainer's own GitHub token>
   429, `github_unavailable` 503 (on 4.4 and 4.5; sends get a 202 instead),
   `internal` 500.
 - The Worker never logs a request object, a header, an IP, a user agent or a
-  body. `observability.enabled` is false in `wrangler.jsonc`, and `console.*`
+  body. `observability.enabled` is false and
+  `observability.logs.invocation_logs` is false in `wrangler.jsonc` (7.2), so
+  Workers Logs writes no per-request entry with headers, and `console.*`
   is allowed only with a constant string plus a count or a status code. A
   test greps `src/` for `console.` and fails on anything else. Cloudflare as
   the host still sees connection details to serve the request; that is said
   in `Docs/PRIVACY.md`.
+- **Before the policy is published**, deploy a throwaway test Worker with the
+  same `observability` block, send it requests, and read what Workers Logs
+  and the dashboard's request views record for it. `Docs/PRIVACY.md` says
+  only what that check showed. Cloudflare changes Workers Logs pricing on
+  2026-12-01; recheck the defaults and the free allowance then, since a
+  pricing change can come with changed defaults.
 - Request bodies over 64 KB are refused before parsing (`content-length`
   first, then a streaming count). No CORS: the API is for the app, not
   browsers.
@@ -542,11 +554,15 @@ Two schedules in `wrangler.jsonc`, one `scheduled` handler switching on
   10 failures the row goes `failed` and a maintainer sees it in
   `wrangler d1 execute`; the app shows "Sent, issue pending" until then.
 
-**Time Travel.** D1 keeps a restorable copy of the database for the last 30
-days (Cloudflare's Time Travel), which only the maintainers' Cloudflare
-account can use, and which is not reachable from the Worker or the API. A
-row deleted by the user or by retention is therefore fully gone 30 days
-after the delete. `Docs/PRIVACY.md` says so.
+**Time Travel.** D1 keeps a restorable copy of the database (Cloudflare's
+Time Travel) for 7 days on the Workers Free plan and 30 days on Workers Paid.
+The window cannot be shortened or turned off. Only the maintainers'
+Cloudflare account can restore from it; it is not reachable from the Worker
+or the API. So "deleted after 90 days" is honestly "deleted after 90 days and
+restorable by Cloudflare for 7 more": a row deleted by the user or by
+retention is fully gone 7 days after the delete on Free, 30 on Paid.
+`Docs/PRIVACY.md` gives the Free figure. Moving to Paid (open question 19)
+changes the policy text in the same PR, and so does moving to another host.
 
 ## 6. The GitHub issue
 
@@ -654,12 +670,16 @@ created once by the pipeline task.
 ```
 Backend/
   README.md               run, test, deploy, secrets (points here)
-  package.json            wrangler, typescript, vitest, @cloudflare/vitest-pool-workers, @cloudflare/workers-types
+  package.json            wrangler, typescript, vitest, @cloudflare/workers-types; @cloudflare/vitest-pool-workers optional
   wrangler.jsonc          see 7.2
   tsconfig.json
-  vitest.config.ts        defineWorkersConfig, miniflare with the D1 binding and migrations applied
+  vitest.config.ts        node environment, SQLite store with the migrations applied (7.3)
+  vitest.workers.config.ts  the same tests in workerd through Miniflare, when it runs without login
   migrations/0001_init.sql
-  src/index.ts            fetch router and scheduled handler
+  src/index.ts            the only Cloudflare-specific entry: builds Deps from env, fetch router, scheduled handler
+  src/deps.ts             Deps { store, github, limits, clock, vars }; the interfaces handlers take
+  src/store.ts            Store interface: installs, reports, aggregates, maintainer_reads; plain SQL over a `run/all/batch` shim
+  src/store-d1.ts         the shim over the D1 binding
   src/installs.ts         POST /v1/installs, DELETE /v1/installs/me, token hashing
   src/reports.ts          POST, GET, DELETE /v1/reports
   src/maintainer.ts       GET /v1/maintainer/issues/{n}/report
@@ -671,7 +691,14 @@ Backend/
   src/retention.ts        the two cron jobs
   src/errors.ts           the error envelope
   test/*.test.ts          one file per src module, plus test/fixtures/report.json (2.4)
+  test/store-sqlite.ts    the same shim over node's built-in `node:sqlite`, for the tests
 ```
+
+Handlers are plain functions, `(request, deps) => Response`, and the cron
+jobs `(deps) => counts`. None of them imports anything from Cloudflare or
+reads `env`; only `src/index.ts` and `src/store-d1.ts` know the platform. The
+SQL is plain SQLite, so moving to another SQLite host (Turso, a VM, a
+container) is a new shim and a new entry file, not a rewrite.
 
 ### 7.2 `wrangler.jsonc`
 
@@ -680,7 +707,10 @@ Backend/
   "name": "peoplemaps-reports",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
-  "observability": { "enabled": false },
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "reports.<our domain>", "custom_domain": true }],
+  "observability": { "enabled": false, "logs": { "invocation_logs": false } },
   "vars": { "GITHUB_REPO": "electropicks/peoplemaps", "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "20", "ISSUE_DAILY_CAP": "200" },
   "env": { "dev": { "vars": { "GITHUB_REPO": "electropicks/peoplemaps", "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "50", "ISSUE_DAILY_CAP": "200" } } },
   "d1_databases": [{ "binding": "DB", "database_name": "peoplemaps-reports", "database_id": "<filled in after wrangler d1 create>", "migrations_dir": "migrations" }],
@@ -696,7 +726,10 @@ Backend/
 The database ID is not a secret and is committed. The database is created
 once by hand with `wrangler d1 create peoplemaps-reports --location wnam`
 (open question 10). `npm run dev` uses `--env dev`, so a tester gets the
-higher per-install cap.
+higher per-install cap. `workers_dev` and `preview_urls` are off, so the
+Worker answers only on our domain: the app's URL never names the vendor, and
+a move to another host changes DNS, not the app (7.5). `invocation_logs`
+stays false even if `observability` is later turned on for debugging (4.6).
 
 **Secrets.** `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit, D1: Edit, on
 this account) and `CLOUDFLARE_ACCOUNT_ID` are environment secrets of the
@@ -710,10 +743,16 @@ through Actions. Nothing else.
 
 ### 7.3 Tests, local run, CI, deploy
 
-- `npm test` runs vitest in `@cloudflare/vitest-pool-workers`: a real
-  Workers runtime with an in-memory D1 and the migrations applied, no
-  account. GitHub is a `fetch` mock (`test/github.mock.ts`) asserting the
-  exact request the Worker makes. Tests cover: mint and reuse a token;
+- `npm test` runs vitest under node (22.13 or later) against
+  `test/store-sqlite.ts`: an in-memory SQLite database with the same
+  migrations applied, no account, no login, no Miniflare. The handlers get
+  the same `Deps` as in production with the store, GitHub and limits
+  swapped (7.1). `npm run test:workers` runs the same files in workerd
+  through `@cloudflare/vitest-pool-workers` and D1; CI runs it too while it
+  works without a Cloudflare login, but it is not required, so the suite
+  passes with or without Miniflare. GitHub is a `fetch` mock
+  (`test/github.mock.ts`) asserting the exact request the Worker makes.
+  Tests cover: mint and reuse a token;
   reject a bad token; send, retry with same body (200), retry with changed
   body (409); a retry after the cron filed the issue returns it; validation
   of each field with its `field` path; exact fields split out of
@@ -723,7 +762,8 @@ through Actions. Nothing else.
   removes rows, and a failed delete removes nothing; retention deletes by
   date, including `maintainer_reads`; the maintainer route with and without
   permission; the rate-limit bindings are called with the IP and nothing
-  stores it; the no-logging grep.
+  stores it; the no-logging grep; `wrangler.jsonc` has `workers_dev`,
+  `preview_urls` and `invocation_logs` false.
 - `npm run dev` is `wrangler dev --env dev --ip 0.0.0.0` on port 8787 with a
   local D1 and `GITHUB_TOKEN` from `.dev.vars` (gitignored). Without a token
   the Worker stores reports and returns 202, which is enough for the app.
@@ -732,7 +772,8 @@ through Actions. Nothing else.
   - `on: pull_request: paths: [Backend/**, .github/workflows/backend.yml]`
     and `on: push: branches: [main]` with the same `paths`.
   - job `test`: `actions/setup-node@v4` (Node 22), `npm ci`, `npm test`,
-    `npx tsc --noEmit`.
+    `npx tsc --noEmit`, then `npm run test:workers` with
+    `continue-on-error: true`.
   - job `deploy`: `needs: test`,
     `if: github.event_name == 'push' && github.ref == 'refs/heads/main'`,
     `concurrency: backend-deploy`, `environment: production`. The GitHub
@@ -760,8 +801,10 @@ one app release. The Worker is deployed before the app that needs it.
 `App/Info.plist` gets `PeoplemapsReportsURL` with the value
 `$(PEOPLEMAPS_REPORTS_URL)`. `Scripts/generate_project.py` sets
 `PEOPLEMAPS_REPORTS_URL` per configuration: Debug
-`http://127.0.0.1:8787`, Release `https://peoplemaps-reports.<account>.workers.dev`
-(the real subdomain goes in when the Worker first deploys). `App/Info.plist`
+`http://127.0.0.1:8787`, Release `https://reports.<our domain>` (the custom
+domain of 7.2; never a `workers.dev` address, so the shipped app does not
+depend on the vendor and the first release already points at the final
+URL). `App/Info.plist`
 also gets `NSAppTransportSecurity` → `NSAllowsLocalNetworking` true, which
 only relaxes loopback and local addresses (open question 2).
 
@@ -930,8 +973,8 @@ Built last, after the backend has filed real issues.
 
 ## 10. Open questions
 
-1. **Worker URL.** `workers.dev` subdomain now; a custom domain only if the
-   app gets a website. Recommended: `workers.dev`.
+1. **Worker URL.** Decided: a domain we own, `reports.<our domain>`, from
+   the first release, with `workers.dev` turned off (7.2, 7.5; question 17).
 2. **Loopback in Release.** `NSAllowsLocalNetworking` in the shared
    `Info.plist` also ships in Release. It only affects local addresses and
    the Release URL is HTTPS. Recommended: accept it; revisit if the generator

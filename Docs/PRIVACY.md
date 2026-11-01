@@ -95,7 +95,8 @@ them) or delete it with all your reports.
    run by the people who make PeopleMaps. It stores the report for 90 days,
    with exact locations kept apart from the rest and shown only to project
    maintainers who ask for them by issue number with their own GitHub login.
-   After 90 days the report is deleted. What remains is a count: how many
+   After 90 days the report is deleted, and Cloudflare can still restore it
+   for 7 more days (see Deleting). What remains is a count: how many
    reports of each category, for each travel mode, in each square of about
    half a kilometre, per week. Counts say nothing about a person and are
    kept.
@@ -105,9 +106,11 @@ them) or delete it with all your reports.
    internet. A later automated step may replay the route from the issue and
    propose a fix.
 
-The server does not store IP addresses, does not log requests, and sets no
-cookies. Cloudflare, as the host, sees your connection the way any website's
-host does in order to deliver it; we do not receive that. Cloudflare also
+We never store or log IP addresses; Cloudflare necessarily sees them to
+deliver traffic. The server does not log requests or their headers, has
+Cloudflare's per-request logging turned off, and sets no cookies. Cloudflare
+sees your connection the way any website's host does; we do not receive
+that. Cloudflare also
 applies connection rate limits at its edge, so that one source cannot flood
 the server; those counts live in its memory for a minute and we store
 nothing from them.
@@ -121,11 +124,14 @@ nothing from them.
   and the ID itself. Each public issue is deleted outright, not edited or
   closed, because GitHub keeps every edit of an issue viewable; comments on
   it go with it. Copies others made are out of our hands.
-- **The restore copy**: Cloudflare keeps a copy of our database from the last
-  30 days that only we, the maintainers, can use to restore it after a
-  mistake. It is not reachable from the app or the server. So a deleted
-  report is completely gone 30 days after you delete it, and a report that
-  expired is gone 30 days after its 90 days.
+- **The restore copy**: Cloudflare keeps a restorable copy of our database
+  from the last 7 days that only we, the maintainers, can use to undo a
+  mistake. We cannot shorten it or turn it off. It is not reachable from the
+  app or the server. So a deleted report is completely gone from Cloudflare
+  7 days after you delete it, and a report that expired is gone 7 days after
+  its 90 days. If we move to Cloudflare's paid plan the window becomes 30
+  days, and if we move to another host it changes again; either way this
+  policy changes first, with a new version number.
 
 ## What we do not do
 
