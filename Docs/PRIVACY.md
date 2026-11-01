@@ -115,7 +115,8 @@ left, this record is deleted a year after the last contact, or at once with
    nearest you, and a database kept in the United States. It stores the report
    for 90 days. Exact
    locations are kept apart from the rest, and only people with access to the
-   project's Cloudflare account can read them. The daily cleanup deletes
+   project's Cloudflare account or to its deploy credentials (the automated deploy
+   token can edit the database) can read them. The daily cleanup deletes
    the report within about a day after its 90 days, and Cloudflare can still
    restore it for 7 more days (see Deleting).
 2. **A public GitHub issue**, only if a maintainer reads your report, finds it
@@ -132,7 +133,9 @@ left, this record is deleted a year after the last contact, or at once with
 
 We never store or log IP addresses; Cloudflare necessarily sees them to
 deliver traffic. The server does not log requests or their headers, has
-Cloudflare's per-request logging turned off, and sets no cookies. When you send
+Cloudflare's per-request logging turned off, and sets no cookies. Cloudflare
+still keeps aggregate request statistics for the server (counts, status codes
+and country). When you send
 a report or get a report ID, the server reads your IP address only to hand it,
 or for the newer IPv6 kind only its first half, to Cloudflare's rate limiter, so
 that one source cannot flood the server. Those counts live in Cloudflare's memory for
