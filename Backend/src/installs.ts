@@ -29,7 +29,7 @@ export async function mintInstall(request: Request, deps: Deps): Promise<Respons
   if (b.schema !== 1) throw invalid("schema", "Unknown schema.");
   for (const k of ["version", "build"] as const) {
     const v = b.app?.[k];
-    if (typeof v !== "string" || v.length === 0 || v.length > 32) throw invalid(`app.${k}`);
+    if (typeof v !== "string" || [...v].length === 0 || [...v].length > 32) throw invalid(`app.${k}`);
   }
   const token = "pm_" + base64url(crypto.getRandomValues(new Uint8Array(32)));
   const now = hour(deps.clock.now());

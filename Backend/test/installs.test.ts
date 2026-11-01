@@ -28,6 +28,16 @@ describe("POST /v1/installs", () => {
     expect(await res.json()).toMatchObject({ error: "invalid_report", field: "app.version" });
   });
 
+  it("counts app strings in code points, as validate.ts does", async () => {
+    const w = world();
+    const post = (version: string) => w.call("POST", "/v1/installs", { body: { schema: 1, app: { version, build: "1" } } });
+    // 32 emoji are 64 UTF-16 units but 32 code points: accepted. 33 are refused.
+    expect((await post("\u{1F600}".repeat(32))).status).toBe(201);
+    const res = await post("\u{1F600}".repeat(33));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: "invalid_report", field: "app.version" });
+  });
+
   it("holds the hourly mint ceiling", async () => {
     const w = world({ installsPerHour: 2 });
     await w.mint();
