@@ -66,7 +66,7 @@ public struct RouteComparison: Sendable {
 
     /// The biggest differences between the two routes, benefits first, then what the calmer route costs you.
     public var reasons: [String] {
-        guard let calmer else { return ["No calmer route was found within your extra time. This one is already the easiest the map can see."] }
+        guard let calmer else { return ["No calmer route was found that is worth the extra time. Stress and times are estimates."] }
         let f = fastest.metrics.breakdown, c = calmer.metrics.breakdown
         let diffs = Factor.allCases.filter { !$0.isUnknown }.map { (factor: $0, cost: f[$0].cost - c[$0].cost, amount: f[$0].amount - c[$0].amount) }
             .filter { $0.factor.isNoticeable(abs($0.amount)) }
@@ -175,17 +175,22 @@ public final class NativeRouter: RouteComputing, Sendable {
                                snappedOrigin: graph.nodes[start.node].coordinate, snappedDestination: graph.nodes[end.node].coordinate)
     }
 
-    /// The least stressful candidate within the time budget, if it is meaningfully calmer and meaningfully different.
+    /// Stress a slower route must remove per extra second to be worth it: 15 equivalent seconds per extra minute.
+    /// A quarter of the stress model's own one-for-one rate, which is the bias for calm (Docs/STRESS_MODEL.md).
+    static let stressPerExtraSecond = 0.25
+
+    /// The candidate within the time budget that saves the most stress net of its extra time, if it is meaningfully
+    /// calmer and meaningfully different. Netting means each further minute must also earn its place.
     public static func selectCalmer(candidates: [Route], fastest: Route, extraMinutes: Int) -> Route? {
         let limit = fastest.metrics.seconds + Double(max(0, extraMinutes)) * 60
         let base = fastest.metrics.stress
+        func worth(_ route: Route) -> Double {
+            base - route.metrics.stress - stressPerExtraSecond * (route.metrics.seconds - fastest.metrics.seconds)
+        }
         return candidates.filter {
             $0.edgeIDs != fastest.edgeIDs && $0.metrics.seconds <= limit + 0.000_001
-            && $0.metrics.stress < base * 0.95 && base - $0.metrics.stress >= 30 && $0.overlap(with: fastest) < 0.9
-        }.min {
-            if abs($0.metrics.stress - $1.metrics.stress) > 0.001 { return $0.metrics.stress < $1.metrics.stress }
-            return $0.metrics.seconds < $1.metrics.seconds
-        }
+            && $0.metrics.stress < base * 0.95 && base - $0.metrics.stress >= 30 && $0.overlap(with: fastest) < 0.9 && worth($0) > 0
+        }.max { worth($0) < worth($1) }
     }
 
     func junction(at node: Int, previous: GraphEdge, next: GraphEdge) -> Junction {
