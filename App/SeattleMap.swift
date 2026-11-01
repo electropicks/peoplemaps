@@ -101,6 +101,10 @@ struct SeattleMap: UIViewRepresentable {
         private var lastHeading: Double?
         private var guidanceAnnotations: [MLNPointAnnotation] = []
         private var puck: MapPuck?
+        /// The route (by `guidanceKey`) the user has been on, so its leader is not drawn again when they leave it.
+        private var reachedKey = ""
+        /// Puck-to-route gap under which no leader is drawn.
+        private static let leaderMeters = RerouteGate.reachedMeters
         /// What the puck's wedge shows, re-applied when its view is rebuilt for a colour change.
         private var puckHeading: Double?
         private var cameraMode: GuidanceCamera.Mode?
@@ -142,6 +146,14 @@ struct SeattleMap: UIViewRepresentable {
                 layer.lineOpacityTransition = MLNTransition(duration: 0.25, delay: 0)
                 style.addLayer(layer)
             }
+            // Dashed line from the puck to a route that starts some way off, in the route's colour.
+            let leaderSource = MLNShapeSource(identifier: "leader", shape: nil, options: nil)
+            style.addSource(leaderSource)
+            let leader = MLNLineStyleLayer(identifier: "leader", source: leaderSource)
+            leader.lineWidth = NSExpression(forConstantValue: 4.5)
+            leader.lineDashPattern = NSExpression(forConstantValue: [1.5, 1.5])
+            leader.lineOpacity = NSExpression(forConstantValue: 0.9)
+            style.addLayer(leader)
             let places: [(String, Double, Double)] = [("BALLARD",47.668,-122.382),("FREMONT",47.652,-122.351),("WALLINGFORD",47.663,-122.335),("QUEEN ANNE",47.637,-122.360),("LAKE UNION",47.639,-122.335),("UNIVERSITY\nDISTRICT",47.665,-122.313)]
             labels = places.map { title, lat, lon in
                 let annotation = MapLabel(); annotation.title = title
@@ -239,16 +251,19 @@ struct SeattleMap: UIViewRepresentable {
                 (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = nil
                 (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineOpacity = NSExpression(forConstantValue: 1.0)
             }
+            #if DEBUG
+            if guiding { MapDebug.shared.routeClears += 1 }
+            #endif
         }
 
         /// Guidance draws the followed route, the destination and the puck, and moves the camera as the mode says:
         /// following keeps the puck centred (heading-up puts it in the lower third), the overview fits the route, free leaves the map alone.
         private func updateGuidance(_ g: Guidance, map: MLNMapView, style: MLNStyle) {
             if !guiding {
+                clearRoutes(style)
                 guiding = true
                 map.removeAnnotations(endpoints + pinAnnotations + (userDot.map { [$0] } ?? []))
-                endpoints = []; pinAnnotations = []; pinKey = ""; userDot = nil; guidanceKey = ""; lastUser = nil; lastHeading = nil; cameraMode = nil
-                clearRoutes(style)
+                endpoints = []; pinAnnotations = []; pinKey = ""; userDot = nil; guidanceKey = ""; lastUser = nil; lastHeading = nil; cameraMode = nil; reachedKey = ""
                 followZoom = true
                 if g.user == nil { aim(at: g.coordinates[0], map: map, courseUp: false, heading: nil) }
             }
@@ -281,11 +296,22 @@ struct SeattleMap: UIViewRepresentable {
                 cameraMode = g.camera.mode
             }
             if key != guidanceKey {
-                clearRoutes(style)
+                // A reroute replaces the line in place: the new shape goes in, and only the other pair is emptied.
+                // Until the replacement arrives the previous route stays drawn.
                 let prefix = g.calmer ? "calmer" : "fastest"
                 var coords = g.coordinates.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
                 let line = coords.count > 1 ? MLNPolyline(coordinates: &coords, count: UInt(coords.count)) : nil
                 for id in [prefix, prefix + "-casing"] { (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = line }
+                let other = g.calmer ? "fastest" : "calmer"
+                if (style.source(withIdentifier: other) as? MLNShapeSource)?.shape != nil {
+                    for id in [other, other + "-casing"] { (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = nil }
+                }
+                (style.layer(withIdentifier: "leader") as? MLNLineStyleLayer)?.lineColor = constant(g.calmer ? .calmer : .fastest)
+                #if DEBUG
+                // What the drawn line is styled as, read back from the layers: fastest is the palette's grey, calmer the green.
+                let colour: (String) -> String = { id in ((style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineColor?.constantValue as? UIColor)?.hexString ?? "none" }
+                MapDebug.shared.lineStyle = "\(prefix) \(colour(prefix)) leader \(colour("leader"))"
+                #endif
                 map.removeAnnotations(guidanceAnnotations)
                 let end = MapDestination()
                 end.coordinate = CLLocationCoordinate2D(latitude: g.destination.lat, longitude: g.destination.lon)
@@ -300,8 +326,27 @@ struct SeattleMap: UIViewRepresentable {
                 lastFollow = Date()
                 placePuck(user, heading: heading, map: map, duration: tick)
                 if g.camera.isFollowing { aim(at: user, map: map, courseUp: g.camera.courseUp, heading: g.heading, tick: tick) }
+                drawLeader(from: user, g, style: style)
                 lastUser = user; lastHeading = heading
             }
+        }
+
+        /// A dashed leader from the puck to the route's first coordinate while they are apart and the user has not
+        /// been on the route yet: the start is a snapped node, so a trip can begin a block from where the line does.
+        private func drawLeader(from user: Coordinate, _ g: Guidance, style: MLNStyle) {
+            let source = style.source(withIdentifier: "leader") as? MLNShapeSource
+            if reachedKey != guidanceKey, user.distance(toPolyline: g.coordinates) <= RerouteGate.reachedMeters { reachedKey = guidanceKey }
+            let gap = g.coordinates.first.map { user.distance(to: $0) } ?? 0
+            let drawn = reachedKey != guidanceKey && gap > Self.leaderMeters
+            if drawn, let first = g.coordinates.first {
+                var coords = [user, first].map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+                source?.shape = MLNPolyline(coordinates: &coords, count: 2)
+            } else if source?.shape != nil {
+                source?.shape = nil
+            }
+            #if DEBUG
+            MapDebug.shared.leaderMeters = drawn ? gap : 0
+            #endif
         }
 
         /// Heading-up puts the puck a third of the way up the free map area, so most of the screen shows the road ahead.
@@ -350,6 +395,10 @@ struct SeattleMap: UIViewRepresentable {
             map.contentInset = .zero
             if map.camera.heading != 0 { let camera = map.camera; camera.heading = 0; move(map, to: camera, duration: Motion.camera(latest?.reduceMotion ?? false)) }
             clearRoutes(style)
+            (style.source(withIdentifier: "leader") as? MLNShapeSource)?.shape = nil
+            #if DEBUG
+            MapDebug.shared.leaderMeters = 0
+            #endif
             routeKey = ""; focusKey = ""; pinKey = ""
         }
 
@@ -384,6 +433,7 @@ struct SeattleMap: UIViewRepresentable {
             for (id, color) in [("fastest-casing", UIColor.systemBackground), ("fastest", .fastest), ("calmer-casing", .systemBackground), ("calmer", .calmer)] {
                 (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineColor = constant(color)
             }
+            (style.layer(withIdentifier: "leader") as? MLNLineStyleLayer)?.lineColor = constant(latest?.guidance?.calmer == true ? .calmer : .fastest)
             // Annotation views are drawn once, so re-add them to pick up the new colours.
             let extras: [MLNPointAnnotation] = guidanceAnnotations + (puck.map { [$0] } ?? []) + (userDot.map { [$0] } ?? [])
             map.removeAnnotations(labels + endpoints + pinAnnotations + extras)
