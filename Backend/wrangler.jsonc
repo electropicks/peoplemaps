@@ -9,7 +9,7 @@
   "observability": { "enabled": false, "logs": { "invocation_logs": false } },
   "vars": { "GITHUB_REPO": "electropicks/peoplemaps", "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "20", "ISSUE_DAILY_CAP": "200", "INSTALLS_PER_HOUR": "60", "HOLD_FOR_APPROVAL": "true" },
   "env": { "dev": { "vars": { "GITHUB_REPO": "electropicks/peoplemaps", "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "50", "ISSUE_DAILY_CAP": "200", "INSTALLS_PER_HOUR": "60", "HOLD_FOR_APPROVAL": "false" } } },
-  "d1_databases": [{ "binding": "DB", "database_name": "peoplemaps-reports", "database_id": "<filled in after wrangler d1 create>", "migrations_dir": "migrations" }],
+  "d1_databases": [{ "binding": "DB", "database_name": "peoplemaps-reports", "database_id": "979b9c50-a12a-40d2-a31a-315a4b276204", "migrations_dir": "migrations" }],
   "unsafe": { "bindings": [
     { "name": "RL_AUTH", "type": "ratelimit", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
     { "name": "RL_INSTALLS", "type": "ratelimit", "namespace_id": "1002", "simple": { "limit": 2, "period": 60 } },
