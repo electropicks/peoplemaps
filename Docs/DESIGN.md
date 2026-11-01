@@ -502,12 +502,11 @@ Small PRs into `main`, in order, each passing `Scripts/verify.sh --ui` on a
 Mac with screenshots per the `simulator-evidence` skill (light, dark,
 landscape unless noted). Base each on the latest `main` after `ux-round-1`.
 
-1. **iOS 27 deployment target.** `Scripts/generate_project.py`
-   (`IPHONEOS_DEPLOYMENT_TARGET` `17.0` → `27.0`), `Package.swift`
-   (`.iOS(.v17)` → `.iOS("27.0")` or `.v27` if the tools version has it; bump
-   `swift-tools-version` if needed), regenerate the project. Remove
-   `#available(iOS 26, *)` checks if any. Evidence: verify summary only, no
-   visual change.
+1. **iOS 27 deployment target (done).** `Scripts/generate_project.py`
+   (`IPHONEOS_DEPLOYMENT_TARGET` is `27.0`) and `Package.swift`
+   (`.iOS("27.0")`); the project is regenerated. No `#available(iOS 26, *)`
+   checks remain outside `App/ExploreView.swift` and `App/Navigation/`.
+   Evidence: verify summary only, no visual change.
 2. **Tokens and category model.** `Core/PlaceCategory.swift` (raw category →
    group, symbol), `Tests/PlaceCategoryTests.swift` (every category in the
    current index maps; unknown → services), category colours in
