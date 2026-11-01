@@ -1,8 +1,8 @@
 name: Backend deploy
 
-# Deploys the reports Worker (Docs/REPORTS.md 7.3) after a merge to main. Pull requests never run this workflow; their
-# backend tests run in ci.yml. The deploy job waits for the maintainer's approval on the protected `production`
-# environment, which alone holds the Cloudflare secrets.
+# Deploys the reports Worker (Docs/REPORTS.md 7.3) automatically after a merge to main, once the tests pass. Pull requests
+# never run this workflow; their backend tests run in ci.yml. The `production` environment, which only main can deploy to,
+# alone holds the Cloudflare secrets. The deploy job is skipped until the repository variable BACKEND_DEPLOY is `true`.
 on:
   push:
     branches: [main]
@@ -30,7 +30,7 @@ jobs:
 
   deploy:
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: vars.BACKEND_DEPLOY == 'true'
     runs-on: ubuntu-latest
     environment: production
     concurrency: backend-deploy

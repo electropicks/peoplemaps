@@ -6,10 +6,8 @@ information. The engineering details are in `Docs/REPORTS.md`; if the two
 ever disagree, the engineering document is the one being built from and this
 one is wrong and gets fixed.
 
-> **Draft, not published.** Two things to settle first (`Docs/REPORTS.md`): what
-> Cloudflare's logs record, checked on the deployed server (4.6), and the
-> database's location below, which holds only if question 25 settles on the
-> `us` jurisdiction. Today's location hint is not a guarantee.
+> **Draft, not published.** One thing to settle first (`Docs/REPORTS.md`): what
+> Cloudflare's logs record, checked on the deployed server (4.6).
 
 ## The short version
 
@@ -109,8 +107,9 @@ left, this record is deleted a year after the last contact, or at once with
 ## Where a report goes
 
 1. **Our server**, run by the people who make PeopleMaps: a Cloudflare Worker,
-   which runs at whichever Cloudflare location is nearest you, and a database in
-   the United States. It stores the report for 90 days. Exact
+   which isn't tied to one country and runs at whichever Cloudflare location is
+   nearest you, and a database kept in the United States. It stores the report
+   for 90 days. Exact
    locations are kept apart from the rest, and only people with access to the
    project's Cloudflare account can read them. The daily cleanup deletes
    the report within about a day after its 90 days, and Cloudflare can still
