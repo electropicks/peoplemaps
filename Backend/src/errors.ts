@@ -1,11 +1,11 @@
 /** The error envelope of Docs/REPORTS.md 4.6. Every response carries `Cache-Control: no-store`. */
 export type ErrorCode =
-  | "unauthorized" | "forbidden" | "not_found" | "invalid_report" | "too_large" | "conflict"
-  | "rate_limited" | "github_unavailable" | "storage_unavailable" | "internal";
+  | "unauthorized" | "not_found" | "invalid_report" | "too_large" | "conflict"
+  | "rate_limited" | "storage_unavailable" | "internal";
 
 const statusOf: Record<ErrorCode, number> = {
-  unauthorized: 401, forbidden: 403, not_found: 404, invalid_report: 400, too_large: 413, conflict: 409,
-  rate_limited: 429, github_unavailable: 503, storage_unavailable: 503, internal: 500,
+  unauthorized: 401, not_found: 404, invalid_report: 400, too_large: 413, conflict: 409,
+  rate_limited: 429, storage_unavailable: 503, internal: 500,
 };
 
 export class HttpError extends Error {

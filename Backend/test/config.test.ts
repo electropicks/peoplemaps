@@ -17,9 +17,9 @@ describe("wrangler.jsonc", () => {
     expect(config.ratelimits.map((b: any) => [b.name, b.simple.limit, b.simple.period])).toEqual([["RL_AUTH", 10, 60], ["RL_INSTALLS", 2, 60], ["RL_REPORTS", 10, 60]]);
     expect(config.unsafe).toBeUndefined();
   });
-  it("has the crons and the approval switch", () => {
-    expect(config.triggers.crons).toEqual(["17 3 * * *", "7 * * * *"]);
-    expect(config.vars.HOLD_FOR_APPROVAL).toBe("true");
+  it("has only the retention cron and needs no secret", () => {
+    expect(config.triggers.crons).toEqual(["17 3 * * *"]);
+    expect(config.secrets).toBeUndefined();
   });
 });
 
@@ -39,11 +39,11 @@ describe("logging (4.6)", () => {
     expect(bad).toEqual([]);
   });
 
-  it("reads cf-connecting-ip only in ratelimit.ts and GITHUB_TOKEN only where it is passed in", () => {
+  it("reads cf-connecting-ip only in ratelimit.ts and never talks to GitHub", () => {
     for (const f of readdirSync(join(root, "src"))) {
       const src = readFileSync(join(root, "src", f), "utf8");
       if (src.includes("cf-connecting-ip")) expect(f).toBe("ratelimit.ts");
-      if (src.includes("GITHUB_TOKEN")) expect(["index.ts", "github.ts"]).toContain(f);
+      expect(src).not.toMatch(/GITHUB_TOKEN|api\.github\.com/);
     }
   });
 });

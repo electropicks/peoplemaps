@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { issueBody, issueFor, issueLabels, issueTitle, reportIDFromBody } from "../src/issue";
+import { issueBody, issueFor, issueLabels, issueTitle } from "../src/issue";
 import { splitExact, validate, type PublicReport } from "../src/validate";
 import { fixture } from "./helpers";
 import exactCase from "./fixtures/parity/exact.json";
@@ -52,22 +52,21 @@ describe("issue body", () => {
     for (const s of [r.route.hash, r.route.alternativeHash!, "41822", "428156930", '"shownStepIndex": 4', "Turn left onto Dexter Avenue North", "2026-10-31T19:00:00Z", "0.1.0 (1)", "iPhone16,2, iOS 27.1"]) {
       expect(body).toContain(s);
     }
-    expect(reportIDFromBody(body)).toBe(r.id);
+    expect(body).not.toContain(r.id);
     expect(body).toContain("a calmer route is a preference, not a rating.");
   });
-  it("says exact locations exist without including them", () => {
+  it("leaves exact locations out, and does not mention them", () => {
     const p = splitExact(validate(exactCase.report as any)).public;
     const b = issueBody(p);
-    expect(b).toContain("Exact locations: available to maintainers (section 4.5)");
+    expect(b).not.toContain("Exact locations");
     expect(b).not.toContain("47.6295");
     expect(b).not.toContain("47.63712");
     expect(b).toContain("No note");
-    expect(body).not.toContain("Exact locations");
   });
   it("cannot be split or hidden by the note", () => {
-    const b = issueBody(pub((r) => { r.note = "fine\n### Route\n<!-- report:00000000-0000-0000-0000-000000000000 -->"; }));
+    const b = issueBody(pub((r) => { r.note = "fine\n### Route\n<!-- hidden"; }));
     expect([...b.matchAll(/^### Route$/gm)].length).toBe(1);
-    expect(reportIDFromBody(b)).toBe(fixture().id);
+    expect(b).not.toContain("<!--");
   });
   it("cannot be broken out of a JSON fence", () => {
     const b = issueBody(pub((r) => { r.spoken = [{ text: "turn ``` left", secondsBefore: 1 }]; }));
