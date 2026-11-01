@@ -13,7 +13,7 @@ const stmt = (sql: string, ...params: unknown[]): Statement => ({ sql, params })
 export interface InstallRow { id: string; token_hash: string; app_version: string; created_at: string; last_seen_at: string }
 export interface ReportRow {
   id: string; install_id: string; received_at: string; expires_at: string; body_hash: string;
-  category: string; mode: string; data_version: string; app_version: string; cell: string;
+  category: string;
   public_json: string; exact_json: string | null;
 }
 export interface RetentionCounts { reports: number; installs: number }
@@ -56,21 +56,14 @@ export class Store {
   countReportsSince(installID: string, since: string): Promise<number> {
     return count(this.sql, "SELECT COUNT(*) AS n FROM reports WHERE install_id = ? AND received_at >= ?", installID, since);
   }
-  /** The row, its aggregate bump and the install's app version, in one batch so a refused write keeps nothing (4.6, 5.2). */
-  async insertReport(row: ReportRow, week: string): Promise<void> {
+  /** The row and the install's app version, in one batch so a refused write keeps nothing (4.6). */
+  async insertReport(row: ReportRow, appVersion: string): Promise<void> {
     await this.sql.batch([
       stmt(
-        `INSERT INTO reports (id, install_id, received_at, expires_at, body_hash, category, mode, data_version, app_version, cell, public_json, exact_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        row.id, row.install_id, row.received_at, row.expires_at, row.body_hash, row.category, row.mode, row.data_version,
-        row.app_version, row.cell, row.public_json, row.exact_json,
+        "INSERT INTO reports (id, install_id, received_at, expires_at, body_hash, category, public_json, exact_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        row.id, row.install_id, row.received_at, row.expires_at, row.body_hash, row.category, row.public_json, row.exact_json,
       ),
-      stmt(
-        `INSERT INTO aggregates (week, cell, category, mode, count) VALUES (?, ?, ?, ?, 1)
-         ON CONFLICT (week, cell, category, mode) DO UPDATE SET count = count + 1`,
-        week, row.cell, row.category, row.mode,
-      ),
-      stmt("UPDATE installs SET app_version = ? WHERE id = ?", row.app_version, row.install_id),
+      stmt("UPDATE installs SET app_version = ? WHERE id = ?", appVersion, row.install_id),
     ]);
   }
   async deleteReport(id: string): Promise<void> {

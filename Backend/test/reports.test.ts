@@ -6,15 +6,15 @@ import exactCase from "./fixtures/parity/exact.json";
 const ID = fixture().id;
 
 describe("POST /v1/reports", () => {
-  it("stores the report and bumps the aggregate", async () => {
+  it("stores the report", async () => {
     const w = world();
     const { token, installID } = await w.mint();
     const res = await w.send(token);
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ id: ID, receivedAt: "2026-10-31T21:00:00Z", expiresAt: "2027-01-29T21:00:00Z" });
     const [row] = w.rows("reports");
-    expect(row).toMatchObject({ install_id: installID, category: "wrong_instruction", mode: "drive", data_version: "a1b2c3d4e5f6", app_version: "0.1.0 (1)", cell: "r4c4", exact_json: null });
-    expect(w.rows("aggregates")).toEqual([{ week: "2026-W44", cell: "r4c4", category: "wrong_instruction", mode: "drive", count: 1 }]);
+    expect(row).toMatchObject({ install_id: installID, category: "wrong_instruction", exact_json: null });
+    expect(JSON.parse(row.public_json as string).position.cell).toBe("r4c4");
   });
 
   it("is idempotent on id: same body 200, reordered keys 200, changed body 409", async () => {
@@ -30,7 +30,6 @@ describe("POST /v1/reports", () => {
     expect(changed.status).toBe(409);
     expect(await changed.json()).toEqual({ error: "conflict", message: `Report ${ID} was already sent with different content.` });
     expect(w.rows("reports")).toHaveLength(1);
-    expect(w.rows("aggregates")[0].count).toBe(1);
   });
 
   it("answers 409 when another install reuses the id", async () => {
@@ -83,7 +82,7 @@ describe("POST /v1/reports", () => {
     const { token } = await w.mint();
     await w.send(token);
     expect(w.limits.reports.keys).toEqual([IP]);
-    for (const t of ["installs", "reports", "aggregates"]) expect(JSON.stringify(w.rows(t))).not.toContain(IP);
+    for (const t of ["installs", "reports"]) expect(JSON.stringify(w.rows(t))).not.toContain(IP);
     w.limits.reports.allow = false;
     expect((await w.send(token, { ...fixture(), id: "00000000-0000-4000-8000-000000000009" })).status).toBe(429);
   });
@@ -97,13 +96,12 @@ describe("POST /v1/reports", () => {
     expect(await res.json()).toMatchObject({ error: "storage_unavailable" });
     expect(Number(res.headers.get("retry-after"))).toBe(2 * 3600 + 26 * 60);
     expect(w.rows("reports")).toHaveLength(0);
-    expect(w.rows("aggregates")).toHaveLength(0);
   });
 
   it("rolls back the whole batch when one statement fails", async () => {
     const w = world();
     const { token } = await w.mint();
-    w.sql.db.exec("DROP TABLE aggregates");
+    w.sql.db.exec("CREATE TRIGGER refuse BEFORE UPDATE OF app_version ON installs BEGIN SELECT RAISE(ABORT, 'no'); END");
     expect((await w.send(token)).status).toBe(500);
     expect(w.rows("reports")).toHaveLength(0);
   });
@@ -124,13 +122,12 @@ describe("GET /v1/reports", () => {
 });
 
 describe("DELETE /v1/reports/{id}", () => {
-  it("deletes the row; aggregates are not decremented", async () => {
+  it("deletes the row", async () => {
     const w = world();
     const { token } = await w.mint();
     await w.send(token);
     expect((await w.call("DELETE", `/v1/reports/${ID}`, { token })).status).toBe(204);
     expect(w.rows("reports")).toHaveLength(0);
-    expect(w.rows("aggregates")[0].count).toBe(1);
     expect((await w.call("DELETE", `/v1/reports/${ID}`, { token })).status).toBe(404);
   });
 

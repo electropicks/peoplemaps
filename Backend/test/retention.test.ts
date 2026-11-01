@@ -18,7 +18,6 @@ describe("retention cron", () => {
     expect(await retention(w.deps)).toEqual({ reports: 1, installs: 0 });
     expect(w.rows("reports").map((r) => r.id)).toEqual(["00000000-0000-4000-8000-000000000002"]);
     expect(w.rows("installs").map((r) => r.id)).toEqual([keep.installID]);
-    expect(w.rows("aggregates").reduce((n, r) => n + Number(r.count), 0)).toBe(2);
   });
 
   it("keeps an install idle for a year while it still has reports", async () => {

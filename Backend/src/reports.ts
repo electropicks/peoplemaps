@@ -3,7 +3,7 @@ import { HttpError, json } from "./errors";
 import { appVersion, authenticate, sha256Hex } from "./installs";
 import { limitByIP } from "./ratelimit";
 import type { ReportRow } from "./store";
-import { addDays, hour, isoWeek } from "./time";
+import { addDays, hour } from "./time";
 import { canonical, readJSON, splitExact, validate } from "./validate";
 
 // POST, GET, DELETE /v1/reports (Docs/REPORTS.md 4.2 to 4.4).
@@ -36,15 +36,11 @@ export async function sendReport(request: Request, deps: Deps): Promise<Response
     expires_at: hour(addDays(new Date(received), deps.vars.retentionDays)),
     body_hash: bodyHash,
     category: report.category,
-    mode: report.request.mode,
-    data_version: report.route.dataVersion,
-    app_version: appVersion(report.app),
-    cell: report.position.cell,
     public_json: JSON.stringify(pub),
     exact_json: exact ? JSON.stringify(exact) : null,
   };
   try {
-    await deps.store.insertReport(row, isoWeek(now));
+    await deps.store.insertReport(row, appVersion(report.app));
   } catch (e) {
     // A concurrent send of the same id got there first: answer as a retry.
     const raced = await deps.store.reportById(report.id).catch(() => null);
