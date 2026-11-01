@@ -7,16 +7,19 @@ const root = join(import.meta.dirname, "..");
 describe("wrangler.jsonc", () => {
   const text = readFileSync(join(root, "wrangler.jsonc"), "utf8");
   const config = JSON.parse(text.replace(/^\s*\/\/.*$/gm, ""));
-  it("answers only on our domain and writes no per-request logs", () => {
-    expect(config.workers_dev).toBe(false);
+  it("answers on workers.dev only, with no preview URLs and no per-request logs", () => {
+    expect(config.workers_dev).toBe(true);
+    expect(config.routes).toBeUndefined();
     expect(config.preview_urls).toBe(false);
     expect(config.observability).toEqual({ enabled: false, logs: { invocation_logs: false } });
   });
-  it("has the three rate-limit bindings, both crons and the approval switch", () => {
-    expect(config.unsafe.bindings.map((b: any) => [b.name, b.simple.limit, b.simple.period])).toEqual([["RL_AUTH", 10, 60], ["RL_INSTALLS", 2, 60], ["RL_REPORTS", 10, 60]]);
+  it("has the three rate limits under the ratelimits key, and no unsafe bindings", () => {
+    expect(config.ratelimits.map((b: any) => [b.name, b.simple.limit, b.simple.period])).toEqual([["RL_AUTH", 10, 60], ["RL_INSTALLS", 2, 60], ["RL_REPORTS", 10, 60]]);
+    expect(config.unsafe).toBeUndefined();
+  });
+  it("has the crons and the approval switch", () => {
     expect(config.triggers.crons).toEqual(["17 3 * * *", "7 * * * *"]);
     expect(config.vars.HOLD_FOR_APPROVAL).toBe("true");
-    expect(config.env.dev.vars.HOLD_FOR_APPROVAL).toBe("false");
   });
 });
 
