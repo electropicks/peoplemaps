@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "PeoplemapsCore",
-    platforms: [.macOS(.v14), .iOS("26.0")],
+    platforms: [.macOS(.v14), .iOS("27.0")],
     products: [.library(name: "PeoplemapsCore", targets: ["PeoplemapsCore"]), .executable(name: "peoplemaps-audit", targets: ["RouteAudit"])],
     targets: [
         .systemLibrary(name: "CZlib", path: "Sources/CZlib", providers: [.apt(["zlib1g-dev"])]),
