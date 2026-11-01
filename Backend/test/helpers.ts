@@ -41,7 +41,7 @@ export function world(vars: Partial<Vars> = {}, now = "2026-10-31T21:34:00Z"): W
     store: new Store(sql),
     limits,
     clock,
-    vars: { retentionDays: 90, reportsPerDay: 20, installsPerHour: 60, ...vars },
+    vars: { retentionDays: 90, reportsPerDay: 5, installsPerHour: 60, ...vars },
   };
   const w: World = {
     deps, sql, limits, clock,

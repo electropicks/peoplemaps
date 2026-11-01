@@ -87,6 +87,14 @@ describe("POST /v1/reports", () => {
     expect((await w.send(token, { ...fixture(), id: "00000000-0000-4000-8000-000000000009" })).status).toBe(429);
   });
 
+  it("checks the IP limit before the token, so a flood of random tokens never reaches the lookup", async () => {
+    const w = world();
+    w.limits.reports.allow = false;
+    const res = await w.send("not-a-real-token");
+    expect(res.status).toBe(429);
+    expect(w.limits.auth.keys).toEqual([]);
+  });
+
   it("answers 503 storage_unavailable and keeps nothing when D1 refuses the write", async () => {
     const w = world();
     const { token } = await w.mint();

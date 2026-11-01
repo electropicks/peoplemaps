@@ -14,8 +14,8 @@ export function receipt(r: Pick<ReportSummary, "id" | "received_at" | "expires_a
 }
 
 export async function sendReport(request: Request, deps: Deps): Promise<Response> {
-  const install = await authenticate(request, deps);
   await limitByIP(request, deps.limits.reports);
+  const install = await authenticate(request, deps);
   const report = validate(await readJSON(request));
   const bodyHash = await sha256Hex(canonical(report));
 
