@@ -37,15 +37,11 @@ export function issueLabels(r: PublicReport): string[] {
 // A backtick inside a JSON string is written as `, so no value can close the fence.
 const fenced = (v: unknown) => "```json\n" + JSON.stringify(v, null, 2).replace(/`/g, "\\u0060") + "\n```";
 
-/** A code fence one backtick longer than any run of backticks in `text` (at least three), so `text` cannot close it. */
-const fence = (text: string) => "`".repeat(Math.max(3, ...[...text.matchAll(/`+/g)].map((m) => m[0].length + 1)));
-
-// Sender text is shown in a fenced block, where GitHub does not mention users, link issues or render markup. The
-// maintainer reads it before filing.
+// Sender text is shown as an indented code block, where GitHub does not mention users, link issues or render markup.
+// Unlike a fence it has no closing line, so no text can end it. The maintainer reads it before filing.
 function noteText(note: string | null): string {
   if (note === null || note.trim() === "") return "No note";
-  const f = fence(note);
-  return `${f}text\n${note}\n${f}`;
+  return note.split(/\r\n|\r|\n/).map((l) => "    " + l).join("\n");
 }
 
 // The same for a short sender string that sits in a sentence: an inline code span whose delimiter the text cannot close.

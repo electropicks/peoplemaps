@@ -179,7 +179,7 @@ trip is best-effort.
   restore onto another phone starts with no ID and no reports.
 - **Export.** The JSON exactly as it would be sent, in the share sheet as `report-<id>.json`. The review screen shows the
   same bytes, pretty-printed.
-- **Delete.** Swipe to delete one snapshot; "Delete all flagged moments" deletes the file. Neither contacts the server.
+- **Delete.** Swipe to delete one snapshot; "Delete all flagged moments" empties the list (the earlier-ID flag of 4.4 stays). Neither contacts the server.
   "Delete my reports" (4.4) reaches only reports sent under the current report ID. It shows the count of local `sent`
   snapshots recorded under the current ID, calls `DELETE /v1/installs/me` on confirmation and, once the server has
   deleted them, marks those copies `withdrawn`. A snapshot sent under an earlier ID (after a reset, say because the key
@@ -277,7 +277,7 @@ on the server, and nothing in a 401 tells them apart. So the app does not claim 
 
 | "Delete my reports" gets | Result | Keychain | Local copies | The user is told |
 |---|---|---|---|---|
-| `204` | `deleted` | wiped | `withdrawn` if sent under the current ID; copies under an earlier ID stay `sent` | "Your reports and report ID were deleted from our server." when no local `sent` copy remains; otherwise the wording below |
+| `204` | `deleted` | wiped | `withdrawn` if sent under the current ID; copies under an earlier ID stay `sent` | "Your reports and report ID were deleted from our server." only when `ReportStore.earlierIDMayHoldReports` is false; otherwise the wording below |
 | Worker's 401 | `notRecognized` | kept | stay `sent` | "Our server doesn't recognise this report ID, so we can't confirm whether your reports were deleted. Anything left expires within its 90 days." |
 | Anything else, including a 401 without the envelope | throws | kept | stay `sent` | the error in words; the user can tap Delete again |
 
@@ -287,12 +287,19 @@ new report needs a working ID. The user is not stuck: the next Send gets the sam
 (4.1). Local copies stay `sent`, since nothing confirms they were deleted, and once the ID resets they are under an earlier
 ID, so a later Delete does not reach them.
 
-**Wording after a `204` when copies under an earlier ID remain.** The confirmation must not claim all reports were deleted
-when local `sent` copies under an earlier ID remain. It says: "Deleted 1 report under your current report ID. 2 other
+**Whether an earlier ID may hold reports comes from a saved flag, not from the rows on the phone.** Rows can go: a swipe,
+the 50-snapshot limit dropping the oldest sent one, or a Send cut off before the app heard the answer. So the store keeps
+two flags in its file: the current ID may hold reports once a Send has begun under it, and when the ID is reset while that
+is set, `earlierIDMayHoldReports` is set for good. A 204 clears the first flag only; "Delete all flagged moments" empties the
+list and keeps both.
+
+**Wording after a `204` when an earlier ID may hold reports.** The confirmation must not claim all reports were deleted
+when `earlierIDMayHoldReports` is set, whatever rows remain. With local `sent` copies under an earlier ID it says: "Deleted 1 report under your current report ID. 2 other
 reports were sent under an earlier report ID. We can't delete those from the app, and they expire within 90 days of
 sending." The numbers are the count marked `withdrawn` and the count left `sent`; "report" is singular for 1. If none were
 marked (every `sent` copy is under an earlier ID), the first sentence reads "No reports were sent under your current
-report ID." The pre-delete confirmation counts only current-ID copies, and when others exist it adds "N more were sent under
+report ID." With no such rows left it says only "Deleted reports under your current report ID. Reports sent under an
+earlier report ID can't be deleted from the app, and they expire within 90 days of sending." The pre-delete confirmation counts only current-ID copies, and when others exist it adds "N more were sent under
 an earlier report ID and can't be deleted from the app." It never says "safe", and it says "can't confirm" where it doesn't
 know.
 
@@ -424,9 +431,15 @@ npm run file-issue -- <report-id> --create   # files it with gh
 ```
 
 `Backend/scripts/file-issue.ts` reads `public_json` with wrangler and builds the issue with `src/issue.ts`, pure functions
-with tests. The maintainer reads it first and edits or drops the note if it has a name or address in it. The note is shown in a
-fenced block (longer than any backtick run in it, so it cannot close the fence), and `@` and `#` in a quoted instruction
-in the title are made inert, so sender text cannot mention a user or link an issue when the maintainer files it.
+with tests. The maintainer reads it first and edits or drops the note if it has a name or address in it. The note is shown as an
+indented code block, which has no closing line for the text to match, so sender text does not mention a user or link an
+issue when the maintainer files it. `@` and `#` in a quoted instruction in the title are made inert.
+
+**Before first deploy** (the backend is not deployed for v0.1.0): refuse control characters in sender text (Worker and
+client together); a distinct code and a real `Retry-After` for the daily cap, and a test pinning it at 5; make the title
+inert before cutting it, defuse `GH-1` and issue URLs, and cap the issue body near 60,000 characters; correct the
+IP-limit wording here and in `Docs/PRIVACY.md` (only `POST /v1/reports` checks it before the token, and it limits rather
+than prevents flooding); revisit the 2,000-ID limit when coverage grows past Seattle.
 
 - **Title.** `[app-report] <Category words>: "<last spoken text>" (<mode>, <dataVersion>)` for instruction and voice
   categories, or `step <shownStepIndex>` when nothing was spoken or the trip had arrived. For the others,

@@ -70,32 +70,33 @@ describe("issue body", () => {
     expect(b).not.toContain("47.63712");
     expect(b).toContain("No note");
   });
-  // The text between the two fence lines of the "What happened" section.
+  // The "What happened" section's lines, minus the four-space indent of the code block.
   const noteBlock = (b: string) => {
-    const m = /^### What happened\n\n(`{3,})text\n([\s\S]*?)\n\1\n\n### Data version$/m.exec(b);
+    const m = /^### What happened\n\n((?: {4}.*(?:\n|$))+)\n?### Data version$/m.exec(b);
     expect(m).not.toBeNull();
-    return m![2];
+    return m![1].replace(/\n$/, "").split("\n").map((l) => l.slice(4)).join("\n");
   };
-  it("shows the note in a fenced block, so it cannot split or hide the body", () => {
+  it("shows the note as an indented code block, so it cannot split or hide the body", () => {
     const b = issueBody(pub((r) => { r.note = "fine\n### Route\n<!-- hidden"; }));
     expect(noteBlock(b)).toBe("fine\n### Route\n<!-- hidden");
+    expect([...b.matchAll(/^### Route$/gm)].length).toBe(1);
   });
-  it("neither mentions nor links from the note: it sits inside a fence", () => {
+  it("neither mentions nor links from the note: it sits in a code block", () => {
     const b = issueBody(pub((r) => { r.note = "ping @octocat see #12 and https://example.com"; }));
     expect(noteBlock(b)).toBe("ping @octocat see #12 and https://example.com");
   });
-  it("cannot be broken out of the note fence", () => {
-    for (const note of ["a\n```\n@octocat\n```\nb", "x ````` y\n`````\n@octocat", "```", "~~~\n@a", "tail`"]) {
+  it("cannot be broken out of the note, whatever backtick or tilde run it holds", () => {
+    for (const note of ["a\n```\n@octocat\n```\nb", "`".repeat(255) + "\n@octocat", "~~~\n@a", "tail`", "x\n\n@octocat"]) {
       const b = issueBody(pub((r) => { r.note = note; }));
       expect(noteBlock(b)).toBe(note);
-      const open = /^### What happened\n\n(`+)text/m.exec(b)![1];
-      for (const run of note.match(/`+/g) ?? []) expect(open.length).toBeGreaterThan(run.length);
+      const section = b.split("### What happened\n\n")[1].split("### Data version")[0];
+      for (const line of section.replace(/\n+$/, "").split("\n")) expect(line.startsWith("    ")).toBe(true);
     }
   });
   it("keeps sender device and app strings from mentioning or ending their span", () => {
-    const b = issueBody(pub((r) => { r.device.model = "@octocat `x`\n\n### Route"; r.app.version = "`@a`"; }));
-    expect(b).toContain("### Device\n\n`` @octocat `x` ### Route, iOS 27.1 ``");
-    expect([...b.matchAll(/^### Route$/gm)].length).toBe(1);
+    const b = issueBody(pub((r) => { r.device.model = "@octocat `x`"; r.app.version = "`@a`"; }));
+    expect(b).toContain("### Device\n\n`` @octocat `x`, iOS 27.1 ``");
+    expect(b).toContain("### App version\n\n``` `@a` (1) ```".replace("``` `@a` (1) ```", "`` `@a` (1) ``"));
   });
   it("cannot be broken out of a JSON fence", () => {
     const b = issueBody(pub((r) => { r.spoken = [{ text: "turn ``` left", secondsBefore: 1 }]; }));
