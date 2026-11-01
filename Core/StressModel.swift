@@ -162,7 +162,7 @@ public enum StressModel {
     // MARK: Time (honest estimates; stress never changes them)
 
     /// Free-flow driving speed in mph when no limit is posted. Seattle posts 25 on arterials and 20 on residential
-    /// streets, and 98% of drivable edges carry a `maxspeed`, so these rarely bind.
+    /// streets, and 99.5% of non-service drive edges carry a `maxspeed`, so these rarely bind.
     static let driveDefaultsMph: [String: Double] = ["motorway": 60, "motorway_link": 35, "trunk": 40, "trunk_link": 30,
         "primary": 25, "primary_link": 25, "secondary": 25, "secondary_link": 25, "tertiary": 25, "tertiary_link": 25,
         "residential": 20, "unclassified": 20, "living_street": 10, "service": 10]
