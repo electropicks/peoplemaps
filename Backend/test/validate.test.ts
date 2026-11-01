@@ -37,6 +37,8 @@ describe("validate", () => {
     ["request.extraMinutes", (r) => { r.request.extraMinutes = 21; }],
     ["request.extraMinutes", (r) => { r.request.extraMinutes = 2.5; }],
     ["request.preferences", (r) => { r.request.preferences = [1]; }],
+    ["request.preferences", (r) => { r.request.preferences = { name: "Sam", address: "12 Main St" }; }],
+    ["request.origin.placeID", (r) => { r.request.origin.placeID = "way/37056567"; }],
     ["request.origin.lat", (r) => { r.request.origin.lat = 47.5; }],
     ["request.origin.lon", (r) => { r.request.origin.lon = -122.1; }],
     ["request.origin.osmNode", (r) => { r.request.origin.osmNode = -1; }],
@@ -55,8 +57,8 @@ describe("validate", () => {
     ["route.meters", (r) => { r.route.meters = -1; }],
     ["route.alternativeHash", (r) => { r.route.alternativeHash = "9b02"; }],
     ["position.stepIndex", (r) => { r.position.stepIndex = -1; }],
-    ["position.cell", (r) => { r.position.cell = "r13c0"; }],
-    ["position.cell", (r) => { r.position.cell = "r0c12"; }],
+    ["position.cell", (r) => { r.position.cell = "r50c0"; }],
+    ["position.cell", (r) => { r.position.cell = "r0c27"; }],
     ["location", (r) => { r.location = { lat: 47.63, lon: -122.35, accuracy: 8, course: 71 }; }],
     ["spoken", (r) => { r.spoken = [...r.spoken, ...r.spoken]; }],
     ["spoken[1].text", (r) => { r.spoken[1].text = ""; }],
@@ -84,6 +86,15 @@ describe("validate", () => {
       r.request.origin = exactEndpoint;
       r.location = { lat: 47.63712, lon: -122.35588, accuracy: 8, course: null };
     }))).toBeUndefined();
+  });
+
+  it("keeps placeID only in the exact part", () => {
+    const { public: pub, exact } = splitExact(validate(mutate((r) => {
+      r.exactLocations = true;
+      r.request.origin = { ...exactEndpoint, placeID: "way/37056567" };
+    })));
+    expect(JSON.stringify(pub)).not.toContain("placeID");
+    expect(exact!.origin!.placeID).toBe("way/37056567");
   });
 
   it("allows removed endpoints, an empty note and a null note", () => {

@@ -14,7 +14,7 @@ describe("POST /v1/reports", () => {
     expect(await res.json()).toEqual({ id: ID, receivedAt: "2026-10-31T21:00:00Z", expiresAt: "2027-01-29T21:00:00Z" });
     const [row] = w.rows("reports");
     expect(row).toMatchObject({ install_id: installID, category: "wrong_instruction", exact_json: null });
-    expect(JSON.parse(row.public_json as string).position.cell).toBe("r4c4");
+    expect(JSON.parse(row.public_json as string).position.cell).toBe("r29c11");
   });
 
   it("is idempotent on id: same body 200, reordered keys 200, changed body 409", async () => {
