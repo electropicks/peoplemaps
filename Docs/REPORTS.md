@@ -174,9 +174,8 @@ trip is best-effort.
   it locally. These four are the statuses the app needs; the server keeps none (4.3).
 - **Limit.** The last 50. A flag that would make 51 drops the oldest `sent` or `withdrawn` snapshot, or else the oldest
   `flagged` one, and the list says "An older unsent moment was removed to make room".
-- **Keychain.** Install ID, bearer token and the `deleteAttempted` flag (4.4),
-  `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, not synchronised, so a restore onto another phone starts with no ID
-  and no reports.
+- **Keychain.** Install ID and bearer token, `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, not synchronised, so a
+  restore onto another phone starts with no ID and no reports.
 - **Export.** The JSON exactly as it would be sent, in the share sheet as `report-<id>.json`. The review screen shows the
   same bytes, pretty-printed.
 - **Delete.** Swipe to delete one snapshot; "Delete all flagged moments" deletes the file. Neither contacts the server.
@@ -260,27 +259,21 @@ DELETE /v1/installs/me     204
 `DELETE /v1/installs/me` deletes every report of the install and the install row, in one D1 batch, and is the reset:
 "Delete my reports" is also "start over".
 
-**A 401 alone does not mean deleted.** A retry after a lost `204` gets a 401, but so does a corrupted token, whose reports
-are still on the server. To tell them apart, the app saves `deleteAttempted` beside the credentials before it sends the
-request. Any answer in the Worker's JSON envelope except `internal` shows that attempt deleted nothing, and puts the flag
-back as it was. No answer, `internal`, or a response without the envelope leaves it set, since the delete may have landed.
+**Only a `204` means deleted.** A retry after a lost `204` gets a 401, but so does a damaged token whose reports are still
+on the server, and nothing in a 401 tells them apart. So the app does not claim either.
 
 | "Delete my reports" gets | Result | Keychain | Local copies | The user is told |
 |---|---|---|---|---|
 | `204` | `deleted` | wiped | `withdrawn` | "Your reports and report ID were deleted from our server." |
-| Worker's 401, `deleteAttempted` set | `deleted` | wiped | `withdrawn` | the same |
-| Worker's 401, flag not set | `notRecognized` | kept | stay `sent` | "Our server doesn't recognise this report ID, so nothing was deleted. Reports sent under it stay until their 90 days end." |
-| Malformed token on the phone, no request made | `notRecognized` | kept | stay `sent` | the same |
+| Worker's 401 | `notRecognized` | kept | stay `sent` | "Our server doesn't recognise this report ID, so we can't confirm whether your reports were deleted. Anything left expires within its 90 days." |
 | Anything else, including a 401 without the envelope | throws | kept | stay `sent` | the error in words; the user can tap Delete again |
 
-"Check status" follows the same rule: a Worker's 401 with the flag set finishes the delete and returns `deleted`, and with
-the flag not set returns `notRecognized` and keeps everything. A `200` clears the flag, since that install still exists. A
-Send's 401 with the flag set tells the app the delete finished, so it marks local copies `withdrawn` instead of showing
-"reset". A Send on an unrecognised ID still resets it (4.1), which is the only way forward; the old reports stay until they
-expire.
+"Check status" keeps everything on a 401 too and shows the same words. The credentials stay after a 401 because wiping them
+gains nothing and could lose the only way to delete, if the 401 was a passing fault. The user is
+not stuck: the next Send gets the same 401, resets the ID and mints a new one (4.1). Local copies stay `sent`, since nothing
+confirms they were deleted.
 
-The one misread left is something in between forging the Worker's 401 after an attempt was lost, which TLS makes unlikely. A
-hand-filed issue (6) is not reached by these; see question 26.
+A hand-filed issue (6) is not reached by these; see question 26.
 
 ### 4.5 Before App Store release
 
@@ -326,7 +319,8 @@ TestFlight, and it budgets Workers Paid at $5 a month for the CPU it needs (ques
   the message "The report server is full." and no `Retry-After`, since only retention or a maintainer frees them, not
   midnight. The app shows "The report server is full. Try again later."
 - **Refused bookkeeping.** `authenticate` updates `last_seen_at` best effort, so a refused update never blocks a read or a
-  delete. A stale value only keeps an empty install a little longer (5.3).
+  delete. A stale value can only get an empty install pruned a little sooner (5.3), and the next accepted request updates
+  it.
 - **Accepted for now, at zero users.** Workers Free allows 100,000 requests a day, and D1 and that limit stop rather than
   bill on a no-card account, so these are outages, not costs: a flood filling the free D1 database; one IP spending the
   global mint ceiling; and unknown-token 401s counting against the daily requests. Fix them when there are users to lose.
