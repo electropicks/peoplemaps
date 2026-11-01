@@ -90,6 +90,27 @@ describe("bearer tokens", () => {
     }
   });
 
+  it("answers 503 with no midnight retry when D1 is full", async () => {
+    const w = world();
+    w.deps.store.insertInstall = async () => { throw new StorageUnavailable("full", false); };
+    const res = await w.call("POST", "/v1/installs", { body: { schema: 1, app: { version: "0.1.0", build: "1" } } });
+    expect(res.status).toBe(503);
+    expect(res.headers.get("retry-after")).toBeNull();
+    expect(await res.json()).toEqual({ error: "storage_unavailable", message: "The report server is full." });
+  });
+
+  it("still reads and deletes when the last_seen_at update is refused", async () => {
+    const w = world();
+    const { token } = await w.mint();
+    await w.send(token);
+    w.clock.t = new Date(w.clock.t.getTime() + 2 * 3_600_000);
+    w.deps.store.touchInstall = async () => { throw new StorageUnavailable("full", false); };
+    expect((await w.call("GET", "/v1/reports", { token })).status).toBe(200);
+    expect((await w.call("DELETE", "/v1/installs/me", { token })).status).toBe(204);
+    expect(w.rows("reports")).toHaveLength(0);
+    expect(w.rows("installs")).toHaveLength(0);
+  });
+
   it("needs a token on every route except minting (4)", async () => {
     const w = world();
     const id = "0B7A4C2E-9D1F-4E3A-8B6C-5D4E3F2A1B0C";

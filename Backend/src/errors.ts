@@ -15,8 +15,12 @@ export class HttpError extends Error {
   get status() { return statusOf[this.code]; }
 }
 
-/** Thrown by a store shim when the database refuses work because its daily limits are spent (4.6). */
-export class StorageUnavailable extends Error {}
+/** Thrown by a store shim when the database refuses work (4.6): its daily limits are spent until midnight, or it is full. */
+export class StorageUnavailable extends Error {
+  constructor(message: string, readonly untilMidnight = true) {
+    super(message);
+  }
+}
 
 export function json(status: number, body: unknown, headers: Record<string, string> = {}): Response {
   return new Response(status === 204 ? null : JSON.stringify(body), {

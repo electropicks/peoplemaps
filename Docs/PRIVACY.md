@@ -6,8 +6,10 @@ information. The engineering details are in `Docs/REPORTS.md`; if the two
 ever disagree, the engineering document is the one being built from and this
 one is wrong and gets fixed.
 
-> **Draft, not published.** One thing to settle first (`Docs/REPORTS.md`): what
-> Cloudflare's logs record, checked on the deployed server (4.6).
+> **Draft, not published.** Two things to settle first (`Docs/REPORTS.md`): what
+> Cloudflare's logs record, checked on the deployed server (4.6), and "kept in
+> the United States" below, which is untrue until the database is replaced
+> (question 25).
 
 ## The short version
 
@@ -17,7 +19,9 @@ one is wrong and gets fixed.
 - There are no accounts, no sign-in, no analytics, no ads, no tracking.
 - A report you send is stored on our server and read by a maintainer. Nothing
   is published automatically. A maintainer may file a useful report as a public
-  GitHub issue by hand, without your exact locations or report ID.
+  GitHub issue by hand. An issue never has your report ID, your exact start and
+  destination or your GPS position, but it can show the route and where along it
+  you flagged, which can place you to within metres.
 - You can see, export and delete everything on the phone, and delete what you
   sent from our server (see Deleting for the limits). The app contacts the
   server only when you tap Send, Check status or Delete my reports.
@@ -37,9 +41,10 @@ one is wrong and gets fixed.
 The app asks for your location once, the first time the home map shows.
 While the app is open it uses your location to start routes and time
 estimates from where you are, and, while guiding, to show where you are on
-the map and say the next turn. It stops when the app leaves the screen. Your
-location is never collected by us, except inside a report you send with
-**Exact locations** turned on.
+the map and say the next turn. It stops when the app leaves the screen. We get
+location information only inside a report you send. Every report shows the
+corners near your start and destination and where along the route you flagged;
+**Exact locations** adds the exact points and your GPS position.
 
 ## What leaves your phone, and only when you tap Send
 
@@ -63,14 +68,14 @@ A report contains:
   before sending takes it out of the request but not out of the route, whose
   street list starts and ends at those corners. If the route's start or end
   worries you, do not send that report.
-- **Exact start, destination and your position when you flagged**, and the map
+- **Exact start, destination and your GPS position when you flagged**, and the map
   ID of a named place you started from or went to, only if
   you turn on **Exact locations** for that report. It is off by default.
   Turn it on when a snapped report would not show the problem, for example
   when the trouble is the first turn out of a driveway.
-- **Where along the route you were** when you flagged: a step number, a
-  distance along it, and which half-kilometre square of Seattle that point
-  is in. This is not a GPS reading, but together with the route's street list
+- **Where along the route you were** when you flagged, in every report: a step
+  number, a distance along it, and which half-kilometre square of Seattle that
+  point is in. This is not a GPS reading, but together with the route's street list
   it places you to within metres of where you flagged, and a public issue
   includes all of it.
 - **The last three spoken instructions** and how many seconds before the
@@ -117,19 +122,20 @@ left, this record is deleted a year after the last contact, or at once with
 2. **A public GitHub issue**, only if a maintainer reads your report, finds it
    useful and files one by hand at `github.com/electropicks/peoplemaps`. The
    server never does this. An issue contains your report except for your exact
-   locations and report ID, with your start and destination shown only as
-   half-kilometre squares. It can include your sentence, which the maintainer
-   may edit or leave out, and the route's street list, so someone with map data
-   can still find the snapped corners where the route begins and ends. Issues
-   are public to anyone on the internet, and GitHub emails them to people who
+   start and destination, your GPS position and your report ID, with your start
+   and destination shown only as half-kilometre squares. It can include your
+   sentence, which the maintainer may edit or leave out, the route's street list
+   and where along it you flagged. So someone with map data can still find the
+   snapped corners where the route begins and ends, and where you were when you
+   flagged, to within metres. Issues are public to anyone on the internet, and GitHub emails them to people who
    watch the project.
 
 We never store or log IP addresses; Cloudflare necessarily sees them to
 deliver traffic. The server does not log requests or their headers, has
 Cloudflare's per-request logging turned off, and sets no cookies. When you send
-a report or get a report ID, the server reads your IP address, or its first half
-for the newer IPv6 kind, only to hand it to Cloudflare's rate limiter, so that
-one source cannot flood the server. Those counts live in Cloudflare's memory for
+a report or get a report ID, the server reads your IP address only to hand it,
+or for the newer IPv6 kind only its first half, to Cloudflare's rate limiter, so
+that one source cannot flood the server. Those counts live in Cloudflare's memory for
 about a minute. We store nothing from them.
 
 ## Deleting
@@ -138,10 +144,16 @@ about a minute. We store nothing from them.
   does not contact the server.
 - **On the server**: **Delete my reports** shows how many sent reports this
   phone remembers, asks you to confirm, then removes every report under your ID
-  and the ID itself. That can be more than the number shown, since the phone
-  keeps only its last 50 moments. If a send is interrupted and you edit the
-  report before sending again, the first copy may also be on the server; only
-  **Delete my reports** removes it.
+  and the ID itself. The server can hold more than the number shown: the phone
+  keeps only its last 50 moments, a moment you swiped away is no longer counted,
+  and a send that was interrupted may have reached the server even though the
+  phone doesn't show it as sent. If you edit such a report before sending again,
+  the first copy stays on the server; only **Delete my reports** removes it.
+- **If the server doesn't recognise your ID**: the app tells you so and says
+  nothing was deleted, because it can't tell whether reports remain. This can
+  happen if the key on the phone is damaged. Those reports, if any, stay until
+  their 90 days end. Your ID stays on the phone until your next report, which
+  gets a new ID.
 - **If you lose the phone**: the ID's key lives only on that phone, so without
   it, or if its Keychain is erased, your reports cannot be deleted from the app
   and stay until their 90 days end.

@@ -19,6 +19,7 @@ describe("D1 limit errors", () => {
   }
   for (const message of ["Exceeded maximum DB size.", "Your account has exceeded D1's maximum account storage limit, please contact Cloudflare to raise your limit"]) {
     it(`turns "${message.slice(0, 30)}…" into StorageUnavailable`, async () => {
+      await expect(refusing(`D1_ERROR: ${message}`).run("INSERT")).rejects.toMatchObject({ untilMidnight: false });
       await expect(refusing(`D1_ERROR: ${message}`).run("INSERT")).rejects.toBeInstanceOf(StorageUnavailable);
     });
   }

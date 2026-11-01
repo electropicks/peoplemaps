@@ -50,6 +50,7 @@ export async function handle(request: Request, deps: Deps): Promise<Response> {
   } catch (e) {
     if (e instanceof HttpError) return errorResponse(e);
     if (e instanceof StorageUnavailable) {
+      if (!e.untilMidnight) return errorResponse(new HttpError("storage_unavailable", "The report server is full."));
       return errorResponse(new HttpError("storage_unavailable", "The report server is full for today.", undefined, secondsToMidnightUTC(deps.clock.now())));
     }
     console.error("internal error", 500);
