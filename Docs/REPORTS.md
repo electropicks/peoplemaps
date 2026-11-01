@@ -190,6 +190,11 @@ trip is best-effort.
 Base URL per build (7.5). JSON in and out. Every response carries `Cache-Control: no-store`. No cookies, no CORS. TLS
 only; `http://` is only for `wrangler dev`.
 
+**What needs no token.** Only `POST /v1/installs` (4.1). There is no health route. An unknown path or method is a 404 and
+the other routes are a 401 without a token, and neither carries data. So the backend is not closed to strangers today:
+anyone on the internet can mint a token, then send up to the caps of 4.2 and read or delete only what that token sent. They
+never reach another install's reports. What holds against this is 4.6's limits, and App Attest (4.5) is what would close it.
+
 ### 4.1 Install token
 
 ```
@@ -264,7 +269,27 @@ where the old reports would remain until they expire; the phone could not have d
 ### 4.5 Before App Store release
 
 App Attest on `POST /v1/installs`, so a token can only be minted by a genuine copy of the app. It is not needed for
-TestFlight, and it budgets Workers Paid at $5 a month for the CPU it needs (question 19).
+TestFlight, and it budgets Workers Paid at $5 a month for the CPU it needs (question 19). Not built.
+
+**Size, as an estimate:** 500 to 800 lines with tests, and two to three working days, most of the risk being on a real phone.
+
+- **Worker,** 350 to 550 lines with tests. A one-time challenge route, which needs no token either (mint would stay
+  tokenless, since it creates the token), with its own short-lived D1 rows. A verifier for the attestation object: CBOR,
+  the certificate chain to Apple's App Attest root, the nonce, the app ID hash, the counter and the key ID. It is either
+  hand-written or a new dependency. Its tests need a recorded attestation from a real phone, checked with a fixed clock
+  because the certificates expire.
+- **App,** 150 to 250 lines with tests, and the App Attest entitlement through `generate_project.py` and the App ID. An
+  attestor protocol in Core, and `DCAppAttestService` in `App/`, since Core also builds on Linux.
+- **Simulator and tests.** `DCAppAttestService` is not available in the Simulator, so no simulator can mint from the
+  deployed Worker. The UI test (8.4) already stubs the network, so it only needs a fake attestor under `--ui-testing`.
+  A simulator against `wrangler dev` needs a switch such as `ATTEST_REQUIRED=false` in `.dev.vars`, and a test that
+  `wrangler.jsonc` never sets it. The real path runs only on a phone, by hand; CI cannot cover it.
+- **Decisions it brings.** A device where App Attest is unsupported, or an Apple outage, cannot mint, so its report stays
+  flagged. Development and production builds attest under different environments, and the Worker must accept the right ones.
+- **What it does not do.** It shows a genuine app on a genuine device, not an honest sender. One phone can make many keys, so
+  4.6's limits stay, and the token is still a bearer token after minting.
+- **Not measured.** Whether the verifier fits Workers Free's 10 ms of CPU, which only a deployed Worker can show, and whether
+  a free Apple team can enable the capability.
 
 ### 4.6 Rate limits, errors, what is not kept
 
@@ -432,8 +457,9 @@ The database ID is not a secret. `preview_urls` stays explicit, because since wr
 turned on for debugging.
 
 **Secrets.** The Worker has none. `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit, D1: Edit) and `CLOUDFLARE_ACCOUNT_ID` are
-environment secrets of the GitHub Environment `production`, not repository secrets: a repository secret with D1 edit
-rights would let any workflow merged to `main` read `exact_json`, and the environment's required reviewer stops that.
+environment secrets of the GitHub Environment `production`, not repository secrets. That environment has no required
+reviewer and only `main` can deploy to it, so a workflow on any other branch cannot read them. A workflow merged to `main`
+can, and that token has D1 edit rights, so it could read `exact_json`: merging to `main` is the only gate.
 
 ### 7.3 Tests, local run, CI, deploy
 
@@ -443,8 +469,11 @@ rights would let any workflow merged to `main` read `exact_json`, and the enviro
 - `npm run dev` is `wrangler dev --ip 0.0.0.0 --port 8787` with a local D1, so a phone on the same network can reach it.
   A tester who needs a higher cap sets `REPORTS_PER_DAY=50` in `.dev.vars` (gitignored).
 - `.github/workflows/ci.yml` has a `backend` job that runs both on every PR. `.github/workflows/backend.yml` runs on a
-  push to `main` touching `Backend/`: the tests, then `wrangler d1 migrations apply --remote` and `wrangler deploy` in a
-  job that waits for approval on the GitHub Environment `production`.
+  push to `main` touching `Backend/`: the tests, then `wrangler d1 migrations apply --remote` and `wrangler deploy`. Deploys
+  run automatically from `main` after the tests pass, with no approval step, on the GitHub Environment `production`.
+- The deploy job runs only when the repository variable `BACKEND_DEPLOY` is `true`, so merging before the setup is done
+  leaves `main` green with the job skipped. It must be a repository variable, since a job's `if` cannot see an
+  environment's variables. Set it last, after the `us` database (question 25) and the secrets.
 - `Scripts/verify.sh` does not cover the backend; the verify skill has a row for it.
 
 ### 7.4 Versioning and rollout
@@ -561,22 +590,20 @@ Numbers are stable, so code comments can cite them; gaps were resolved or remove
     to Paid makes Time Travel 30 days, and the policy changes in the same PR (5.3).
 21. **Endpoints in a filed issue.** Default: coarsened to the 550 m cell (6), with the route-ends caveat stated there and in
     `Docs/PRIVACY.md`.
-25. **Data location.** Owner to decide. `Docs/PRIVACY.md` says "in the United States", but the database
-    (`979b9c50-a12a-40d2-a31a-315a4b276204`, empty) was created with a `wnam` location hint, and Cloudflare says a hint is not
-    a guarantee. A `--jurisdiction=us` database is the guaranteed form, and a jurisdiction can only be set at creation. To
-    make the claim hold, recreate it while it is empty: `npx wrangler d1 create peoplemaps-reports --jurisdiction=us`
-    (wrangler, since the Cloudflare connector cannot set a jurisdiction), commit the new ID and delete the old database.
-    Otherwise soften the policy's sentence. A jurisdiction covers where the database runs and stores data; the Worker itself
-    still runs at the Cloudflare location nearest the sender.
-26. **Deleting after a hand-filed issue.** Owner to decide. An issue carries no report ID, so "Delete my reports" cannot find
-    it, and the policy says so. Default: accept that, because filing is rare and a maintainer has read it first. If that is
-    not enough, the options are to file only in the maintainer's own words, or to record the issue number on the row and
-    tell the maintainer on delete.
-27. **Check status.** Owner to decide. With no issue state it can only show that a report is still held and until when.
-    Default: keep `GET /v1/reports`, since it is the sender's view of what the server holds, and decide when the screen is
-    built. Dropping the button later removes one sentence from the policy.
+25. **Data location.** Decided: pinned to the US. A jurisdiction can only be set at creation, and the current database
+    (`979b9c50-a12a-40d2-a31a-315a4b276204`, empty) has only a `wnam` location hint, which Cloudflare says is not a guarantee.
+    So before the first deploy it is replaced: `npx wrangler d1 create peoplemaps-reports --jurisdiction=us` (wrangler, since
+    the Cloudflare connector cannot set a jurisdiction), then the new ID in `Backend/wrangler.jsonc` and the old database
+    deleted. Not done yet; it waits for a Cloudflare token, and `BACKEND_DEPLOY` stays off until then (7.3). A jurisdiction
+    covers where the database runs and stores data; the Worker itself still runs at the Cloudflare location nearest the
+    sender.
+26. **Deleting after a hand-filed issue.** Decided: an issue carries no report ID, so "Delete my reports" cannot find it, and
+    the policy says so. A maintainer removes a hand-filed issue on request. Filing is rare and a maintainer has read it first.
+27. **Check status.** Decided for now: keep `GET /v1/reports`, since it is the sender's view of what the server holds, though
+    with no issue state it can only show that a report is still held and until when. Dropping the button later removes one
+    sentence from the policy.
 
-28. **`placeID` with exact off.** Default, and the owner may overrule it: sent and stored only with exact locations on (2.2),
+28. **`placeID` with exact off.** Decided: sent and stored only with exact locations on (2.2),
     since an OSM ID names the exact place while the policy says location is collected only then. The cost is that route
     replay of a default report snaps by coordinate rather than using the importer's snap for that place; the plan replay is
     unaffected.
