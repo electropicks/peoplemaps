@@ -4,8 +4,11 @@ Drafted 31 October 2026. Design only; nothing in `App/`, `Core/` or `.github/`
 changes with this document. Three tasks build from it in parallel: the backend
 (section 5 to 7), the app client (section 2, 3 and 8), and the issue pipeline
 (section 6, 9 and the replay tool in section 2.5). Each section names its
-interfaces so the tasks can be built and tested apart. The user-facing version
-of the data rules is `Docs/PRIVACY.md`; keep the two in step.
+interfaces so the tasks can be built and tested apart. One small prerequisite
+comes first: the importer writes the graph hash into `Data/provenance.json`
+(2.5 step 1), which the app client and the replay tool both read. The
+user-facing version of the data rules is `Docs/PRIVACY.md`; keep the two in
+step.
 
 Read with `.claude/skills/product-rules/SKILL.md` (no "safe", times are
 estimates, unknown is said to be unknown), `Docs/NAVIGATION.md` and
@@ -66,19 +69,19 @@ says what leaves the phone by default.
 | `request.origin`, `request.destination` | endpoint (2.2) | Rebuild the `RouteRequest`. Exact on the phone, snapped when sent | **yes** exact; low snapped | snapped |
 | `request.rerouted` | bool | The route being followed came from a reroute, so `origin` is where the user was when the engine rerouted, not where the trip began | no | yes |
 | `chosen` | `calmer` or `fastest` | Which card the user picked; which route to compare the replay against | no | yes |
-| `route.dataVersion` | 12 hex chars | SHA-256 prefix of the bundled `seattle-graph.bin`, so the replay checks out the same data | no | yes |
+| `route.dataVersion` | 12 hex chars | First 12 hex chars of the SHA-256 of the bundled `seattle-graph.bin`, read from the search index's `graphSHA256` meta row that the importer writes; the app never hashes the file. The replay checks out the same data | no | yes |
 | `route.edgeIDs` | [Int] | The directed edges travelled, `Route.edgeIDs`. Exact for this data version; the plan replays from these alone | low (a public route) | yes |
 | `route.wayIDs` | [Int64] | OSM way IDs along the route, consecutive duplicates collapsed, so the route reads on any data version and in the issue | low | yes |
 | `route.hash` | 64 hex chars | SHA-256 of `Route.id` (edge IDs joined by `-`); a replay compares hashes first | no | yes |
 | `route.meters`, `route.seconds`, `route.stress` | Double | The metrics the user saw; a replay must reproduce them | no | yes |
 | `route.alternativeHash` | string or null | Hash of the route not chosen (calmer when fastest was chosen and vice versa), null when no calmer route existed | no | yes |
 | `position.stepIndex` | Int | The engine's step (`NavigationController.stepIndex`) | low | yes |
-| `position.shownStepIndex` | Int | The step on the card; differs from `stepIndex` while the card still says "Head north on…" | low | yes |
+| `position.shownStepIndex` | Int | The step on the card: `stepIndex + 1` (the card announces the next maneuver), capped at the last step, except during the set-off card, when it is `stepIndex` (0) and the card still says "Head north on…" | low | yes |
 | `position.distanceToManeuver` | metres | Where along the step the user was; the route point is derived from this and the plan, so no coordinate is needed | low | yes |
 | `position.remainingMeters`, `position.remainingSeconds` | Double | What the trip bar showed | no | yes |
 | `position.cell` | `r<row>c<col>` | The 550 m grid square of the route point at flag time, for the aggregate counts (5.2) | low | yes |
 | `location` | exact position (2.2) or null | GPS fix at flag time: lat, lon, horizontal accuracy, course. Null unless exact locations are on for this report | **yes** | no |
-| `spoken` | up to 3 of `{text, secondsBefore}` | The last instructions the voice said (after `SpokenText.normalize`), newest last, and how many seconds before the flag each was spoken | no | yes |
+| `spoken` | up to 3 of `{text, secondsBefore}` | The last instructions the voice said (after `SpokenText.normalize`), newest last, and how many seconds before the flag each was spoken. The voice says the destination's name in "Arrive at <name>" and "You've arrived at <name>"; the snapshot replaces the name with "your destination" in every text, so an address or saved-place name never enters a report | no | yes |
 | `nav.state` | `guiding`, `rerouting`, `paused`, `arrived` | What the engine was doing | no | yes |
 | `nav.rerouteCount` | Int | Reroutes so far in this trip | no | yes |
 | `nav.muted` | bool | Voice reports with the voice off are read differently | no | yes |
@@ -199,12 +202,15 @@ beside `RouteAudit`. `Tools/` stays the audit tool. Both build on Linux.
 swift run -c release peoplemaps-replay report.json        # prints a JSON result
 ```
 
-1. **Data version.** Compare `route.dataVersion` with the SHA-256 of
-   `Core/Resources/seattle-graph.bin` in the checkout. If it differs, print
-   `dataVersion: mismatch` and the commit that has it:
-   `git log --format=%H -- Core/Resources/seattle-graph.bin`, hashing the file
-   at each commit (`git show <commit>:Core/Resources/seattle-graph.bin | sha256sum`).
-   The pipeline checks that commit out and runs again.
+1. **Data version.** The importer writes the full SHA-256 of
+   `seattle-graph.bin` as `graphSHA256` in `Data/provenance.json` (it already
+   computes it for the search index meta; adding the key regenerates
+   provenance, which `Scripts/verify.sh` reproduces byte for byte). Compare
+   `route.dataVersion` with the prefix of that value in the checkout. If it
+   differs, print `dataVersion: mismatch` and the commit that introduced it:
+   `git log --format=%H -S<dataVersion> -- Data/provenance.json`, newest
+   first. No file is hashed. The pipeline checks that commit out and runs
+   again; its checkout needs `fetch-depth: 0` (9).
 2. **Plan replay**, always possible. Build the `Route` from `route.edgeIDs`
    with `NativeRouter.route(ids:mode:)` (made public), then
    `navigationPlan(mode:)`. Print the step at `position.shownStepIndex`, its
@@ -214,13 +220,15 @@ swift run -c release peoplemaps-replay report.json        # prints a JSON result
    `seconds` and `stress` reproduce. Any mismatch here means the data version
    or the router changed and is reported as such.
 3. **Route replay**, when both endpoints are present. Build
-   `RouteRequest(origin:destination:mode:extraMinutes:)` with
-   `Place(id: placeID ?? "report/origin", name: "", lat:, lon:, category: placeID == nil ? "report" : "place")`
-   (the category is only used for IDs and labels; `Place.snap` is empty, so
-   the router snaps by coordinate, which for an intersection endpoint is the
-   node itself at 0 m). Run `compute`, pick `chosen`, compare hashes. Print
-   `match`, or `differs` with the way-ID sequences side by side and both
-   routes' metrics.
+   `RouteRequest(origin:destination:mode:extraMinutes:)`. For each endpoint,
+   when `placeID` names a place in `graph.places`, use that `Place`, whose
+   `snap` is the importer's node, as the app used (2.2). Otherwise use
+   `Place(id: "report/origin", name: "", lat:, lon:, category: "report")`
+   with an empty `snap`, so the router snaps by coordinate, which for an
+   intersection endpoint is the node itself at 0 m; a place that is only in
+   the search index falls back to this too. Run `compute`, pick `chosen`,
+   compare hashes. Print `match`, or `differs` with the way-ID sequences side
+   by side and both routes' metrics.
 
 **What snapping loses.** A snapped endpoint moves the start or end to a
 junction up to 400 m away. The replayed route can differ from the reported one
@@ -460,10 +468,12 @@ ship; a change is a new file.
 `cell` is a grid square about 550 m on a side over the coverage bounds:
 `r<row>c<col>` with row `floor((lat - 47.615) / 0.005)` and col
 `floor((lon + 122.390) / 0.0075)` of the flag point, the route point
-`distanceToManeuver` metres before the end of the shown step. The Worker has
-no graph, so the app computes the cell and sends it as `position.cell`; the
-Worker checks it is a cell of the grid (rows 0 to 12, columns 0 to 11) and
-stores it unchanged.
+`distanceToManeuver` metres before the end of the shown step. The north edge
+falls inside row 12 and the east edge is exactly column 12, so the app clamps
+row to 0 to 12 and column to 0 to 11 (a point on the east edge lands in
+column 11). The Worker has no graph, so the app computes the cell and sends
+it as `position.cell`; the Worker checks it is a cell of that grid (rows 0 to
+12, columns 0 to 11) and stores it unchanged.
 
 On every accepted report, `INSERT … ON CONFLICT DO UPDATE SET count = count + 1`
 for `(week of received_at, cell, category, mode)`. Deletes do not decrement:
@@ -517,6 +527,9 @@ body:
   - type: input
     id: app-version
     attributes: { label: App version }
+  - type: input
+    id: flagged-at
+    attributes: { label: Flagged at, description: "Hour, UTC, for example 2026-10-31T19:00:00Z" }
   - type: textarea
     id: request
     attributes: { label: Route request, render: json }
@@ -544,17 +557,21 @@ splits on `### ` headings reads both a Worker-filed and a hand-filed issue.
 
 **Title.** `[app-report] <Category words>: "<instruction of the shown step>" (<mode>, <dataVersion>)`
 for instruction and voice categories, with the instruction taken from the
-last `spoken` text or, when none, "step <shownStepIndex>". For
+last `spoken` text or, when none or when `nav.state` is `arrived`,
+"step <shownStepIndex>". The arrived rule is belt and braces for 2.1: the
+title never carries an arrival utterance. For
 `calmer_bad_choice`: `[app-report] Calmer route questioned: <first way ID> → <last way ID> (<mode>, <dataVersion>)`.
 For `map_data` and `other` the same with "Map data" or "Other". Category
 words: Wrong instruction, Calmer route questioned, Map data, Voice or timing,
 Other.
 
 **Body.** Category; What happened (the note, or "No note"); Data version;
-App version; Route request (mode, extra minutes, preferences, the snapped
-endpoints as sent, `rerouted`); Route (`dataVersion`, `hash`,
-`alternativeHash`, `meters`, `seconds`, `stress`, `wayIDs`, `edgeIDs`);
-Position; Spoken instructions; Navigation state; Device. A trailing HTML
+App version; Flagged at (the hour, UTC, as sent); Route request (mode, extra
+minutes, preferences, the snapped endpoints as sent, `rerouted`); Route
+(`chosen`, `dataVersion`, `hash`, `alternativeHash`, `meters`, `seconds`,
+`stress`, `wayIDs`, `edgeIDs`); Position; Spoken instructions; Navigation
+state; Device. Everything the replay (2.5) needs is in the body; the parser
+in 9 fills `exactLocations: false` and `location: null`. A trailing HTML
 comment `<!-- report:<id> -->` carries the report ID so 4.5 can find the row
 by issue number even if the DB index is lost; the ID is random and says
 nothing about the sender. A line at the end: "Filed by the PeopleMaps
@@ -562,7 +579,8 @@ reports backend from a report the sender reviewed and sent. Times in the app
 are estimates; a calmer route is a preference, not a rating."
 
 **Omitted from the issue, even when stored:** exact endpoints, exact
-`location`, the install ID, the receipt time beyond the hour. If the user
+`location`, the `exactLocations` flag, the install ID, the receipt time
+beyond the hour. If the user
 turned exact locations on, the issue says "Exact locations: available to
 maintainers (section 4.5)" under Route request, and the endpoints shown are
 the `snapped` forms the app sends inside each exact endpoint (2.2), so
@@ -682,11 +700,14 @@ argument `--reports-url <url>` overrides it in Debug builds, and
 - `Core/Reports.swift`, new: `ReportCategory`, `ReportEndpoint`,
   `ReportSnapshot`, `Report`, `ReportStore` (load, save, add, trim, status
   changes; a value type with `load(from:)`/`save(to:)` like `SavedPlaces`),
-  `ReportEncoder` (canonical JSON, key order of 2.4), `dataVersion(of:)`.
+  `ReportEncoder` (canonical JSON, key order of 2.4). `SearchIndex` gains
+  `dataVersion`, the first 12 chars of its `graphSHA256` meta row.
   `NativeRouter.nearestIntersection(to:mode:)` and `route(ids:mode:)` become
   public in `Core/RoutingEngine.swift`. `Tests/ReportsTests.swift`: encode
   and decode a fixture, snapping picks a junction, trimming, the exact fields
-  drop out when `exactLocations` is false, `dataVersion` is 12 hex chars.
+  drop out when `exactLocations` is false, `dataVersion` is 12 hex chars and
+  matches `graphSHA256` in `Data/provenance.json`, the destination name is
+  replaced in `spoken`.
 - `App/Reports/ReportsStore.swift`: `@Observable` wrapper over
   `ReportStore`, the file path, the UI-testing file name.
 - `App/Reports/ReportsClient.swift`: `URLSession` with `ephemeral`
@@ -707,15 +728,23 @@ argument `--reports-url <url>` overrides it in Debug builds, and
   button reads "Flagged" for two seconds, no sheet, no text. Identifier
   `flag-moment`. VoiceOver: "Flag this moment. Saves the current route and
   instruction on this phone to report later."
+- `App/Navigation/FerrostarAdapter.swift` and `OwnRouteProvider.swift`:
+  `AdaptedRoute` gains `comparison: RouteComparison` and `usedCalmer: Bool`,
+  set in `NavigationController.start` from its arguments and in
+  `OwnRouteProvider.getRoutes` from the reroute's own comparison, which it
+  discards today. Without this nothing holds `route.edgeIDs`, `hash`,
+  `stress`, `alternativeHash` or `chosen` after a reroute.
 - `App/Navigation/NavigationController.swift`: keep the last three spoken
-  texts with timestamps, count reroutes, expose `snapshot(store:)` that
-  builds a `ReportSnapshot` from its published state, the active plan, the
-  comparison and the router's intersection snap.
+  texts with timestamps, with the destination's `shortName` replaced by
+  "your destination" (2.1); count reroutes; expose `snapshot(store:)` that
+  builds a `ReportSnapshot` from its published state and from `active` (its
+  plan, comparison and `usedCalmer`), plus the router's intersection snap.
 - `App/ExploreView.swift`: a "Flagged moments" row in the home footer next
   to About, with an unsent count. Identifier `flagged-moments`.
 - `App/PrivacyInfo.xcprivacy`: `NSPrivacyCollectedDataTypes` gains Coarse
   Location, Precise Location, Other User Content (the note), Other
-  Diagnostic Data, and Device ID (the install ID), each with
+  Diagnostic Data, and User ID (the install ID: a server-issued random
+  identifier is Apple's "User ID", not "Device ID"), each with
   `NSPrivacyCollectedDataTypeLinked` false, `Tracking` false, purpose
   `AppFunctionality`. The App Store Connect privacy answers must say the
   same. The comment at the top is updated.
@@ -730,6 +759,10 @@ the category reads "The calmer route was a bad choice". The review screen
 header: "This becomes a public issue on GitHub. Exact locations stay off
 unless you turn them on; nothing has left this phone yet." The flag button
 during guidance says nothing about the problem; the user explains at home.
+The review screen shows `route.stress` because the review shows every byte;
+the number is a maintainer artefact for the replay, and no other screen in
+the app shows a stress score (the app explains a calmer route in local terms,
+never a number).
 
 ### 8.3 Behaviour details
 
@@ -775,7 +808,8 @@ Built last, after the backend has filed real issues.
 - `on: issues: types: [labeled]`, `if: github.event.label.name == 'app-report'`,
   `concurrency: triage-${{ github.event.issue.number }}`.
 - `permissions: contents: write, issues: write, pull-requests: write`.
-- Steps: checkout `main`; Swift 6.4 on `ubuntu-latest`; `anthropics/claude-code-action@v1`
+- Steps: checkout `main` with `fetch-depth: 0`, so the data-version lookup
+  of 2.5 can find and check out an older commit; Swift 6.4 on `ubuntu-latest`; `anthropics/claude-code-action@v1`
   with `claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}`,
   `prompt` from `.github/app-report-prompt.md`, and `allowed_tools` limited
   to Bash, Read, Edit, Write and Grep.
