@@ -9,7 +9,41 @@ import FoundationNetworking
 public struct ReportCredentials: Codable, Equatable, Sendable {
     public var installID: String
     public var token: String
-    public init(installID: String, token: String) { self.installID = installID; self.token = token }
+    /// A `DELETE /v1/installs/me` may have landed with its answer lost: only then does a 401 mean deleted (4.4).
+    public var deleteAttempted: Bool
+    public init(installID: String, token: String, deleteAttempted: Bool = false) {
+        self.installID = installID; self.token = token; self.deleteAttempted = deleteAttempted
+    }
+
+    private enum CodingKeys: String, CodingKey { case installID, token, deleteAttempted }
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(installID: try c.decode(String.self, forKey: .installID), token: try c.decode(String.self, forKey: .token),
+                  deleteAttempted: try c.decodeIfPresent(Bool.self, forKey: .deleteAttempted) ?? false)
+    }
+
+    /// The shape the Worker issues: `pm_` and 43 base64url characters. Anything else cannot match an install.
+    var tokenIsWellFormed: Bool {
+        token.hasPrefix("pm_") && token.count == 46
+            && token.dropFirst(3).allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == "_") }
+    }
+}
+
+/// How "Delete my reports" ended (4.4). Only `deleted` may say that reports were deleted.
+public enum ReportDeleteResult: Equatable, Sendable {
+    /// The server has deleted them: credentials wiped, so mark local copies `withdrawn`.
+    case deleted
+    /// The server does not know this ID, so nothing was deleted and reports may remain. Credentials kept.
+    case notRecognized
+}
+
+/// How "Check status" ended (4.4).
+public enum ReportStatusResult: Equatable, Sendable {
+    case held([ReportReceipt])
+    /// An earlier "Delete my reports" did land, its answer lost: credentials wiped, so mark local copies `withdrawn`.
+    case deleted
+    /// The server does not know this ID, which says nothing about whether reports remain. Credentials kept.
+    case notRecognized
 }
 
 /// Where the credentials live: the Keychain in the app, memory in tests.
@@ -127,44 +161,75 @@ public struct ReportsClient: Sendable {
 
     // MARK: Taps (8.3)
 
-    /// Send: mints on the first send; on a 401 calls `onReset` ("Your report ID was reset"), wipes the credentials,
-    /// mints and retries once. The old install's rows went with it, so unsent reports keep their IDs.
-    public func send(_ report: Report, credentials: ReportCredentialStore, onReset: @Sendable () async -> Void = {}) async throws -> ReportReceipt {
+    /// Send: mints on the first send; on a 401 calls `onReset`, wipes the credentials, mints and retries once. `onReset` is
+    /// told whether an earlier delete landed (mark local copies `withdrawn`) or not ("Your report ID was reset").
+    public func send(_ report: Report, credentials: ReportCredentialStore, onReset: @Sendable (_ deleteLanded: Bool) async -> Void = { _ in }) async throws -> ReportReceipt {
         if let saved = credentials.load() {
-            do { return try await send(report, token: saved.token) } catch let e as ReportsError where e.serverCode == .unauthorized {
-                await onReset()
+            do {
+                let receipt = try await send(report, token: saved.token)
+                clearDeleteAttempt(saved, in: credentials)
+                return receipt
+            } catch let e as ReportsError where e.serverCode == .unauthorized {
+                await onReset(saved.deleteAttempted)
                 credentials.wipe()
             }
         }
         return try await send(report, token: try await mint(app: report.app, into: credentials).token)
     }
 
-    /// Check status: `GET /v1/reports`. A 401 wipes the credentials and ends there; nothing mints (4.1).
-    public func checkStatus(credentials: ReportCredentialStore) async throws -> [ReportReceipt] {
+    /// Check status: `GET /v1/reports`. Nothing mints (4.1). A 401 means deleted only after a delete whose answer was lost.
+    public func checkStatus(credentials: ReportCredentialStore) async throws -> ReportStatusResult {
         guard let saved = credentials.load() else { throw ReportsError.noReportID }
-        return try await wipingOn401(credentials) { try await reports(token: saved.token) }
+        guard saved.tokenIsWellFormed else { return .notRecognized }
+        do {
+            let list = try await reports(token: saved.token)
+            clearDeleteAttempt(saved, in: credentials)
+            return .held(list)
+        } catch let e as ReportsError where e.serverCode == .unauthorized {
+            guard saved.deleteAttempted else { return .notRecognized }
+            credentials.wipe()
+            return .deleted
+        }
     }
 
-    /// Delete my reports: `DELETE /v1/installs/me`, then the credentials go ("start over", 4.4). A 401 from the Worker counts
-    /// as deleted: the retry after a lost 204 looks just like it, and the token is no use either way. A 401 without the
-    /// Worker's JSON is some other server (`.unexpected`) and, like any other failure, keeps them to try again later.
-    public func deleteMyReports(credentials: ReportCredentialStore) async throws {
-        guard let saved = credentials.load() else { throw ReportsError.noReportID }
-        do { try await deleteInstall(token: saved.token) } catch let e as ReportsError where e.serverCode == .unauthorized {}
+    /// Delete my reports: `DELETE /v1/installs/me`, then the credentials go ("start over", 4.4). The attempt is recorded first,
+    /// so a retry after a lost 204 can tell its 401 from that of a token the server never knew, which deletes nothing and keeps
+    /// the credentials. A malformed token makes no request. Any other failure keeps them to try again later.
+    public func deleteMyReports(credentials: ReportCredentialStore) async throws -> ReportDeleteResult {
+        guard var saved = credentials.load() else { throw ReportsError.noReportID }
+        guard saved.tokenIsWellFormed else { return .notRecognized }
+        let earlierAttempt = saved.deleteAttempted
+        saved.deleteAttempted = true
+        try credentials.save(saved)
+        do {
+            try await deleteInstall(token: saved.token)
+        } catch let e as ReportsError {
+            if case let .server(answer) = e, answer.code != .internal {
+                // The Worker answered, so this attempt deleted nothing.
+                saved.deleteAttempted = earlierAttempt
+                try? credentials.save(saved)
+                guard answer.code == .unauthorized else { throw e }
+                if !earlierAttempt { return .notRecognized }
+            } else {
+                throw e
+            }
+        }
         credentials.wipe()
+        return .deleted
+    }
+
+    /// The server still knows this token, so an earlier delete never landed.
+    private func clearDeleteAttempt(_ saved: ReportCredentials, in credentials: ReportCredentialStore) {
+        guard saved.deleteAttempted else { return }
+        var cleared = saved
+        cleared.deleteAttempted = false
+        try? credentials.save(cleared)
     }
 
     private func mint(app: Report.App, into credentials: ReportCredentialStore) async throws -> ReportCredentials {
         let fresh = try await mintInstall(app: app)
         try credentials.save(fresh)
         return fresh
-    }
-
-    private func wipingOn401<T>(_ credentials: ReportCredentialStore, _ work: () async throws -> T) async throws -> T {
-        do { return try await work() } catch let e as ReportsError where e.serverCode == .unauthorized {
-            credentials.wipe()
-            throw e
-        }
     }
 
     // MARK: HTTP

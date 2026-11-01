@@ -290,7 +290,7 @@ final class ReportsTests: XCTestCase {
         let creds = MemoryCredentials(.init(installID: "id-1", token: "pm_1"))
         let resets = Counter()
         do {
-            _ = try await client(fake).send(try reportToSend(), credentials: creds) { resets.bump() }
+            _ = try await client(fake).send(try reportToSend(), credentials: creds) { _ in resets.bump() }
             XCTFail("expected a 401")
         } catch let e as ReportsError {
             XCTAssertEqual(e.serverCode, .unauthorized)
@@ -301,33 +301,105 @@ final class ReportsTests: XCTestCase {
         XCTAssertEqual(creds.load()?.installID, "id-2")
     }
 
-    func testA401OnCheckStatusWipesAndNeverMints() async throws {
-        let fake = FakeServer([.init(status: 401, body: #"{"error":"unauthorized","message":"gone"}"#)])
-        let creds = MemoryCredentials(.init(installID: "id-1", token: "pm_1"))
-        await assertThrows(.unauthorized) { _ = try await self.client(fake).checkStatus(credentials: creds) }
-        XCTAssertNil(creds.load())
+    private static let goodToken = "pm_" + String(repeating: "A", count: 43)
+    private static let unauthorized = ReportsHTTPResponse(status: 401, body: #"{"error":"unauthorized","message":"This report ID does not exist on the server."}"#)
+    private static var goodCredentials: MemoryCredentials { MemoryCredentials(.init(installID: "id-1", token: goodToken)) }
+
+    /// A delete that reached the server, or may have, with its answer lost.
+    private func loseADelete(_ creds: MemoryCredentials) async {
+        do {
+            _ = try await client(FakeServer([], error: URLError(.networkConnectionLost))).deleteMyReports(credentials: creds)
+            XCTFail("expected no connection")
+        } catch { XCTAssertEqual(error as? ReportsError, .noConnection) }
+        XCTAssertEqual(creds.load()?.deleteAttempted, true)
+    }
+
+    func testA401OnCheckStatusKeepsTheIDAndNeverMints() async throws {
+        let fake = FakeServer([Self.unauthorized])
+        let creds = Self.goodCredentials
+        let result = try await client(fake).checkStatus(credentials: creds)
+        XCTAssertEqual(result, .notRecognized)
+        XCTAssertEqual(creds.load()?.token, Self.goodToken)
         XCTAssertEqual(fake.requests.map(\.line), ["GET /v1/reports"])
-        do { _ = try await client(fake).checkStatus(credentials: creds); XCTFail() } catch { XCTAssertEqual(error as? ReportsError, .noReportID) }
+    }
+
+    func testCheckStatusAfterALostDeleteFinishesIt() async throws {
+        let creds = Self.goodCredentials
+        await loseADelete(creds)
+        let result = try await client(FakeServer([Self.unauthorized])).checkStatus(credentials: creds)
+        XCTAssertEqual(result, .deleted)
+        XCTAssertNil(creds.load())
+        do { _ = try await client(FakeServer([])).deleteMyReports(credentials: creds); XCTFail() } catch { XCTAssertEqual(error as? ReportsError, .noReportID) }
+    }
+
+    func testAnInstallThatStillAnswersClearsTheLostDelete() async throws {
+        let creds = Self.goodCredentials
+        await loseADelete(creds)
+        let status = try await client(FakeServer([.init(status: 200, body: #"{"reports":[]}"#)])).checkStatus(credentials: creds)
+        XCTAssertEqual(status, .held([]))
+        XCTAssertEqual(creds.load()?.deleteAttempted, false)
+        let result = try await client(FakeServer([Self.unauthorized])).deleteMyReports(credentials: creds)
+        XCTAssertEqual(result, .notRecognized, "that attempt is over, so this 401 says nothing was deleted")
+        XCTAssertNotNil(creds.load())
+    }
+
+    func testSendAfterALostDeleteSaysItLanded() async throws {
+        let creds = Self.goodCredentials
+        await loseADelete(creds)
+        let fake = FakeServer([Self.unauthorized, .init(status: 201, body: #"{"installID":"id-2","token":"pm_2"}"#), .init(status: 201, body: Self.receiptJSON)])
+        let landed = Counter()
+        _ = try await client(fake).send(try reportToSend(), credentials: creds) { if $0 { landed.bump() } }
+        XCTAssertEqual(landed.value, 1)
+        XCTAssertEqual(creds.load()?.installID, "id-2")
+        XCTAssertEqual(creds.load()?.deleteAttempted, false)
     }
 
     func testCheckStatusReadsTheList() async throws {
         let fake = FakeServer([.init(status: 200, body: #"{"reports":[{"id":"A","receivedAt":"2026-10-31T21:00:00Z","expiresAt":"2027-01-29T21:00:00Z","category":"map_data"}]}"#)])
-        let list = try await client(fake).checkStatus(credentials: MemoryCredentials(.init(installID: "i", token: "pm_1")))
-        XCTAssertEqual(list, [.init(id: "A", receivedAt: "2026-10-31T21:00:00Z", expiresAt: "2027-01-29T21:00:00Z", category: .mapData)])
+        let list = try await client(fake).checkStatus(credentials: Self.goodCredentials)
+        XCTAssertEqual(list, .held([.init(id: "A", receivedAt: "2026-10-31T21:00:00Z", expiresAt: "2027-01-29T21:00:00Z", category: .mapData)]))
+    }
+
+    func testDeleteMyReportsDeletes() async throws {
+        let fake = FakeServer([.init(status: 204)])
+        let creds = Self.goodCredentials
+        let result = try await client(fake).deleteMyReports(credentials: creds)
+        XCTAssertEqual(result, .deleted)
+        XCTAssertNil(creds.load())
     }
 
     func testDeleteMyReportsFinishesWhenTheRetryAfterALostResponseGetsA401() async throws {
-        let fake = FakeServer([.init(status: 401, body: #"{"error":"unauthorized","message":"gone"}"#)])
-        let creds = MemoryCredentials(.init(installID: "id-1", token: "pm_1"))
-        try await client(fake).deleteMyReports(credentials: creds)
+        let creds = Self.goodCredentials
+        await loseADelete(creds)
+        let fake = FakeServer([Self.unauthorized])
+        let result = try await client(fake).deleteMyReports(credentials: creds)
+        XCTAssertEqual(result, .deleted)
         XCTAssertNil(creds.load())
         XCTAssertEqual(fake.requests.map(\.line), ["DELETE /v1/installs/me"])
     }
 
+    func testDeleteMyReportsDoesNotClaimAPlain401Deleted() async throws {
+        let creds = Self.goodCredentials
+        let result = try await client(FakeServer([Self.unauthorized])).deleteMyReports(credentials: creds)
+        XCTAssertEqual(result, .notRecognized)
+        XCTAssertEqual(creds.load(), .init(installID: "id-1", token: Self.goodToken))
+    }
+
+    func testDeleteMyReportsSendsNothingWithAMalformedToken() async throws {
+        for token in ["", "pm_1", String(Self.goodToken.dropLast()), Self.goodToken + "A", "xx" + Self.goodToken.dropFirst(2), "pm_" + String(repeating: "é", count: 43)] {
+            let fake = FakeServer([])
+            let creds = MemoryCredentials(.init(installID: "id-1", token: token))
+            let result = try await client(fake).deleteMyReports(credentials: creds)
+            XCTAssertEqual(result, .notRecognized, token)
+            XCTAssertEqual(creds.load()?.token, token)
+            XCTAssertTrue(fake.requests.isEmpty, token)
+        }
+    }
+
     func testDeleteMyReportsKeepsTheIDOnA401ThatIsNotTheWorkers() async throws {
         let fake = FakeServer([.init(status: 401, body: "<html>Sign in to this network</html>")])
-        let creds = MemoryCredentials(.init(installID: "id-1", token: "pm_1"))
-        do { try await client(fake).deleteMyReports(credentials: creds); XCTFail("expected a failure") } catch {
+        let creds = Self.goodCredentials
+        do { _ = try await client(fake).deleteMyReports(credentials: creds); XCTFail("expected a failure") } catch {
             guard case ReportsError.unexpected = error else { return XCTFail("\(error)") }
         }
         XCTAssertNotNil(creds.load())
@@ -338,18 +410,28 @@ final class ReportsTests: XCTestCase {
             .init(status: 503, body: #"{"error":"storage_unavailable","message":"The report server is full for today."}"#),
             .init(status: 204),
         ])
-        let creds = MemoryCredentials(.init(installID: "id-1", token: "pm_1"))
+        let creds = Self.goodCredentials
         do {
-            try await client(fake).deleteMyReports(credentials: creds)
+            _ = try await client(fake).deleteMyReports(credentials: creds)
             XCTFail("expected 503")
         } catch let ReportsError.server(e) {
             XCTAssertEqual(e.status, 503)
             XCTAssertEqual(e.code, .storageUnavailable)
         }
-        XCTAssertNotNil(creds.load(), "the reports can still be deleted later")
-        try await client(fake).deleteMyReports(credentials: creds)
+        XCTAssertEqual(creds.load()?.deleteAttempted, false, "the Worker answered, so that attempt deleted nothing")
+        let result = try await client(fake).deleteMyReports(credentials: creds)
+        XCTAssertEqual(result, .deleted)
         XCTAssertNil(creds.load())
         XCTAssertEqual(fake.requests.map(\.line), ["DELETE /v1/installs/me", "DELETE /v1/installs/me"])
+    }
+
+    func testDeleteMyReportsAnInternalErrorMayHaveLanded() async throws {
+        let creds = Self.goodCredentials
+        do {
+            _ = try await client(FakeServer([.init(status: 500, body: #"{"error":"internal","message":"Something went wrong."}"#)])).deleteMyReports(credentials: creds)
+            XCTFail("expected 500")
+        } catch { XCTAssertEqual((error as? ReportsError)?.serverCode, .internal) }
+        XCTAssertEqual(creds.load()?.deleteAttempted, true)
     }
 
     func testErrorMapping() async throws {
@@ -435,10 +517,6 @@ final class ReportsTests: XCTestCase {
     }
 
     private func client(_ fake: FakeServer) -> ReportsClient { ReportsClient(baseURL: URL(string: "http://127.0.0.1:8787")!, transport: fake.transport) }
-
-    private func assertThrows(_ code: ReportsServerError.Code, _ work: () async throws -> Void, line: UInt = #line) async {
-        do { try await work(); XCTFail("expected \(code)", line: line) } catch { XCTAssertEqual((error as? ReportsError)?.serverCode, code, line: line) }
-    }
 
     private func assertError(_ expected: ReportsError, _ work: () async throws -> Void, line: UInt = #line) async {
         do { try await work(); XCTFail("expected \(expected)", line: line) } catch { XCTAssertEqual(error as? ReportsError, expected, line: line) }

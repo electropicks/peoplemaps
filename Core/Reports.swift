@@ -53,7 +53,6 @@ public struct Report: Codable, Equatable, Sendable {
     public struct Request: Codable, Equatable, Sendable {
         public var mode: TravelMode
         public var extraMinutes: Int
-        /// Null until the "Calmer means" sheet lands (Docs/DESIGN.md 4.6).
         public var origin: Endpoint?
         public var destination: Endpoint?
         public var rerouted: Bool
