@@ -49,9 +49,9 @@ struct RouteDetails: View {
                     Text("No route is labeled safe; \"calmer\" means fewer of the things listed above.")
                     Text("Times use assumed speeds, hills and junction delays. They do not include live traffic, closures, parking, signal timing, or verified travel times.")
                     Text(modeNote)
-                    Text("Hills come from a 5 m USGS ground model; bridges and tunnels are interpolated between their ends.")
+                    Text("Hills come from a 16 ft USGS ground model; bridges and tunnels are interpolated between their ends.")
                     ForEach(comparison.caveats, id: \.self) { Text("Unknown in the map: \($0)") }
-                    Text("Routes begin and end at nearby points on the main connected network: \(Int(comparison.originSnapMeters.rounded())) m from the start place and \(Int(comparison.destinationSnapMeters.rounded())) m from the destination. These gaps are not routed or included in time.")
+                    Text("Routes begin and end at nearby points on the main connected network: \(DistanceFormat.distance(comparison.originSnapMeters)) from the start place and \(DistanceFormat.distance(comparison.destinationSnapMeters)) from the destination. These gaps are not routed or included in time.")
                 }.font(.subheadline).foregroundStyle(.secondary)
                 Section("Streets") {
                     streets("Fastest", comparison.fastest, color: .fastest)
