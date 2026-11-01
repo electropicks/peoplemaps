@@ -25,7 +25,7 @@ public enum PlaceCategory: String, CaseIterable, Sendable {
                   "e-cigarette", "paint", "cannabis", "marketplace", "trade", "second_hand", "grocery", "variety_store",
                   "beverages", "toys", "electronics", "cosmetics", "hardware", "stationery", "games", "video_games",
                   "comics", "mall", "shop", "yarn", "houseware", "kitchenware", "fashion_accessories", "perfumery",
-                  "art_materials", "bed", "tyres", "car_parts", "motorcycle", "hifi", "lighting", "tiles", "carpet",
+                  "art_materials", "bed", "tyres", "car_parts", "motorcycle", "hifi", "car", "lighting", "tiles", "carpet",
                   "general"]),
         (.parks, ["park", "garden", "wood", "water", "playground", "nature_reserve", "beach", "dog_park", "peak",
                   "paddling_pool", "fishing"]),
