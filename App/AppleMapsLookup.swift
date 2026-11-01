@@ -5,6 +5,7 @@ import SwiftUI
 struct AppleMapsLookup: View {
     let query: String
     @Environment(\.openURL) private var openURL
+    @ScaledMetric private var diameter: CGFloat = 32
 
     /// `maps://?q=…` searched near the centre of our area.
     static func url(for query: String) -> URL? {
@@ -16,11 +17,12 @@ struct AppleMapsLookup: View {
     var body: some View {
         Button { if let url = Self.url(for: query) { openURL(url) } } label: {
             HStack(spacing: 12) {
-                Image(systemName: "map").font(.system(size: 15, weight: .medium)).foregroundStyle(.white)
-                    .frame(width: 32, height: 32).background(Color(uiColor: .systemGray), in: Circle())
+                Image(systemName: "map").font(.system(size: 14.5, weight: .semibold)).foregroundStyle(Color.categoryGlyph)
+                    .frame(width: diameter, height: diameter).background(Color.categoryFill(.services), in: Circle())
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Look up in Apple Maps").font(.body).foregroundStyle(.primary)
-                    Text("Opens the Maps app").font(.footnote).foregroundStyle(.secondary)
+                    Text("Opens the Maps app").font(.subheadline).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "arrow.up.forward").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
@@ -28,7 +30,7 @@ struct AppleMapsLookup: View {
             .padding(.horizontal, 14).frame(minHeight: 52).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(.panelFill, in: RoundedRectangle(cornerRadius: 12))
+        .background(.panelFill, in: RoundedRectangle(cornerRadius: Layout.groupRadius))
         .accessibilityLabel("Look up \u{201C}\(query)\u{201D} in Apple Maps")
         .accessibilityHint("Opens the Maps app")
         .accessibilityIdentifier("apple-maps-lookup")

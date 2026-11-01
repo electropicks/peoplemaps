@@ -773,6 +773,59 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertFalse(lookup.exists)
     }
 
+    @MainActor func testSearchResultShowsSourceAndEmptyStateStays() {
+        let app = launchHome()
+        app.buttons["search-field"].tap()
+        let field = app.textFields["search-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("park")
+        let result = app.buttons["result-relation/1047789"]
+        XCTAssertTrue(result.waitForExistence(timeout: 5))
+        // The visible source line, not just the VoiceOver label.
+        XCTAssertTrue(result.staticTexts["OpenStreetMap, Oct 2026"].exists, result.debugDescription)
+        XCTAssertTrue(result.label.hasSuffix(", OpenStreetMap, Oct 2026"), result.label)
+        app.buttons["cancel-search-home"].tap()
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("unfindableXYZ")
+        XCTAssertTrue(app.descendants(matching: .any)["search-empty"].waitForExistence(timeout: 5))
+    }
+
+    /// VoiceOver order (DESIGN section 7): name, category, address or area, source and date.
+    @MainActor func testAddressRowLabelOrder() {
+        let app = launchHome()
+        app.buttons["search-field"].tap()
+        let field = app.textFields["search-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("3400 Fremont Ave N")
+        let result = app.buttons["result-node/2652117839"]
+        XCTAssertTrue(result.waitForExistence(timeout: 5))
+        XCTAssertEqual(result.label, "3400 Fremont Avenue North, Address, Fremont, OpenStreetMap, Oct 2026")
+        XCTAssertTrue(result.staticTexts["Address \u{00B7} Fremont"].exists, result.debugDescription)
+        XCTAssertTrue(result.staticTexts["OpenStreetMap, Oct 2026"].exists)
+    }
+
+    /// Picker distances run from where the user is, not from the place being replaced, and are absent when that is unknown.
+    @MainActor func testPickerDistanceIsFromTheUser() {
+        let app = launch()
+        app.buttons["choose-origin"].tap()
+        pick(app, "Fremont Branch", id: "way/37058377")
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
+        app.buttons["choose-origin"].tap()
+        let gasWorks = app.buttons["place-recent-relation/1047789"]
+        XCTAssertTrue(gasWorks.waitForExistence(timeout: 5))
+        // The user is at Kerry Park, 1.6 mi from Gas Works; the start place (Fremont) is under a mile away.
+        let measured = NSPredicate { _, _ in gasWorks.label.contains("1.6 miles") }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: measured, object: nil)], timeout: 10), .completed, gasWorks.label)
+        capture("14b-picker-distance", app: app)
+        app.buttons["cancel-search"].tap()
+        // The destination picker doesn't know where the user is, so it shows no distances.
+        app.buttons["choose-destination"].tap()
+        let recent = app.buttons["place-recent-relation/1047789"]
+        XCTAssertTrue(recent.waitForExistence(timeout: 5))
+        XCTAssertFalse(recent.label.contains("mile") || recent.label.contains("feet"), recent.label)
+    }
+
     @MainActor func testFavouritesAndDroppedPinInLandscape() {
         let app = launchHome()
         openPlace(app, "Fremont Branch", id: "way/37058377")
