@@ -20,16 +20,19 @@ records anything renamed in the PR.
 
 | API (iOS 26 SDK) | Use here | Status |
 |---|---|---|
-| `glassEffect(_ glass: Glass = .regular, in: some Shape)` | custom floating controls, chips | confirm |
-| `Glass.regular`, `.clear`, `.identity`, `.tint(_:)`, `.interactive()` | variants; `.identity` to switch glass off | confirm |
-| `GlassEffectContainer(spacing:)` | one per cluster of nearby glass | confirm |
-| `glassEffectID(_:in:)`, `glassEffectUnion(id:namespace:)` | morph map buttons between screens | confirm |
-| `.buttonStyle(.glass)`, `.buttonStyle(.glassProminent)` | secondary and primary buttons | confirm |
-| `scrollEdgeEffectStyle(_:for:)` | soft edge under the sheet's pinned header | confirm |
-| `presentationDetents`, `presentationBackgroundInteraction`, `presentationContentInteraction` | the persistent sheet | stable since iOS 16.4 |
-| `@Environment(\.accessibilityReduceTransparency)`, `\.colorSchemeContrast`, `\.accessibilityReduceMotion` | fallbacks | stable |
+| `glassEffect(_ glass: Glass = .regular, in: some Shape)` | custom floating controls, chips | confirmed in Xcode 27.1 (iOS 27.1 SDK) |
+| `Glass.regular`, `.clear`, `.identity`, `.tint(_:)`, `.interactive()` | variants; `.identity` to switch glass off | confirmed in Xcode 27.1 (iOS 27.1 SDK) |
+| `GlassEffectContainer(spacing:)` | one per cluster of nearby glass | confirmed in Xcode 27.1 (iOS 27.1 SDK) |
+| `glassEffectID(_:in:)`, `glassEffectUnion(id:namespace:)` | morph map buttons between screens | confirmed in Xcode 27.1 (iOS 27.1 SDK) |
+| `.buttonStyle(.glass)`, `.buttonStyle(.glassProminent)` | secondary and primary buttons | confirmed in Xcode 27.1 (iOS 27.1 SDK) |
+| `scrollEdgeEffectStyle(_:for:)` | soft edge under the sheet's pinned header | confirmed in Xcode 27.1 (iOS 27.1 SDK) |
+| `presentationDetents`, `presentationBackgroundInteraction`, `presentationContentInteraction` | the persistent sheet | stable since iOS 16.4; confirmed in Xcode 27.1 |
+| `@Environment(\.accessibilityReduceTransparency)`, `\.colorSchemeContrast`, `\.accessibilityReduceMotion` | fallbacks | stable; confirmed in Xcode 27.1 |
 | iOS 27 "clear to tinted" glass slider | users can make all glass more opaque | reported in press, unconfirmed |
 | Xcode 27 ignores `UIDesignRequiresCompatibility` | no opting out of glass | Apple forums thread 832543 |
+
+`.containerConcentric` was not found in the Xcode 27.1 SDK; `ConcentricRectangle` exists, so use that for
+concentric corners (section 3).
 
 Partial-height system sheets get a glass background on iOS 26+ automatically;
 a custom `presentationBackground` replaces it. We rely on the system
@@ -146,8 +149,8 @@ height 52 (`@ScaledMetric`). Gap between groups 20; inside a group 8. Map
 control cluster 16 from the edges and the safe area.
 
 **Corner radii, concentric.** Outer shapes follow the device corner; inner
-shapes are `outer − padding`. Use `ConcentricRectangle` / `.containerConcentric`
-if Xcode 27 has it (iOS 26 SDK name, confirm); otherwise compute:
+shapes are `outer − padding`. Use `ConcentricRectangle` (confirmed in
+Xcode 27.1; `.containerConcentric` does not exist) or compute:
 
 | Shape | Radius |
 |---|---|
@@ -499,12 +502,11 @@ Small PRs into `main`, in order, each passing `Scripts/verify.sh --ui` on a
 Mac with screenshots per the `simulator-evidence` skill (light, dark,
 landscape unless noted). Base each on the latest `main` after `ux-round-1`.
 
-1. **iOS 27 deployment target.** `Scripts/generate_project.py`
-   (`IPHONEOS_DEPLOYMENT_TARGET` `17.0` → `27.0`), `Package.swift`
-   (`.iOS(.v17)` → `.iOS("27.0")` or `.v27` if the tools version has it; bump
-   `swift-tools-version` if needed), regenerate the project. Remove
-   `#available(iOS 26, *)` checks if any. Evidence: verify summary only, no
-   visual change.
+1. **iOS 27 deployment target (done).** `Scripts/generate_project.py`
+   (`IPHONEOS_DEPLOYMENT_TARGET` is `27.0`) and `Package.swift`
+   (`.iOS("27.0")`); the project is regenerated. No `#available(iOS 26, *)`
+   checks remain outside `App/ExploreView.swift` and `App/Navigation/`.
+   Evidence: verify summary only, no visual change.
 2. **Tokens and category model.** `Core/PlaceCategory.swift` (raw category →
    group, symbol), `Tests/PlaceCategoryTests.swift` (every category in the
    current index maps; unknown → services), category colours in

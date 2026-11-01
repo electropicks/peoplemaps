@@ -52,6 +52,23 @@ extension UIColor {
     private static func elevated(_ color: UIColor) -> UIColor {
         UIColor { color.resolvedColor(with: UITraitCollection(traitsFrom: [$0, UITraitCollection(userInterfaceLevel: .elevated)])) }
     }
+    /// Category badge fills (Docs/DESIGN.md section 2). Only place badges use them, never text, glass or buttons.
+    static func categoryFill(_ group: PlaceCategory) -> UIColor {
+        switch group {
+        case .food: dynamic(light: 0xC75300, dark: 0xFF9F0A)
+        case .coffee: dynamic(light: 0x8A5A2B, dark: 0xC8935A)
+        case .nightlife: dynamic(light: 0x8E3FC0, dark: 0xBF5AF2)
+        case .shops: dynamic(light: 0x4B49C8, dark: 0x7D7AFF)
+        case .parks: dynamic(light: 0x0B7A6B, dark: 0x3CC9B0)
+        case .sport: dynamic(light: 0x00728F, dark: 0x40C8E0)
+        case .transit: dynamic(light: 0x0064D2, dark: 0x409CFF)
+        case .sights: dynamic(light: 0xC2185B, dark: 0xFF6482)
+        case .health: dynamic(light: 0xD70015, dark: 0xFF6961)
+        case .services: dynamic(light: 0x6C6C70, dark: 0xAEAEB2)
+        }
+    }
+    /// The glyph on a category fill: white in light mode, near-black in dark mode where the fills are brighter.
+    static let categoryGlyph = dynamic(light: 0xFFFFFF, dark: 0x1C1C1E)
     static let mapLand = dynamic(light: 0xF2F2F2, dark: 0x1A1A1C)
     static let mapStreet = dynamic(light: 0xFFFFFF, dark: 0x2C2C2E)
     static let mapArterial = dynamic(light: 0xE3DDCF, dark: 0x46423A)
@@ -68,6 +85,11 @@ extension ShapeStyle where Self == Color {
     static var fastest: Color { Color(uiColor: .fastest) }
     static var panel: Color { Color(uiColor: .panel) }
     static var panelFill: Color { Color(uiColor: .panelFill) }
+}
+
+extension Color {
+    static func categoryFill(_ group: PlaceCategory) -> Color { Color(uiColor: .categoryFill(group)) }
+    static var categoryGlyph: Color { Color(uiColor: .categoryGlyph) }
 }
 
 /// One set of short, physical timings for every screen, like Apple Maps. Reduce Motion keeps crossfades and drops

@@ -4,7 +4,8 @@ Implemented 27 October 2026 in `Core/StressModel.swift`, with data from
 `Scripts/import_osm.py`. Differences from the first draft: walking has no
 per-turn cost (sidewalk geometry makes turn counts noise), and the whole-route
 factors (stop-and-go clusters, short freeway hops, side-street shortcuts) are
-scored on each candidate but are not visible to the search itself.
+scored on each candidate but are not visible to the search itself. Drive times
+were recalibrated on 31 October 2026 against a real trip (see Time).
 
 ## What we are optimizing
 
@@ -39,6 +40,83 @@ Stress means something different in each mode, so each mode has its own model:
    no sidewalk). Route stress = sum of events + sum of exposure.
 6. **Time stays honest.** Stress never changes the time estimate. Time has its
    own model (speeds, signal delay, and grade for bike and walk).
+
+## Time
+
+Time has its own model, `seconds(_:mode:)` and `transitionSeconds` in
+`Core/StressModel.swift`. Stress never changes it. Every number here is an
+estimate: there is no live traffic, signal timing, bridge schedule or time of
+day, and the UI says so.
+
+### Drive
+
+Each edge is driven at a free-flow speed, and every junction charges its
+slowdown once. The speed carries no urban factor; signals, stops and turns are
+what slow a Seattle driver down, and they are counted where they happen.
+
+| Road | Free-flow speed (mph) | Note |
+| --- | --- | --- |
+| Any road with a posted limit | the posted limit | 99.5% of non-service drive edges (89% of all drive edges) have `maxspeed`; Seattle posts 25 on arterials and 20 on residential streets |
+| motorway | 60 | capped at 43 (70 km/h), see below |
+| motorway_link | 35 | |
+| trunk | 40 | Aurora |
+| trunk_link | 30 | |
+| primary, secondary, tertiary and their links | 25 | the citywide arterial limit |
+| residential, unclassified | 20 | the citywide residential limit |
+| living_street, service | 10 | alleys, parking aisles |
+| anything else drivable | 15 | |
+
+| Junction | Delay (s) | Reasoning |
+| --- | --- | --- |
+| Signal | 15 | Expected value: red about half the time, for an average wait near 30 s |
+| All-way stop | 10 | Stop, then take turns |
+| Stop sign | 8 | A full stop and restart |
+| Yield | 3 | |
+| Unsigned cross street when leaving a local street (4 or more legs) | 3 | The residential grid mostly has no signs; you slow to look, and to yield to the right |
+| Turn (over 35° onto another way) | 5 | Slowing through the corner |
+
+**Why this table.** The first model had the same shape but double-counted.
+Its class table (motorway 70, trunk 50, primary 35, secondary 32, tertiary 28,
+residential 22, service 12) read like mph but was divided by 3.6, so it was
+km/h; posted limits were multiplied by 0.8 and then capped by that table; and
+the junction delays were added on top. Aurora (40 mph posted) came out at
+31 mph, a 25 mph arterial at 20 mph and a 20 mph residential street at 14 mph.
+A real trip on 31 October 2026, 3rd Ave NW and NW 43rd St to Bell St in
+Belltown, took 10 minutes door to door; the old model estimated 12 minutes for
+its fastest route (19 mph average) and 14 for the calmer one. The new table
+gives 10.5 minutes (21 mph average, 9 signals, 11 turns) without any trip
+being special-cased. Across the four audited drive trips, estimates fell by 9
+to 17 percent and three of the four fastest routes changed: with speeds at the
+posted limit and junctions dearer, the search now prefers through roads with
+fewer stops, which is also what a local does. Kerry Park to Gas Works now
+runs over the Fremont Bridge instead of Aurora, and its fastest route is
+already the calmest the map can see.
+
+**The 70 km/h cap.** `NativeRouter`'s A* heuristic divides straight-line
+distance by 70 km/h, and A* is only exact when no edge is faster than that. So
+drive speeds are capped at 43 mph (`driveTopMph`) until the router reads its
+top speed from the time model, which would let motorways use their posted 60.
+Inside the bundled bounds the motorways are I-5 (posted 60) and SR 99 south
+of the Aurora Bridge (posted 40), and 43 is not far from a midday estimate on
+either.
+
+**Not in the estimate.** Traffic queues, signal coordination, waiting for a
+gap on an unsignalled left (charged as stress, not time), bridge openings and
+finding parking. Each would need data the app does not have offline; the first
+is the one most worth adding when real arrival times are recorded.
+
+### Bike
+
+18 km/h on streets, 14 on shared paths, 11 on tagged rough surfaces, plus
+about 3 s per metre climbed and a little back on descents, never faster than
+32 km/h. Signals add 8 s, stop signs 3, yields 1, turns 2. Checked on
+31 October 2026: these are km/h as intended, so bike times were left alone.
+
+### Walk
+
+1.4 m/s on the flat plus 2.5 s per metre climbed, close to Tobler's hiking
+function for city grades; 0.6 m/s on steps. A signalled crossing of anything
+busier than a side street waits 25 s. Unchanged.
 
 ## Drive
 
@@ -109,7 +187,7 @@ same distance by about 100 equivalent seconds, even at equal time.
 Built on Level of Traffic Stress (LTS), the standard method from Mekuria,
 Furth and Nixon (2012). It rates each street 1 to 4 from lanes, speed, bike
 facility and parking. Seattle's OSM data has the inputs: lanes (99%), maxspeed
-(98%), cycleway tags (54% of arterials) and parking (about 35% of arterials).
+(99.5% of non-service drive edges), cycleway tags (54% of arterials) and parking (about 35% of arterials).
 
 ### Exposure
 
@@ -130,7 +208,7 @@ facility and parking. Seattle's OSM data has the inputs: lanes (99%), maxspeed
 | Left turn on an arterial without a signal | 90 | At a signal: 15 |
 | Leaving a bike facility onto a street with no facility | 20 | Network gaps |
 | Stop sign | 10 | Stopping costs a cyclist momentum, more than it costs a driver |
-| Signal | 8 | Expected cost |
+| Signal | 14 | Waiting at a red beside traffic, then pulling away from it. Dearer than a stop sign (10), which is a quick stop and go. Stress only: the time estimate still adds 8 s |
 | Stop or signal on an uphill grade over 6% | +20 | **Needs elevation data**; restarting uphill is the worst kind of stop |
 | Turn (a decision) | 4 | |
 | Movable bridge | 15 | |
