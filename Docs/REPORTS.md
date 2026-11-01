@@ -174,13 +174,14 @@ trip is best-effort.
   it locally. These four are the statuses the app needs; the server keeps none (4.3).
 - **Limit.** The last 50. A flag that would make 51 drops the oldest `sent` or `withdrawn` snapshot, or else the oldest
   `flagged` one, and the list says "An older unsent moment was removed to make room".
-- **Keychain.** Install ID and bearer token, `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, not synchronised, so a
-  restore onto another phone starts with no ID and no reports.
+- **Keychain.** Install ID, bearer token and the `deleteAttempted` flag (4.4),
+  `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, not synchronised, so a restore onto another phone starts with no ID
+  and no reports.
 - **Export.** The JSON exactly as it would be sent, in the share sheet as `report-<id>.json`. The review screen shows the
   same bytes, pretty-printed.
 - **Delete.** Swipe to delete one snapshot; "Delete all flagged moments" deletes the file. Neither contacts the server.
-  "Delete my reports" (4.4) shows the count of local `sent` snapshots, calls `DELETE /v1/installs/me` on confirmation and
-  marks local copies `withdrawn`.
+  "Delete my reports" (4.4) shows the count of local `sent` snapshots, calls `DELETE /v1/installs/me` on confirmation and,
+  once the server has deleted them, marks local copies `withdrawn`.
 - **Network.** No request is automatic: not when the list opens, not at launch, not on a timer. The client contacts the
   server only on Send, "Check status" (`GET /v1/reports`) and "Delete my reports". Each is one explicit tap.
 - **Backups.** The `reports/` folder is marked `isExcludedFromBackup`, because it holds exact coordinates.
@@ -209,9 +210,9 @@ accepted report, so a maintainer can tell which builds still send (question 1). 
 Send.
 
 Every other endpoint needs `Authorization: Bearer pm_…`. A token that matches no install is `401 unauthorized`: the
-install was deleted or never existed. The app wipes its two Keychain items and shows "Your report ID was reset". It
-mints a new token only inside a Send, then retries that send once; a 401 on "Check status" ends there, and on "Delete my
-reports" it counts as done (4.4). No request mints a token on its own.
+install was deleted or never existed. On a Send, the app wipes its Keychain items, shows "Your report ID was reset", mints
+a new token and retries that send once. "Check status" and "Delete my reports" never mint, and a 401 there follows 4.4. No
+request mints a token on its own.
 
 ### 4.2 Send a report
 
@@ -221,7 +222,7 @@ Body: the report (2.4); its `id` is the idempotency key
 201 { "id": "6F1D…", "receivedAt": "2026-10-31T21:00:00Z", "expiresAt": "2027-01-29T21:00:00Z" }   // stored
 200 { same shape }                                                                                 // a retry with the same id and body
 409 { "error": "conflict", "message": "Report 6F1D… was already sent with different content." }
-503 { "error": "storage_unavailable", "message": "…" } + Retry-After                               // D1 refused the write (4.6); nothing kept
+503 { "error": "storage_unavailable", "message": "…" }, Retry-After on the daily limits only      // D1 refused the write (4.6); nothing kept
 ```
 
 - The Worker validates the shape (`Backend/src/validate.ts`: types, enums, `edgeIDs` and `wayIDs` non-empty and at most
@@ -257,14 +258,29 @@ DELETE /v1/installs/me     204
 ```
 
 `DELETE /v1/installs/me` deletes every report of the install and the install row, in one D1 batch, and is the reset:
-"Delete my reports" is also "start over". The app wipes its Keychain items only after a `204`, or on a 401. On any other
-failure it keeps them, so the user can tap Delete again.
+"Delete my reports" is also "start over".
 
-**A 401 on `DELETE /v1/installs/me` counts as deleted.** If the `204` was lost, the retry gets a 401, and telling the user
-it failed would be wrong. A 401 in the Worker's JSON envelope means it holds no install for this token, and reports can
-only be reached through an install, so there is nothing left that this phone could delete. A 401 without that envelope,
-say from something in between, stays an error. The one case this misreads is a Keychain token that has been corrupted,
-where the old reports would remain until they expire; the phone could not have deleted them anyway. A hand-filed issue (6) is not reached by these; see question 26.
+**A 401 alone does not mean deleted.** A retry after a lost `204` gets a 401, but so does a corrupted token, whose reports
+are still on the server. To tell them apart, the app saves `deleteAttempted` beside the credentials before it sends the
+request. Any answer in the Worker's JSON envelope except `internal` shows that attempt deleted nothing, and puts the flag
+back as it was. No answer, `internal`, or a response without the envelope leaves it set, since the delete may have landed.
+
+| "Delete my reports" gets | Result | Keychain | Local copies | The user is told |
+|---|---|---|---|---|
+| `204` | `deleted` | wiped | `withdrawn` | "Your reports and report ID were deleted from our server." |
+| Worker's 401, `deleteAttempted` set | `deleted` | wiped | `withdrawn` | the same |
+| Worker's 401, flag not set | `notRecognized` | kept | stay `sent` | "Our server doesn't recognise this report ID, so nothing was deleted. Reports sent under it stay until their 90 days end." |
+| Malformed token on the phone, no request made | `notRecognized` | kept | stay `sent` | the same |
+| Anything else, including a 401 without the envelope | throws | kept | stay `sent` | the error in words; the user can tap Delete again |
+
+"Check status" follows the same rule: a Worker's 401 with the flag set finishes the delete and returns `deleted`, and with
+the flag not set returns `notRecognized` and keeps everything. A `200` clears the flag, since that install still exists. A
+Send's 401 with the flag set tells the app the delete finished, so it marks local copies `withdrawn` instead of showing
+"reset". A Send on an unrecognised ID still resets it (4.1), which is the only way forward; the old reports stay until they
+expire.
+
+The one misread left is something in between forging the Worker's 401 after an attempt was lost, which TLS makes unlikely. A
+hand-filed issue (6) is not reached by these; see question 26.
 
 ### 4.5 Before App Store release
 
@@ -306,8 +322,11 @@ TestFlight, and it budgets Workers Paid at $5 a month for the CPU it needs (ques
   answers `503 storage_unavailable` with `Retry-After` set to 00:00 UTC, and the app keeps the report flagged with "The
   report server is full for today. Try again after <local time>." The report is not parked anywhere else, since a second
   store would need its own retention and its own line in the policy.
-- **D1's size limits** ("Exceeded maximum DB size." and the account storage limit) get the same 503, though only retention
-  or a maintainer frees them, not midnight.
+- **D1's size limits** ("Exceeded maximum DB size." and the account storage limit) also get `503 storage_unavailable`, with
+  the message "The report server is full." and no `Retry-After`, since only retention or a maintainer frees them, not
+  midnight. The app shows "The report server is full. Try again later."
+- **Refused bookkeeping.** `authenticate` updates `last_seen_at` best effort, so a refused update never blocks a read or a
+  delete. A stale value only keeps an empty install a little longer (5.3).
 - **Accepted for now, at zero users.** Workers Free allows 100,000 requests a day, and D1 and that limit stop rather than
   bill on a no-card account, so these are outages, not costs: a flood filling the free D1 database; one IP spending the
   global mint ceiling; and unknown-token 401s counting against the daily requests. Fix them when there are users to lose.
@@ -394,11 +413,14 @@ with tests. The maintainer reads it first and edits or drops the note if it has 
   `<origin cell> → <destination cell>`, never a street name.
 - **Body.** `### <Label>` sections: Category; What happened; Data version; App version; Flagged at; Route request; Route;
   Position; Spoken instructions; Navigation state; Device. Everything a replay needs is there.
+- **Kept: the position.** `position` (step, distance to the manoeuvre, what remains and the cell) stays, because a replay
+  lands on that step.
 - **Omitted:** exact endpoints, `location`, the `exactLocations` flag, the install ID and report ID, and the snapped
   endpoints' coordinates and `osmNode`: each endpoint shows as its cell.
 - **What coarsening does not hide.** `edgeIDs` and `wayIDs` stay, because the plan replay needs the whole route, and a
   route starts and ends at its snapped intersections. Anyone with the map data can read those corners off the first and
-  last edges. The maintainer can cut the route from a sensitive issue; `Docs/PRIVACY.md` says this.
+  last edges, and with `position` can work out to within metres where the sender was when they flagged. The maintainer can
+  cut the route and position from a sensitive issue; `Docs/PRIVACY.md` says this.
 - **Labels.** `app-report`, `report:<category>`, `mode:<mode>`, created once with `gh label create`.
 
 ## 7. Backend layout
@@ -473,7 +495,8 @@ can, and that token has D1 edit rights, so it could read `exact_json`: merging t
   run automatically from `main` after the tests pass, with no approval step, on the GitHub Environment `production`.
 - The deploy job runs only when the repository variable `BACKEND_DEPLOY` is `true`, so merging before the setup is done
   leaves `main` green with the job skipped. It must be a repository variable, since a job's `if` cannot see an
-  environment's variables. Set it last, after the `us` database (question 25) and the secrets.
+  environment's variables. Set it last, after the `us` database (question 25) and the secrets. The first deploy is then
+  `gh workflow run backend.yml --ref main`, with no dummy push; the environment refuses any other branch.
 - `Scripts/verify.sh` does not cover the backend; the verify skill has a row for it.
 
 ### 7.4 Versioning and rollout
@@ -527,10 +550,11 @@ Not built yet, apart from the `Core` files.
 
 Follows the product rules. The composer never asks whether a route was safe; the category reads "The calmer route was a
 bad choice". The review screen header: "This goes to the people who make PeopleMaps. If it helps, a maintainer may file a
-public GitHub issue from it by hand: your note and the route, which starts and ends at the snapped corners, but never your
-exact locations or report ID. Exact locations stay off unless you turn them on; nothing has left this phone yet." The note
-field asks not to put names or addresses in it. The "Delete my reports" confirmation: "Delete 3 sent reports and your
-report ID from our server? This does not remove a public issue a maintainer has already filed." The flag button says
+public GitHub issue from it by hand: your note, the route, which starts and ends at the snapped corners, and where along it
+you flagged, but never your exact start and destination, GPS position or report ID. Exact locations stay off unless you
+turn them on; nothing has left this phone yet." The note field asks not to put names or addresses in it. The "Delete my
+reports" confirmation: "This phone remembers 3 sent reports. Delete every report under your report ID, and the ID, from our
+server? This does not remove a public issue a maintainer has already filed." The flag button says
 nothing about the problem. The review shows `route.stress` because it shows every byte; no other screen shows a score.
 
 ### 8.3 Behaviour details
@@ -592,9 +616,10 @@ Numbers are stable, so code comments can cite them; gaps were resolved or remove
     `Docs/PRIVACY.md`.
 25. **Data location.** Decided: pinned to the US. A jurisdiction can only be set at creation, and the current database
     (`979b9c50-a12a-40d2-a31a-315a4b276204`, empty) has only a `wnam` location hint, which Cloudflare says is not a guarantee.
-    So before the first deploy it is replaced: `npx wrangler d1 create peoplemaps-reports --jurisdiction=us` (wrangler, since
-    the Cloudflare connector cannot set a jurisdiction), then the new ID in `Backend/wrangler.jsonc` and the old database
-    deleted. Not done yet; it waits for a Cloudflare token, and `BACKEND_DEPLOY` stays off until then (7.3). A jurisdiction
+    So before the first deploy it is replaced, and the old one goes first because the name is taken: while it is still
+    empty, `npx wrangler d1 delete peoplemaps-reports`, then `npx wrangler d1 create peoplemaps-reports --jurisdiction=us`
+    (wrangler, since the Cloudflare connector cannot set a jurisdiction), then the new ID in `Backend/wrangler.jsonc`. Not
+    done yet; it waits for a Cloudflare token, and `BACKEND_DEPLOY` stays off until then (7.3). A jurisdiction
     covers where the database runs and stores data; the Worker itself still runs at the Cloudflare location nearest the
     sender.
 26. **Deleting after a hand-filed issue.** Decided: an issue carries no report ID, so "Delete my reports" cannot find it, and
