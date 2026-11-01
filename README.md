@@ -25,7 +25,7 @@ asked for only when you start guidance.
 ## Run
 
 Requirements: Xcode with an iOS Simulator runtime (built with Xcode 27 on the
-iOS 26.5 runtime; deployment target iOS 17, iPhone only). Python 3 only to
+iOS 27 runtime; deployment target iOS 27, iPhone only). Python 3 only to
 regenerate data or the project.
 
 ```sh

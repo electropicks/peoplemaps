@@ -23,7 +23,7 @@ jobs:
 
   # The iOS app build, on every PR. macOS minutes cost 10x, so the UI suite runs only when asked.
   ios-build:
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -36,7 +36,7 @@ jobs:
   # uploaded as the "evidence" artifact, so a PR can carry pictures without a Mac.
   ui-tests:
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ui-tests')
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
