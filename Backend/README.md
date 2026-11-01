@@ -41,17 +41,18 @@ apply --remote` and `wrangler deploy` in the `deploy` job. Deploys run automatic
 no approval step, and can also be started by hand with `gh workflow run backend.yml --ref main`. A pull request never
 deploys. The job is skipped until the repository variable `BACKEND_DEPLOY` is `true`.
 
-The database already exists, pinned to the US (`Docs/REPORTS.md` question 25). Once, by hand, in this order, for the first
-deploy:
+The database already exists, pinned to the US (`Docs/REPORTS.md` question 25), and the account's `workers.dev` subdomain is
+`peoplemaps`, so the Worker's URL is `https://peoplemaps-reports.peoplemaps.workers.dev`, the Release base URL
+(`Docs/REPORTS.md` 7.5). Once a build ships, neither the subdomain nor the Worker's name may be renamed: either changes the
+URL it calls.
 
-1. Set the account's `workers.dev` subdomain once, and never rename the Worker: either changes the URL shipped apps call
-   (`https://peoplemaps-reports.<account-subdomain>.workers.dev`). Put that URL in the Release build setting
-   (`Docs/REPORTS.md` 7.5).
-2. On Cloudflare's Account API Tokens page, create an account-owned token with Workers: Editor and D1: Edit. Add it as
+Once, by hand, in this order, for the first deploy:
+
+1. On Cloudflare's Account API Tokens page, create an account-owned token with Workers: Editor and D1: Edit. Add it as
    `CLOUDFLARE_API_TOKEN`, with `CLOUDFLARE_ACCOUNT_ID`, to the GitHub Environment `production`, which has no reviewers and
    deploys only from `main`. Not repository secrets. "Workers Scripts: Edit" is the legacy name for Editor
    ([Workers roles](https://developers.cloudflare.com/workers/authorization/workers/)).
-3. Editor can't create a Worker, so run the first remote migration and deploy from the owner's logged-in Mac, on `main` after
+2. Editor can't create a Worker, so run the first remote migration and deploy from the owner's logged-in Mac, on `main` after
    the reports stack has merged:
 
    ```sh
@@ -60,10 +61,10 @@ deploy:
    npx wrangler deploy
    ```
 
-4. Now that the Worker exists, narrow the token's Workers scope to `peoplemaps-reports`.
-5. Last, set the repository variable (not an environment variable, which a job's `if` cannot see): `gh variable set
+3. Now that the Worker exists, narrow the token's Workers scope to `peoplemaps-reports`.
+4. Last, set the repository variable (not an environment variable, which a job's `if` cannot see): `gh variable set
    BACKEND_DEPLOY --body true`. From then on CI deploys.
-6. Before the privacy policy is published, send the deployed Worker some requests and read what Workers Logs and the
+5. Before the privacy policy is published, send the deployed Worker some requests and read what Workers Logs and the
    dashboard record (4.6).
 
 ## Reading reports and filing an issue
