@@ -88,8 +88,8 @@ final class PeoplemapsUITests: XCTestCase {
     /// The Seattle Center lawn: the nearest drivable node, where a route from here starts, is about 143 m away.
     private static let seattleCenterLawn = CLLocationCoordinate2D(latitude: 47.6213, longitude: -122.3510)
 
-    @MainActor private func setDevice(_ c: CLLocationCoordinate2D, course: Double = -1) {
-        XCUIDevice.shared.location = XCUILocation(location: CLLocation(coordinate: c, altitude: 50, horizontalAccuracy: 5, verticalAccuracy: 5,
+    @MainActor private func setDevice(_ c: CLLocationCoordinate2D, course: Double = -1, accuracy: Double = 5) {
+        XCUIDevice.shared.location = XCUILocation(location: CLLocation(coordinate: c, altitude: 50, horizontalAccuracy: accuracy, verticalAccuracy: 5,
                                                                          course: course, speed: course < 0 ? 0 : 8, timestamp: Date()))
     }
 
@@ -270,6 +270,26 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: gone, object: nil)], timeout: 10), .completed, "Leader stayed once on the route")
         XCTAssertEqual(probe(app, "debug-reroute-count"), "0", "Heading for the start counted as a deviation")
         XCTAssertEqual(probe(app, "debug-nav-state"), "guiding")
+    }
+
+    /// A fix on the route's line but with a poor error radius proves nothing: the engine snaps it, but the gate does not
+    /// count it as reaching the route, so the leader from the device's own position to the start stays.
+    @MainActor func testPoorAccuracyFixOnTheLineKeepsTheLeader() {
+        let app = launchAskingForLocation(answer: "Allow While Using App", at: Self.seattleCenterLawn)
+        showGasWorksRoutes(app)
+        startGuidanceReal(app)
+        let leader = NSPredicate { _, _ in (Int(self.probe(app, "debug-leader")) ?? 0) > 25 }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: leader, object: nil)], timeout: 10), .completed, "No leader at the start")
+        let line = routePoints(app)
+        XCTAssertGreaterThan(line.count, 3, "Route readout missing")
+        guard let (point, course) = Self.samples(line, step: 60, limit: 200).first else { return XCTFail("Route too short") }
+        for _ in 0..<5 { setDevice(point, course: course, accuracy: 40); Thread.sleep(forTimeInterval: 0.5) }
+        let held = Int(probe(app, "debug-leader")) ?? 0
+        XCTAssertGreaterThan(held, 25, "A poor fix on the line hid the leader")
+        // A good fix at the same place is on the route: the leader goes.
+        setDevice(point, course: course, accuracy: 5)
+        let gone = NSPredicate { _, _ in self.probe(app, "debug-leader") == "0" }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: gone, object: nil)], timeout: 10), .completed, "Leader stayed after a good fix on the route")
     }
 
     @MainActor func testBackgroundAndForegroundKeepsGuidance() {

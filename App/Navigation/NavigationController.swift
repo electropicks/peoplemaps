@@ -29,6 +29,10 @@ final class NavigationController {
     private(set) var heading: Double?
     /// Moving at 1 m/s or more (or at an unknown speed with a known course): the puck shows its heading only then.
     private(set) var isMoving = false
+    /// The latest fix as the device reported it (the engine's `userLocation`), not snapped onto the route. The leader is drawn from it.
+    private(set) var rawCoordinate: Coordinate?
+    /// Whether the reroute gate has seen a good fix within `RerouteGate.reachedMeters` of the route since it was installed.
+    private(set) var hasReachedRoute = false
     private(set) var isRerouting = false
     private(set) var hasArrived = false
     /// Geometry of the route being followed; `routeVersion` changes whenever it is replaced (start or reroute).
@@ -237,6 +241,7 @@ final class NavigationController {
         if active != nil { rerouteCount += 1 }
         active = adapted
         gate.routeInstalled(at: Date())
+        hasReachedRoute = false
         routeGeometry = adapted.route.geometry.map { Coordinate(lat: $0.lat, lon: $0.lng) }
         routeVersion += 1
     }
@@ -263,13 +268,14 @@ final class NavigationController {
             if let plan = active?.plan { stepIndex = plan.steps.count - 1; currentStep = plan.steps.last; thenStep = nil }
         case .idle:
             break
-        case let .navigating(_, _, _, remaining, _, progress, _, _, _, spoken, _):
+        case let .navigating(_, raw, _, remaining, _, progress, _, _, _, spoken, _):
             guard let plan = active?.plan else { return }
-            // Not the engine's `.noDeviation`: it also means "fix too poor to judge", which says nothing about the route.
-            if let fix = state.preferredUserLocation {
-                gate.observe(distanceToRoute: Coordinate(lat: fix.coordinates.lat, lon: fix.coordinates.lng).distance(toPolyline: routeGeometry),
-                             accuracy: fix.horizontalAccuracy)
-            }
+            // The gate gets the raw fix (`userLocation`), not `preferredUserLocation`: on `.noDeviation` that one is snapped onto
+            // the step line, so its distance to the route is about zero. Not the engine's `.noDeviation` either: it also means
+            // "fix too poor to judge", which says nothing about the route.
+            rawCoordinate = Coordinate(lat: raw.coordinates.lat, lon: raw.coordinates.lng)
+            gate.observe(distanceToRoute: rawCoordinate!.distance(toPolyline: routeGeometry), accuracy: raw.horizontalAccuracy)
+            hasReachedRoute = gate.hasReachedRoute
             if let spoken, !spoken.text.isEmpty { lastSpoken = SpokenText.normalize(spoken.text) }
             hasArrived = false
             distanceToManeuver = progress.distanceToNextManeuver
