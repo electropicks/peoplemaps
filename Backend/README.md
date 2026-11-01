@@ -38,7 +38,7 @@ Put `REPORTS_PER_DAY=50` in `.dev.vars` (gitignored) if a tester needs a higher 
 
 `.github/workflows/backend.yml` runs on a push to `main` that touches `Backend/`: tests, then `wrangler d1 migrations
 apply --remote` and `wrangler deploy` in the `deploy` job. Deploys run automatically from `main` once the tests pass, with
-no approval step, and never from a pull request. The job is skipped until the repository variable `BACKEND_DEPLOY` is
+no approval step, and never from a pull request, or by hand with `gh workflow run backend.yml --ref main`. The job is skipped until the repository variable `BACKEND_DEPLOY` is
 `true`.
 
 Once, by hand, in this order, before the first deploy:
@@ -50,14 +50,16 @@ Once, by hand, in this order, before the first deploy:
    creation:
 
    ```sh
+   npx wrangler d1 delete peoplemaps-reports   # first, while it is empty: the name is taken until then
    npx wrangler d1 create peoplemaps-reports --jurisdiction=us
    ```
 
-   Put the new ID in `database_id` in `wrangler.jsonc`, then delete the old, empty database.
+   Put the new ID in `database_id` in `wrangler.jsonc`.
 3. Add `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit, D1: Edit) and `CLOUDFLARE_ACCOUNT_ID` to the GitHub Environment
    `production`, which has no reviewers and deploys only from `main`. Not repository secrets.
 4. Last, set the repository variable (not an environment variable, which a job's `if` cannot see): `gh variable set
-   BACKEND_DEPLOY --body true`. The next push to `main` that touches `Backend/` deploys.
+   BACKEND_DEPLOY --body true`. Then `gh workflow run backend.yml --ref main` deploys for the first time, with no dummy
+   push.
 5. Before the privacy policy is published, send the deployed Worker some requests and read what Workers Logs and the
    dashboard record (4.6).
 
