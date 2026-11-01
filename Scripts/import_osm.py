@@ -563,7 +563,7 @@ def main():
     if args.json_graph: pathlib.Path(args.json_graph).write_text(json.dumps(graph,separators=(',',':'))+'\n')
     # Search reads its own, newer extract (places and addresses), kept apart so the graph's inputs don't change.
     search_json, search_source = read_snapshot('seattle-search'); sources.append(search_source)
-    search=build_search.build(search_json, places, nodes, segments, inside, hashlib.sha256(graph_bin).hexdigest(), OUT/'seattle-search.sqlite.gz')
+    search=build_search.build(search_json, places, nodes, segments, inside, hashlib.sha256(graph_bin).hexdigest(), OUT/'seattle-search.sqlite.gz', DATA/'seattle-overture-places.json.gz')
     (OUT/'seattle-map.geojson').write_text(json.dumps(map_geojson(features,lines),separators=(',',':'))+'\n')
     directed={mode:sum(mode in s.get(k,{}).get('modes',[]) for s in segments for k in 'fr') for mode in MODES}
     report={'sources':sources,'bounds':BBOX,'nodes':len(nodes),'segments':len(segments),'directedEdgesByMode':directed,

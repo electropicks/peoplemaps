@@ -325,11 +325,16 @@ struct ExploreView: View {
     }
 
     private var attribution: some View {
-        Link("© OpenStreetMap", destination: URL(string: "https://www.openstreetmap.org/copyright")!)
-            .font(.caption2).foregroundStyle(.secondary)
-            .padding(.horizontal, 6).padding(.vertical, 2)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 4))
-            .accessibilityLabel("Map data © OpenStreetMap contributors")
+        HStack(spacing: 4) {
+            Link("© OpenStreetMap", destination: URL(string: "https://www.openstreetmap.org/copyright")!)
+                .accessibilityLabel("Map data © OpenStreetMap contributors")
+            Text("·")
+            Link("Overture Maps Foundation", destination: URL(string: "https://docs.overturemaps.org/attribution/")!)
+                .accessibilityLabel("Places from Overture Maps Foundation")
+        }
+        .font(.caption2).foregroundStyle(.secondary)
+        .padding(.horizontal, 6).padding(.vertical, 2)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 4))
     }
 
     @ViewBuilder private var panelContent: some View {
@@ -448,6 +453,7 @@ struct ExploreView: View {
                 }
                 // Full width under the subtitle, clear of the buttons, so it rarely wraps.
                 estimateLine(place)
+                if let source = place.source { Text(source).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("place-source") }
             }
             if graph.contains(place.coordinate) {
                 directionsButton(place)
