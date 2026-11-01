@@ -143,7 +143,9 @@ struct GuidanceOverlay: View {
                 Image(systemName: Self.symbol(navigator.currentStep?.maneuver ?? .depart))
                     .font(.system(size: arrowSize * 0.75, weight: .bold)).foregroundStyle(.calmerText)
                     .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
-                    .frame(width: arrowSize, height: arrowSize).accessibilityHidden(true)
+                    .frame(width: arrowSize, height: arrowSize).accessibilityHidden(!Self.exposesArrow)
+                    .accessibilityLabel("Arrow").accessibilityValue(Self.symbol(navigator.currentStep?.maneuver ?? .depart))
+                    .accessibilityIdentifier("guidance-arrow")
                 VStack(alignment: .leading, spacing: 2) {
                     Text(NavigationFormat.distance(navigator.distanceToManeuver)).font(.largeTitle.bold()).monospacedDigit()
                         .lineLimit(1).minimumScaleFactor(0.6)
@@ -388,21 +390,12 @@ struct GuidanceOverlay: View {
         .accessibilityElement(children: .contain).accessibilityIdentifier("arrival-card")
     }
 
-    static func symbol(_ maneuver: Maneuver) -> String {
-        switch maneuver {
-        case .depart, .continueOnto: "arrow.up"
-        case .cross: "figure.walk"
-        case .arrive: "mappin.circle.fill"
-        case let .turn(direction):
-            switch direction {
-            case .slightLeft: "arrow.up.left"
-            case .left: "arrow.turn.up.left"
-            case .sharpLeft: "arrow.turn.down.left"
-            case .slightRight: "arrow.up.right"
-            case .right: "arrow.turn.up.right"
-            case .sharpRight: "arrow.turn.down.right"
-            case .uTurn: "arrow.uturn.left"
-            }
-        }
-    }
+    #if DEBUG
+    /// UI tests read the arrow the card really draws; release builds keep it out of VoiceOver, which reads the instruction.
+    static let exposesArrow = true
+    #else
+    static let exposesArrow = false
+    #endif
+
+    static func symbol(_ maneuver: Maneuver) -> String { maneuver.symbolName }
 }
