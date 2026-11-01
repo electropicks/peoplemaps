@@ -53,7 +53,8 @@ export async function authenticate(request: Request, deps: Deps): Promise<Instal
   const install = await deps.store.installByTokenHash(hash);
   if (!install) throw new HttpError("unauthorized", "This report ID does not exist on the server.");
   const now = hour(deps.clock.now());
-  if (install.last_seen_at !== now) await deps.store.touchInstall(install.id, now);
+  // Best effort: a refused update must not block reading or deleting (4.6).
+  if (install.last_seen_at !== now) await deps.store.touchInstall(install.id, now).catch(() => {});
   return install;
 }
 
