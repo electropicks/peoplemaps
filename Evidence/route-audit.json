@@ -9,9 +9,9 @@
     "caveats" : [
       "Fastest route: 0.6 km where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.05138719081878662,
+    "computeSeconds" : 0.009431004524230957,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 42.83233880786795,
+    "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 0,
     "fastestFactors" : [
       [
@@ -26,12 +26,12 @@
       ],
       [
         "besideTraffic",
-        847.9,
+        847.89999999999998,
         51
       ],
       [
         "climb",
-        17.3,
+        17.300000000000001,
         35
       ],
       [
@@ -46,7 +46,7 @@
       ],
       [
         "unknownSidewalk",
-        588.7,
+        588.70000000000005,
         12
       ],
       [
@@ -55,9 +55,9 @@
         10
       ]
     ],
-    "fastestMeters" : 5127.610000000001,
-    "fastestSeconds" : 3708.059523809523,
-    "fastestStress" : 649.9963,
+    "fastestMeters" : 5127.6100000000006,
+    "fastestSeconds" : 3708.0595238095229,
+    "fastestStress" : 649.99630000000002,
     "mode" : "walk",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
@@ -69,13 +69,13 @@
     "budgetMinutes" : 2,
     "calmerFactors" : [
       [
-        "unmarkedCrossing",
-        1,
+        "markedCrossing",
+        2,
         90
       ],
       [
-        "markedCrossing",
-        2,
+        "unmarkedCrossing",
+        1,
         90
       ],
       [
@@ -85,7 +85,7 @@
       ],
       [
         "climb",
-        15.7,
+        15.699999999999999,
         31
       ],
       [
@@ -100,7 +100,7 @@
       ],
       [
         "unknownSidewalk",
-        561.7,
+        561.70000000000005,
         11
       ],
       [
@@ -114,17 +114,17 @@
         10
       ]
     ],
-    "calmerMeters" : 5127.43,
+    "calmerMeters" : 5127.4300000000003,
     "calmerSeconds" : 3753.9309523809507,
-    "calmerStress" : 351.3495,
+    "calmerStress" : 351.34949999999998,
     "candidates" : 5,
     "caveats" : [
       "Fastest route: 0.6 km where sidewalks aren't mapped.",
       "Calmer route: 0.6 km where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 1.23471200466156,
+    "computeSeconds" : 0.20959198474884033,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 42.83233880786795,
+    "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 45.871428571427714,
     "fastestFactors" : [
       [
@@ -139,12 +139,12 @@
       ],
       [
         "besideTraffic",
-        847.9,
+        847.89999999999998,
         51
       ],
       [
         "climb",
-        17.3,
+        17.300000000000001,
         35
       ],
       [
@@ -159,7 +159,7 @@
       ],
       [
         "unknownSidewalk",
-        588.7,
+        588.70000000000005,
         12
       ],
       [
@@ -168,9 +168,9 @@
         10
       ]
     ],
-    "fastestMeters" : 5127.610000000001,
-    "fastestSeconds" : 3708.059523809523,
-    "fastestStress" : 649.9963,
+    "fastestMeters" : 5127.6100000000006,
+    "fastestSeconds" : 3708.0595238095229,
+    "fastestStress" : 649.99630000000002,
     "mode" : "walk",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
@@ -195,12 +195,12 @@
       ],
       [
         "besideTraffic",
-        639.3,
+        639.29999999999995,
         38
       ],
       [
         "climb",
-        18.1,
+        18.100000000000001,
         36
       ],
       [
@@ -224,17 +224,17 @@
         10
       ]
     ],
-    "calmerMeters" : 5267.000000000002,
-    "calmerSeconds" : 3984.623809523808,
-    "calmerStress" : 232.02509999999998,
+    "calmerMeters" : 5267.0000000000018,
+    "calmerSeconds" : 3984.6238095238082,
+    "calmerStress" : 232.02510000000001,
     "candidates" : 5,
     "caveats" : [
       "Fastest route: 0.6 km where sidewalks aren't mapped.",
       "Calmer route: 0.6 km where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 1.220017433166504,
+    "computeSeconds" : 0.20717489719390869,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 42.83233880786795,
+    "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 276.56428571428523,
     "fastestFactors" : [
       [
@@ -249,12 +249,12 @@
       ],
       [
         "besideTraffic",
-        847.9,
+        847.89999999999998,
         51
       ],
       [
         "climb",
-        17.3,
+        17.300000000000001,
         35
       ],
       [
@@ -269,7 +269,7 @@
       ],
       [
         "unknownSidewalk",
-        588.7,
+        588.70000000000005,
         12
       ],
       [
@@ -278,9 +278,9 @@
         10
       ]
     ],
-    "fastestMeters" : 5127.610000000001,
-    "fastestSeconds" : 3708.059523809523,
-    "fastestStress" : 649.9963,
+    "fastestMeters" : 5127.6100000000006,
+    "fastestSeconds" : 3708.0595238095229,
+    "fastestStress" : 649.99630000000002,
     "mode" : "walk",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
@@ -307,12 +307,12 @@
       ],
       [
         "besideTraffic",
-        639.3,
+        639.29999999999995,
         38
       ],
       [
         "climb",
-        18.1,
+        18.100000000000001,
         36
       ],
       [
@@ -336,17 +336,17 @@
         10
       ]
     ],
-    "calmerMeters" : 5267.000000000002,
-    "calmerSeconds" : 3984.623809523808,
-    "calmerStress" : 232.02509999999995,
+    "calmerMeters" : 5267.0000000000018,
+    "calmerSeconds" : 3984.6238095238082,
+    "calmerStress" : 232.02510000000001,
     "candidates" : 5,
     "caveats" : [
       "Fastest route: 0.6 km where sidewalks aren't mapped.",
       "Calmer route: 0.6 km where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 1.2279858589172363,
+    "computeSeconds" : 0.21483910083770752,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 42.83233880786795,
+    "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 276.56428571428523,
     "fastestFactors" : [
       [
@@ -361,12 +361,12 @@
       ],
       [
         "besideTraffic",
-        847.9,
+        847.89999999999998,
         51
       ],
       [
         "climb",
-        17.3,
+        17.300000000000001,
         35
       ],
       [
@@ -381,7 +381,7 @@
       ],
       [
         "unknownSidewalk",
-        588.7,
+        588.70000000000005,
         12
       ],
       [
@@ -390,9 +390,9 @@
         10
       ]
     ],
-    "fastestMeters" : 5127.610000000001,
-    "fastestSeconds" : 3708.059523809523,
-    "fastestStress" : 649.9963,
+    "fastestMeters" : 5127.6100000000006,
+    "fastestSeconds" : 3708.0595238095229,
+    "fastestStress" : 649.99630000000002,
     "mode" : "walk",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
@@ -414,7 +414,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.026940345764160156,
+    "computeSeconds" : 0.0070990324020385742,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 0,
@@ -431,7 +431,7 @@
       ],
       [
         "climb",
-        15.7,
+        15.699999999999999,
         63
       ],
       [
@@ -441,7 +441,7 @@
       ],
       [
         "quietStreet",
-        898.7,
+        898.70000000000005,
         54
       ],
       [
@@ -460,19 +460,19 @@
         20
       ],
       [
+        "signal",
+        1,
+        14
+      ],
+      [
         "allWayStop",
         1,
         10
-      ],
-      [
-        "signal",
-        1,
-        8
       ]
     ],
-    "fastestMeters" : 5230.000000000001,
+    "fastestMeters" : 5230.0000000000009,
     "fastestSeconds" : 1132.8954285714285,
-    "fastestStress" : 647.902,
+    "fastestStress" : 653.90200000000004,
     "mode" : "bike",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
@@ -485,7 +485,7 @@
     "calmerFactors" : [
       [
         "arterialRiding",
-        784.6,
+        784.60000000000002,
         188
       ],
       [
@@ -521,7 +521,7 @@
       [
         "signal",
         2,
-        16
+        28
       ],
       [
         "stopAndGo",
@@ -534,17 +534,17 @@
         4
       ]
     ],
-    "calmerMeters" : 5500.690000000002,
+    "calmerMeters" : 5500.6900000000023,
     "calmerSeconds" : 1210.6334285714283,
-    "calmerStress" : 568.5791999999999,
+    "calmerStress" : 580.5791999999999,
     "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.7886718511581421,
+    "computeSeconds" : 0.14528095722198486,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
-    "extraSeconds" : 77.73799999999983,
+    "extraSeconds" : 77.737999999999829,
     "fastestFactors" : [
       [
         "arterialRiding",
@@ -558,7 +558,7 @@
       ],
       [
         "climb",
-        15.7,
+        15.699999999999999,
         63
       ],
       [
@@ -568,7 +568,7 @@
       ],
       [
         "quietStreet",
-        898.7,
+        898.70000000000005,
         54
       ],
       [
@@ -587,19 +587,19 @@
         20
       ],
       [
+        "signal",
+        1,
+        14
+      ],
+      [
         "allWayStop",
         1,
         10
-      ],
-      [
-        "signal",
-        1,
-        8
       ]
     ],
-    "fastestMeters" : 5230.000000000001,
+    "fastestMeters" : 5230.0000000000009,
     "fastestSeconds" : 1132.8954285714285,
-    "fastestStress" : 647.902,
+    "fastestStress" : 653.90200000000004,
     "mode" : "bike",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
@@ -608,7 +608,7 @@
       "0.3 km less riding on arterials",
       "1 fewer all-way stop",
       "Tradeoff: 2 more places where the bike route drops you into traffic",
-      "Tradeoff: 3 more turns"
+      "Tradeoff: 1 more traffic signal"
     ]
   },
   {
@@ -616,7 +616,7 @@
     "calmerFactors" : [
       [
         "arterialRiding",
-        784.6,
+        784.60000000000002,
         188
       ],
       [
@@ -640,19 +640,19 @@
         60
       ],
       [
-        "stopSign",
-        4,
-        40
-      ],
-      [
         "bikeRouteGap",
         2,
         40
       ],
       [
+        "stopSign",
+        4,
+        40
+      ],
+      [
         "signal",
         2,
-        16
+        28
       ],
       [
         "stopAndGo",
@@ -665,17 +665,17 @@
         4
       ]
     ],
-    "calmerMeters" : 5500.690000000002,
+    "calmerMeters" : 5500.6900000000023,
     "calmerSeconds" : 1210.6334285714283,
-    "calmerStress" : 568.5791999999999,
+    "calmerStress" : 580.5791999999999,
     "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.8097357749938965,
+    "computeSeconds" : 0.14169692993164062,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
-    "extraSeconds" : 77.73799999999983,
+    "extraSeconds" : 77.737999999999829,
     "fastestFactors" : [
       [
         "arterialRiding",
@@ -689,7 +689,7 @@
       ],
       [
         "climb",
-        15.7,
+        15.699999999999999,
         63
       ],
       [
@@ -699,7 +699,7 @@
       ],
       [
         "quietStreet",
-        898.7,
+        898.70000000000005,
         54
       ],
       [
@@ -718,19 +718,19 @@
         20
       ],
       [
+        "signal",
+        1,
+        14
+      ],
+      [
         "allWayStop",
         1,
         10
-      ],
-      [
-        "signal",
-        1,
-        8
       ]
     ],
-    "fastestMeters" : 5230.000000000001,
+    "fastestMeters" : 5230.0000000000009,
     "fastestSeconds" : 1132.8954285714285,
-    "fastestStress" : 647.902,
+    "fastestStress" : 653.90200000000004,
     "mode" : "bike",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
@@ -739,7 +739,7 @@
       "0.3 km less riding on arterials",
       "1 fewer all-way stop",
       "Tradeoff: 2 more places where the bike route drops you into traffic",
-      "Tradeoff: 3 more turns"
+      "Tradeoff: 1 more traffic signal"
     ]
   },
   {
@@ -747,7 +747,7 @@
     "calmerFactors" : [
       [
         "arterialRiding",
-        784.6,
+        784.60000000000002,
         188
       ],
       [
@@ -783,7 +783,7 @@
       [
         "signal",
         2,
-        16
+        28
       ],
       [
         "stopAndGo",
@@ -796,17 +796,17 @@
         4
       ]
     ],
-    "calmerMeters" : 5500.690000000002,
+    "calmerMeters" : 5500.6900000000023,
     "calmerSeconds" : 1210.6334285714283,
-    "calmerStress" : 568.5791999999999,
+    "calmerStress" : 580.5791999999999,
     "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.8137936592102051,
+    "computeSeconds" : 0.14950501918792725,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
-    "extraSeconds" : 77.73799999999983,
+    "extraSeconds" : 77.737999999999829,
     "fastestFactors" : [
       [
         "arterialRiding",
@@ -820,7 +820,7 @@
       ],
       [
         "climb",
-        15.7,
+        15.699999999999999,
         63
       ],
       [
@@ -830,7 +830,7 @@
       ],
       [
         "quietStreet",
-        898.7,
+        898.70000000000005,
         54
       ],
       [
@@ -849,19 +849,19 @@
         20
       ],
       [
+        "signal",
+        1,
+        14
+      ],
+      [
         "allWayStop",
         1,
         10
-      ],
-      [
-        "signal",
-        1,
-        8
       ]
     ],
-    "fastestMeters" : 5230.000000000001,
+    "fastestMeters" : 5230.0000000000009,
     "fastestSeconds" : 1132.8954285714285,
-    "fastestStress" : 647.902,
+    "fastestStress" : 653.90200000000004,
     "mode" : "bike",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
@@ -870,7 +870,7 @@
       "0.3 km less riding on arterials",
       "1 fewer all-way stop",
       "Tradeoff: 2 more places where the bike route drops you into traffic",
-      "Tradeoff: 3 more turns"
+      "Tradeoff: 1 more traffic signal"
     ]
   },
   {
@@ -883,7 +883,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.05455183982849121,
+    "computeSeconds" : 0.012599945068359375,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 0,
@@ -929,12 +929,12 @@
         14
       ]
     ],
-    "fastestMeters" : 5153.719999999997,
+    "fastestMeters" : 5153.7199999999966,
     "fastestSeconds" : 699.7103614889046,
-    "fastestStress" : 642.1738,
+    "fastestStress" : 642.17380000000003,
     "mode" : "drive",
     "origin" : "Ballard Library",
-    "originSnapMeters" : 43.86858435148768,
+    "originSnapMeters" : 43.868584351487677,
     "reasons" : [
       "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
@@ -948,11 +948,6 @@
         120
       ],
       [
-        "stopAndGo",
-        4,
-        40
-      ],
-      [
         "allWayStop",
         2,
         40
@@ -960,6 +955,11 @@
       [
         "turn",
         5,
+        40
+      ],
+      [
+        "stopAndGo",
+        4,
         40
       ],
       [
@@ -974,21 +974,21 @@
       ],
       [
         "residential",
-        134.7,
+        134.69999999999999,
         4
       ]
     ],
-    "calmerMeters" : 5452.769999999999,
-    "calmerSeconds" : 726.914012168933,
-    "calmerStress" : 269.0422,
+    "calmerMeters" : 5452.7699999999986,
+    "calmerSeconds" : 726.91401216893303,
+    "calmerStress" : 269.04219999999998,
     "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 1.0201261043548584,
+    "computeSeconds" : 0.18713796138763428,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
-    "extraSeconds" : 27.20365068002843,
+    "extraSeconds" : 27.203650680028431,
     "fastestFactors" : [
       [
         "unsignalledLeft",
@@ -1031,12 +1031,12 @@
         14
       ]
     ],
-    "fastestMeters" : 5153.719999999997,
+    "fastestMeters" : 5153.7199999999966,
     "fastestSeconds" : 699.7103614889046,
-    "fastestStress" : 642.1738,
+    "fastestStress" : 642.17380000000003,
     "mode" : "drive",
     "origin" : "Ballard Library",
-    "originSnapMeters" : 43.86858435148768,
+    "originSnapMeters" : 43.868584351487677,
     "reasons" : [
       "2 fewer left turns across traffic without a signal",
       "1 fewer crossing of a busy street without a signal",
@@ -1054,8 +1054,8 @@
         120
       ],
       [
-        "stopAndGo",
-        4,
+        "allWayStop",
+        2,
         40
       ],
       [
@@ -1064,8 +1064,8 @@
         40
       ],
       [
-        "allWayStop",
-        2,
+        "stopAndGo",
+        4,
         40
       ],
       [
@@ -1080,21 +1080,21 @@
       ],
       [
         "residential",
-        134.7,
+        134.69999999999999,
         4
       ]
     ],
-    "calmerMeters" : 5452.769999999999,
-    "calmerSeconds" : 726.914012168933,
-    "calmerStress" : 269.0422,
+    "calmerMeters" : 5452.7699999999986,
+    "calmerSeconds" : 726.91401216893303,
+    "calmerStress" : 269.04219999999998,
     "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 1.0408884286880493,
+    "computeSeconds" : 0.18707489967346191,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
-    "extraSeconds" : 27.20365068002843,
+    "extraSeconds" : 27.203650680028431,
     "fastestFactors" : [
       [
         "unsignalledLeft",
@@ -1137,12 +1137,12 @@
         14
       ]
     ],
-    "fastestMeters" : 5153.719999999997,
+    "fastestMeters" : 5153.7199999999966,
     "fastestSeconds" : 699.7103614889046,
-    "fastestStress" : 642.1738,
+    "fastestStress" : 642.17380000000003,
     "mode" : "drive",
     "origin" : "Ballard Library",
-    "originSnapMeters" : 43.86858435148768,
+    "originSnapMeters" : 43.868584351487677,
     "reasons" : [
       "2 fewer left turns across traffic without a signal",
       "1 fewer crossing of a busy street without a signal",
@@ -1160,8 +1160,8 @@
         120
       ],
       [
-        "stopAndGo",
-        4,
+        "allWayStop",
+        2,
         40
       ],
       [
@@ -1170,8 +1170,8 @@
         40
       ],
       [
-        "allWayStop",
-        2,
+        "stopAndGo",
+        4,
         40
       ],
       [
@@ -1186,21 +1186,21 @@
       ],
       [
         "residential",
-        134.7,
+        134.69999999999999,
         4
       ]
     ],
-    "calmerMeters" : 5452.769999999999,
-    "calmerSeconds" : 726.914012168933,
-    "calmerStress" : 269.0422,
+    "calmerMeters" : 5452.7699999999986,
+    "calmerSeconds" : 726.91401216893303,
+    "calmerStress" : 269.04219999999998,
     "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 1.0000791549682617,
+    "computeSeconds" : 0.18876802921295166,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
-    "extraSeconds" : 27.20365068002843,
+    "extraSeconds" : 27.203650680028431,
     "fastestFactors" : [
       [
         "unsignalledLeft",
@@ -1243,12 +1243,12 @@
         14
       ]
     ],
-    "fastestMeters" : 5153.719999999997,
+    "fastestMeters" : 5153.7199999999966,
     "fastestSeconds" : 699.7103614889046,
-    "fastestStress" : 642.1738,
+    "fastestStress" : 642.17380000000003,
     "mode" : "drive",
     "origin" : "Ballard Library",
-    "originSnapMeters" : 43.86858435148768,
+    "originSnapMeters" : 43.868584351487677,
     "reasons" : [
       "2 fewer left turns across traffic without a signal",
       "1 fewer crossing of a busy street without a signal",
@@ -1267,7 +1267,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.04360842704772949,
+    "computeSeconds" : 0.011366963386535645,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 14.770704209858819,
     "extraSeconds" : 0,
@@ -1284,12 +1284,12 @@
       ],
       [
         "climb",
-        87.4,
+        87.400000000000006,
         175
       ],
       [
         "besideTraffic",
-        1381.9,
+        1381.9000000000001,
         83
       ],
       [
@@ -1309,16 +1309,16 @@
       ],
       [
         "unknownSidewalk",
-        8.1,
+        8.0999999999999996,
         0
       ]
     ],
-    "fastestMeters" : 3687.32,
+    "fastestMeters" : 3687.3200000000002,
     "fastestSeconds" : 2959.6619047619038,
-    "fastestStress" : 745.878,
+    "fastestStress" : 745.87800000000004,
     "mode" : "walk",
     "origin" : "Fremont Library",
-    "originSnapMeters" : 14.006930237699917,
+    "originSnapMeters" : 14.006930237699915,
     "reasons" : [
       "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
@@ -1333,12 +1333,12 @@
       ],
       [
         "climb",
-        78.2,
+        78.200000000000003,
         156
       ],
       [
         "besideTraffic",
-        1946.6,
+        1946.5999999999999,
         117
       ],
       [
@@ -1358,21 +1358,21 @@
       ],
       [
         "unknownSidewalk",
-        8.1,
+        8.0999999999999996,
         0
       ]
     ],
-    "calmerMeters" : 3906.7,
+    "calmerMeters" : 3906.6999999999998,
     "calmerSeconds" : 3043.3619047619054,
-    "calmerStress" : 511.3582,
+    "calmerStress" : 511.35820000000001,
     "candidates" : 7,
     "caveats" : [
 
     ],
-    "computeSeconds" : 1.907280683517456,
+    "computeSeconds" : 0.35230493545532227,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 14.770704209858819,
-    "extraSeconds" : 83.70000000000164,
+    "extraSeconds" : 83.700000000001637,
     "fastestFactors" : [
       [
         "markedCrossing",
@@ -1386,12 +1386,12 @@
       ],
       [
         "climb",
-        87.4,
+        87.400000000000006,
         175
       ],
       [
         "besideTraffic",
-        1381.9,
+        1381.9000000000001,
         83
       ],
       [
@@ -1411,16 +1411,16 @@
       ],
       [
         "unknownSidewalk",
-        8.1,
+        8.0999999999999996,
         0
       ]
     ],
-    "fastestMeters" : 3687.32,
+    "fastestMeters" : 3687.3200000000002,
     "fastestSeconds" : 2959.6619047619038,
-    "fastestStress" : 745.878,
+    "fastestStress" : 745.87800000000004,
     "mode" : "walk",
     "origin" : "Fremont Library",
-    "originSnapMeters" : 14.006930237699917,
+    "originSnapMeters" : 14.006930237699915,
     "reasons" : [
       "2 fewer unmarked crossings of busy streets",
       "2 fewer marked crossings without a signal",
@@ -1433,7 +1433,7 @@
     "calmerFactors" : [
       [
         "climb",
-        78.3,
+        78.299999999999997,
         157
       ],
       [
@@ -1458,21 +1458,21 @@
       ],
       [
         "unknownSidewalk",
-        8.1,
+        8.0999999999999996,
         0
       ]
     ],
-    "calmerMeters" : 4136.210000000001,
+    "calmerMeters" : 4136.2100000000009,
     "calmerSeconds" : 3257.5476190476193,
     "calmerStress" : 323.70040000000006,
     "candidates" : 7,
     "caveats" : [
 
     ],
-    "computeSeconds" : 1.9731521606445312,
+    "computeSeconds" : 0.36419200897216797,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 14.770704209858819,
-    "extraSeconds" : 297.8857142857155,
+    "extraSeconds" : 297.88571428571549,
     "fastestFactors" : [
       [
         "markedCrossing",
@@ -1486,12 +1486,12 @@
       ],
       [
         "climb",
-        87.4,
+        87.400000000000006,
         175
       ],
       [
         "besideTraffic",
-        1381.9,
+        1381.9000000000001,
         83
       ],
       [
@@ -1511,16 +1511,16 @@
       ],
       [
         "unknownSidewalk",
-        8.1,
+        8.0999999999999996,
         0
       ]
     ],
-    "fastestMeters" : 3687.32,
+    "fastestMeters" : 3687.3200000000002,
     "fastestSeconds" : 2959.6619047619038,
-    "fastestStress" : 745.878,
+    "fastestStress" : 745.87800000000004,
     "mode" : "walk",
     "origin" : "Fremont Library",
-    "originSnapMeters" : 14.006930237699917,
+    "originSnapMeters" : 14.006930237699915,
     "reasons" : [
       "5 fewer marked crossings without a signal",
       "2 fewer unmarked crossings of busy streets",
@@ -1533,12 +1533,12 @@
     "calmerFactors" : [
       [
         "climb",
-        82.9,
+        82.900000000000006,
         166
       ],
       [
         "besideTraffic",
-        701.4,
+        701.39999999999998,
         42
       ],
       [
@@ -1553,21 +1553,21 @@
       ],
       [
         "unknownSidewalk",
-        8.1,
+        8.0999999999999996,
         0
       ]
     ],
-    "calmerMeters" : 4526.42,
-    "calmerSeconds" : 3540.407142857143,
+    "calmerMeters" : 4526.4200000000001,
+    "calmerSeconds" : 3540.4071428571428,
     "calmerStress" : 243.04380000000006,
     "candidates" : 7,
     "caveats" : [
 
     ],
-    "computeSeconds" : 2.049543619155884,
+    "computeSeconds" : 0.36432993412017822,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 14.770704209858819,
-    "extraSeconds" : 580.7452380952391,
+    "extraSeconds" : 580.74523809523907,
     "fastestFactors" : [
       [
         "markedCrossing",
@@ -1581,12 +1581,12 @@
       ],
       [
         "climb",
-        87.4,
+        87.400000000000006,
         175
       ],
       [
         "besideTraffic",
-        1381.9,
+        1381.9000000000001,
         83
       ],
       [
@@ -1606,16 +1606,16 @@
       ],
       [
         "unknownSidewalk",
-        8.1,
+        8.0999999999999996,
         0
       ]
     ],
-    "fastestMeters" : 3687.32,
+    "fastestMeters" : 3687.3200000000002,
     "fastestSeconds" : 2959.6619047619038,
-    "fastestStress" : 745.878,
+    "fastestStress" : 745.87800000000004,
     "mode" : "walk",
     "origin" : "Fremont Library",
-    "originSnapMeters" : 14.006930237699917,
+    "originSnapMeters" : 14.006930237699915,
     "reasons" : [
       "5 fewer marked crossings without a signal",
       "2 fewer unmarked crossings of busy streets",
@@ -1632,19 +1632,19 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.048818349838256836,
+    "computeSeconds" : 0.011098980903625488,
     "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 29.96706459333779,
+    "destinationSnapMeters" : 29.967064593337788,
     "extraSeconds" : 0,
     "fastestFactors" : [
       [
         "climb",
-        84.1,
+        84.099999999999994,
         336
       ],
       [
         "arterialRiding",
-        1319.6,
+        1319.5999999999999,
         317
       ],
       [
@@ -1654,8 +1654,13 @@
       ],
       [
         "busyArterialRiding",
-        158.8,
+        158.80000000000001,
         95
+      ],
+      [
+        "signal",
+        5,
+        70
       ],
       [
         "turn",
@@ -1664,17 +1669,12 @@
       ],
       [
         "quietStreet",
-        818.8,
+        818.79999999999995,
         49
       ],
       [
         "allWayStop",
         4,
-        40
-      ],
-      [
-        "signal",
-        5,
         40
       ],
       [
@@ -1694,7 +1694,7 @@
       ],
       [
         "steepDescent",
-        94.2,
+        94.200000000000003,
         19
       ],
       [
@@ -1709,11 +1709,11 @@
       ]
     ],
     "fastestMeters" : 3845.0299999999993,
-    "fastestSeconds" : 1102.590571428571,
-    "fastestStress" : 1244.4549999999997,
+    "fastestSeconds" : 1102.5905714285709,
+    "fastestStress" : 1274.4549999999997,
     "mode" : "bike",
     "origin" : "Fremont Library",
-    "originSnapMeters" : 14.006930237699917,
+    "originSnapMeters" : 14.006930237699915,
     "reasons" : [
       "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
@@ -1723,18 +1723,23 @@
     "calmerFactors" : [
       [
         "climb",
-        80.7,
+        80.700000000000003,
         323
       ],
       [
         "arterialRiding",
-        609.2,
+        609.20000000000005,
         146
       ],
       [
         "busyArterialRiding",
-        158.8,
+        158.80000000000001,
         95
+      ],
+      [
+        "signal",
+        6,
+        84
       ],
       [
         "turn",
@@ -1743,17 +1748,12 @@
       ],
       [
         "quietStreet",
-        851.9,
+        851.89999999999998,
         51
       ],
       [
-        "signal",
-        6,
-        48
-      ],
-      [
         "steepDescent",
-        208.6,
+        208.59999999999999,
         42
       ],
       [
@@ -1762,12 +1762,12 @@
         30
       ],
       [
-        "hillStop",
+        "bikeRouteGap",
         1,
         20
       ],
       [
-        "bikeRouteGap",
+        "hillStop",
         1,
         20
       ],
@@ -1787,26 +1787,26 @@
         0
       ]
     ],
-    "calmerMeters" : 4226.41,
+    "calmerMeters" : 4226.4099999999999,
     "calmerSeconds" : 1168.4065714285707,
-    "calmerStress" : 871.2334,
+    "calmerStress" : 907.23339999999996,
     "candidates" : 4,
     "caveats" : [
 
     ],
-    "computeSeconds" : 2.2740437984466553,
+    "computeSeconds" : 0.39325392246246338,
     "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 29.96706459333779,
-    "extraSeconds" : 65.8159999999998,
+    "destinationSnapMeters" : 29.967064593337788,
+    "extraSeconds" : 65.815999999999804,
     "fastestFactors" : [
       [
         "climb",
-        84.1,
+        84.099999999999994,
         336
       ],
       [
         "arterialRiding",
-        1319.6,
+        1319.5999999999999,
         317
       ],
       [
@@ -1816,8 +1816,13 @@
       ],
       [
         "busyArterialRiding",
-        158.8,
+        158.80000000000001,
         95
+      ],
+      [
+        "signal",
+        5,
+        70
       ],
       [
         "turn",
@@ -1826,17 +1831,12 @@
       ],
       [
         "quietStreet",
-        818.8,
+        818.79999999999995,
         49
       ],
       [
         "allWayStop",
         4,
-        40
-      ],
-      [
-        "signal",
-        5,
         40
       ],
       [
@@ -1856,7 +1856,7 @@
       ],
       [
         "steepDescent",
-        94.2,
+        94.200000000000003,
         19
       ],
       [
@@ -1871,11 +1871,11 @@
       ]
     ],
     "fastestMeters" : 3845.0299999999993,
-    "fastestSeconds" : 1102.590571428571,
-    "fastestStress" : 1244.4549999999997,
+    "fastestSeconds" : 1102.5905714285709,
+    "fastestStress" : 1274.4549999999997,
     "mode" : "bike",
     "origin" : "Fremont Library",
-    "originSnapMeters" : 14.006930237699917,
+    "originSnapMeters" : 14.006930237699915,
     "reasons" : [
       "2 fewer left turns across traffic without a signal",
       "0.7 km less riding on arterials",
@@ -1889,12 +1889,12 @@
     "calmerFactors" : [
       [
         "climb",
-        82.8,
+        82.799999999999997,
         331
       ],
       [
         "arterialRiding",
-        425.2,
+        425.19999999999999,
         102
       ],
       [
@@ -1904,8 +1904,13 @@
       ],
       [
         "busyArterialRiding",
-        158.8,
+        158.80000000000001,
         95
+      ],
+      [
+        "signal",
+        6,
+        84
       ],
       [
         "quietStreet",
@@ -1913,13 +1918,8 @@
         54
       ],
       [
-        "signal",
-        6,
-        48
-      ],
-      [
         "steepDescent",
-        208.6,
+        208.59999999999999,
         42
       ],
       [
@@ -1944,30 +1944,30 @@
       ],
       [
         "unknownSurface",
-        174.9,
+        174.90000000000001,
         1
       ]
     ],
-    "calmerMeters" : 4486.81,
+    "calmerMeters" : 4486.8100000000004,
     "calmerSeconds" : 1237.7865714285706,
-    "calmerStress" : 842.8380500000001,
+    "calmerStress" : 878.83805000000007,
     "candidates" : 4,
     "caveats" : [
 
     ],
-    "computeSeconds" : 2.290514588356018,
+    "computeSeconds" : 0.40676796436309814,
     "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 29.96706459333779,
+    "destinationSnapMeters" : 29.967064593337788,
     "extraSeconds" : 135.19599999999969,
     "fastestFactors" : [
       [
         "climb",
-        84.1,
+        84.099999999999994,
         336
       ],
       [
         "arterialRiding",
-        1319.6,
+        1319.5999999999999,
         317
       ],
       [
@@ -1977,8 +1977,13 @@
       ],
       [
         "busyArterialRiding",
-        158.8,
+        158.80000000000001,
         95
+      ],
+      [
+        "signal",
+        5,
+        70
       ],
       [
         "turn",
@@ -1987,13 +1992,8 @@
       ],
       [
         "quietStreet",
-        818.8,
+        818.79999999999995,
         49
-      ],
-      [
-        "signal",
-        5,
-        40
       ],
       [
         "allWayStop",
@@ -2017,7 +2017,7 @@
       ],
       [
         "steepDescent",
-        94.2,
+        94.200000000000003,
         19
       ],
       [
@@ -2032,11 +2032,11 @@
       ]
     ],
     "fastestMeters" : 3845.0299999999993,
-    "fastestSeconds" : 1102.590571428571,
-    "fastestStress" : 1244.4549999999997,
+    "fastestSeconds" : 1102.5905714285709,
+    "fastestStress" : 1274.4549999999997,
     "mode" : "bike",
     "origin" : "Fremont Library",
-    "originSnapMeters" : 14.006930237699917,
+    "originSnapMeters" : 14.006930237699915,
     "reasons" : [
       "0.9 km less riding on arterials",
       "2 fewer left turns across traffic without a signal",
@@ -2050,12 +2050,12 @@
     "calmerFactors" : [
       [
         "climb",
-        82.8,
+        82.799999999999997,
         331
       ],
       [
         "arterialRiding",
-        425.2,
+        425.19999999999999,
         102
       ],
       [
@@ -2065,8 +2065,13 @@
       ],
       [
         "busyArterialRiding",
-        158.8,
+        158.80000000000001,
         95
+      ],
+      [
+        "signal",
+        6,
+        84
       ],
       [
         "quietStreet",
@@ -2074,13 +2079,8 @@
         54
       ],
       [
-        "signal",
-        6,
-        48
-      ],
-      [
         "steepDescent",
-        208.6,
+        208.59999999999999,
         42
       ],
       [
@@ -2105,30 +2105,30 @@
       ],
       [
         "unknownSurface",
-        174.9,
+        174.90000000000001,
         1
       ]
     ],
-    "calmerMeters" : 4486.81,
+    "calmerMeters" : 4486.8100000000004,
     "calmerSeconds" : 1237.7865714285706,
-    "calmerStress" : 842.8380500000001,
+    "calmerStress" : 878.83805000000007,
     "candidates" : 4,
     "caveats" : [
 
     ],
-    "computeSeconds" : 2.1345207691192627,
+    "computeSeconds" : 0.41424202919006348,
     "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 29.96706459333779,
+    "destinationSnapMeters" : 29.967064593337788,
     "extraSeconds" : 135.19599999999969,
     "fastestFactors" : [
       [
         "climb",
-        84.1,
+        84.099999999999994,
         336
       ],
       [
         "arterialRiding",
-        1319.6,
+        1319.5999999999999,
         317
       ],
       [
@@ -2138,8 +2138,13 @@
       ],
       [
         "busyArterialRiding",
-        158.8,
+        158.80000000000001,
         95
+      ],
+      [
+        "signal",
+        5,
+        70
       ],
       [
         "turn",
@@ -2148,13 +2153,8 @@
       ],
       [
         "quietStreet",
-        818.8,
+        818.79999999999995,
         49
-      ],
-      [
-        "signal",
-        5,
-        40
       ],
       [
         "allWayStop",
@@ -2178,7 +2178,7 @@
       ],
       [
         "steepDescent",
-        94.2,
+        94.200000000000003,
         19
       ],
       [
@@ -2193,11 +2193,11 @@
       ]
     ],
     "fastestMeters" : 3845.0299999999993,
-    "fastestSeconds" : 1102.590571428571,
-    "fastestStress" : 1244.4549999999997,
+    "fastestSeconds" : 1102.5905714285709,
+    "fastestStress" : 1274.4549999999997,
     "mode" : "bike",
     "origin" : "Fremont Library",
-    "originSnapMeters" : 14.006930237699917,
+    "originSnapMeters" : 14.006930237699915,
     "reasons" : [
       "0.9 km less riding on arterials",
       "2 fewer left turns across traffic without a signal",
@@ -2216,9 +2216,9 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.04958772659301758,
+    "computeSeconds" : 0.012524008750915527,
     "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 59.64779377729007,
+    "destinationSnapMeters" : 59.647793777290069,
     "extraSeconds" : 0,
     "fastestFactors" : [
       [
@@ -2262,9 +2262,9 @@
         3
       ]
     ],
-    "fastestMeters" : 4005.959999999998,
-    "fastestSeconds" : 558.7348335719396,
-    "fastestStress" : 420.07349999999997,
+    "fastestMeters" : 4005.9599999999982,
+    "fastestSeconds" : 558.73483357193959,
+    "fastestStress" : 420.07350000000002,
     "mode" : "drive",
     "origin" : "Fremont Library",
     "originSnapMeters" : 26.769035872678163,
@@ -2282,9 +2282,9 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 1.4908961057662964,
+    "computeSeconds" : 0.27461802959442139,
     "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 59.64779377729007,
+    "destinationSnapMeters" : 59.647793777290069,
     "extraSeconds" : 0,
     "fastestFactors" : [
       [
@@ -2328,9 +2328,9 @@
         3
       ]
     ],
-    "fastestMeters" : 4005.959999999998,
-    "fastestSeconds" : 558.7348335719396,
-    "fastestStress" : 420.07349999999997,
+    "fastestMeters" : 4005.9599999999982,
+    "fastestSeconds" : 558.73483357193959,
+    "fastestStress" : 420.07350000000002,
     "mode" : "drive",
     "origin" : "Fremont Library",
     "originSnapMeters" : 26.769035872678163,
@@ -2348,9 +2348,9 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 1.4244307279586792,
+    "computeSeconds" : 0.27168500423431396,
     "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 59.64779377729007,
+    "destinationSnapMeters" : 59.647793777290069,
     "extraSeconds" : 0,
     "fastestFactors" : [
       [
@@ -2394,9 +2394,9 @@
         3
       ]
     ],
-    "fastestMeters" : 4005.959999999998,
-    "fastestSeconds" : 558.7348335719396,
-    "fastestStress" : 420.07349999999997,
+    "fastestMeters" : 4005.9599999999982,
+    "fastestSeconds" : 558.73483357193959,
+    "fastestStress" : 420.07350000000002,
     "mode" : "drive",
     "origin" : "Fremont Library",
     "originSnapMeters" : 26.769035872678163,
@@ -2414,9 +2414,9 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 1.4413394927978516,
+    "computeSeconds" : 0.26128304004669189,
     "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 59.64779377729007,
+    "destinationSnapMeters" : 59.647793777290069,
     "extraSeconds" : 0,
     "fastestFactors" : [
       [
@@ -2460,9 +2460,9 @@
         3
       ]
     ],
-    "fastestMeters" : 4005.959999999998,
-    "fastestSeconds" : 558.7348335719396,
-    "fastestStress" : 420.07349999999997,
+    "fastestMeters" : 4005.9599999999982,
+    "fastestSeconds" : 558.73483357193959,
+    "fastestStress" : 420.07350000000002,
     "mode" : "drive",
     "origin" : "Fremont Library",
     "originSnapMeters" : 26.769035872678163,
@@ -2480,9 +2480,9 @@
     "caveats" : [
       "Fastest route: 1.0 km where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.042793989181518555,
+    "computeSeconds" : 0.012519955635070801,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 42.83233880786795,
+    "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 0,
     "fastestFactors" : [
       [
@@ -2507,7 +2507,7 @@
       ],
       [
         "climb",
-        25.4,
+        25.399999999999999,
         51
       ],
       [
@@ -2533,7 +2533,7 @@
     ],
     "fastestMeters" : 4068.3699999999985,
     "fastestSeconds" : 3006.3261904761894,
-    "fastestStress" : 952.6275,
+    "fastestStress" : 952.62750000000005,
     "mode" : "walk",
     "origin" : "Kerry Park",
     "originSnapMeters" : 2.2992778781403174,
@@ -2556,7 +2556,7 @@
       ],
       [
         "besideTraffic",
-        895.3,
+        895.29999999999995,
         54
       ],
       [
@@ -2585,17 +2585,17 @@
         11
       ]
     ],
-    "calmerMeters" : 4129.780000000001,
-    "calmerSeconds" : 3125.440476190476,
+    "calmerMeters" : 4129.7800000000007,
+    "calmerSeconds" : 3125.4404761904761,
     "calmerStress" : 400.52470000000005,
     "candidates" : 6,
     "caveats" : [
       "Fastest route: 1.0 km where sidewalks aren't mapped.",
       "Calmer route: 0.6 km where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 2.4803881645202637,
+    "computeSeconds" : 0.43759405612945557,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 42.83233880786795,
+    "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 119.11428571428678,
     "fastestFactors" : [
       [
@@ -2620,7 +2620,7 @@
       ],
       [
         "climb",
-        25.4,
+        25.399999999999999,
         51
       ],
       [
@@ -2646,7 +2646,7 @@
     ],
     "fastestMeters" : 4068.3699999999985,
     "fastestSeconds" : 3006.3261904761894,
-    "fastestStress" : 952.6275,
+    "fastestStress" : 952.62750000000005,
     "mode" : "walk",
     "origin" : "Kerry Park",
     "originSnapMeters" : 2.2992778781403174,
@@ -2672,7 +2672,7 @@
       ],
       [
         "climb",
-        29.1,
+        29.100000000000001,
         58
       ],
       [
@@ -2701,7 +2701,7 @@
         10
       ]
     ],
-    "calmerMeters" : 4303.819999999999,
+    "calmerMeters" : 4303.8199999999988,
     "calmerSeconds" : 3211.7833333333315,
     "calmerStress" : 359.53890000000007,
     "candidates" : 6,
@@ -2709,9 +2709,9 @@
       "Fastest route: 1.0 km where sidewalks aren't mapped.",
       "Calmer route: 0.5 km where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 2.5554707050323486,
+    "computeSeconds" : 0.44898200035095215,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 42.83233880786795,
+    "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 205.45714285714212,
     "fastestFactors" : [
       [
@@ -2736,7 +2736,7 @@
       ],
       [
         "climb",
-        25.4,
+        25.399999999999999,
         51
       ],
       [
@@ -2762,7 +2762,7 @@
     ],
     "fastestMeters" : 4068.3699999999985,
     "fastestSeconds" : 3006.3261904761894,
-    "fastestStress" : 952.6275,
+    "fastestStress" : 952.62750000000005,
     "mode" : "walk",
     "origin" : "Kerry Park",
     "originSnapMeters" : 2.2992778781403174,
@@ -2783,7 +2783,7 @@
       ],
       [
         "climb",
-        34.8,
+        34.799999999999997,
         70
       ],
       [
@@ -2803,7 +2803,7 @@
       ],
       [
         "unknownSidewalk",
-        973.1,
+        973.10000000000002,
         19
       ],
       [
@@ -2817,17 +2817,17 @@
         10
       ]
     ],
-    "calmerMeters" : 4465.009999999998,
-    "calmerSeconds" : 3328.523809523808,
-    "calmerStress" : 334.1017,
+    "calmerMeters" : 4465.0099999999984,
+    "calmerSeconds" : 3328.5238095238078,
+    "calmerStress" : 334.10170000000005,
     "candidates" : 6,
     "caveats" : [
       "Fastest route: 1.0 km where sidewalks aren't mapped.",
       "Calmer route: 1.0 km where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 2.6974278688430786,
+    "computeSeconds" : 0.44209706783294678,
     "destination" : "Gas Works Park",
-    "destinationSnapMeters" : 42.83233880786795,
+    "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 322.19761904761845,
     "fastestFactors" : [
       [
@@ -2852,7 +2852,7 @@
       ],
       [
         "climb",
-        25.4,
+        25.399999999999999,
         51
       ],
       [
@@ -2878,7 +2878,7 @@
     ],
     "fastestMeters" : 4068.3699999999985,
     "fastestSeconds" : 3006.3261904761894,
-    "fastestStress" : 952.6275,
+    "fastestStress" : 952.62750000000005,
     "mode" : "walk",
     "origin" : "Kerry Park",
     "originSnapMeters" : 2.2992778781403174,
@@ -2900,7 +2900,7 @@
     "caveats" : [
       "Fastest route: 1.6 km with unknown surface."
     ],
-    "computeSeconds" : 0.04042196273803711,
+    "computeSeconds" : 0.0099419355392456055,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 0,
@@ -2912,12 +2912,12 @@
       ],
       [
         "busyArterialRiding",
-        384.9,
+        384.89999999999998,
         231
       ],
       [
         "climb",
-        48.4,
+        48.399999999999999,
         194
       ],
       [
@@ -2927,7 +2927,7 @@
       ],
       [
         "steepDescent",
-        519.1,
+        519.10000000000002,
         104
       ],
       [
@@ -2948,7 +2948,7 @@
       [
         "signal",
         4,
-        32
+        56
       ],
       [
         "bikeRouteGap",
@@ -2956,12 +2956,12 @@
         20
       ],
       [
-        "movableBridge",
+        "leftAtSignal",
         1,
         15
       ],
       [
-        "leftAtSignal",
+        "movableBridge",
         1,
         15
       ],
@@ -2983,10 +2983,10 @@
     ],
     "fastestMeters" : 4391.880000000001,
     "fastestSeconds" : 1063.869337662338,
-    "fastestStress" : 1314.81775,
+    "fastestStress" : 1338.8177500000002,
     "mode" : "bike",
     "origin" : "Kerry Park",
-    "originSnapMeters" : 43.48935206828262,
+    "originSnapMeters" : 43.489352068282621,
     "reasons" : [
       "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
@@ -3001,7 +3001,7 @@
     "caveats" : [
       "Fastest route: 1.6 km with unknown surface."
     ],
-    "computeSeconds" : 1.5392500162124634,
+    "computeSeconds" : 0.28403997421264648,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 0,
@@ -3013,12 +3013,12 @@
       ],
       [
         "busyArterialRiding",
-        384.9,
+        384.89999999999998,
         231
       ],
       [
         "climb",
-        48.4,
+        48.399999999999999,
         194
       ],
       [
@@ -3028,7 +3028,7 @@
       ],
       [
         "steepDescent",
-        519.1,
+        519.10000000000002,
         104
       ],
       [
@@ -3049,7 +3049,7 @@
       [
         "signal",
         4,
-        32
+        56
       ],
       [
         "bikeRouteGap",
@@ -3057,12 +3057,12 @@
         20
       ],
       [
-        "movableBridge",
+        "leftAtSignal",
         1,
         15
       ],
       [
-        "leftAtSignal",
+        "movableBridge",
         1,
         15
       ],
@@ -3084,10 +3084,10 @@
     ],
     "fastestMeters" : 4391.880000000001,
     "fastestSeconds" : 1063.869337662338,
-    "fastestStress" : 1314.81775,
+    "fastestStress" : 1338.8177500000002,
     "mode" : "bike",
     "origin" : "Kerry Park",
-    "originSnapMeters" : 43.48935206828262,
+    "originSnapMeters" : 43.489352068282621,
     "reasons" : [
       "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
@@ -3102,7 +3102,7 @@
     "caveats" : [
       "Fastest route: 1.6 km with unknown surface."
     ],
-    "computeSeconds" : 1.476243257522583,
+    "computeSeconds" : 0.29312694072723389,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 0,
@@ -3114,12 +3114,12 @@
       ],
       [
         "busyArterialRiding",
-        384.9,
+        384.89999999999998,
         231
       ],
       [
         "climb",
-        48.4,
+        48.399999999999999,
         194
       ],
       [
@@ -3129,7 +3129,7 @@
       ],
       [
         "steepDescent",
-        519.1,
+        519.10000000000002,
         104
       ],
       [
@@ -3150,7 +3150,7 @@
       [
         "signal",
         4,
-        32
+        56
       ],
       [
         "bikeRouteGap",
@@ -3158,12 +3158,12 @@
         20
       ],
       [
-        "movableBridge",
+        "leftAtSignal",
         1,
         15
       ],
       [
-        "leftAtSignal",
+        "movableBridge",
         1,
         15
       ],
@@ -3185,10 +3185,10 @@
     ],
     "fastestMeters" : 4391.880000000001,
     "fastestSeconds" : 1063.869337662338,
-    "fastestStress" : 1314.81775,
+    "fastestStress" : 1338.8177500000002,
     "mode" : "bike",
     "origin" : "Kerry Park",
-    "originSnapMeters" : 43.48935206828262,
+    "originSnapMeters" : 43.489352068282621,
     "reasons" : [
       "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
@@ -3197,34 +3197,39 @@
     "budgetMinutes" : 10,
     "calmerFactors" : [
       [
+        "signal",
+        11,
+        154
+      ],
+      [
         "climb",
-        44.3,
-        177
+        36.399999999999999,
+        146
       ],
       [
         "arterialRiding",
-        647.3,
-        155
+        536.39999999999998,
+        129
       ],
       [
-        "quietStreet",
-        1741,
-        104
-      ],
-      [
-        "signal",
-        13,
-        104
+        "busyArterialRiding",
+        195,
+        117
       ],
       [
         "turn",
-        20,
-        80
+        23,
+        92
+      ],
+      [
+        "quietStreet",
+        1410.9000000000001,
+        85
       ],
       [
         "steepDescent",
-        334,
-        67
+        344,
+        69
       ],
       [
         "unsignalledCrossing",
@@ -3233,8 +3238,8 @@
       ],
       [
         "stopAndGo",
-        6,
-        30
+        4,
+        20
       ],
       [
         "bikeRouteGap",
@@ -3247,32 +3252,27 @@
         15
       ],
       [
-        "stopSign",
-        1,
-        10
-      ],
-      [
         "roughSurface",
         20.5,
         1
       ],
       [
         "unknownSurface",
-        52,
+        61.200000000000003,
         0
       ]
     ],
-    "calmerMeters" : 6766.110000000002,
-    "calmerSeconds" : 1590.682944805194,
-    "calmerStress" : 824.3000000000001,
+    "calmerMeters" : 6295.6000000000004,
+    "calmerSeconds" : 1463.7751948051941,
+    "calmerStress" : 907.3352000000001,
     "candidates" : 4,
     "caveats" : [
       "Fastest route: 1.6 km with unknown surface."
     ],
-    "computeSeconds" : 1.5288292169570923,
+    "computeSeconds" : 0.2934119701385498,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
-    "extraSeconds" : 526.813607142856,
+    "extraSeconds" : 399.90585714285612,
     "fastestFactors" : [
       [
         "arterialRiding",
@@ -3281,12 +3281,12 @@
       ],
       [
         "busyArterialRiding",
-        384.9,
+        384.89999999999998,
         231
       ],
       [
         "climb",
-        48.4,
+        48.399999999999999,
         194
       ],
       [
@@ -3296,7 +3296,7 @@
       ],
       [
         "steepDescent",
-        519.1,
+        519.10000000000002,
         104
       ],
       [
@@ -3317,7 +3317,7 @@
       [
         "signal",
         4,
-        32
+        56
       ],
       [
         "bikeRouteGap",
@@ -3325,12 +3325,12 @@
         20
       ],
       [
-        "movableBridge",
+        "leftAtSignal",
         1,
         15
       ],
       [
-        "leftAtSignal",
+        "movableBridge",
         1,
         15
       ],
@@ -3352,15 +3352,15 @@
     ],
     "fastestMeters" : 4391.880000000001,
     "fastestSeconds" : 1063.869337662338,
-    "fastestStress" : 1314.81775,
+    "fastestStress" : 1338.8177500000002,
     "mode" : "bike",
     "origin" : "Kerry Park",
-    "originSnapMeters" : 43.48935206828262,
+    "originSnapMeters" : 43.489352068282621,
     "reasons" : [
-      "0.4 km less riding in traffic on busy arterials",
-      "0.7 km less riding on arterials",
+      "0.8 km less riding on arterials",
+      "0.2 km less riding in traffic on busy arterials",
       "1 fewer left turn across traffic without a signal",
-      "Tradeoff: 9 more traffic signals",
+      "Tradeoff: 7 more traffic signals",
       "Tradeoff: 1 more crossing of a busy street without a signal"
     ]
   },
@@ -3374,7 +3374,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.042261600494384766,
+    "computeSeconds" : 0.0098249912261962891,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 0,
@@ -3391,7 +3391,7 @@
       ],
       [
         "residential",
-        1343.6,
+        1343.5999999999999,
         40
       ],
       [
@@ -3410,12 +3410,12 @@
         30
       ],
       [
-        "unsignalledRight",
+        "stopSign",
         1,
         15
       ],
       [
-        "stopSign",
+        "unsignalledRight",
         1,
         15
       ],
@@ -3426,11 +3426,11 @@
       ]
     ],
     "fastestMeters" : 4616.4699999999975,
-    "fastestSeconds" : 576.294157122405,
-    "fastestStress" : 390.3083,
+    "fastestSeconds" : 576.29415712240495,
+    "fastestStress" : 390.30829999999997,
     "mode" : "drive",
     "origin" : "Kerry Park",
-    "originSnapMeters" : 44.15341507348351,
+    "originSnapMeters" : 44.153415073483508,
     "reasons" : [
       "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
@@ -3445,7 +3445,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 1.0256848335266113,
+    "computeSeconds" : 0.19938194751739502,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 0,
@@ -3462,7 +3462,7 @@
       ],
       [
         "residential",
-        1343.6,
+        1343.5999999999999,
         40
       ],
       [
@@ -3481,12 +3481,12 @@
         30
       ],
       [
-        "unsignalledRight",
+        "stopSign",
         1,
         15
       ],
       [
-        "stopSign",
+        "unsignalledRight",
         1,
         15
       ],
@@ -3497,11 +3497,11 @@
       ]
     ],
     "fastestMeters" : 4616.4699999999975,
-    "fastestSeconds" : 576.294157122405,
-    "fastestStress" : 390.3083,
+    "fastestSeconds" : 576.29415712240495,
+    "fastestStress" : 390.30829999999997,
     "mode" : "drive",
     "origin" : "Kerry Park",
-    "originSnapMeters" : 44.15341507348351,
+    "originSnapMeters" : 44.153415073483508,
     "reasons" : [
       "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
@@ -3516,7 +3516,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.9965636730194092,
+    "computeSeconds" : 0.19245994091033936,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 0,
@@ -3533,7 +3533,7 @@
       ],
       [
         "residential",
-        1343.6,
+        1343.5999999999999,
         40
       ],
       [
@@ -3552,12 +3552,12 @@
         30
       ],
       [
-        "unsignalledRight",
+        "stopSign",
         1,
         15
       ],
       [
-        "stopSign",
+        "unsignalledRight",
         1,
         15
       ],
@@ -3568,11 +3568,11 @@
       ]
     ],
     "fastestMeters" : 4616.4699999999975,
-    "fastestSeconds" : 576.294157122405,
-    "fastestStress" : 390.3083,
+    "fastestSeconds" : 576.29415712240495,
+    "fastestStress" : 390.30829999999997,
     "mode" : "drive",
     "origin" : "Kerry Park",
-    "originSnapMeters" : 44.15341507348351,
+    "originSnapMeters" : 44.153415073483508,
     "reasons" : [
       "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
@@ -3587,7 +3587,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.9775663614273071,
+    "computeSeconds" : 0.18264901638031006,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 0,
@@ -3604,7 +3604,7 @@
       ],
       [
         "residential",
-        1343.6,
+        1343.5999999999999,
         40
       ],
       [
@@ -3623,12 +3623,12 @@
         30
       ],
       [
-        "unsignalledRight",
+        "stopSign",
         1,
         15
       ],
       [
-        "stopSign",
+        "unsignalledRight",
         1,
         15
       ],
@@ -3639,11 +3639,11 @@
       ]
     ],
     "fastestMeters" : 4616.4699999999975,
-    "fastestSeconds" : 576.294157122405,
-    "fastestStress" : 390.3083,
+    "fastestSeconds" : 576.29415712240495,
+    "fastestStress" : 390.30829999999997,
     "mode" : "drive",
     "origin" : "Kerry Park",
-    "originSnapMeters" : 44.15341507348351,
+    "originSnapMeters" : 44.153415073483508,
     "reasons" : [
       "No calmer route was found within your extra time. This one is already the easiest the map can see."
     ]
