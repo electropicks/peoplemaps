@@ -971,6 +971,30 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertFalse(app.alerts.firstMatch.exists)
     }
 
+    /// The map credit stays on screen at every stop: over the map, then inside the sheet once the sheet is fully raised.
+    @MainActor func testMapCreditStaysVisibleWhenTheSheetIsRaised() {
+        let app = launchHome(location: Self.atBallardLibrary)
+        let osm = app.links["Map data © OpenStreetMap contributors"], overture = app.links["Places from Overture Maps Foundation"]
+        XCTAssertTrue(osm.isHittable)
+        XCTAssertTrue(overture.isHittable)
+        // Search raises the sheet fully, and the keyboard mustn't hide the credit.
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 5))
+        XCTAssertTrue(osm.waitForExistence(timeout: 2))
+        XCTAssertTrue(osm.isHittable)
+        XCTAssertTrue(overture.isHittable)
+        capture("22-credit-search", app: app)
+        app.buttons["cancel-search-home"].tap()
+        showGasWorksRoutes(app)
+        XCTAssertTrue(app.buttons["route-calmer"].waitForExistence(timeout: 10))
+        let start = app.buttons["start-navigation"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: -6))
+        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -500)))
+        XCTAssertTrue(app.buttons["start-navigation"].isHittable)
+        XCTAssertTrue(osm.isHittable, "Pinned under Start")
+        XCTAssertGreaterThan(osm.frame.minY, app.buttons["start-navigation"].frame.maxY)
+        capture("23-credit-preview-large", app: app)
+    }
+
     /// The bar explains the rating in words and scores; a route with nothing calmer has one marker and says what was found.
     @MainActor func testCalmBarInRouteDetails() {
         var app = launchHome(location: Self.atBallardLibrary)

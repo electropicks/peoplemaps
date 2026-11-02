@@ -375,13 +375,16 @@ struct ExploreView: View {
         return UIEdgeInsets(top: safe.top + 24, left: 32, bottom: max(mapCover, safe.bottom) + 40, right: 16 + 44 + 16)
     }
 
-    /// The map buttons and attribution over the map; the sheet itself is a system sheet above them. Both fade out once the sheet is large.
+    /// The map buttons and attribution over the map; the sheet itself is a system sheet above them. Both give way once the sheet
+    /// is large: only the status bar is left above it, so the credit moves into the sheet (`portraitSheet`).
     private func portraitChrome(_ geo: GeometryProxy) -> some View {
         VStack(spacing: 0) {
             HStack { Spacer(); mapButtons }.padding(.horizontal, 16).padding(.top, 8)
             Spacer(minLength: 0)
-            HStack { attribution; Spacer() }.padding(.horizontal, 12)
-                .padding(.bottom, max(sheetCover - geo.safeAreaInsets.bottom, 0) + 8)
+            if stop != .large {
+                HStack { attribution; Spacer() }.padding(.horizontal, 12)
+                    .padding(.bottom, max(sheetCover - geo.safeAreaInsets.bottom, 0) + 8)
+            }
         }
         .opacity(stop == .large ? 0 : 1)
         .allowsHitTesting(stop != .large)
@@ -391,6 +394,12 @@ struct ExploreView: View {
 
     private var portraitSheet: some View {
         presenting(panel)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if stop == .large {
+                    attributionLinks.frame(maxWidth: .infinity).padding(.vertical, 6).transition(.opacity)
+                }
+            }
+            .animation(Motion.content(reduceMotion), value: stop == .large)
             .presentationDetents(detents, selection: stopBinding)
             .presentationBackgroundInteraction(.enabled(upThrough: screen == .preview ? previewDetent : .medium))
             .presentationDragIndicator(.visible)
@@ -477,6 +486,10 @@ struct ExploreView: View {
     }
 
     private var attribution: some View {
+        attributionLinks.padding(.horizontal, 8).padding(.vertical, 3).floatingSurface(in: Capsule())
+    }
+
+    private var attributionLinks: some View {
         HStack(spacing: 4) {
             Link("© OpenStreetMap", destination: URL(string: "https://www.openstreetmap.org/copyright")!)
                 .accessibilityLabel("Map data © OpenStreetMap contributors")
@@ -486,8 +499,6 @@ struct ExploreView: View {
         }
         .font(.caption2).foregroundStyle(GuidanceOverlay.onGlass).lineLimit(1)
         .dynamicTypeSize(...DynamicTypeSize.large)
-        .padding(.horizontal, 8).padding(.vertical, 3)
-        .floatingSurface(in: Capsule())
     }
 
     // MARK: Home

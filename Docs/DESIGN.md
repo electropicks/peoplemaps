@@ -193,8 +193,9 @@ Proposed:
 - Attribution: "© OpenStreetMap" stays always visible and linked (ODbL),
   and becomes "© OpenStreetMap contributors · Overture Maps Foundation" once
   Overture Places lands (branch `search/overture-places`). `.caption2`, on a small glass capsule just above the sheet's top edge,
-  leading. It moves with the detent, and fades with the buttons when the sheet is
-  large and the map is covered. Size capped at `.large`, one line.
+  leading. It moves with the detent. At the large detent only the status bar is
+  left above the sheet, so the credit moves inside it, pinned at the bottom
+  without the capsule. Size capped at `.large`, one line.
 - Remove all custom `.shadow` calls on glass; glass draws its own.
 
 ```
