@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "PeoplemapsCore",
-    platforms: [.macOS(.v14), .iOS(.v17)],
+    platforms: [.macOS(.v14), .iOS("27.0")],
     products: [.library(name: "PeoplemapsCore", targets: ["PeoplemapsCore"]), .executable(name: "peoplemaps-audit", targets: ["RouteAudit"]),
                .executable(name: "peoplemaps-bench", targets: ["RouterBench"])],
     targets: [

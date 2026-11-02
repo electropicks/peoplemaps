@@ -54,6 +54,17 @@ and City of Seattle address points were reviewed and not used: their terms
 do not clearly allow redistribution in this app (details in `Data/LICENSE.md`).
 Results are labelled with their source and date ("OpenStreetMap, Oct 2026").
 
+**Overture Maps Places** — Overture Maps Foundation, release 2026-10-21.0.
+
+The search index also holds businesses from Overture Maps Places, from the
+sources Overture attributes: Meta, Microsoft, BrightQuery, Uberall, Birdeye and
+DAC (CDLA Permissive 2.0, `Data/licenses/CDLA-Permissive-2.0.md`), Foursquare
+(Apache 2.0, © Foursquare Labs, Inc.; `Data/licenses/Apache-2.0.txt` and the
+NOTICE in `Data/licenses/Foursquare-NOTICE.txt`) and AllThePlaces (CC0 1.0).
+The extract is archived as `Data/seattle-overture-places.json.gz`; details and
+the derivative-database note are in `Data/LICENSE.md`. Results from it are
+labelled "Overture (Foursquare), Oct 2026" and so on.
+
 **USGS 3D Elevation Program (3DEP)** — public domain; credit requested.
 
 Elevation comes from the 3DEP ground model (~5 m, exported from the

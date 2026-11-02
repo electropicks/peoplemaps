@@ -1,22 +1,12 @@
 import XCTest
 @testable import PeoplemapsCore
 
-/// The binary graph must decode to exactly what the importer's JSON describes. The importer runs once into a temp dir,
+/// The binary graph must decode to exactly what the importer's JSON describes. The importer runs once (in Scripts/verify.sh, or here when run alone),
 /// emitting both formats from the same in-memory graph. macOS only: it needs Process and python3.
 final class BinaryGraphTests: XCTestCase {
     func testBinaryGraphMatchesImporterJSON() throws {
         #if os(macOS) || os(Linux)
-        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-        let temp = FileManager.default.temporaryDirectory.appendingPathComponent("peoplemaps-graph-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: temp) }
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["python3", root.appendingPathComponent("Scripts/import_osm.py").path,
-                             "--out", temp.path, "--json-graph", temp.appendingPathComponent("graph.json").path]
-        process.standardOutput = FileHandle.nullDevice
-        try process.run(); process.waitUntilExit()
-        try XCTSkipUnless(process.terminationStatus == 0, "importer could not run")
-
+        let temp = try importerOutput()
         let json = try Data(contentsOf: temp.appendingPathComponent("graph.json"))
         let expected = try JSONDecoder().decode(GraphFile.self, from: json).graph()
         let actual = try GraphBinary.decode(Data(contentsOf: temp.appendingPathComponent("seattle-graph.bin")))
@@ -27,6 +17,26 @@ final class BinaryGraphTests: XCTestCase {
         #else
         throw XCTSkip("needs python3")
         #endif
+    }
+
+    /// Where the importer's output is: the directory Scripts/verify.sh already filled (PEOPLEMAPS_IMPORT_DIR), else a fresh run, about 2.5 minutes.
+    private func importerOutput() throws -> URL {
+        let fm = FileManager.default
+        if let shared = ProcessInfo.processInfo.environment["PEOPLEMAPS_IMPORT_DIR"].map({ URL(fileURLWithPath: $0) }),
+           fm.fileExists(atPath: shared.appendingPathComponent("graph.json").path), fm.fileExists(atPath: shared.appendingPathComponent("seattle-graph.bin").path) {
+            return shared
+        }
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        let temp = fm.temporaryDirectory.appendingPathComponent("peoplemaps-graph-\(UUID().uuidString)")
+        addTeardownBlock { try? fm.removeItem(at: temp) }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["python3", root.appendingPathComponent("Scripts/import_osm.py").path,
+                             "--out", temp.path, "--json-graph", temp.appendingPathComponent("graph.json").path]
+        process.standardOutput = FileHandle.nullDevice
+        try process.run(); process.waitUntilExit()
+        try XCTSkipUnless(process.terminationStatus == 0, "importer could not run")
+        return temp
     }
 
     func testRejectsCorruptData() throws {

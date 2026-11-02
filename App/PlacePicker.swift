@@ -3,26 +3,29 @@ import PeoplemapsCore
 
 struct PlacePicker: View {
     let title: String
-    let graph: StreetGraph
     let search: SearchIndex
-    let selected: Place
+    /// Nil while the field is empty ("Choose start").
+    let selected: Place?
     let saved: SavedPlacesStore
     /// Set for the origin: offers "Current location" unless location is denied.
     let location: LocationPermission?
+    /// Where distances are measured from when `location` can't say (the user's position, never the place being replaced).
+    var near: Coordinate?
     let onSelect: (Place) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
     @State private var access: LocationPermission.Access
     @State private var locating = false
     @State private var locationFailed = false
+    @State private var here: Coordinate?
 
-    init(title: String, graph: StreetGraph, search: SearchIndex, selected: Place, saved: SavedPlacesStore, location: LocationPermission? = nil, onSelect: @escaping (Place) -> Void) {
-        self.title = title; self.graph = graph; self.search = search; self.selected = selected; self.saved = saved; self.location = location; self.onSelect = onSelect
+    init(title: String, search: SearchIndex, selected: Place?, saved: SavedPlacesStore, location: LocationPermission? = nil, near: Coordinate? = nil, onSelect: @escaping (Place) -> Void) {
+        self.title = title; self.search = search; self.selected = selected; self.saved = saved; self.location = location; self.near = near; self.onSelect = onSelect
         _access = State(initialValue: location?.access ?? .denied)
     }
 
-    private var featured: [Place] { ExploreView.featuredIDs.compactMap { id in graph.places.first { $0.id == id }.map(search.withAddress) } }
-    private var results: [Place] { search.search(query, near: selected.coordinate) }
+    private var results: [Place] { search.search(query, near: selected?.coordinate) }
+    private var offersCurrentLocation: Bool { location != nil && access != .denied }
 
     var body: some View {
         NavigationStack {
@@ -30,12 +33,15 @@ struct PlacePicker: View {
                 VStack(alignment: .leading, spacing: 16) {
                     SearchField(text: $query, identifier: "place-search")
                     if query.isEmpty {
-                        if location != nil && access != .denied {
-                            CurrentLocationRow(locating: locating, failed: locationFailed, selected: selected.isCurrentLocation, action: useCurrentLocation)
+                        if offersCurrentLocation {
+                            CurrentLocationRow(locating: locating, failed: locationFailed, selected: selected?.isCurrentLocation == true, action: useCurrentLocation)
                         }
                         if !saved.favourites.isEmpty { section("Favourites", saved.favourites, prefix: "place-favourite-") }
-                        section("Featured places", featured, prefix: "place-")
                         if !saved.recents.isEmpty { section("Recents", saved.recents, prefix: "place-recent-") }
+                        if !offersCurrentLocation && saved.favourites.isEmpty && saved.recents.isEmpty {
+                            Text("Search a place or address.").font(.footnote).foregroundStyle(.secondary).padding(.horizontal, 4)
+                                .accessibilityIdentifier("place-hint")
+                        }
                     } else if results.isEmpty {
                         EmptySearch(count: search.count).padding(.top, 40)
                         AppleMapsLookup(query: query)
@@ -45,22 +51,26 @@ struct PlacePicker: View {
                 }.padding(.horizontal, 16)
             }
             .scrollDismissesKeyboard(.interactively)
-            .background(Color(uiColor: .systemGroupedBackground))
+            .task {
+                guard let location, access == .granted, let c = await location.currentCoordinate() else { return }
+                here = Coordinate(lat: c.latitude, lon: c.longitude)
+            }
             .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.accessibilityIdentifier("cancel-search") } }
-        }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() }.accessibilityIdentifier("cancel-search") } }
+        }.tint(.primary)
     }
 
     private func section(_ title: String, _ places: [Place], prefix: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.footnote).textCase(.uppercase).foregroundStyle(.secondary).padding(.leading, 16)
-            PlaceList(places: places, query: query, selectedID: selected.id, identifier: { prefix + $0.id }) {
+            Text(title).font(.footnote.weight(.semibold)).foregroundStyle(.secondary).padding(.leading, 16)
+                .accessibilityAddTraits(.isHeader)
+            PlaceList(places: places, query: query, selectedID: selected?.id, near: here ?? near, identifier: { prefix + $0.id }) {
                 onSelect($0); dismiss()
             }
         }
     }
 
-    /// Asks for permission only here, on a tap. A refusal hides the row and is never raised again.
+    /// Reads the fix, asking for permission first if the user hasn\u{2019}t answered yet; a refusal hides the row.
     private func useCurrentLocation() {
         guard let location, !locating else { return }
         locating = true; locationFailed = false
@@ -87,32 +97,32 @@ struct CurrentLocationRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Image(systemName: "location.fill").font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
-                    .frame(width: 32, height: 32).background(Color(uiColor: .systemBlue), in: Circle())
+                CategoryBadge(badge: .currentLocation)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Current location").font(.body).foregroundStyle(.primary)
                     if locating || failed {
                         Text(failed ? "Couldn\u{2019}t find where you are. Try again." : "Finding where you are\u{2026}")
-                            .font(.footnote).foregroundStyle(.secondary)
+                            .font(.subheadline).foregroundStyle(.secondary)
                     }
                 }
                 Spacer(minLength: 0)
                 if locating { ProgressView() }
-                else if selected { Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(.tint) }
+                else if selected { Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(.primary) }
             }
-            .padding(.horizontal, 14).frame(minHeight: 52).contentShape(Rectangle())
+            .padding(.horizontal, 14).padding(.vertical, 6).frame(minHeight: 52).contentShape(Rectangle())
             .animation(Motion.content(reduceMotion), value: locating)
             .animation(Motion.content(reduceMotion), value: failed)
         }
         .buttonStyle(.plain)
-        .background(.panelFill, in: RoundedRectangle(cornerRadius: 12))
+        .background(.panelFill, in: RoundedRectangle(cornerRadius: Layout.groupRadius))
         .accessibilityIdentifier("place-current-location")
     }
 }
 
-/// Native-style search field: gray rounded field, magnifier, clear button.
+/// Native-style search field: tertiary-fill capsule (no glass on the glass sheet), magnifier, clear button.
 struct SearchField: View {
     @Binding var text: String
+    var placeholder = "Search places"
     var identifier = "search-input"
     var focused: FocusState<Bool>.Binding?
 
@@ -126,11 +136,11 @@ struct SearchField: View {
             }
         }
         .padding(.horizontal, 12).frame(height: 44)
-        .background(Color(uiColor: .tertiarySystemFill), in: RoundedRectangle(cornerRadius: 12))
+        .background(.fill.tertiary, in: Capsule())
     }
 
     @ViewBuilder private var field: some View {
-        let base = TextField("Search places", text: $text).autocorrectionDisabled().submitLabel(.search).accessibilityIdentifier(identifier)
+        let base = TextField(placeholder, text: $text).autocorrectionDisabled().submitLabel(.search).accessibilityIdentifier(identifier)
         if let focused { base.focused(focused) } else { base }
     }
 }
@@ -138,13 +148,11 @@ struct SearchField: View {
 struct EmptySearch: View {
     let count: Int
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").font(.system(size: 36, weight: .light)).foregroundStyle(.secondary)
-            Text("No places match in this Seattle area").font(.headline).multilineTextAlignment(.center)
-            Text("PeopleMaps searches \(count.formatted()) places and addresses in this offline area.").font(.subheadline).foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+        ContentUnavailableView {
+            Label("No places match in this Seattle area", systemImage: "magnifyingglass")
+        } description: {
+            Text("PeopleMaps searches \(count.formatted()) places and addresses in this offline area.")
         }
-        .frame(maxWidth: .infinity).padding(.horizontal, 24)
         .accessibilityElement(children: .combine).accessibilityIdentifier("search-empty")
     }
 }

@@ -5,14 +5,19 @@ import SQLite3
 import CSQLite
 #endif
 
-/// Offline search over the bundled index of OpenStreetMap places and street addresses, built by
-/// Scripts/build_search.py. Ranked by text match, then category weight (landmarks and parks over shops,
-/// addresses last), then distance from a supplied point. Falls back to typo correction when nothing matches.
+/// Offline search over the bundled index of OpenStreetMap places and street addresses plus Overture Maps
+/// businesses, built by Scripts/build_search.py. Ranked by text match, then category weight (landmarks and
+/// parks over shops, addresses last), then distance from a supplied point. Falls back to typo correction
+/// when nothing matches.
 public final class SearchIndex: @unchecked Sendable {
     /// Entries in the index: named places plus addresses.
     public let count: Int
-    /// "OpenStreetMap, Oct 2026": the source and date of the extract.
+    /// "OpenStreetMap, Oct 2026": the source and date of the OSM extract. Each `Place.source` names its own row's
+    /// source ("Overture (Foursquare), Oct 2026" for a business from Overture, dated by the release).
     public let source: String
+    private let overtureDate: String?
+    /// The row columns to select; indexes built before the per-row `source` column are all OpenStreetMap.
+    private let columns: String
     private let db: OpaquePointer
     private let lock = NSLock()
     /// The importer's per-mode graph nodes; ignored when the index was built against another graph.
@@ -20,11 +25,11 @@ public final class SearchIndex: @unchecked Sendable {
     private var vocabulary: [(term: String, docs: Int)]?
     private var last: (key: String, results: [Place])?
 
-    /// The bundled index, inflated once into `directory` (Caches by default) and reused on later launches.
-    public static func bundled(graph: StreetGraph? = nil, directory: URL? = nil) throws -> SearchIndex {
+    /// The bundled index, opened without the decoded graph (`graphNodes` is the header's node count), inflated once into `directory` (Caches by default) and reused on later launches.
+    public static func bundled(graphNodes: Int? = nil, directory: URL? = nil) throws -> SearchIndex {
         guard let url = Bundle.module.url(forResource: "seattle-search.sqlite", withExtension: "gz") else { throw RoutingError.missingData }
         let folder = try directory ?? FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        return try SearchIndex(gzipped: try Data(contentsOf: url), graphNodeCount: graph?.nodes.count, directory: folder)
+        return try SearchIndex(gzipped: try Data(contentsOf: url), graphNodeCount: graphNodes, directory: folder)
     }
 
     public init(gzipped: Data, graphNodeCount: Int?, directory: URL) throws {
@@ -55,6 +60,10 @@ public final class SearchIndex: @unchecked Sendable {
         count = total
         snapsMatchGraph = graphNodeCount.map { String($0) == meta["graphNodes"] } ?? false
         source = [meta["source"], Self.monthYear(meta["sourceDate"])].compactMap { $0 }.joined(separator: ", ")
+        overtureDate = Self.monthYear(meta["overtureDate"])
+        var hasSource = false
+        Self.rows(db, "SELECT 1 FROM pragma_table_info('entries') WHERE name = 'source'", []) { _ in hasSource = true }
+        columns = "osm, kind, name, category, address, lat, lon, walk, bike, drive, " + (hasSource ? "source" : "NULL")
     }
 
     deinit { sqlite3_close(db) }
@@ -97,7 +106,7 @@ public final class SearchIndex: @unchecked Sendable {
     public func place(id: String) -> Place? {
         lock.lock(); defer { lock.unlock() }
         var found: Place?
-        Self.rows(db, "SELECT \(Self.columns) FROM entries WHERE osm = ?1 AND kind = 'place' LIMIT 1", [.text(id)]) { found = place($0) }
+        Self.rows(db, "SELECT \(columns) FROM entries WHERE osm = ?1 AND kind = 'place' LIMIT 1", [.text(id)]) { found = place($0) }
         return found
     }
 
@@ -106,6 +115,28 @@ public final class SearchIndex: @unchecked Sendable {
     public func withAddress(_ place: Place) -> Place {
         guard place.address == nil, let address = self.place(id: place.id)?.address else { return place }
         var place = place; place.address = address; return place
+    }
+
+    /// The indexed street address nearest to `c` within `meters`, or nil. Labels a place the map has no address for
+    /// ("Near 410 Terry Avenue North"), so it carries no snap nodes. At one spot, the building's own address wins
+    /// over one of its units.
+    public func nearestAddress(to c: Coordinate, within meters: Double = 40) -> Place? {
+        lock.lock(); defer { lock.unlock() }
+        // A box a little larger than the circle, then the exact distance.
+        let dLat = meters / 111_000, dLon = meters / (111_000 * max(0.01, cos(c.lat * .pi / 180)))
+        var best: (distance: Double, unit: Bool, place: Place)?
+        Self.rows(db, """
+            SELECT osm, name, lat, lon, unit IS NOT NULL FROM entries
+            WHERE kind = 'address' AND lat BETWEEN ?1 AND ?2 AND lon BETWEEN ?3 AND ?4 ORDER BY id
+            """, [.double(c.lat - dLat), .double(c.lat + dLat), .double(c.lon - dLon), .double(c.lon + dLon)]) { row in
+            let found = Place(id: Self.text(row, 0) ?? "", name: Self.text(row, 1) ?? "", lat: sqlite3_column_double(row, 2),
+                              lon: sqlite3_column_double(row, 3), category: "address", kind: .address, source: source)
+            let distance = c.distance(to: found.coordinate), unit = sqlite3_column_int(row, 4) != 0
+            guard distance <= meters else { return }
+            if let best, (best.distance, best.unit ? 1 : 0) <= (distance, unit ? 1 : 0) { return }
+            best = (distance, unit, found)
+        }
+        return best?.place
     }
 
     private func run(_ tokens: [String], unit: String?, near: Coordinate?, limit: Int) -> [Place] {
@@ -124,7 +155,7 @@ public final class SearchIndex: @unchecked Sendable {
                       [.text(number), .text(street)]) { _ in exact = true }
             if !exact {
                 Self.rows(db, """
-                    SELECT \(Self.columns) FROM entries WHERE kind = 'address' AND number GLOB '[0-9]*'
+                    SELECT \(columns) FROM entries WHERE kind = 'address' AND number GLOB '[0-9]*'
                     AND id IN (SELECT rowid FROM fts WHERE fts MATCH ?1)
                     ORDER BY abs(CAST(number AS INTEGER) - ?2), unit IS NOT NULL, id LIMIT 3
                     """, [.text(street), .int(n)]) { nearest.append(place($0)) }
@@ -133,7 +164,7 @@ public final class SearchIndex: @unchecked Sendable {
         var ranked: [Place] = []
         let k = near.map { pow(cos($0.lat * .pi / 180), 2) } ?? 0
         Self.rows(db, """
-            SELECT \(Self.columns) FROM entries WHERE id IN (SELECT rowid FROM fts WHERE fts MATCH ?3)
+            SELECT \(columns) FROM entries WHERE id IN (SELECT rowid FROM fts WHERE fts MATCH ?3)
             ORDER BY CASE
                 WHEN ?4 IS NOT NULL AND number = ?4 COLLATE NOCASE AND id IN (SELECT rowid FROM fts WHERE fts MATCH ?5) THEN 0
                 WHEN id IN (SELECT rowid FROM fts WHERE fts MATCH ?1) THEN 1
@@ -215,8 +246,6 @@ public final class SearchIndex: @unchecked Sendable {
         return (String(query[..<whole.lowerBound]), String(query[unit]).uppercased())
     }
 
-    private static let columns = "osm, kind, name, category, address, lat, lon, walk, bike, drive"
-
     private func place(_ row: OpaquePointer) -> Place {
         var snap: [TravelMode: Int] = [:]
         if snapsMatchGraph {
@@ -227,7 +256,14 @@ public final class SearchIndex: @unchecked Sendable {
         let kind = Place.Kind(rawValue: Self.text(row, 1) ?? "") ?? .place
         return Place(id: Self.text(row, 0) ?? "", name: Self.text(row, 2) ?? "", lat: sqlite3_column_double(row, 5),
                      lon: sqlite3_column_double(row, 6), category: Self.text(row, 3) ?? kind.rawValue, kind: kind,
-                     address: Self.text(row, 4), source: source, snap: snap)
+                     address: Self.text(row, 4), source: label(Self.text(row, 10)), snap: snap)
+    }
+
+    /// "Overture · Foursquare" → "Overture (Foursquare), Oct 2026"; nothing, or "OpenStreetMap", → the extract's own source.
+    private func label(_ rowSource: String?) -> String {
+        guard let rowSource, rowSource.hasPrefix("Overture") else { return source }
+        let dataset = rowSource.components(separatedBy: " · ").dropFirst().first
+        return [dataset.map { "Overture (\($0))" } ?? "Overture", overtureDate].compactMap { $0 }.joined(separator: ", ")
     }
 
     private enum Value { case text(String), int(Int), double(Double), null }

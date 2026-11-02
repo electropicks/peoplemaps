@@ -21,13 +21,52 @@
   "places": 519,
   "search": {
     "addresses": 50026,
-    "gzippedBytes": 3398687,
-    "inflatedBytes": 11702272,
-    "places": 6742,
-    "sqlite": "3.54.1",
+    "gzippedBytes": 4413854,
+    "inflatedBytes": 14671872,
+    "overture": {
+      "archive": {
+        "file": "Data/seattle-overture-places.json.gz",
+        "records": 59523,
+        "sha256": "cbe0b55de4029b1507a9ce460e2cfe7e96fdf8cbd7686deedd7bc95bf921f749"
+      },
+      "bbox": {
+        "east": -122.24,
+        "north": 47.74,
+        "south": 47.49,
+        "west": -122.44
+      },
+      "fetched": "2026-10-30",
+      "minConfidence": 0.6,
+      "release": "2026-10-21.0",
+      "shipped": 8655,
+      "shippedBySource": {
+        "Overture \u00b7 AllThePlaces": 243,
+        "Overture \u00b7 Birdeye": 13,
+        "Overture \u00b7 BrightQuery": 2514,
+        "Overture \u00b7 DAC": 8,
+        "Overture \u00b7 Foursquare": 1424,
+        "Overture \u00b7 Meta": 3034,
+        "Overture \u00b7 Microsoft": 1404,
+        "Overture \u00b7 Uberall": 15
+      },
+      "source": "s3://overturemaps-us-west-2/release/2026-10-21.0/theme=places/type=place/",
+      "stages": {
+        "allowedSource": 20586,
+        "archive": 59523,
+        "categorised": 10899,
+        "categoryFilled": 337,
+        "confident": 16299,
+        "duplicateOfOSM": 2218,
+        "duplicateOfOverture": 26,
+        "inBox": 20586,
+        "notClosed": 19377
+      }
+    },
+    "places": 15397,
+    "sqlite": "3.45.1",
     "unsnapped": {
-      "bike": 0,
-      "drive": 5,
+      "bike": 5,
+      "drive": 15,
       "walk": 0
     }
   },

@@ -6,7 +6,7 @@ import PeoplemapsCore
 /// Ferrostar's route source for the first route AND every reroute: our own `NativeRouter`, offline.
 /// A reroute keeps the destination, mode, extra-time budget and the user's calmer/fastest choice.
 final class OwnRouteProvider: CustomRouteProvider, @unchecked Sendable {
-    let router: NativeRouter
+    let router: any RouteComputing
     let destination: Place
     let mode: TravelMode
     let extraMinutes: Int
@@ -14,7 +14,7 @@ final class OwnRouteProvider: CustomRouteProvider, @unchecked Sendable {
     /// Called with every route handed to Ferrostar, so the UI can read the plan behind it.
     private let onRoute: @Sendable (AdaptedRoute) -> Void
 
-    init(router: NativeRouter, destination: Place, mode: TravelMode, extraMinutes: Int, preferCalmer: Bool, onRoute: @escaping @Sendable (AdaptedRoute) -> Void) {
+    init(router: any RouteComputing, destination: Place, mode: TravelMode, extraMinutes: Int, preferCalmer: Bool, onRoute: @escaping @Sendable (AdaptedRoute) -> Void) {
         self.router = router; self.destination = destination; self.mode = mode
         self.extraMinutes = extraMinutes; self.preferCalmer = preferCalmer; self.onRoute = onRoute
     }

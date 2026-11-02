@@ -1,0 +1,62 @@
+name: Backend deploy
+
+# Deploys the reports Worker (Docs/REPORTS.md 7.3) automatically after a merge to main, once the tests pass, or by hand. The
+# very first deploy runs from the owner's Mac (Backend/README.md). Pull requests never run this workflow; their backend tests
+# run in ci.yml. The `production` environment, which only main can deploy to, alone holds the Cloudflare secrets. The deploy
+# job is skipped until the repository variable BACKEND_DEPLOY is `true`.
+on:
+  push:
+    branches: [main]
+    paths: [Backend/**, .github/workflows/backend.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npx tsc --noEmit
+
+  deploy:
+    needs: test
+    if: vars.BACKEND_DEPLOY == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency: backend-deploy
+    defaults:
+      run:
+        working-directory: Backend
+    env:
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+      # No install scripts here, since one could still rewrite node_modules/.bin/wrangler or $GITHUB_PATH for the steps below.
+      - run: npm ci --ignore-scripts
+      # The token only reaches these two steps. Migrations first, so a deploy never runs
+      # against an older schema; a failed migration stops the deploy.
+      - run: npx wrangler d1 migrations apply peoplemaps-reports --remote
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
