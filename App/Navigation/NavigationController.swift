@@ -38,6 +38,9 @@ final class NavigationController {
     /// Geometry of the route being followed; `routeVersion` changes whenever it is replaced (start or reroute).
     private(set) var routeGeometry: [Coordinate] = []
     private(set) var routeVersion = 0
+    /// Metres of `routeGeometry` already driven; 0 on a fresh route, so a reroute never inherits the old split.
+    private(set) var travelledMeters = 0.0
+    @ObservationIgnored private var routeMeters = 0.0
     /// Routes installed after the first one in this trip.
     private(set) var rerouteCount = 0
     private(set) var mode = TravelMode.drive
@@ -277,6 +280,8 @@ final class NavigationController {
         gate.routeInstalled(at: Date())
         hasReachedRoute = false
         routeGeometry = adapted.route.geometry.map { Coordinate(lat: $0.lat, lon: $0.lng) }
+        routeMeters = RouteLine.length(routeGeometry)
+        travelledMeters = 0
         routeVersion += 1
     }
 
@@ -318,6 +323,7 @@ final class NavigationController {
             hasArrived = false
             distanceToManeuver = progress.distanceToNextManeuver
             remainingMeters = progress.distanceRemaining
+            travelledMeters = min(routeMeters, max(travelledMeters, routeMeters - progress.distanceRemaining))
             remainingSeconds = progress.durationRemaining
             stepIndex = min(max(0, plan.steps.count - remaining.count), plan.steps.count - 1)
             let travelled = plan.steps[stepIndex].meters - progress.distanceToNextManeuver

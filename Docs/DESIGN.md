@@ -77,10 +77,11 @@ extensions) as today; the redesign adds the category set and an
 | `directionsFill` | `#1F7A3A` | `#30D158` | primary button fill / glass tint | label 5.4 white / 10.4 black |
 | `directionsText` | white | black | label on the above | as above |
 | `fastest` | `#8E8E93` | `#8E8E93` | fastest line and bar | graphic only |
+| `passedRoute` | `#9CB3A3` | `#56725F` | the part of the followed route already driven, drawn 3.5 pt (the route is 5.5) | vs map land 2.0 / 3.3; vs the route ahead 2.0 / 2.6. Below 3:1 in light on purpose: it is a trail, not information, and the width, the puck at its end and the casing say "behind" without colour |
 | `panelFill` | elevated `secondarySystemBackground` | same | opaque content cards in the sheet | text uses `label`/`secondaryLabel` |
 | `calmBand` | `#3590D0` `#5393A5` `#928A7B` `#C47632` `#D9605F` | same | calm bar, Breezy to Yikes; blue through grey to orange and rose, not green to red, so it doesn't read as safe and unsafe | landed band black text ≥4.5; band vs `panelFill` ≥3 |
 | `mapLand`…`mapPath` | unchanged | unchanged | MapLibre style | — |
-| Location | `systemBlue` | `systemBlue` | puck and Current location row only | — |
+| Location | `systemBlue` | `systemBlue` | the map marker and Current location row only. The marker always has a white ring and a faint dark halo, so it separates from the green and grey route lines by lightness, not hue (blue vs white ring 4.0 light; marker vs land 3.6 / 4.3 light/dark) | — |
 
 Removed: the hard-coded arrival circle colour in `GuidanceView`
 (`Color(red: 0x1F…)`) becomes `.directionsFill`. `panel` (opaque sheet
@@ -446,6 +447,21 @@ would push mute, compass and overview off it. Secondary text on glass uses
 │╰────────────────────────────╯│
 ```
 
+#### Map marker and route line while guiding
+
+- **Marker.** Outside guidance: a blue dot with a white ring; with a known
+  heading it gains a beam and a small rim triangle, without one it stays a
+  plain dot (no direction is invented). Nothing outside guidance supplies a
+  heading yet, so today it is always the dot. During guidance: a blue arrow
+  (chevron with a notch, 34 pt, white 3.5 pt outline, dark halo) pointing along
+  the course, replacing the dot once a course is known and keeping the last
+  course while stopped.
+- **Route line.** The line splits at progress: behind is `passedRoute`, 3.5 pt
+  (casing 6), ahead keeps the route colour at 5.5 pt. Colour is not the only
+  cue: width and the marker at the join carry it. Only the two shapes are
+  replaced, every 4 m, so the style is never rebuilt; a reroute starts at
+  zero.
+
 ### 4.8 Arrival
 
 Current: opaque bottom sheet, green check, notes list, Done
@@ -479,7 +495,14 @@ All through `Motion` (`App/PeoplemapsApp.swift`); no new durations.
 - Glass morphs (map cluster, guidance chip appearing) use `glassEffectID`
   inside `withAnimation(Motion.panel(reduce))`.
 - Under Reduce Motion: no morphs or slides, crossfade only (`Motion.edge`
-  already does this); camera moves cut (`Motion.camera`).
+  already does this).
+- Camera: every programmatic move goes through `SeattleMap.move`. A move
+  within three-quarters of a screen glides (0.5 s ease); a longer one, or one
+  that changes zoom by more than 2.5 levels, flies (`fly(to:)`, 1 to 1.8 s)
+  so tiles load at a coarse zoom on the way. Reduce Motion: short moves cut,
+  long ones dip the map out and in (about 0.4 s) instead of sweeping.
+  `--ui-testing` cuts. Sheet padding is applied once the sheet stops moving
+  (0.3 s), never per frame. Content-inset changes ease; they never snap.
 - `--ui-testing`: `Motion.off` keeps everything instant, glass included.
 - Haptics (D7): selection on mode/extra-time/preference change, impact on
   Start, success on arrival. `sensoryFeedback` follows the system setting.

@@ -133,7 +133,7 @@ struct ExploreView: View {
         guard guiding, !navigator.routeGeometry.isEmpty else { return nil }
         return Guidance(version: navigator.routeVersion, coordinates: navigator.routeGeometry, calmer: navigator.calmerRoute,
                         destination: navigator.routeGeometry.last!, user: navigator.coordinate, rawUser: navigator.rawCoordinate,
-                        reachedRoute: navigator.hasReachedRoute, heading: navigator.heading, moving: navigator.isMoving,
+                        reachedRoute: navigator.hasReachedRoute, heading: navigator.heading, moving: navigator.isMoving, travelled: navigator.travelledMeters,
                         camera: camera, inset: guidanceInset)
     }
 

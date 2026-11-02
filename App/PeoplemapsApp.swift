@@ -42,6 +42,8 @@ extension UIColor {
     /// The accent in small text, a shade darker in light mode to keep 4.5:1 contrast.
     static let calmerText = dynamic(light: 0x1F7A3A, dark: 0x30D158)
     static let fastest = hex(0x8E8E93)
+    /// The part of the followed route already driven: lighter than the route in light mode, dimmer in dark, with the line drawn thinner.
+    static let passedRoute = dynamic(light: 0x9CB3A3, dark: 0x56725F)
     /// Directions button: a shade darker than the accent in light mode so white text keeps its contrast.
     static let directionsFill = dynamic(light: 0x1F7A3A, dark: 0x30D158)
     static let directionsText = dynamic(light: 0xFFFFFF, dark: 0x000000)
