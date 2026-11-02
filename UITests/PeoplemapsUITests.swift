@@ -92,7 +92,10 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: unchecked, object: nil)], timeout: 10), .completed, "None says it did not look")
         app.buttons["route-details"].tap()
         XCTAssertTrue(app.navigationBars["Behind the routes"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS '1 distinct route was found'")).firstMatch.exists, "One route reads properly")
+        // The calm estimate comes first, so this is further down the list.
+        let oneRoute = app.staticTexts.containing(NSPredicate(format: "label CONTAINS '1 distinct route was found'")).firstMatch
+        for _ in 0..<4 where !oneRoute.exists { app.collectionViews.firstMatch.swipeUp() }
+        XCTAssertTrue(oneRoute.exists, "One route reads properly")
         capture("02-none-details", app: app)
         app.buttons["close-details"].tap()
         setExtraTime(app, "5 min")
@@ -861,8 +864,9 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["choose-destination"].label.hasPrefix("Going to, "))
         // Far outside the routing bounds: the card says so instead of offering directions.
         app.buttons["close-preview"].tap()
-        let map = app.otherElements["Seattle offline map"]
-        for _ in 0..<3 { map.pinch(withScale: 0.3, velocity: -2) }
+        // A pinch on the whole map would also land on the sheet, so fit the city and drag it away from the corner.
+        app.buttons["recenter"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.2)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.6)))
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.08, dy: 0.12)).press(forDuration: 1.2)
         XCTAssertTrue(app.descendants(matching: .any)["outside-coverage"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["directions"].exists)
