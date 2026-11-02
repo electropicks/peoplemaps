@@ -78,6 +78,7 @@ extensions) as today; the redesign adds the category set and an
 | `directionsText` | white | black | label on the above | as above |
 | `fastest` | `#8E8E93` | `#8E8E93` | fastest line and bar | graphic only |
 | `panelFill` | elevated `secondarySystemBackground` | same | opaque content cards in the sheet | text uses `label`/`secondaryLabel` |
+| `calmBand` | `#3590D0` `#5393A5` `#928A7B` `#C47632` `#D9605F` | same | calm bar, Breezy to Yikes; blue through grey to orange and rose, not green to red, so it doesn't read as safe and unsafe | landed band black text ≥4.5; band vs `panelFill` ≥3 |
 | `mapLand`…`mapPath` | unchanged | unchanged | MapLibre style | — |
 | Location | `systemBlue` | `systemBlue` | puck and Current location row only | — |
 
@@ -182,16 +183,19 @@ with a shadow, top right; "© OpenStreetMap" pill bottom left over the panel
 
 Proposed:
 - One vertical glass capsule, top trailing, in a `GlassEffectContainer`:
-  **Locate** (`location`; fills when following; the in-context location
-  permission moment, D3) and **Fit** (`viewfinder`, "Fit routes on map" in
-  preview). About moves into the sheet (home footer "About PeopleMaps"), so
+  **Locate** (`location`; always shown; centres on the user, and explains itself
+  in an alert when it can't: permission not asked or denied, outside the map, no
+  fix yet) and **Fit** (`viewfinder`; "Fit routes on map" in preview, "Centre on
+  this place" on a place, "Fit map to Seattle" on home). About moves into the sheet (home footer "About PeopleMaps"), so
   the cluster stays at two buttons. Each button 44×44, `.glass` style.
 - The cluster rides above the sheet's detent and fades out when the sheet is
   at the large detent (Apple Maps behaviour).
 - Attribution: "© OpenStreetMap" stays always visible and linked (ODbL),
   and becomes "© OpenStreetMap contributors · Overture Maps Foundation" once
   Overture Places lands (branch `search/overture-places`). `.caption2`, on a small glass capsule just above the sheet's top edge,
-  leading. It moves with the detent; it is never hidden behind the sheet.
+  leading. It moves with the detent. At the large detent only the status bar is
+  left above the sheet, so the credit moves inside it, pinned at the bottom
+  without the capsule. Size capped at `.large`, one line.
 - Remove all custom `.shadow` calls on glass; glass draws its own.
 
 ```
@@ -216,13 +220,13 @@ Proposed (with `ux-round-1`): a persistent system sheet,
 - Search field labelled **"Where to?"**, capsule, `magnifyingglass` leading.
 - **Favourites row**, as in Apple Maps: a horizontal row of 56-pt circular
   category badges (`@ScaledMetric`), each with the place's short name
-  (`Place.shortName`) in `.caption` under it, one line, centred. Tapping a
-  badge opens the place card. The row ends in an **Add** badge: `plus` on a
-  `systemGray5` fill, label "Add", which raises the sheet to `.large` with
-  the search field focused; picking a result there favourites it. With no
-  favourites the row shows only the Add badge with "Add favourites here"
-  beside it, `.subheadline` secondary. No `panelFill` group: the badges sit
-  on the sheet, like Apple Maps.
+  (`Place.shortName`) in `.caption` under it, up to two lines, centred. Tapping a
+  badge opens the place card; long-press removes it, and Edit opens a list with
+  swipe to delete. The row ends in an **Add** badge: `plus` on a `systemGray5`
+  fill, label "Add", which raises the sheet to `.large` with the search field
+  focused; picking a result there favourites it. The row is hidden until there is
+  a favourite (owner, 1 November 2026): the star on a place card adds the first.
+  No `panelFill` group: the badges sit on the sheet, like Apple Maps.
 - **Recents** below, a vertical `panelFill` list with category badges,
   visible from the medium detent. No Featured places (ux-round-1). Empty
   first launch shows one line instead: "Search a place or address, or
@@ -243,9 +247,6 @@ Proposed (with `ux-round-1`): a persistent system sheet,
 │ │      Café · Fremont      │ │
 │ └────────────────────────┘ │
 │ ⓘ About PeopleMaps         │
-
-No favourites yet:
-│  (＋)  Add favourites here  │
 ```
 
 ### 4.3 Search and results
@@ -282,17 +283,19 @@ list. Each row:
 Current: name, subtitle, favourite and close buttons, green Directions,
 footnote (`place-light.png`).
 
-Proposed (with `ux-round-1` content): sheet at `.medium`.
+Proposed (with `ux-round-1` content): sheet sized to fit the card, so medium
+doesn't leave half of it empty; large at accessibility sizes.
 - Header: 44-pt category badge, name `.title2.bold()`, "Restaurant ·
   Fremont" `.subheadline`. Trailing: favourite (`star`/`star.fill`) and close
   (`xmark`) as small bordered circular buttons (not glass: they sit on
   glass).
 - Address line, or "Near 3400 Fremont Ave N".
-- Time line: "12 min by car · calmer route adds about 1 min" then the main
-  benefit in `calmerText`: "Avoids 2 unsignalled lefts". "Estimate, no live
-  traffic" stays.
 - **Directions**: full-width `.glassProminent`, `.tint(.directionsFill)`,
-  label `directionsText`, `car.fill` leading.
+  label `directionsText`, mode symbol leading. Two lines that describe what Start
+  would take: "Calmer: 12–14 min, 3.4 mi" and "Meh → Breezy, mostly fewer
+  unsignalled lefts", or "9–11 min, 2.9 mi" and "Chill, best balance we found"
+  with no calmer route (`Docs/STRESS_MODEL.md`, Calm score). "Estimate, no live
+  traffic" stays under it.
 - Source/date line at the bottom.
 - Outside coverage: the existing "Outside the area we cover yet" group,
   unchanged copy, `exclamationmark.triangle` in secondary.
@@ -320,8 +323,15 @@ Proposed, top to bottom:
    benefit line in `calmerText` for Calmer, "Estimate, no live traffic" for
    Fastest, checkmark on the selected one. Selecting a card morphs the map
    line opacity (existing code).
-7. **Start**: `.glassProminent` tinted, full width. "Why this route ›" becomes
-   a plain `label`-coloured row (D13: green is not a link colour).
+7. **Start**: `.glassProminent` tinted, pinned under the scroll, with a bordered
+   **Why this route** capsule beside it (D13: green is not a link colour), stacked
+   at accessibility sizes. Pinned because a row below Start got clipped at the
+   default size. Default stop is 0.66 of the screen, so routes and both buttons
+   show without scrolling; accessibility sizes open large.
+8. **Calm bar**, in Why this route and at the preview's large stop: the five bands
+   left to right with their words, the landed band highlighted, a marker each for
+   fastest (above) and calmer (below), no number axis, scores in text. One row per
+   level at accessibility sizes.
 
 ```
 ╭────────────────────────────╮
@@ -339,8 +349,7 @@ Proposed, top to bottom:
 │ │▏Fastest 12 min · 5.2 km │ │
 │ │▏Estimate, no live traffic│ │
 │ └────────────────────────┘ │
-│ (        Start           ) │
-│ Why this route           › │
+│ (    Start    ) (Why this route) │
 ```
 
 ### 4.6 Route preferences sheet ("Calmer means")

@@ -45,6 +45,8 @@ struct SeattleMap: UIViewRepresentable {
     let comparison: RouteComparison?
     let selectedCalmer: Bool
     let recenter: Int
+    /// Bumped by Locate: frames the user at neighbourhood zoom, whatever else is on the map.
+    var locate = 0
     /// The selected place: the only green pin, centred in the visible map.
     var selected: Place?
     /// Where the device is, when known and inside coverage: a blue dot, and what Home frames at neighbourhood zoom.
@@ -54,7 +56,7 @@ struct SeattleMap: UIViewRepresentable {
     /// A long-press on the map, at that spot.
     var onLongPress: (Coordinate) -> Void = { _ in }
     var guidance: Guidance?
-    /// The user panned or pinched while guiding, so following should stop.
+    /// The user panned or pinched: following stops while guiding, and Locate is no longer centred otherwise.
     var onCameraGesture: () -> Void = {}
     /// Space covered by the panel and map buttons, kept clear when fitting routes.
     let padding: UIEdgeInsets
@@ -88,6 +90,7 @@ struct SeattleMap: UIViewRepresentable {
         var latest: SeattleMap?
         private var routeKey = ""
         private var recenterID = -1
+        private var locateID = -1
         private var fittedPadding = UIEdgeInsets.zero
         private var styleReady = false
         private var appliedScheme: ColorScheme?
@@ -223,13 +226,14 @@ struct SeattleMap: UIViewRepresentable {
             let focusChanged = focus != focusKey
             let paddingChanged = (abs(fittedPadding.bottom - latest.padding.bottom) > 1 || abs(fittedPadding.left - latest.padding.left) > 1)
             let recentered = recenterID >= 0 && recenterID != latest.recenter
-            if focusChanged || paddingChanged || recentered || (changed && c != nil) {
-                var points = (c?.fastest.coordinates ?? []) + (c?.calmer?.coordinates ?? [])
-                if points.isEmpty, let place = latest.selected {
+            let located = locateID >= 0 && locateID != latest.locate && latest.user != nil
+            if focusChanged || paddingChanged || recentered || located || (changed && c != nil) {
+                var points = located ? [] : (c?.fastest.coordinates ?? []) + (c?.calmer?.coordinates ?? [])
+                if !located, points.isEmpty, let place = latest.selected {
                     // A neighbourhood-sized window around the place, so it lands in the middle of the visible map.
                     points = [Coordinate(lat: place.lat - 0.004, lon: place.lon - 0.006), Coordinate(lat: place.lat + 0.004, lon: place.lon + 0.006)]
                 }
-                if points.isEmpty, let user = latest.user {
+                if points.isEmpty, !recentered, let user = latest.user {
                     points = [Coordinate(lat: user.lat - 0.004, lon: user.lon - 0.006), Coordinate(lat: user.lat + 0.004, lon: user.lon + 0.006)]
                 }
                 if points.isEmpty { points = latest.coverage }
@@ -243,7 +247,7 @@ struct SeattleMap: UIViewRepresentable {
                 }
             }
             focusKey = focus
-            routeKey = key; recenterID = latest.recenter
+            routeKey = key; recenterID = latest.recenter; locateID = latest.locate
         }
 
         private func setRouteOpacity(_ style: MLNStyle, _ value: (String) -> Double) {
@@ -428,9 +432,9 @@ struct SeattleMap: UIViewRepresentable {
             routeKey = ""; focusKey = ""; pinKey = ""
         }
 
-        /// A pan, pinch or zoom gesture while following or in the overview hands the camera to the user.
+        /// A pan, pinch or zoom gesture hands the camera to the user.
         func mapView(_ mapView: MLNMapView, regionWillChangeWith reason: MLNCameraChangeReason, animated: Bool) {
-            guard guiding, let g = latest?.guidance, g.camera.mode != .free else { return }
+            if guiding, latest?.guidance?.camera.mode == .free { return }
             let gestures: MLNCameraChangeReason = [.gesturePan, .gesturePinch, .gestureZoomIn, .gestureZoomOut, .gestureOneFingerZoom, .gestureRotate]
             if !reason.isDisjoint(with: gestures) { latest?.onCameraGesture() }
         }
