@@ -64,7 +64,16 @@ struct SeattleMap: UIViewRepresentable {
     var onCameraGesture: () -> Void = {}
     /// Space covered by the panel and map buttons, kept clear when fitting routes.
     let padding: UIEdgeInsets
+    /// The coloured place markers, once built; nil keeps the map free of them.
+    var markerFeed: PlaceMarkerFeed?
+    /// Browsing: markers show and a tap on one opens it. Off over a route or guidance.
+    var showsPlaces = false
+    var onPlaceTap: (String) -> Void = { _ in }
+    /// Whether to say which markers are on screen each time the map stops, for VoiceOver.
+    var reportsPlaces = false
+    var onVisiblePlaces: ([VisiblePlace]) -> Void = { _ in }
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeUIView(context: Context) -> MLNMapView {
@@ -81,6 +90,11 @@ struct SeattleMap: UIViewRepresentable {
         map.maximumZoomLevel = 18
         map.setCenter(CLLocationCoordinate2D(latitude: 47.649, longitude: -122.349), zoomLevel: 12, animated: false)
         map.addGestureRecognizer(UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.longPressed(_:))))
+        // Waits out a double tap, which zooms. Runs alongside the map's own single tap, so a neighbourhood label can't swallow a marker's tap.
+        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tapped(_:)))
+        tap.delegate = context.coordinator
+        for other in map.gestureRecognizers ?? [] { if let double = other as? UITapGestureRecognizer, double.numberOfTapsRequired == 2 { tap.require(toFail: double) } }
+        map.addGestureRecognizer(tap)
         context.coordinator.latest = self
         return map
     }
@@ -88,14 +102,17 @@ struct SeattleMap: UIViewRepresentable {
         context.coordinator.latest = self
         // Read here, where the environment is live, not later from a stored copy of this struct.
         context.coordinator.reduce = reduceMotion
+        context.coordinator.increasedContrast = contrast == .increased
         context.coordinator.update(map)
     }
 
     // MapLibre delivers its view delegate callbacks on the UI thread; its ObjC protocol predates Swift concurrency.
-    @MainActor final class Coordinator: NSObject, @preconcurrency MLNMapViewDelegate {
+    @MainActor final class Coordinator: NSObject, @preconcurrency MLNMapViewDelegate, UIGestureRecognizerDelegate {
         var latest: SeattleMap?
         /// Reduce Motion, copied from the environment on every update.
         var reduce = false
+        /// Increase Contrast, copied the same way.
+        var increasedContrast = false
         private var routeKey = ""
         private var recenterID = -1
         private var locateID = -1
@@ -138,6 +155,14 @@ struct SeattleMap: UIViewRepresentable {
         /// Where the passed/ahead split was last drawn, in metres along the line; -1 forces a redraw.
         private var splitAt = -1.0
         private var userDotHeading: Double?
+        /// The marker source on the map, once the feed is ready, and what its layers were last set to.
+        private var markerSource: MLNComputedShapeSource?
+        private var markerArtKey = ""
+        private var markersShown = false
+        private var markerHidden: String?
+        private var reportedPlaces = false
+        private var placesWanted = false
+        private static var markerLayers: [String] { PlaceMarkers.tiers.map { "places-\($0.zoom)" } }
 
         private static let baseLayers: [(id: String, color: UIColor)] = [
             ("water", .mapWater), ("parks", .mapPark), ("roads", .mapStreet), ("arterials", .mapArterial), ("paths", .mapPath),
@@ -147,8 +172,14 @@ struct SeattleMap: UIViewRepresentable {
             AppEvents.shared.log(.map, "map idle", coalesce: true, ["zoom": map.zoomLevel])
             #if DEBUG
             MapDebug.shared.baseFeatures = map.visibleFeatures(in: map.bounds, styleLayerIdentifiers: ["water", "roads", "arterials"]).count
+            MapDebug.shared.zoom = map.zoomLevel
             #endif
+            reportVisiblePlaces(map)
         }
+
+        #if DEBUG
+        func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) { FrameMeter.shared.counting = false }
+        #endif
 
         func mapView(_ map: MLNMapView, didFinishLoading style: MLNStyle) {
             AppEvents.shared.log(.map, "map style loaded")
@@ -212,6 +243,7 @@ struct SeattleMap: UIViewRepresentable {
             if appliedScheme != latest.colorScheme {
                 applyColors(latest.colorScheme, map: map, style: style)
             }
+            updateMarkers(map, style: style)
             if let guidance = latest.guidance { updateGuidance(guidance, map: map, style: style); return }
             if guiding { endGuidance(map: map, style: style) }
             let key = "\(c?.fastest.id ?? "none")|\(c?.calmer?.id ?? "none")|\(latest.selectedCalmer)"
@@ -290,6 +322,106 @@ struct SeattleMap: UIViewRepresentable {
             focusKey = focus
             routeKey = key; recenterID = latest.recenter; locateID = latest.locate
         }
+
+        /// Adds the marker layers once the feed is ready, and keeps their art, visibility and selected place current.
+        /// One symbol layer per zoom tier, so each tier fades in just before its zoom and no filter has to read the zoom. The fade
+        /// is narrow, because a pinch can stop anywhere: a wide one leaves the whole tier sitting washed out.
+        /// Thinning has already kept markers apart, so MapLibre runs no collision checks, which is what would make them flicker on a pan.
+        private func updateMarkers(_ map: MLNMapView, style: MLNStyle) {
+            guard let latest, let feed = latest.markerFeed else { return }
+            if markerSource == nil, let above = style.layer(withIdentifier: "paths") {
+                let source = MLNComputedShapeSource(identifier: "places", dataSource: feed, options: [.minimumZoomLevel: 13, .maximumZoomLevel: 15])
+                markerSource = source
+                style.addSource(source)
+                // Each is inserted directly above the base map, so the first tier, the most prominent places, ends up on top.
+                for tier in PlaceMarkers.tiers {
+                    let layer = MLNSymbolStyleLayer(identifier: "places-\(tier.zoom)", source: source)
+                    layer.predicate = NSPredicate(format: "z == %d", tier.zoom)
+                    let shown = PlaceMarkers.shown(tier.zoom)
+                    layer.minimumZoomLevel = Float(shown - 0.12)
+                    layer.iconImageName = NSExpression(forKeyPath: "img")
+                    layer.iconAllowsOverlap = NSExpression(forConstantValue: true)
+                    layer.iconIgnoresPlacement = NSExpression(forConstantValue: true)
+                    layer.iconScale = NSExpression(format: "mgl_interpolate:withCurveType:parameters:stops:($zoomLevel, 'linear', nil, %@)", [14: 0.75, 16: 0.92, 18: 1.0])
+                    layer.iconOpacity = NSExpression(format: "mgl_interpolate:withCurveType:parameters:stops:($zoomLevel, 'linear', nil, %@)", [shown - 0.12: 0.0, shown: 1.0])
+                    layer.isVisible = latest.showsPlaces
+                    style.insertLayer(layer, above: above)
+                }
+                markersShown = latest.showsPlaces; markerHidden = nil; markerArtKey = ""
+                #if DEBUG
+                MapDebug.shared.placeMarkers = "\(feed.count) \(Int(feed.milliseconds.rounded()))ms"
+                #endif
+            }
+            guard markerSource != nil else { return }
+            let artKey = "\(latest.colorScheme)|\(increasedContrast)"
+            if artKey != markerArtKey {
+                markerArtKey = artKey
+                // Replacing an image under its own name redraws the symbols in place.
+                for art in feed.art { style.setImage(MarkerArt.image(art, traits: traits, contrast: increasedContrast), forName: art.name) }
+            }
+            if markersShown != latest.showsPlaces {
+                markersShown = latest.showsPlaces
+                for id in Self.markerLayers { style.layer(withIdentifier: id)?.isVisible = markersShown }
+                if !markersShown { reportVisiblePlaces(map) }
+            }
+            // The map may not move again, as when VoiceOver starts or a route closes where it was. Symbols take a moment to draw.
+            let wanted = latest.reportsPlaces && latest.showsPlaces
+            if wanted != placesWanted {
+                placesWanted = wanted
+                if wanted { DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self, weak map] in if let map { self?.reportVisiblePlaces(map) } } }
+            }
+            // The selected place has its own pin; its marker steps aside while it's up.
+            if markerHidden != latest.selected?.id {
+                markerHidden = latest.selected?.id
+                for tier in PlaceMarkers.tiers {
+                    (style.layer(withIdentifier: "places-\(tier.zoom)") as? MLNSymbolStyleLayer)?.predicate = markerHidden.map { NSPredicate(format: "z == %d AND pid != %@", tier.zoom, $0) } ?? NSPredicate(format: "z == %d", tier.zoom)
+                }
+            }
+        }
+
+        /// Up to 24 markers above the sheet, nearest the middle of the map first, in the order VoiceOver should meet them.
+        private func reportVisiblePlaces(_ map: MLNMapView) {
+            guard let latest else { return }
+            var places: [VisiblePlace] = []
+            if latest.reportsPlaces, latest.showsPlaces, markerSource != nil {
+                let top = map.safeAreaInsets.top
+                let clear = CGRect(x: 0, y: top, width: map.bounds.width, height: max(0, map.bounds.height - top - latest.padding.bottom + 40))
+                let centre = CGPoint(x: clear.midX, y: clear.midY)
+                var seen = Set<String>()
+                for feature in map.visibleFeatures(in: clear, styleLayerIdentifiers: Set(Self.markerLayers)) {
+                    guard let id = feature.attribute(forKey: "pid") as? String, seen.insert(id).inserted,
+                          id != latest.selected?.id else { continue }
+                    let point = map.convert(feature.coordinate, toPointTo: map)
+                    guard clear.contains(point) else { continue }
+                    places.append(VisiblePlace(id: id, name: feature.attribute(forKey: "name") as? String ?? "", kind: feature.attribute(forKey: "kind") as? String ?? "", point: point))
+                }
+                places.sort { hypot($0.point.x - centre.x, $0.point.y - centre.y) < hypot($1.point.x - centre.x, $1.point.y - centre.y) }
+                places = Array(places.prefix(24))
+            }
+            guard !places.isEmpty || reportedPlaces else { return }
+            reportedPlaces = !places.isEmpty
+            publish(places)
+        }
+
+        /// Reports can start inside `updateUIView`, where SwiftUI state mustn't change.
+        private func publish(_ places: [VisiblePlace]) {
+            DispatchQueue.main.async { [weak self] in self?.latest?.onVisiblePlaces(places) }
+        }
+
+        /// A tap within reach of a marker opens the nearest one. Otherwise the tap does what it always did.
+        @objc func tapped(_ gesture: UITapGestureRecognizer) {
+            guard gesture.state == .ended, let latest, latest.showsPlaces, markerSource != nil, let map = gesture.view as? MLNMapView else { return }
+            let point = gesture.location(in: map)
+            let reach = CGRect(x: point.x - 22, y: point.y - 22, width: 44, height: 44)
+            let nearest = map.visibleFeatures(in: reach, styleLayerIdentifiers: Set(Self.markerLayers))
+                .min { a, b in
+                    let pa = map.convert(a.coordinate, toPointTo: map), pb = map.convert(b.coordinate, toPointTo: map)
+                    return hypot(pa.x - point.x, pa.y - point.y) < hypot(pb.x - point.x, pb.y - point.y)
+                }
+            if let id = nearest?.attribute(forKey: "pid") as? String { latest.onPlaceTap(id) }
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { true }
 
         private func setRouteOpacity(_ style: MLNStyle, _ value: (String) -> Double) {
             guard latest?.guidance == nil else { return }
@@ -573,7 +705,14 @@ struct SeattleMap: UIViewRepresentable {
         func mapView(_ mapView: MLNMapView, regionWillChangeWith reason: MLNCameraChangeReason, animated: Bool) {
             if guiding, latest?.guidance?.camera.mode == .free { return }
             let gestures: MLNCameraChangeReason = [.gesturePan, .gesturePinch, .gestureZoomIn, .gestureZoomOut, .gestureOneFingerZoom, .gestureRotate]
-            if !reason.isDisjoint(with: gestures) { latest?.onCameraGesture() }
+            if !reason.isDisjoint(with: gestures) {
+                latest?.onCameraGesture()
+                #if DEBUG
+                FrameMeter.shared.counting = true
+                #endif
+            }
+            // Elements stand where markers were; they come back when the map stops.
+            if reportedPlaces { reportedPlaces = false; publish([]) }
         }
 
         private func pinKey(_ s: SeattleMap) -> String { s.selected?.id ?? "" }

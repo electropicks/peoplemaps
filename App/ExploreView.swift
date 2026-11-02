@@ -92,6 +92,11 @@ struct ExploreView: View {
     @State private var asking = false
     @State private var notice: LocationNotice?
     @State private var saved = SavedPlacesStore()
+    /// The map's place markers, ready shortly after launch; home never waits for them.
+    @State private var markerFeed: PlaceMarkerFeed?
+    /// What the map last drew, for VoiceOver.
+    @State private var visiblePlaces: [VisiblePlace] = []
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @State private var preferences = RoutePreferencesStore()
     @AppStorage("voiceMuted", store: ExploreView.voiceStore) private var voiceMuted = false
     @Environment(\.scenePhase) private var scenePhase
@@ -211,6 +216,43 @@ struct ExploreView: View {
     private func endNavigation() { navigator.stop(); show(.preview) }
     private func finishNavigation() { navigator.stop(); show(.home) }
 
+    /// Places show while browsing, never over a route or guidance.
+    private var showsPlaces: Bool { screen == .home || screen == .search || selectedPlace != nil }
+    /// Map symbols are invisible to VoiceOver, so the ones on screen get elements of their own. UI tests read them too.
+    private var reportsPlaces: Bool { voiceOver || Motion.off }
+    /// `--no-place-markers`, in debug builds: the map without markers, to measure what they cost.
+    private static var markersOff: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("--no-place-markers")
+        #else
+        return false
+        #endif
+    }
+
+    private func openMarker(_ id: String) {
+        guard showsPlaces, let place = search.place(id: id) else { return }
+        open(place)
+    }
+
+    /// One element per marker on screen, at its place on the map. Taps fall through to the map, which is what opens the card.
+    private var placeElements: some View {
+        ZStack(alignment: .topLeading) {
+            Color.clear
+            ForEach(visiblePlaces) { place in
+                Color.clear.frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .accessibilityElement()
+                    .accessibilityLabel("\(place.name), \(place.kind)")
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction { openMarker(place.id) }
+                    .accessibilityIdentifier("map-place-\(place.id)")
+                    .position(place.point)
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
     /// Every change of screen goes through here, so the sheet's stop always belongs to the screen's detents.
     private func show(_ next: Screen) {
         if screen == .home, next != .home { homeStop = stop }
@@ -299,10 +341,12 @@ struct ExploreView: View {
             ZStack {
                 SeattleMap(comparison: screen == .preview ? session.comparison : nil, selectedCalmer: selectedCalmer, recenter: recenter, locate: locateCount, selected: mapSelection,
                            user: userInCoverage, userHeading: wantsCompass ? userHeading : nil, coverage: coverage, onLongPress: dropPin, guidance: guidance,
-                           onCameraGesture: { if guiding { camera.pan() } else if centred { centred = false } }, padding: mapPadding(geo))
+                           onCameraGesture: { if guiding { camera.pan() } else if centred { centred = false } }, padding: mapPadding(geo),
+                           markerFeed: markerFeed, showsPlaces: showsPlaces, onPlaceTap: openMarker, reportsPlaces: reportsPlaces, onVisiblePlaces: { visiblePlaces = $0 })
                     .ignoresSafeArea()
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(screen == .preview ? "Seattle offline map. Routes are also described in the panel." : "Seattle offline map")
+                if reportsPlaces && showsPlaces { placeElements }
                 if screen == .navigating {
                     GuidanceOverlay(navigator: navigator, landscape: landscape, cardWidth: cardWidth, attribution: AnyView(attribution), camera: $camera, muted: $voiceMuted,
                                     onInsets: { guidanceInset = $0 }, onEnd: endNavigation, onDone: finishNavigation)
@@ -321,6 +365,7 @@ struct ExploreView: View {
             if let previewRequest { selectedCalmer = true; session.start(previewRequest) } else { session.cancel() }
         }
         .task { await locate(prompting: true) }
+        .task { if !Self.markersOff { markerFeed = await PlaceMarkerFeed.load(search) } }
         .onDisappear { session.cancel(); navigator.stop() }
         .onChange(of: voiceMuted) { navigator.setMuted(voiceMuted) }
         .reportContext(screen: String(String(describing: screen).prefix { $0 != "(" }), mode: mode, extraMinutes: budget, comparison: session.comparison, navigator: navigator, dataVersion: search.dataVersion)
