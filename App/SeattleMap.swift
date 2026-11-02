@@ -127,19 +127,27 @@ struct SeattleMap: UIViewRepresentable {
             ("water", .mapWater), ("parks", .mapPark), ("roads", .mapStreet), ("arterials", .mapArterial), ("paths", .mapPath),
         ]
 
+        #if DEBUG
+        func mapViewDidBecomeIdle(_ map: MLNMapView) {
+            MapDebug.shared.baseFeatures = map.visibleFeatures(in: map.bounds, styleLayerIdentifiers: ["water", "roads", "arterials"]).count
+        }
+        #endif
+
         func mapView(_ map: MLNMapView, didFinishLoading style: MLNStyle) {
-            guard let url = StreetGraph.mapURL else { return }
-            let source = MLNShapeSource(identifier: "seattle", url: url, options: [.simplificationTolerance: 0.3])
+            guard let url = StreetGraph.mapURL, let tiles = URL(string: "pmtiles://" + url.absoluteString) else { return }
+            let source = MLNVectorTileSource(identifier: "seattle", configurationURL: tiles)
             style.addSource(source)
             for (id, kind) in [("water", "water"), ("parks", "park")] {
                 let layer = MLNFillStyleLayer(identifier: id, source: source)
-                layer.predicate = NSPredicate(format: "kind == %@", kind)
+                layer.sourceLayerIdentifier = kind
                 style.addLayer(layer)
             }
             for (id, kind, width) in [("roads", "road", 2.0), ("arterials", "arterial", 2.7), ("paths", "path", 0.8)] {
                 let layer = MLNLineStyleLayer(identifier: id, source: source)
-                layer.predicate = NSPredicate(format: "kind == %@", kind)
-                layer.lineWidth = NSExpression(forConstantValue: width)
+                layer.sourceLayerIdentifier = kind
+                // The same widths as before from z13; narrower when zoomed out, or downtown's grid merges into a block.
+                layer.lineWidth = kind == "path" ? NSExpression(forConstantValue: width)
+                    : NSExpression(format: "mgl_interpolate:withCurveType:parameters:stops:($zoomLevel, 'linear', nil, %@)", [10: width * 0.5, 13: width])
                 layer.lineOpacity = NSExpression(forConstantValue: kind == "path" ? 0.7 : 1)
                 style.addLayer(layer)
             }

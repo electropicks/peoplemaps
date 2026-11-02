@@ -182,7 +182,7 @@ public struct StreetGraph: Sendable {
         try graph.validate()
         return graph
     }
-    public static var mapURL: URL? { Bundle.module.url(forResource: "seattle-map", withExtension: "geojson") }
+    public static var mapURL: URL? { Bundle.module.url(forResource: "seattle-map", withExtension: "pmtiles") }
 
     public func validate() throws {
         guard bounds.count == 4, !nodes.isEmpty,

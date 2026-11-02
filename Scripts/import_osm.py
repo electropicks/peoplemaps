@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Deterministic, deliberately conservative OSM + elevation to routing-graph compiler. No network."""
 import argparse, array, collections, gzip, hashlib, json, math, os, pathlib, struct
-import build_search
+import build_search, build_tiles
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 # PEOPLEMAPS_BBOX="S,W,N,E", PEOPLEMAPS_DATA and PEOPLEMAPS_OUT redirect an import (coverage spikes) without touching the shipped data.
@@ -11,6 +11,7 @@ def shown(path):
     return str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else path.name
 REPORT = DATA  # provenance.json; --out redirects it with the outputs
 BBOX = [float(x) for x in os.environ['PEOPLEMAPS_BBOX'].split(',')] if os.environ.get('PEOPLEMAPS_BBOX') else [47.615, -122.390, 47.678, -122.300]  # S,W,N,E
+WATER_MARGIN = 0.1  # degrees: water is drawn this far past BBOX, so it doesn't stop in a straight line at the routing edge
 MODES = ['drive', 'bike', 'walk']
 ROAD = {'motorway','motorway_link','trunk','trunk_link','primary','primary_link',
         'secondary','secondary_link','tertiary','tertiary_link','residential',
@@ -220,10 +221,11 @@ def approach_grade(prof, span=30):
     grade = 0.0 if d < 5 else (end_z - start[1]) / d * 100
     return None if abs(grade) > MAX_ROAD_GRADE*100 else round(grade, 1)
 
-def clip_ring(coords):
-    # Sutherland-Hodgman against the extract rectangle, preserving OSM geometry.
+def clip_ring(coords, box=None):
+    # Sutherland-Hodgman against the extract rectangle (S,W,N,E; BBOX unless given), preserving OSM geometry.
+    S, W, N, E = box or BBOX
     pts = coords[:-1] if coords and coords[0] == coords[-1] else coords[:]
-    for axis, limit, greater in [(0,BBOX[1],True),(0,BBOX[3],False),(1,BBOX[0],True),(1,BBOX[2],False)]:
+    for axis, limit, greater in [(0,W,True),(0,E,False),(1,S,True),(1,N,False)]:
         prevpts, pts = pts, []
         if not prevpts: break
         a = prevpts[-1]
@@ -372,51 +374,80 @@ def graph_binary(graph):
     out += pad8(tail)
     return bytes(out)
 
-MAP_PRECISION = 6        # decimal degrees: 0.11 m north-south, under a pixel at the closest zoom (18)
-MAP_TOLERANCE_M = 0.3    # Douglas-Peucker tolerance for map lines
+def water_box():
+    S, W, N, E = BBOX
+    return [S - WATER_MARGIN, W - WATER_MARGIN, N + WATER_MARGIN, E + WATER_MARGIN]
 
-def round_coords(c):
-    return [round(c[0],MAP_PRECISION),round(c[1],MAP_PRECISION)] if isinstance(c[0],(int,float)) else [round_coords(x) for x in c]
+def map_shapes(allnodes, allways, relations):
+    """What the map tiles draw from the snapshot: lines {layer: [(first zoom, coords)]} and polygons {layer: [[ring, hole, ...]]}.
+    Highways keep today's selection (a node inside BBOX); water is clipped to water_box(), parks to BBOX."""
+    box = {'water': water_box(), 'park': BBOX}
+    lines = collections.defaultdict(list); polygons = collections.defaultdict(list)
+    def coords(ns): return [(allnodes[n]['lon'], allnodes[n]['lat']) for n in ns if n in allnodes]
+    def kind_of(t): return 'water' if t.get('natural') == 'water' else 'park' if t.get('leisure') in {'park', 'garden', 'pitch'} else None
+    for w in sorted(allways.values(), key=lambda w: w['id']):
+        t = w.get('tags', {}); ns = w['nodes']; cs = coords(ns)
+        if len(cs) < 2: continue
+        if t.get('highway') and t.get('area') != 'yes' and any(inside(allnodes[n]) for n in ns if n in allnodes):
+            drawn = build_tiles.map_line(t)
+            if drawn: lines[drawn[0]].append((drawn[1], cs))
+        kind = kind_of(t)
+        if ns[0] == ns[-1] and kind:
+            ring = clip_ring([list(c) for c in cs], box[kind])
+            if ring: polygons[kind].append([[tuple(c) for c in ring]])
+    for r in relations:
+        t = r.get('tags', {}); kind = 'water' if t.get('natural') == 'water' else 'park' if t.get('leisure') == 'park' else None
+        if not kind: continue
+        groups = {role: stitch([allways[m['ref']]['nodes'][:] for m in r['members'] if m['type'] == 'way' and m['ref'] in allways and m['role'] == role]) for role in ['outer', 'inner']}
+        outers = [clip_ring([list(c) for c in coords(ns)], box[kind]) for ns in groups['outer']]
+        inners = [clip_ring([list(c) for c in coords(ns)], box[kind]) for ns in groups['inner']]
+        for ring in outers:
+            if ring: polygons[kind].append([[tuple(c) for c in ring]] + [[tuple(c) for c in hole] for hole in inners if hole and point_in_ring(hole[0], ring)])
+    return lines, polygons
 
-def simplify_line(coords):
-    """Rounds to MAP_PRECISION, drops repeated points, then Douglas-Peucker at MAP_TOLERANCE_M. None if it collapses to a point."""
-    pts=[]
-    for c in round_coords(coords):
-        if not pts or c!=pts[-1]: pts.append(c)
-    if len(pts)<2: return None
-    kx=111_320*math.cos(math.radians(pts[0][1])); ky=110_574
-    xy=[(p[0]*kx,p[1]*ky) for p in pts]
-    keep=[False]*len(pts); keep[0]=keep[-1]=True
-    stack=[(0,len(pts)-1)]
-    while stack:
-        i,j=stack.pop()
-        (x1,y1),(x2,y2)=xy[i],xy[j]; dx,dy=x2-x1,y2-y1; length=math.hypot(dx,dy)
-        far=-1; far_d=MAP_TOLERANCE_M
-        for k in range(i+1,j):
-            x,y=xy[k]
-            d=abs(dx*(y1-y)-(x1-x)*dy)/length if length else math.hypot(x-x1,y-y1)
-            if d>far_d: far,far_d=k,d
-        if far>=0: keep[far]=True; stack+=[(i,far),(far,j)]
-    return [p for p,k in zip(pts,keep) if k]
+def map_tiles(elements, coast_json):
+    """The PMTiles map from the snapshot elements and the coastline snapshot: (bytes, summary)."""
+    allnodes = {i: e for (typ, i), e in elements.items() if typ == 'node'}
+    allways = {i: e for (typ, i), e in elements.items() if typ == 'way'}
+    relations = [e for (typ, i), e in elements.items() if typ == 'relation']
+    lines, polygons = map_shapes(allnodes, allways, relations)
+    coast_nodes = {e['id']: e for e in coast_json['elements'] if e['type'] == 'node'}
+    coast = [e for e in coast_json['elements'] if e['type'] == 'way']
+    polygons['water'][:0] = build_tiles.coast_water(coast, coast_nodes, tuple(water_box()))
+    return build_tiles.build(lines, polygons)
 
-def map_geojson(polygons,lines):
-    """Polygons keep one feature each; all lines of a kind become one MultiLineString (the per-feature JSON overhead was most of the bytes)."""
-    merged=[{'type':'Feature','properties':{'kind':kind},'geometry':{'type':'MultiLineString','coordinates':ls}} for kind,ls in sorted(lines.items())]
-    return {'type':'FeatureCollection','features':polygons+merged}
+def dem_source(path, sha):
+    return {'file':shown(path),'sha256':sha,'source':'USGS 3DEP 3DEPElevation ImageServer exportImage, ~5 m bilinear, public domain'}
+
+def tiles_only(out, report):
+    """--tiles-only: rewrite just the map tiles and the provenance entries they change (sources, map), reading the rest of
+    provenance.json from DATA. For a machine whose SQLite differs from the shipped search index's: a full import would rewrite it."""
+    elements, sources = read_sources()
+    dem_path = DATA/'seattle-dem.tif.gz'
+    sources.append(dem_source(dem_path, hashlib.sha256(gzip.decompress(dem_path.read_bytes())).hexdigest()))
+    search_json, search_source = read_snapshot('seattle-search'); sources.append(search_source)
+    coast_json, coast_source = read_snapshot('seattle-coast'); sources.append(coast_source)
+    data, summary = map_tiles(elements, coast_json)
+    (out/'seattle-map.pmtiles').write_bytes(data)
+    provenance = json.loads((DATA/'provenance.json').read_text())
+    provenance['sources'] = sources; provenance['map'] = summary
+    (report/'provenance.json').write_text(json.dumps(provenance,indent=2,sort_keys=True)+'\n')
+    print(json.dumps(summary,indent=2,sort_keys=True))
 
 def main():
     global OUT, REPORT
     ap = argparse.ArgumentParser()
     ap.add_argument('--out', help='write all outputs here instead of the repository (for tests)')
+    ap.add_argument('--tiles-only', action='store_true', help='write only seattle-map.pmtiles and the provenance entries it changes (leaves the search index alone)')
     ap.add_argument('--json-graph', help='also write the intermediate graph as JSON to this path (for tests)')
     args = ap.parse_args()
     if args.out: OUT = REPORT = pathlib.Path(args.out)
     OUT.mkdir(parents=True,exist_ok=True)
+    if args.tiles_only: return tiles_only(OUT, REPORT)
     elements, sources = read_sources()
     dem_path = DATA/'seattle-dem.tif.gz'
     z, dem_sha = load_dem(dem_path)
-    sources.append({'file':shown(dem_path),'sha256':dem_sha,
-                    'source':'USGS 3DEP 3DEPElevation ImageServer exportImage, ~5 m bilinear, public domain'})
+    sources.append(dem_source(dem_path, dem_sha))
     allnodes={i:e for (typ,i),e in elements.items() if typ=='node'}
     allways={i:e for (typ,i),e in elements.items() if typ=='way'}
     relations=[e for (typ,i),e in elements.items() if typ=='relation']
@@ -518,30 +549,8 @@ def main():
         if crossing_control(nt)=='signal': nodes[i]['pedestrianSignal']=True
     mapped=[{**r,'via':nodeindex[r['viaOSM']]} for r in restrictions if r['viaOSM'] in nodeindex]
 
-    features=[]; places=[]
+    places=[]
     def coords(ns):return [[allnodes[n]['lon'],allnodes[n]['lat']] for n in ns if n in allnodes]
-    lines=collections.defaultdict(list)
-    def feature(geom,kind,name=''):
-        # The style only reads `kind`, so names are dropped; lines of one kind share a feature (see map_geojson).
-        if geom['type']=='LineString':
-            line=simplify_line(geom['coordinates'])
-            if line: lines[kind].append(line)
-        else: features.append({'type':'Feature','properties':{'kind':kind},'geometry':{'type':geom['type'],'coordinates':round_coords(geom['coordinates'])}})
-    for w in sorted(allways.values(),key=lambda w:w['id']):
-        t=w.get('tags',{}); ns=w['nodes'];cs=coords(ns)
-        if len(cs)<2:continue
-        if t.get('highway') and any(inside(allnodes[n]) for n in ns if n in allnodes):
-            feature({'type':'LineString','coordinates':cs},'arterial' if t['highway'] in {'primary','secondary','trunk','motorway'} else 'path' if t['highway'] in {'cycleway','footway','path','steps'} else 'road',t.get('name',''))
-        if ns[0]==ns[-1] and (t.get('natural')=='water' or t.get('leisure') in {'park','garden','pitch'}):
-            ring=clip_ring(cs)
-            if ring:feature({'type':'Polygon','coordinates':[ring]},'water' if t.get('natural')=='water' else 'park',t.get('name',''))
-    for r in relations:
-        t=r.get('tags',{})
-        if t.get('natural')!='water' and t.get('leisure')!='park':continue
-        groups={role:stitch([allways[m['ref']]['nodes'][:] for m in r['members'] if m['type']=='way' and m['ref'] in allways and m['role']==role]) for role in ['outer','inner']}
-        outers=[clip_ring(coords(ns)) for ns in groups['outer']];inners=[clip_ring(coords(ns)) for ns in groups['inner']]
-        polys=[[ring]+[hole for hole in inners if hole and point_in_ring(hole[0],ring)] for ring in outers if ring]
-        if polys:feature({'type':'MultiPolygon','coordinates':polys},'water' if t.get('natural')=='water' else 'park',t.get('name',''))
     # Offline search is an explicit bounded selection of named public POIs, never ranking by sponsorship.
     for (typ,i),e in sorted(elements.items()):
         t=e.get('tags',{});name=t.get('name','')
@@ -564,7 +573,9 @@ def main():
     # Search reads its own, newer extract (places and addresses), kept apart so the graph's inputs don't change.
     search_json, search_source = read_snapshot('seattle-search'); sources.append(search_source)
     search=build_search.build(search_json, places, nodes, segments, inside, hashlib.sha256(graph_bin).hexdigest(), OUT/'seattle-search.sqlite.gz', DATA/'seattle-overture-places.json.gz')
-    (OUT/'seattle-map.geojson').write_text(json.dumps(map_geojson(features,lines),separators=(',',':'))+'\n')
+    coast_json, coast_source = read_snapshot('seattle-coast'); sources.append(coast_source)
+    map_data, map_summary = map_tiles(elements, coast_json)
+    (OUT/'seattle-map.pmtiles').write_bytes(map_data)
     directed={mode:sum(mode in s.get(k,{}).get('modes',[]) for s in segments for k in 'fr') for mode in MODES}
     report={'sources':sources,'bounds':BBOX,'nodes':len(nodes),'segments':len(segments),'directedEdgesByMode':directed,
             'places':len(places),'supportedRestrictions':len(mapped),'unsupportedRestrictionsConservativelyExcluded':unsupported,
@@ -574,7 +585,7 @@ def main():
             'approachesWithTurnLaneData':sum('leftTurnLane' in s.get(k,{}) for s in segments for k in 'fr'),
             'crossingSegments':collections.Counter(str(s['crossing']['control']) for s in segments if 'crossing' in s),
             'signalNodes':sum('signal' in n for n in nodes),
-            'structureNodesInterpolated':len(lifted),'search':search}
+            'structureNodesInterpolated':len(lifted),'search':search,'map':map_summary}
     (REPORT/'provenance.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
     print(json.dumps({k:v for k,v in report.items() if k!='unsupportedRestrictionsConservativelyExcluded'},indent=2,sort_keys=True))
     print('Conservative restriction exclusions:',len(unsupported))
