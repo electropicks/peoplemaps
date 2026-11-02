@@ -139,8 +139,11 @@ final class SeattlePreferenceTests: XCTestCase {
 
     /// Trips in the bundled data where each option, set to Avoid, changes the route and cuts that option's factors.
     private static let avoidTrips: [(trip: (String, String), mode: TravelMode, options: [RoutePreferences.Option])] = [
-        (("node/2544213221", "node/4318969638"), .bike, RoutePreferences.Option.allCases),
-        (("node/6737717414", "way/293941621"), .drive, [.trafficLights, .stopSigns, .unprotectedLefts, .busyCrossings, .turns]),
+        (("node/2544213221", "node/4318969638"), .bike, RoutePreferences.Option.allCases.filter { $0 != .turns }),
+        (("way/58740248", "way/54029687"), .bike, [.turns]),
+        (("node/6737717414", "way/293941621"), .drive, [.trafficLights, .unprotectedLefts, .turns]),
+        (("way/40819484", "node/5195109521"), .drive, [.stopSigns]),
+        (("node/1582021320", "node/2400948704"), .drive, [.busyCrossings]),
         (("node/2158768959", "node/2327652050"), .drive, [.hills]),
         (("way/253553517", "way/222420235"), .walk, [.trafficLights, .busyStreets, .busyCrossings, .hills]),
     ]

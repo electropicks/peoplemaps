@@ -20,7 +20,7 @@ a claim of parity with mature routing engines.
 ## Data boundaries
 
 `Scripts/import_osm.py` compiles the preserved Overpass responses into a graph
-and display GeoJSON. Routing segments retain full geometry, OSM way IDs, names,
+and the map tiles. Routing segments retain full geometry, OSM way IDs, names,
 road classes, mode permissions, surfaces, posted speed text, incline text, and
 direction-specific cycleway tags. Shared nodes, signals, barriers, endpoints,
 and restriction nodes split segments. The app never infers missing attributes
@@ -48,6 +48,71 @@ conditional schedules, construction, seasonal closures, traffic, ferry routing,
 turn-protection phases, complex intersection rules, and many access subtleties
 are not modeled. Missing OSM restrictions can still produce infeasible routes.
 
+## Map tiles
+
+`Core/Resources/seattle-map.pmtiles` is PMTiles v3 holding Mapbox Vector Tiles (version 2), zoom 8 to 14, overzoomed
+by MapLibre to the app's maximum of 18. The app opens it with `pmtiles://file://`. `Scripts/build_tiles.py` writes
+it, stdlib only. Each tile has at most one feature per source layer (all lines one MultiLineString, all polygons one
+MultiPolygon), with no properties or names. The style never filters, so zoom detail is decided only by what each
+layer holds.
+
+| Source layer | Type | Contents and first zoom |
+|---|---|---|
+| `water` | polygon | z8: coast polygons, `natural=water` |
+| `park` | polygon | z10: `leisure=park/garden/pitch` |
+| `arterial` | line | z8: motorway, trunk. z10: primary. z11: secondary |
+| `road` | line | z11: tertiary and the motorway, trunk and primary links. z12: secondary and tertiary links, residential, unclassified, living street, busway. z13: pedestrian, service with no `service` tag or an alley. z14: other service |
+| `path` | line | z12: cycleway. z14: footway, path, steps, track |
+
+Other `highway` values and `area=yes` ways are not drawn.
+
+| Zoom | Extent | Buffer | Simplify | Drop polygon under |
+|---:|---:|---:|---:|---:|
+| 14 | 8192 | 128 | 1.5 units (0.3 m) | 1 unit |
+| 12 to 13 | 4096 | 64 | 6 | 8 units |
+| 8 to 11 | 4096 | 64 | 10 | 8 units |
+
+Tiles and directories are stored **uncompressed**: gzip would save about 22% of the file, but the bytes would then
+depend on a zlib build, and the App Store compresses the download anyway. The output is deterministic, so
+`Scripts/verify.sh` compares it with a fresh import.
+
+**Coastline.** Puget Sound is not a polygon in OSM; `natural=coastline` ways have land on their left and water on
+their right. `coast_water` joins the ways end to start without reversing them, clips the chains to the water box
+(the routing box plus 0.1°), and closes each run clockwise along the box edge, so the water side is filled. A coastline
+that ends inside the box fails the import rather than flooding the map. Islands become holes.
+
+`python3 Scripts/import_osm.py --tiles-only` rewrites only the tiles and the `sources` and `map` entries of
+`Data/provenance.json`. Use it on a machine whose SQLite differs from the one that built the shipped search index; a
+full import there would rewrite the index.
+
+## Region data
+
+What is in git is a small test fixture: the Seattle box in `Data/` and `Core/Resources/`, reproduced byte for
+byte by `Scripts/verify.sh`. Larger regions are too big for git (GitHub rejects files over 100 MB, and this
+repo's history is permanent), so they live in assets on a GitHub release (Git LFS is not used). Map data comes
+from Geofabrik extracts. `Data/regions.json` is the committed manifest: the release tag, and per region its
+bounding box, every file's size and SHA-256, and which files are expected importer outputs. Nothing under
+`Data/region/` is committed. CI and `swift test` never need it.
+
+```bash
+Scripts/fetch_data [region]      # downloads into Data/region/<region>/, checks pins, silent when present
+Scripts/verify.sh --region       # also re-imports each fetched region and compares with its expected outputs
+```
+
+Without fetched data `--region` prints `SKIPPED` lines and passes; plain `Scripts/verify.sh` does not look at regions.
+
+Add or update a region file:
+
+1. Make the files: the importer's input snapshots at the region folder's root (names as in `Data/`), and the
+   outputs from importing them (`PEOPLEMAPS_DATA`, `PEOPLEMAPS_BBOX`, `PEOPLEMAPS_OUT`) under `expected/`.
+2. Upload each to a release as `<region>--<path with / replaced by __>`, for example
+   `king-county--expected__seattle-graph.bin`. Use a new tag for changed files rather than replacing assets.
+3. Put its size and `shasum -a 256` in `Data/regions.json` under `regions.<region>.files`, set `bbox`
+   (S,W,N,E), list the expected outputs under `outputs`, and set `release` to the tag.
+4. `Scripts/fetch_data <region>` then `Scripts/verify.sh --region`, and commit the manifest.
+
+`PEOPLEMAPS_DATA_URL` points the fetch at another directory URL (a local `file://` folder works) for testing.
+
 ## Routing and budget
 
 `NativeRouter` uses an incoming directed edge as its Dijkstra state. This keeps
@@ -62,10 +127,14 @@ from winning merely because it is closest. Turn restrictions are still checked
 during search. Snapping can select the wrong side of a physical barrier; endpoint
 gaps are not routed, are excluded from ETA, and are disclosed in the UI.
 
-Six additional searches minimize `estimated seconds + weight × comfort cost`,
-using weights 0.15, 0.4, 1, 2.5, 6, and 15. Distinct candidates are compared using
-their exact seconds. A calmer candidate must fit `fastest seconds + budget × 60`
-and reduce comfort cost by more than 2%. Lowest cost wins; time breaks ties.
+Six additional searches minimize `estimated seconds + weight × stress`,
+using weights 0.25, 0.5, 1, 2, 4, and 8. The budget does not bound these searches.
+Distinct candidates are compared using their exact seconds. A calmer candidate must
+fit `fastest seconds + budget × 60`, reduce stress by at least 5% and 30 equivalent
+seconds, and remove more than 15 equivalent seconds of stress per extra minute. The
+most stress saved net of that rate wins. When none qualifies, `NoCalmerFinding` records
+what the candidates showed, for the preview to say (`Docs/STRESS_MODEL.md`, Choosing
+and explaining routes).
 This candidate search does not prove the global optimum under a time constraint.
 No extra time searches only the fastest route. No suitable candidate is an
 ordinary first-class result. Displayed minutes round up; filtering never does.
@@ -87,11 +156,12 @@ are directional; shared paths are kept distinct. Grade tag coverage is reported
 but not scored because this slice has no reliable elevation model. No route
 is given a safety score or label.
 
-Times use assumed class speeds and simple junction delays. Driving caps a class
-assumption at 80% of a parsed posted speed when available. Cycling assumes
-18 km/h, 14 on shared paths, 11 on tagged rough surfaces. There is no calibration
-or live traffic. Signals add 12 seconds driving / 8 cycling; turns add 5 / 2.
-These constants are hypotheses, exposed in code for review, not empirical ETAs.
+Times use free-flow speeds (the posted limit when mapped, else a class default)
+and junction delays for signals, stops, unsigned cross streets and turns; the
+tables are in the Time section of `Docs/STRESS_MODEL.md`. Cycling assumes
+18 km/h, 14 on shared paths, 11 on tagged rough surfaces. There is no live
+traffic. Drive times were checked against one real trip; the constants remain
+hypotheses, exposed in code for review, not empirical ETAs.
 
 ## UI and lifecycle
 

@@ -4,16 +4,40 @@ import Foundation
 /// Everything is little-endian and read with plain pointer loads; only the small restrictions/places tail is JSON.
 enum GraphBinary {
     static let nilIndex: UInt32 = 0xFFFF_FFFF
+    static let magic: UInt32 = 0x4247_4D50 /* "PMGB" */, version: UInt32 = 3
     private static let headerSize = 64, segmentSize = 88, directionSize = 16
 
     static func decode(_ data: Data) throws -> StreetGraph {
         try data.withUnsafeBytes { try decode($0) }
     }
 
+    /// Directed edges in the file: the segment directions that allow at least one mode.
+    static func edgeCount(_ data: Data) throws -> Int {
+        try data.withUnsafeBytes { raw in
+            func get<T>(_ type: T.Type, _ offset: Int) -> T { raw.loadUnaligned(fromByteOffset: offset, as: type) }
+            guard raw.count >= headerSize, get(UInt32.self, 0) == magic, get(UInt32.self, 4) == version else { throw RoutingError.missingData }
+            let stringCount = Int(get(UInt32.self, 40)), nodeCount = Int(get(UInt32.self, 44)), segmentCount = Int(get(UInt32.self, 48))
+            let pointCount = Int(get(UInt32.self, 52))
+            guard raw.count >= headerSize + 4 * (stringCount + 1) else { throw RoutingError.missingData }
+            let stringBytes = Int(get(UInt32.self, headerSize + 4 * stringCount))
+            let segmentsAt = segmentsOffset(stringCount: stringCount, stringBytes: stringBytes, nodeCount: nodeCount, pointCount: pointCount)
+            guard raw.count >= segmentsAt + (segmentSize + 2 * directionSize) * segmentCount else { throw RoutingError.missingData }
+            return (0..<segmentCount).reduce(0) { total, s in
+                let at = segmentsAt + (segmentSize + 2 * directionSize) * s + segmentSize
+                return total + (0..<2).filter { get(UInt8.self, at + $0 * directionSize + 12) != 0 }.count
+            }
+        }
+    }
+
+    private static func up8(_ n: Int) -> Int { (n + 7) & ~7 }
+    private static func segmentsOffset(stringCount: Int, stringBytes: Int, nodeCount: Int, pointCount: Int) -> Int {
+        let nodesAt = headerSize + up8(4 * (stringCount + 1) + stringBytes)
+        return nodesAt + 32 * nodeCount + up8(nodeCount) + 8 * pointCount
+    }
+
     private static func decode(_ raw: UnsafeRawBufferPointer) throws -> StreetGraph {
         func get<T>(_ type: T.Type, _ offset: Int) -> T { raw.loadUnaligned(fromByteOffset: offset, as: type) }
-        func up8(_ n: Int) -> Int { (n + 7) & ~7 }
-        guard raw.count >= headerSize, get(UInt32.self, 0) == 0x4247_4D50 /* "PMGB" */, get(UInt32.self, 4) == 3 else { throw RoutingError.missingData }
+        guard raw.count >= headerSize, get(UInt32.self, 0) == magic, get(UInt32.self, 4) == version else { throw RoutingError.missingData }
         let bounds = (0..<4).map { get(Double.self, 8 + 8 * $0) }
         let stringCount = Int(get(UInt32.self, 40)), nodeCount = Int(get(UInt32.self, 44)), segmentCount = Int(get(UInt32.self, 48))
         let pointCount = Int(get(UInt32.self, 52)), tailSize = Int(get(UInt32.self, 56))

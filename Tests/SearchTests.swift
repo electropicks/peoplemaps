@@ -4,18 +4,39 @@ import XCTest
 final class SearchTests: XCTestCase {
     static let graph = try! StreetGraph.bundled()
     static let directory = FileManager.default.temporaryDirectory.appendingPathComponent("peoplemaps-search-tests")
-    static let index = try! SearchIndex.bundled(graph: graph, directory: directory)
+    static let index = try! SearchIndex.bundled(graphNodes: graph.nodes.count, directory: directory)
     static let fremont = Coordinate(lat: 47.651, lon: -122.350)
     private var index: SearchIndex { Self.index }
 
     func testOpensWithPlacesAddressesAndSource() {
-        XCTAssertGreaterThan(index.count, 50_000)
+        XCTAssertGreaterThan(index.count, 60_000)
         XCTAssertTrue(index.source.hasPrefix("OpenStreetMap, "), index.source)
         XCTAssertTrue(index.search("").isEmpty)
         XCTAssertTrue(index.search("  ,. ").isEmpty)
     }
+    func testOvertureBusinessIsFoundByNameWithItsOwnSource() throws {
+        // Overture-only: no OSM place has this name. Foursquare's record, dated by the release, not by the record.
+        let hit = try XCTUnwrap(index.search("broadcast coffee", near: Self.fremont).first)
+        XCTAssertEqual(hit.name, "Broadcast Coffee")
+        XCTAssertEqual(hit.id, "overture/e1fb6a43-f757-4588-bdae-60ea3637cc69")
+        XCTAssertEqual(hit.category, "cafe")
+        XCTAssertNil(hit.address, "addresses come from OSM only")
+        XCTAssertEqual(hit.source, "Overture (Foursquare), Oct 2026")
+        XCTAssertEqual(index.place(id: hit.id)?.name, "Broadcast Coffee")
+        XCTAssertEqual(Set(hit.snap.keys), Set(TravelMode.allCases), "snapped to routable nodes like OSM rows")
+        let osm = try XCTUnwrap(index.search("gas works").first)
+        XCTAssertEqual(osm.source, "OpenStreetMap, Oct 2026")
+        XCTAssertEqual(try XCTUnwrap(index.search("3400 Fremont Ave N").first).source, "OpenStreetMap, Oct 2026")
+    }
+    func testOvertureDuplicateOfAnOSMPlaceAppearsOnce() {
+        // Overture also lists Chutneys Bistro (id 01021a76-...) at the same spot; the OSM place keeps the row.
+        let hits = index.search("chutneys bistro", near: Self.fremont).filter { $0.name == "Chutneys Bistro" }
+        XCTAssertEqual(hits.map(\.id), ["node/3033233528"])
+        XCTAssertEqual(hits.first?.source, "OpenStreetMap, Oct 2026")
+        XCTAssertNil(index.place(id: "overture/01021a76-cb85-4ca2-9bca-7b42301517ff"))
+    }
     func testReopeningReusesTheInflatedFile() throws {
-        let again = try SearchIndex.bundled(graph: Self.graph, directory: Self.directory)
+        let again = try SearchIndex.bundled(graphNodes: Self.graph.nodes.count, directory: Self.directory)
         XCTAssertEqual(again.count, index.count)
         let files = try FileManager.default.contentsOfDirectory(atPath: Self.directory.path).filter { $0.hasPrefix("seattle-search-") }
         XCTAssertEqual(files.count, 1)
@@ -36,6 +57,51 @@ final class SearchTests: XCTestCase {
         XCTAssertEqual(index.withAddress(park).address, "2101 North Northlake Way")
         let pin = Place(id: "pin", name: "Dropped pin", lat: 47.65, lon: -122.34, category: "pin")
         XCTAssertNil(index.withAddress(pin).address)
+    }
+    func testNearestAddressForAPlaceWithoutOne() throws {
+        // Amazon.com Nitro North has no address in OSM; the nearest mapped one is about 20 m away.
+        let nitro = try XCTUnwrap(index.place(id: "way/1137900798"))
+        XCTAssertNil(nitro.address)
+        let near = try XCTUnwrap(index.nearestAddress(to: nitro.coordinate, within: 40))
+        XCTAssertEqual(near.kind, .address)
+        XCTAssertEqual(near.id, "node/10964497269")
+        XCTAssertEqual(near.coordinate.distance(to: nitro.coordinate), 19.5, accuracy: 1)
+        XCTAssertEqual(index.nearestAddress(to: nitro.coordinate)?.id, near.id, "40 m by default")
+        XCTAssertNil(index.nearestAddress(to: nitro.coordinate, within: 15))
+    }
+    func testNearestAddressPrefersTheBuildingOverAUnit() throws {
+        // A unit row and its building's row share one point.
+        let spot = Coordinate(lat: 47.6179645, lon: -122.3140016)
+        XCTAssertEqual(index.nearestAddress(to: spot, within: 5)?.name, "1808 14th Avenue")
+    }
+    func testNearestAddressIsNilFarFromAny() {
+        XCTAssertNil(index.nearestAddress(to: Coordinate(lat: 47.637, lon: -122.336), within: 40), "middle of Lake Union")
+    }
+    func testCategoryWordsFindPlacesByCategoryBelowNameMatches() {
+        for (query, category) in [("gas station", "fuel"), ("gas stations", "fuel"), ("petrol", "fuel"), ("coffee shop", "cafe"),
+                                  ("grocery", "supermarket"), ("pharmacy", "pharmacy"), ("drugstore", "pharmacy")] {
+            let hits = index.search(query, near: Self.fremont)
+            XCTAssertGreaterThanOrEqual(hits.count, 5, query)
+            XCTAssertTrue(hits.prefix(30).contains { $0.category == category }, query)
+        }
+        let restaurants = index.search("restaurants", near: Self.fremont)
+        XCTAssertTrue(restaurants.contains { $0.category == "thai_restaurant" || $0.category == "restaurant" })
+        XCTAssertTrue(restaurants.allSatisfy { $0.kind == .place })
+    }
+    func testCategoryMatchesComeAfterNameMatches() throws {
+        let hits = index.search("gas", near: Self.fremont)
+        let named: (Place) -> Bool = { SearchIndex.normalize($0.name).split(separator: " ").contains { $0.hasPrefix("gas") } }
+        XCTAssertEqual(hits.first?.name, "Gas Works Park", "a name match stays first")
+        let shell = try XCTUnwrap(hits.firstIndex { $0.category == "fuel" && !named($0) })
+        XCTAssertGreaterThan(shell, try XCTUnwrap(hits.lastIndex(where: named)))
+        XCTAssertLessThan(shell, 30, "ahead of text found only in a category such as gastroenterology")
+        XCTAssertEqual(Set(hits.map(\.id)).count, hits.count, "no duplicates")
+        XCTAssertEqual(index.search("coffee", near: Self.fremont).first?.name.lowercased().contains("coffee"), true)
+        XCTAssertEqual(index.search("gas station", near: Self.fremont).first?.category, "fuel")
+    }
+    func testNonCategoryQueriesAreUnchanged() {
+        XCTAssertTrue(index.search("zzzz qqqq").isEmpty)
+        XCTAssertEqual(index.search("gas works").first?.id, "relation/1047789")
     }
     func testRepeatedQueriesReuseTheLastAnswer() {
         let first = index.search("gas works", near: Self.fremont)
@@ -70,7 +136,7 @@ final class SearchTests: XCTestCase {
         // Within a tier and weight, nearer first.
         let cafes = index.search("starbucks", near: Self.fremont).filter { $0.name == "Starbucks" }
         XCTAssertGreaterThan(cafes.count, 1)
-        let distances = cafes.filter { $0.category == cafes[0].category }.map { $0.coordinate.distance(to: Self.fremont) }
+        let distances = cafes.filter { $0.category == cafes[0].category && $0.source == cafes[0].source }.map { $0.coordinate.distance(to: Self.fremont) }
         XCTAssertEqual(distances, distances.sorted())
         // A name that starts with the query beats one that only contains it.
         XCTAssertTrue(index.search("space needle").first?.name.hasPrefix("Space Needle") == true)

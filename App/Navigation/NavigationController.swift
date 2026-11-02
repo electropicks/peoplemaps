@@ -9,8 +9,9 @@ import PeoplemapsCore
 @preconcurrency import FerrostarCoreFFI
 
 /// Owns Ferrostar's engine for one guided trip and publishes what the guidance screen shows.
-/// Thresholds follow `Docs/NAVIGATION.md`: off-route at 50 m driving and 30 m cycling or walking, Ferrostar's own
-/// reroute throttling (5 s, 50 m), steps advance by distance to the end of the step, arrival within 20 m.
+/// Thresholds follow `Docs/NAVIGATION.md`: the engine flags a fix off-route at 50 m driving and 30 m cycling or
+/// walking, and `RerouteGate` decides which of those fixes start a reroute; steps advance by distance to the end
+/// of the step, arrival within 20 m.
 @MainActor @Observable
 final class NavigationController {
     private(set) var isActive = false
@@ -22,11 +23,23 @@ final class NavigationController {
     private(set) var remainingSeconds = 0.0
     private(set) var coordinate: Coordinate?
     private(set) var course: Double?
+    private(set) var speed: Double?
+    /// The course smoothed over recent fixes, in degrees from north, kept while the user is stopped so the map does
+    /// not swing back north at every light. Nil until the first known course.
+    private(set) var heading: Double?
+    /// Moving at 1 m/s or more (or at an unknown speed with a known course): the puck shows its heading only then.
+    private(set) var isMoving = false
+    /// The latest fix as the device reported it (the engine's `userLocation`), not snapped onto the route. The leader is drawn from it.
+    private(set) var rawCoordinate: Coordinate?
+    /// Whether the reroute gate has seen a good fix within `RerouteGate.reachedMeters` of the route since it was installed.
+    private(set) var hasReachedRoute = false
     private(set) var isRerouting = false
     private(set) var hasArrived = false
     /// Geometry of the route being followed; `routeVersion` changes whenever it is replaced (start or reroute).
     private(set) var routeGeometry: [Coordinate] = []
     private(set) var routeVersion = 0
+    /// Routes installed after the first one in this trip.
+    private(set) var rerouteCount = 0
     private(set) var mode = TravelMode.drive
     private(set) var calmerRoute = false
     private(set) var destination: Place?
@@ -42,18 +55,27 @@ final class NavigationController {
     var instruction: String {
         guard let step = currentStep else { return "" }
         if step.maneuver == .arrive, let destination { return "Arrive at \(destination.shortName)" }
-        return step.instruction
+        return Self.longened(step.instruction)
+    }
+
+    /// `--long-street-names` (UI tests) pads street names so text sizes can be checked against the longest Seattle ones.
+    static func longened(_ text: String) -> String {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--long-street-names"), text.contains(" onto ") { return text + " Northeast Boulevard Extension" }
+        #endif
+        return text
     }
 
     /// "right onto Halladay St": the next maneuver in lower case, for the "Then:" row.
     var thenText: String {
         guard let step = thenStep else { return "" }
         if step.maneuver == .arrive, let destination { return "arrive at \(destination.shortName)" }
-        let text = step.instruction.hasPrefix("Turn ") ? String(step.instruction.dropFirst(5)) : step.instruction
+        let long = Self.longened(step.instruction)
+        let text = long.hasPrefix("Turn ") ? String(long.dropFirst(5)) : long
         return text.prefix(1).lowercased() + text.dropFirst()
     }
 
-    @ObservationIgnored private let router: NativeRouter
+    @ObservationIgnored private let router: any RouteComputing
     @ObservationIgnored private var core: FerrostarCore?
     @ObservationIgnored private var subscription: AnyCancellable?
     @ObservationIgnored private var active: AdaptedRoute?
@@ -63,16 +85,33 @@ final class NavigationController {
     @ObservationIgnored private var arrivalHandled = false
     /// Routes handed to Ferrostar, by token, so a reroute's plan can be found when the engine switches to it.
     @ObservationIgnored private var known: [UUID: AdaptedRoute] = [:]
+    @ObservationIgnored private var gate = RerouteGate(mode: .drive)
 
     /// Last instruction the engine asked to be spoken, recorded even when muted. Read by the UI-test probe only.
     private(set) var lastSpoken = ""
     private(set) var keepingAwake = false
+    /// The last few spoken lines with the time each was said, for problem reports.
+    @ObservationIgnored private(set) var spokenLog: [(text: String, at: Date)] = []
+    /// Changes with every trip, so marked moments can be matched to the trip that ends.
+    private(set) var tripID = UUID()
+    @ObservationIgnored private var tripDraft: UsageLogger.Draft?
     var isPaused: Bool { paused }
 
-    init(router: NativeRouter) { self.router = router }
+    init(router: any RouteComputing) { self.router = router }
 
     /// Distance walked along a step before "Head north on…" gives way to the next maneuver.
     private static let setOffMeters = 40.0
+    /// Below this the course is noise, so the puck shows no heading.
+    private static let movingSpeed = 1.0
+
+    /// Halfway from the last heading to the new course along the shorter arc; changes under 2° are ignored as jitter.
+    static func smoothed(_ heading: Double?, towards course: Double) -> Double {
+        guard let heading else { return course }
+        var delta = (course - heading).truncatingRemainder(dividingBy: 360)
+        if delta > 180 { delta -= 360 } else if delta < -180 { delta += 360 }
+        if abs(delta) < 2 { return heading }
+        return (heading + delta / 2 + 360).truncatingRemainder(dividingBy: 360)
+    }
 
     #if DEBUG
     static var simulating: Bool {
@@ -118,12 +157,15 @@ final class NavigationController {
         let core = FerrostarCore(customRouteProvider: provider, locationProvider: location,
                                  navigationControllerConfig: Self.config(for: request.mode),
                                  spokenInstructionObserver: observer)
+        core.delegate = self
         self.core = core
+        gate = RerouteGate(mode: request.mode)
         mode = request.mode; calmerRoute = usingCalmer; destination = request.destination
         tripMeters = adapted.plan.meters; tripSeconds = adapted.plan.seconds
         tripNotes = Self.notes(comparison, calmer: usingCalmer)
-        hasArrived = false; isRerouting = false; isActive = true
-        arrivalHandled = false; paused = false; lastSpoken = ""
+        hasArrived = false; isRerouting = false; isActive = true; rerouteCount = 0
+        arrivalHandled = false; paused = false; lastSpoken = ""; spokenLog = []; tripID = UUID()
+        tripDraft = UsageLogger.Draft(comparison: comparison, started: usingCalmer ? .calmer : .fastest)
         keepAwake(true)
         subscription = core.$state.receive(on: DispatchQueue.main).sink { [weak self] state in
             MainActor.assumeIsolated { self?.apply(state) }
@@ -134,8 +176,8 @@ final class NavigationController {
 
     /// Up to three facts for the arrival summary: what the calmer route avoided, then what it cost in time.
     private static func notes(_ comparison: RouteComparison, calmer: Bool) -> [String] {
-        guard calmer else { return [] }
-        let gains = comparison.reasons.filter { !$0.hasPrefix("Tradeoff") && !$0.hasPrefix("No calmer") }.prefix(2)
+        guard calmer, comparison.calmer != nil else { return [] }
+        let gains = comparison.reasons.filter { !$0.hasPrefix("Tradeoff") }.prefix(2)
         let extra = comparison.extraTimeLabel
         let cost = extra == "No extra time" ? "No extra time compared with the fastest route"
             : extra.hasPrefix("<1") ? "Under a minute longer than the fastest route"
@@ -168,14 +210,33 @@ final class NavigationController {
     private func arrive() {
         guard !arrivalHandled else { return }
         arrivalHandled = true
+        finishTrip(.arrived)
         location?.stopUpdating()
         keepAwake(false)
         guard let observer, let name = destination?.shortName else { return }
         lastSpoken = SpokenText.normalize("You've arrived at \(name)")
+        spokenLog.append((lastSpoken, Date()))
         observer.spokenInstructionTriggered(SpokenInstruction(text: "You've arrived at \(name)", ssml: nil, triggerDistanceBeforeManeuver: 0, utteranceId: UUID()))
     }
 
+    /// Logs the trip once, only when the usage log is on. A trip that stops without arriving ended early.
+    private func finishTrip(_ ended: UsageLog.Ended) {
+        guard var draft = tripDraft else { return }
+        tripDraft = nil
+        draft.reroutes = rerouteCount
+        UsageLogger.record(draft, ended: ended)
+    }
+
+    /// Where the trip is now, for a marked moment; nil when not guiding.
+    func moment() -> ProblemReport.Moment? {
+        guard isActive, let fix = rawCoordinate ?? coordinate else { return nil }
+        return ProblemReport.Moment(at: Date(), stepIndex: stepIndex, stepCount: active?.plan.steps.count ?? 0, instruction: instruction,
+                                    remainingMeters: remainingMeters.rounded(), remainingSeconds: remainingSeconds.rounded(),
+                                    cell: ReportCell.of(lat: fix.lat, lon: fix.lon), location: .init(lat: fix.lat, lon: fix.lon))
+    }
+
     func stop() {
+        if !hasArrived { finishTrip(.endedEarly) }
         subscription = nil
         core?.stopNavigation()
         location?.stopUpdating()
@@ -184,7 +245,8 @@ final class NavigationController {
         core = nil; location = nil; observer = nil; paused = false; arrivalHandled = false
         active = nil; known = [:]
         isActive = false; hasArrived = false; isRerouting = false
-        currentStep = nil; thenStep = nil; tripNotes = []; coordinate = nil; course = nil; routeGeometry = []; stepIndex = 0
+        currentStep = nil; thenStep = nil; tripNotes = []; coordinate = nil; course = nil; speed = nil; heading = nil; isMoving = false
+        routeGeometry = []; stepIndex = 0
         distanceToManeuver = 0; remainingMeters = 0; remainingSeconds = 0
     }
 
@@ -210,7 +272,10 @@ final class NavigationController {
 
     private func install(_ adapted: AdaptedRoute) {
         remember(adapted)
+        if active != nil { rerouteCount += 1 }
         active = adapted
+        gate.routeInstalled(at: Date())
+        hasReachedRoute = false
         routeGeometry = adapted.route.geometry.map { Coordinate(lat: $0.lat, lon: $0.lng) }
         routeVersion += 1
     }
@@ -225,6 +290,9 @@ final class NavigationController {
         if let location = state.preferredUserLocation {
             coordinate = Coordinate(lat: location.coordinates.lat, lon: location.coordinates.lng)
             course = location.courseOverGround.map { Double($0.degrees) }
+            speed = location.speed?.value
+            isMoving = course != nil && (speed.map { $0 >= Self.movingSpeed } ?? true)
+            if isMoving, let course { heading = Self.smoothed(heading, towards: course) }
         }
         switch state.tripState {
         case .complete:
@@ -234,9 +302,19 @@ final class NavigationController {
             if let plan = active?.plan { stepIndex = plan.steps.count - 1; currentStep = plan.steps.last; thenStep = nil }
         case .idle:
             break
-        case let .navigating(_, _, _, remaining, _, progress, _, _, _, spoken, _):
+        case let .navigating(_, raw, _, remaining, _, progress, _, _, _, spoken, _):
             guard let plan = active?.plan else { return }
-            if let spoken, !spoken.text.isEmpty { lastSpoken = SpokenText.normalize(spoken.text) }
+            // The gate gets the raw fix (`userLocation`), not `preferredUserLocation`: on `.noDeviation` that one is snapped onto
+            // the step line, so its distance to the route is about zero. Not the engine's `.noDeviation` either: it also means
+            // "fix too poor to judge", which says nothing about the route.
+            rawCoordinate = Coordinate(lat: raw.coordinates.lat, lon: raw.coordinates.lng)
+            gate.observe(distanceToRoute: rawCoordinate!.distance(toPolyline: routeGeometry), accuracy: raw.horizontalAccuracy)
+            hasReachedRoute = gate.hasReachedRoute
+            if let spoken, !spoken.text.isEmpty {
+                let text = SpokenText.normalize(spoken.text)
+                if text != lastSpoken { spokenLog = Array((spokenLog + [(text, Date())]).suffix(3)) }
+                lastSpoken = text
+            }
             hasArrived = false
             distanceToManeuver = progress.distanceToNextManeuver
             remainingMeters = progress.distanceRemaining
@@ -248,5 +326,32 @@ final class NavigationController {
             currentStep = plan.steps[shown]
             thenStep = shown + 1 < plan.steps.count ? plan.steps[shown + 1] : nil
         }
+    }
+}
+
+/// The engine asks before every reroute; `RerouteGate` answers. Without a delegate it would reroute on the first
+/// off-route fix, then every 5 s and 50 m, which turns a snapped start or one wide fix into a run of reroutes.
+extension NavigationController: @preconcurrency FerrostarCoreDelegate {
+    func core(_ core: FerrostarCore, didStartWith route: FerrostarCoreFFI.Route) {}
+
+    func core(_ core: FerrostarCore, correctiveActionForDeviation deviation: DeviationKind, remainingWaypoints waypoints: [Waypoint]) -> CorrectiveAction {
+        guard case let .navigating(_, location, _, _, _, _, _, _, _, _, _) = core.state?.tripState else { return .doNothing }
+        let meters: Double = switch deviation {
+        case let .completelyOffRoute(deviationFromRouteLine): deviationFromRouteLine
+        case let .offStepOnRoute(deviationFromStepLine): deviationFromStepLine
+        }
+        let fix = RerouteGate.Fix(coordinate: Coordinate(lat: location.coordinates.lat, lon: location.coordinates.lng), metersOffRoute: meters,
+                                  accuracy: location.horizontalAccuracy, speed: location.speed?.value, time: Date())
+        guard gate.shouldReroute(fix) else { return .doNothing }
+        tripDraft?.departures.append(fix.coordinate)
+        return .getNewRoutes(waypoints: waypoints)
+    }
+
+    /// The reroute's route is installed the way the engine would without a delegate; `apply` then follows it to its plan.
+    func core(_ core: FerrostarCore, loadedAlternateRoutes routes: [FerrostarCoreFFI.Route]) {
+        guard let route = routes.first else { return }
+        try? core.startNavigation(route: route)
+        // `apply` installs the route once the new state arrives; the gate must not judge the new session's first fix by the old route.
+        gate.routeInstalled(at: Date())
     }
 }
