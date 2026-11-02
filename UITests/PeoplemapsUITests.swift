@@ -128,6 +128,58 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["route-calmer"].tap()
         waitForTop("calmer")
     }
+    /// A long move (Home at the user's neighbourhood to a place across town) flies instead of sweeping; the probe reports how
+    /// each move was made, as it would be with motion on (`--ui-testing` itself cuts).
+    @MainActor func testFarCameraMoveFliesAndShortOnesGlide() {
+        let app = launchHome(location: Self.atKerryPark)
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        let flew = NSPredicate { _, _ in self.probe(app, "debug-camera-moves").contains("fly") }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: flew, object: nil)], timeout: 10), .completed,
+                       "Moves were: \(probe(app, "debug-camera-moves"))")
+        capture("40-far-move-lands", app: app)
+    }
+
+    /// Outside guidance the marker is a plain dot: with no heading source there is no direction to show, and none is invented.
+    @MainActor func testMarkerIsAPlainDotOutsideGuidance() {
+        let app = launchHome(location: Self.atKerryPark)
+        let dot = NSPredicate { _, _ in self.probe(app, "debug-marker") == "dot" }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: dot, object: nil)], timeout: 10), .completed, probe(app, "debug-marker"))
+    }
+
+    /// With a heading (the compass; here injected with `--fake-heading`) the dot gains a beam and a rim tip, and loses them again
+    /// when guidance starts. Captured in light and dark.
+    @MainActor func testMarkerShowsHeadingFromTheCompass() {
+        let app = launchHome(location: Self.atKerryPark, extra: ["--fake-heading", "70"])
+        let beam = NSPredicate { _, _ in self.probe(app, "debug-marker") == "dot 70" }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: beam, object: nil)], timeout: 10), .completed, probe(app, "debug-marker"))
+        capture("42-heading-beam-light", app: app)
+        XCUIDevice.shared.appearance = .dark
+        Thread.sleep(forTimeInterval: 1)
+        XCTAssertEqual(probe(app, "debug-marker"), "dot 70")
+        capture("43-heading-beam-dark", app: app)
+        XCUIDevice.shared.appearance = .light
+    }
+
+    /// While guiding, the marker is a dot until a course is known, then an arrow; the line splits at progress, the part behind
+    /// in the passed colour, and is never emptied or rebuilt on the way.
+    @MainActor func testGuidanceShowsArrowAndSplitsTheRouteAtProgress() {
+        let app = launchAskingForLocation(answer: "Allow While Using App", at: Self.seattleCenterLawn)
+        showGasWorksRoutes(app)
+        startGuidanceReal(app)
+        let line = routePoints(app)
+        XCTAssertGreaterThan(line.count, 3, "Route readout missing")
+        func passedMetres() -> Int { Int(probe(app, "debug-passed").split(separator: " ").first ?? "") ?? -1 }
+        XCTAssertEqual(passedMetres(), 0, "Something was already passed at the start: \(probe(app, "debug-passed"))")
+        XCTAssertTrue(probe(app, "debug-passed").hasSuffix(" 9CB3A3"), "Passed colour: \(probe(app, "debug-passed"))")
+        for (point, course) in Self.samples(line, step: 20, limit: 300) { setDevice(point, course: course); Thread.sleep(forTimeInterval: 0.3) }
+        let split = NSPredicate { _, _ in passedMetres() > 100 }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: split, object: nil)], timeout: 15), .completed,
+                       "The line did not split as the device moved: \(probe(app, "debug-passed"))")
+        XCTAssertTrue(probe(app, "debug-marker").hasPrefix("arrow "), "Marker: \(probe(app, "debug-marker"))")
+        XCTAssertEqual(probe(app, "debug-route-clears"), "0", "The followed route's line was emptied while it was split")
+        capture("41-arrow-and-passed-line", app: app)
+    }
+
     @MainActor func testBaseMapDrawsFromBundledTiles() {
         let app = launchHome()
         let drawn = NSPredicate { _, _ in (Int(self.probe(app, "debug-map-features")) ?? 0) > 0 }

@@ -17,6 +17,12 @@ final class MapDebug {
     var topRoute = ""
     /// Base-map features (water, roads, arterials) in view once the map is idle. 0 means no tiles drew.
     var baseFeatures = 0
+    /// Metres of the followed line drawn as passed and as ahead, and the passed layer's colour, e.g. `120 ahead 2400 9CB3A3`.
+    var passed = ""
+    /// The user's marker: `dot`, `dot <degrees>`, `arrow <degrees>`, or `none`.
+    var marker = "none"
+    /// How each programmatic camera move was made (`cut`, `glide`, `fly`, `fade`), as it would be with motion on.
+    var moves: [String] = []
 }
 
 extension UIColor {
@@ -71,6 +77,9 @@ struct NavigationDebugProbe: View {
             probe("debug-line-style", map.lineStyle)
             probe("debug-top-route", map.topRoute)
             probe("debug-map-features", String(map.baseFeatures))
+            probe("debug-passed", map.passed)
+            probe("debug-marker", map.marker)
+            probe("debug-camera-moves", map.moves.suffix(6).joined(separator: ","))
         }
         .frame(width: 1, height: 10).allowsHitTesting(false)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
