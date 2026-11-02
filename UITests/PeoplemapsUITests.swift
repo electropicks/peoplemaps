@@ -32,8 +32,22 @@ final class PeoplemapsUITests: XCTestCase {
         result.tap()
         XCTAssertTrue(app.buttons["close-place"].waitForExistence(timeout: 5))
     }
-    /// Waits for the card's estimate, which the Directions button carries as "18 min drive, 4.2 miles, …".
-    @MainActor @discardableResult private func waitForEstimate(_ app: XCUIApplication, containing text: String = " min ") -> String {
+    /// Pulls the home sheet up from the peek, to where Recents and About are.
+    @MainActor private func raiseHome(_ app: XCUIApplication) {
+        let start = app.buttons["search-field"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -300)))
+    }
+    /// Picks a limit from the Extra time menu, which is what the preview shows at its default height.
+    @MainActor private func setExtraTime(_ app: XCUIApplication, _ value: String) {
+        let menu = app.buttons["extra-time-menu"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        menu.tap()
+        let item = app.buttons[value]
+        XCTAssertTrue(item.waitForExistence(timeout: 5), value)
+        item.tap()
+    }
+    /// Waits for the card's estimate, which the Directions button carries as "Calmer route, 16 to 19 minutes drive, 4.2 miles, …".
+    @MainActor @discardableResult private func waitForEstimate(_ app: XCUIApplication, containing text: String = " minute") -> String {
         let directions = app.buttons["directions"]
         let ready = NSPredicate { _, _ in (directions.value as? String)?.contains(text) == true }
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: ready, object: nil)], timeout: 20), .completed, text)
@@ -65,7 +79,7 @@ final class PeoplemapsUITests: XCTestCase {
         let x = ["Drive", "Cycle", "Walk"].map { app.buttons[$0].frame.midX }
         XCTAssertEqual(x, x.sorted(), "Mode order")
         XCTAssertTrue(app.buttons["Drive"].isSelected)
-        XCTAssertTrue(app.buttons["10 min"].isSelected, "The default leans to calm")
+        XCTAssertEqual(app.buttons["extra-time-menu"].value as? String, "10 min", "The default leans to calm")
         // Routes with less stress exist here but gain too little, so this one must not be called the calmest.
         let finding = app.descendants(matching: .any)["no-alternative"]
         XCTAssertTrue(finding.waitForExistence(timeout: 10))
@@ -73,15 +87,18 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(finding.label.contains("estimates"), finding.label)
         XCTAssertFalse(finding.label.localizedCaseInsensitiveContains("calmest"), finding.label)
         XCTAssertFalse(finding.label.localizedCaseInsensitiveContains("safe"), finding.label)
-        app.buttons["None"].tap()
+        setExtraTime(app, "None")
         let unchecked = NSPredicate { _, _ in finding.exists && finding.label.contains("nothing else was checked") }
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: unchecked, object: nil)], timeout: 10), .completed, "None says it did not look")
         app.buttons["route-details"].tap()
         XCTAssertTrue(app.navigationBars["Behind the routes"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS '1 distinct route was found'")).firstMatch.exists, "One route reads properly")
+        // The calm estimate comes first, so this is further down the list.
+        let oneRoute = app.staticTexts.containing(NSPredicate(format: "label CONTAINS '1 distinct route was found'")).firstMatch
+        for _ in 0..<4 where !oneRoute.exists { app.collectionViews.firstMatch.swipeUp() }
+        XCTAssertTrue(oneRoute.exists, "One route reads properly")
         capture("02-none-details", app: app)
         app.buttons["close-details"].tap()
-        app.buttons["5 min"].tap()
+        setExtraTime(app, "5 min")
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
         app.buttons["Cycle"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
@@ -589,15 +606,15 @@ final class PeoplemapsUITests: XCTestCase {
         let app = launch()
         for _ in 0..<2 {
             app.buttons["Cycle"].tap()
-            app.buttons["2 min"].tap()
+            setExtraTime(app, "2 min")
             app.buttons["Drive"].tap()
-            app.buttons["10 min"].tap()
+            setExtraTime(app, "10 min")
             app.buttons["swap"].tap()
             XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 12))
         }
         XCTAssertTrue(app.buttons["choose-origin"].label.contains("Current location"))
         XCTAssertTrue(app.buttons["choose-destination"].label.contains("Gas Works"))
-        XCTAssertTrue(app.buttons["10 min"].isSelected)
+        XCTAssertEqual(app.buttons["extra-time-menu"].value as? String, "10 min")
         XCTAssertTrue(app.buttons["Drive"].isSelected)
         app.buttons["recenter"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].exists)
@@ -607,6 +624,7 @@ final class PeoplemapsUITests: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeLeft
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["choose-origin"].isHittable)
+        XCTAssertTrue(app.buttons["start-navigation"].isHittable, "Start stays on screen in landscape")
         app.buttons["Cycle"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
         app.buttons["recenter"].tap()
@@ -644,12 +662,15 @@ final class PeoplemapsUITests: XCTestCase {
         }
     }
     /// Kerry Park to Gas Works has no calmer drive to offer at any budget: the routes with less stress gain too little,
-    /// so the card adds nothing under the name (Docs/STRESS_MODEL.md, Time).
-    @MainActor func testPlaceCardSaysNothingWhenThereIsNoCalmerDrive() {
+    /// so the button gives the one route's time, its calm word, and what the router found (Docs/STRESS_MODEL.md, Time).
+    @MainActor func testPlaceCardSaysWhatTheRouterFoundWhenThereIsNoCalmerDrive() {
         let app = launchHome(location: Self.atKerryPark)
         openPlace(app, "Gas Works", id: "relation/1047789")
         let value = waitForEstimate(app)
-        XCTAssertNotNil(value.range(of: #"^\d+ min drive, "#, options: .regularExpression), value)
+        XCTAssertNotNil(value.range(of: #"^\d+( to \d+)? minutes? drive, "#, options: .regularExpression), value)
+        XCTAssertTrue(value.contains("best balance we found"), value)
+        XCTAssertFalse(value.contains("Calmer route"), value)
+        XCTAssertFalse(value.localizedCaseInsensitiveContains("safe"), value)
         XCTAssertFalse(app.staticTexts["place-estimate"].exists)
         XCTAssertFalse(app.staticTexts["place-estimate-loading"].exists)
     }
@@ -659,12 +680,11 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["place-estimate-loading"].waitForExistence(timeout: 2), "A quiet placeholder while it computes")
         XCTAssertTrue(app.buttons["directions"].isHittable, "The estimate never blocks the card")
         let value = waitForEstimate(app)
-        XCTAssertNotNil(value.range(of: #"^\d+ min drive, [\d.]+ (miles?|feet), estimate without live traffic$"#, options: .regularExpression), value)
-        // From Current location, the line under the name says only what the calmer route costs and gains.
-        let estimate = app.staticTexts["place-estimate"]
-        XCTAssertTrue(estimate.exists)
-        XCTAssertTrue(estimate.label.hasPrefix("Calmer"), estimate.label)
-        XCTAssertFalse(estimate.label.localizedCaseInsensitiveContains("safe"))
+        // The button shows the calmer route Start defaults to, never the fastest time, and reads fastest to calmer.
+        XCTAssertNotNil(value.range(of: #"^Calmer route, \d+( to \d+)? minutes? drive, [\d.]+ (miles?|feet), .+, estimate without live traffic$"#, options: .regularExpression), value)
+        XCTAssertFalse(value.localizedCaseInsensitiveContains("safe"), value)
+        // From Current location there's no start to name.
+        XCTAssertFalse(app.staticTexts["place-estimate"].exists)
         capture("17-place-estimate", app: app)
         // Closing mid-way and opening another place starts over for the new one.
         app.buttons["close-place"].tap()
@@ -678,8 +698,9 @@ final class PeoplemapsUITests: XCTestCase {
         // Home now lists it under Recents, and its card estimates in the mode used last.
         let recent = app.buttons["home-recent-way/37058377"]
         XCTAssertTrue(recent.waitForExistence(timeout: 5))
+        raiseHome(app)
         recent.tap()
-        waitForEstimate(app, containing: " min cycle")
+        waitForEstimate(app, containing: " cycle")
     }
     @MainActor func testSearchFindsParkAndOpensPlaceCard() {
         let app = launchHome()
@@ -748,12 +769,14 @@ final class PeoplemapsUITests: XCTestCase {
     }
     @MainActor func testAboutCountsSegmentsFromTheGraphFile() {
         let app = launchHome(extra: ["--hold-router"])
+        raiseHome(app)
         app.buttons["about"].tap()
         let counted = app.staticTexts.containing(NSPredicate(format: "label MATCHES %@", #"^[\d,]{5,} directed street and path segments are bundled.*"#)).firstMatch
         XCTAssertTrue(counted.waitForExistence(timeout: 5), "A real count while the graph is still loading")
     }
     @MainActor func testAboutShowsAcknowledgementsAndLicences() {
         let app = launchHome()
+        raiseHome(app)
         app.buttons["about"].tap()
         let acknowledgements = app.buttons["acknowledgements"]
         for _ in 0..<3 where !acknowledgements.isHittable { app.collectionViews.firstMatch.swipeUp() }
@@ -791,7 +814,7 @@ final class PeoplemapsUITests: XCTestCase {
     @MainActor func testFirstLaunchAsksForLocationAndStartsFromIt() {
         let app = launchAskingForLocation(answer: "Allow While Using App", at: Self.fremont)
         // Home frames the user's neighbourhood once the first fix arrives.
-        let located = NSPredicate { _, _ in app.buttons["recenter"].label == "Centre on your location" }
+        let located = NSPredicate { _, _ in app.buttons["locate"].value as? String == "Found" }
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: located, object: nil)], timeout: 10), .completed)
         capture("00b-home-at-user", app: app)
         openPlace(app, "Gas Works", id: "relation/1047789")
@@ -846,8 +869,9 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["choose-destination"].label.hasPrefix("Going to, "))
         // Far outside the routing bounds: the card says so instead of offering directions.
         app.buttons["close-preview"].tap()
-        let map = app.otherElements["Seattle offline map"]
-        for _ in 0..<3 { map.pinch(withScale: 0.3, velocity: -2) }
+        // A pinch on the whole map would also land on the sheet, so fit the city and drag it away from the corner.
+        app.buttons["recenter"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.2)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.6)))
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.08, dy: 0.12)).press(forDuration: 1.2)
         XCTAssertTrue(app.descendants(matching: .any)["outside-coverage"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["directions"].exists)
@@ -868,7 +892,7 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(app.textFields["place-search"].waitForExistence(timeout: 5))
     }
 
-    @MainActor func testFavouriteSurvivesRelaunchAndSwipesAway() {
+    @MainActor func testFavouriteSurvivesRelaunchAndCanBeRemoved() {
         var app = launchHome(keepSaved: false)
         XCTAssertFalse(app.staticTexts["Favourites"].exists, "First launch shows no Favourites section")
         openPlace(app, "Gas Works", id: "relation/1047789")
@@ -884,12 +908,153 @@ final class PeoplemapsUITests: XCTestCase {
         app = launchHome(keepSaved: true)
         let row = app.buttons["favourite-relation/1047789"]
         XCTAssertTrue(row.waitForExistence(timeout: 5), "Favourite should survive a relaunch")
+        XCTAssertTrue(row.isHittable, "The row is part of the peek")
         capture("12-home-favourites", app: app)
-        row.swipeLeft()
-        let remove = app.buttons["Remove"]
-        if remove.waitForExistence(timeout: 2) { remove.tap() }
+        // Long-press removes it from the row.
+        row.press(forDuration: 1.2)
+        let remove = app.buttons["Remove from Favourites"]
+        XCTAssertTrue(remove.waitForExistence(timeout: 5))
+        remove.tap()
         XCTAssertTrue(row.waitForNonExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Favourites"].exists, "Hidden again once none are left")
+    }
+
+    @MainActor func testAddBadgeAndEditFavourites() {
+        let app = launchHome(keepSaved: false)
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        app.buttons["favourite"].tap()
+        app.buttons["close-place"].tap()
+        // Add searches, and the place picked goes straight into the row.
+        let add = app.buttons["add-favourite"]
+        XCTAssertTrue(add.waitForExistence(timeout: 5))
+        add.tap()
+        let field = app.textFields["search-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        XCTAssertEqual(field.placeholderValue, "Add a favourite")
+        field.typeText("Kerry Park")
+        let result = app.buttons["result-node/693337509"]
+        XCTAssertTrue(result.waitForExistence(timeout: 5))
+        result.tap()
+        XCTAssertTrue(app.buttons["favourite-node/693337509"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["close-place"].exists, "Back on home, not on the place card")
+        // Edit lists them; swipe deletes one, and removing the last closes the list and hides the row.
+        app.buttons["edit-favourites"].tap()
+        let swiped = app.cells.containing(.any, identifier: "edit-favourite-node/693337509").firstMatch
+        XCTAssertTrue(swiped.waitForExistence(timeout: 5))
+        capture("12c-edit-favourites", app: app)
+        swiped.swipeLeft()
+        let delete = app.buttons["Delete"]
+        XCTAssertTrue(delete.waitForExistence(timeout: 5))
+        delete.tap()
+        XCTAssertTrue(swiped.waitForNonExistence(timeout: 5))
+        let last = app.cells.containing(.any, identifier: "edit-favourite-relation/1047789").firstMatch
+        last.swipeLeft()
+        XCTAssertTrue(delete.waitForExistence(timeout: 5))
+        delete.tap()
+        XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["favourite-relation/1047789"].waitForNonExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["Favourites"].exists)
+    }
+
+    /// Locate is always shown; when it can't centre, it says why instead of doing nothing.
+    @MainActor func testLocateExplainsWhenItCannotCentre() {
+        var app = launchHome()
+        XCTAssertEqual(app.buttons["locate"].value as? String ?? "", "")
+        app.buttons["locate"].tap()
+        XCTAssertTrue(app.alerts["Location is off for PeopleMaps"].waitForExistence(timeout: 5))
+        app.alerts.buttons["Not Now"].tap()
+        app.terminate()
+        app = launchHome(location: "47.4000,-122.2000")
+        app.buttons["locate"].tap()
+        XCTAssertTrue(app.alerts["You\u{2019}re outside the area we cover"].waitForExistence(timeout: 5))
+        app.alerts.buttons["OK"].tap()
+        app.terminate()
+        app = launchHome(location: Self.atKerryPark)
+        app.buttons["locate"].tap()
+        let centred = NSPredicate { _, _ in app.buttons["locate"].value as? String == "Centred" }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: centred, object: nil)], timeout: 5), .completed)
+        XCTAssertFalse(app.alerts.firstMatch.exists)
+    }
+
+    /// The map credit stays on screen at every stop: over the map, then inside the sheet once the sheet is fully raised.
+    @MainActor func testMapCreditStaysVisibleWhenTheSheetIsRaised() {
+        let app = launchHome(location: Self.atBallardLibrary)
+        let osm = app.links["Map data © OpenStreetMap contributors"], overture = app.links["Places from Overture Maps Foundation"]
+        XCTAssertTrue(osm.isHittable)
+        XCTAssertTrue(overture.isHittable)
+        // Search raises the sheet fully, and the keyboard mustn't hide the credit.
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 5))
+        XCTAssertTrue(osm.waitForExistence(timeout: 2))
+        XCTAssertTrue(osm.isHittable)
+        XCTAssertTrue(overture.isHittable)
+        capture("22-credit-search", app: app)
+        app.buttons["cancel-search-home"].tap()
+        showGasWorksRoutes(app)
+        XCTAssertTrue(app.buttons["route-calmer"].waitForExistence(timeout: 10))
+        let start = app.buttons["start-navigation"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: -6))
+        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -500)))
+        XCTAssertTrue(app.buttons["start-navigation"].isHittable)
+        XCTAssertTrue(osm.isHittable, "Pinned under Start")
+        XCTAssertGreaterThan(osm.frame.minY, app.buttons["start-navigation"].frame.maxY)
+        capture("23-credit-preview-large", app: app)
+    }
+
+    /// The bar explains the rating in words and scores; a route with nothing calmer has one marker and says what was found.
+    @MainActor func testCalmBarInRouteDetails() {
+        var app = launchHome(location: Self.atBallardLibrary)
+        showGasWorksRoutes(app)
+        XCTAssertTrue(app.buttons["route-calmer"].waitForExistence(timeout: 10))
+        // The calmer card reads fastest to calmer.
+        XCTAssertTrue(app.buttons["route-calmer"].label.contains(" to "), app.buttons["route-calmer"].label)
+        app.buttons["route-details"].tap()
+        var bar = app.descendants(matching: .any)["calm-bar"]
+        XCTAssertTrue(bar.waitForExistence(timeout: 5))
+        XCTAssertTrue(bar.label.hasPrefix("Calm estimate"), bar.label)
+        XCTAssertTrue(bar.label.contains("Fastest: "), bar.label)
+        XCTAssertTrue(bar.label.contains("Calmer: "), bar.label)
+        XCTAssertTrue(bar.label.contains(" out of 100"), bar.label)
+        XCTAssertFalse(bar.label.localizedCaseInsensitiveContains("safe"), bar.label)
+        capture("18-calm-bar", app: app)
+        app.terminate()
+        app = launchHome(location: Self.atKerryPark)
+        showGasWorksRoutes(app)
+        app.buttons["route-details"].tap()
+        bar = app.descendants(matching: .any)["calm-bar"]
+        XCTAssertTrue(bar.waitForExistence(timeout: 5))
+        XCTAssertTrue(bar.label.contains("This route: "), bar.label)
+        XCTAssertFalse(bar.label.contains("Calmer: "), bar.label)
+        capture("19-calm-bar-one-route", app: app)
+    }
+
+    /// At the largest text everything still scrolls into reach, with Start pinned.
+    @MainActor func testPreviewScrollsAndKeepsStartAtTheLargestText() {
+        let app = launchHome(location: Self.atBallardLibrary, extra: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        waitForEstimate(app)
+        XCTAssertTrue(app.buttons["directions"].isHittable)
+        capture("20-place-largest-text", app: app)
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["start-navigation"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["start-navigation"].isHittable)
+        capture("21-preview-largest-text", app: app)
+        XCTAssertTrue(app.buttons["route-details"].isHittable, "Why this route is pinned with Start")
+        let fastest = app.buttons["route-fastest"]
+        for _ in 0..<8 where !fastest.isHittable { app.scrollViews.firstMatch.swipeUp() }
+        XCTAssertTrue(fastest.isHittable, "The routes scroll into reach")
+        XCTAssertTrue(app.buttons["start-navigation"].isHittable)
+    }
+
+    /// At the default size the routes, Start and Why this route are all in reach without scrolling.
+    @MainActor func testPreviewShowsRoutesStartAndWhyWithoutScrolling() {
+        let app = launchHome(location: Self.atBallardLibrary)
+        showGasWorksRoutes(app)
+        XCTAssertTrue(app.buttons["route-calmer"].waitForExistence(timeout: 10))
+        let start = app.buttons["start-navigation"], why = app.buttons["route-details"], fastest = app.buttons["route-fastest"]
+        XCTAssertTrue(start.isHittable)
+        XCTAssertTrue(why.isHittable)
+        XCTAssertLessThanOrEqual(fastest.frame.maxY, start.frame.minY + 1, "The last route isn't behind Start")
+        XCTAssertLessThanOrEqual(start.frame.maxY, app.frame.maxY)
     }
 
     @MainActor func testRecentDestinationShowsWhenSearchIsEmpty() {
