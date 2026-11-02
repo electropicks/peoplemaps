@@ -37,22 +37,3 @@ final class SavedPlacesStore {
         try? saved.save(to: url)
     }
 }
-
-extension Place {
-    static let pinCategory = "dropped pin", locationCategory = "current location"
-
-    /// A long-press on the map. Named "Dropped pin" until the index can give the nearest address.
-    static func droppedPin(at c: Coordinate) -> Place {
-        Place(id: String(format: "pin/%.5f,%.5f", c.lat, c.lon), name: "Dropped pin", lat: c.lat, lon: c.lon, category: pinCategory)
-    }
-    /// Where the device was when the user picked it; the router snaps it to the nearest street for the mode.
-    static func currentLocation(at c: Coordinate) -> Place {
-        Place(id: "current-location", name: "Current location", lat: c.lat, lon: c.lon, category: locationCategory)
-    }
-    var isDroppedPin: Bool { category == Self.pinCategory }
-    var isCurrentLocation: Bool { category == Self.locationCategory }
-    /// "47.62950° N, 122.35990° W"
-    var coordinateLabel: String {
-        String(format: "%.5f° %@, %.5f° %@", abs(lat), lat >= 0 ? "N" : "S", abs(lon), lon >= 0 ? "E" : "W")
-    }
-}
