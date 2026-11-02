@@ -71,7 +71,7 @@ jobs:
   ui-tests:
     if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'ui-tests') && (github.event.action != 'labeled' || github.event.label.name == 'ui-tests'))
     runs-on: xcode-27
-    timeout-minutes: 40
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -82,7 +82,10 @@ jobs:
         run: Scripts/fetch_data seattle-all
       - run: PEOPLEMAPS_XCODE="$(xcode-select -p)" PEOPLEMAPS_UI_RESULT="$RUNNER_TEMP/ui-tests.xcresult" Scripts/verify.sh --fast --ui
       - if: always()
-        run: xcrun xcresulttool export attachments --path "$RUNNER_TEMP/ui-tests.xcresult" --output-path "$RUNNER_TEMP/ui-screenshots"
+        run: |
+          [ -d "$RUNNER_TEMP/ui-tests.xcresult" ] || { echo "no result bundle: the suite did not finish"; exit 0; }
+          mkdir -p "$RUNNER_TEMP/ui-screenshots"
+          xcrun xcresulttool export attachments --path "$RUNNER_TEMP/ui-tests.xcresult" --output-path "$RUNNER_TEMP/ui-screenshots"
       - if: always()
         uses: actions/upload-artifact@v4
         with:

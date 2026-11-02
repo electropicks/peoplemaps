@@ -84,13 +84,14 @@ print(names[-1])')"
     fi
   fi
   xcrun simctl boot "$ui" 2>/dev/null || true
-  # xcodebuild -quiet names a failed test but not what failed in it, so a failed run prints each failure's message
+  # Each test prints as it ends, so a run that stalls shows where. A failed run also prints each failure's message
   # from the result bundle and keeps the bundle for Xcode.
   ui_tests() {
     local bundle; bundle="${PEOPLEMAPS_UI_RESULT:-$(mktemp -d)/ui-tests.xcresult}"
-    xcodebuild -quiet -project Peoplemaps.xcodeproj -scheme Peoplemaps -configuration Debug \
+    xcodebuild -project Peoplemaps.xcodeproj -scheme Peoplemaps -configuration Debug \
       -destination "platform=iOS Simulator,id=$ui" -only-testing:PeoplemapsUITests/PeoplemapsUITests \
-      -parallel-testing-enabled NO -resultBundlePath "$bundle" test && return 0
+      -parallel-testing-enabled NO -resultBundlePath "$bundle" test 2>&1 \
+      | grep --line-buffered -E "Test [Cc]ase .* (passed|failed|skipped)|error:|Executed [0-9]+ test" && return 0
     echo "result bundle: $bundle"
     xcrun xcresulttool get test-results summary --path "$bundle" 2>/dev/null | python3 -c '
 import json, sys
