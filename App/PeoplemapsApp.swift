@@ -6,10 +6,13 @@ struct PeoplemapsApp: App {
     /// Home needs only the graph's bounds and search; the router builds behind it and routing requests wait for it.
     private let ready: Result<(graph: StreetGraph, router: DeferredRouter, search: SearchIndex), Error>
     init() {
+        AppEventHooks.start()
         ready = Result {
-            let header = try StreetGraph.bundledHeader()
-            return (header.boundsOnly, DeferredRouter { Self.holdForTests(); return NativeRouter(graph: try StreetGraph.bundled()) }, try SearchIndex.bundled(graphNodes: header.nodes))
+            let header = try AppEvents.shared.timed(.data, "graph header loaded") { try StreetGraph.bundledHeader() }
+            let router = DeferredRouter { Self.holdForTests(); return try AppEvents.shared.timed(.data, "router ready") { NativeRouter(graph: try StreetGraph.bundled()) } }
+            return (header.boundsOnly, router, try AppEvents.shared.timed(.data, "search index loaded") { try SearchIndex.bundled(graphNodes: header.nodes) })
         }
+        if case let .failure(error) = ready { AppEvents.shared.log(.error, "bundled data failed to load", error: error) }
     }
     /// UI tests pass `--hold-router` to keep the router from being ready, proving home never waits for it.
     private nonisolated static func holdForTests() {
@@ -42,6 +45,8 @@ extension UIColor {
     /// The accent in small text, a shade darker in light mode to keep 4.5:1 contrast.
     static let calmerText = dynamic(light: 0x1F7A3A, dark: 0x30D158)
     static let fastest = hex(0x8E8E93)
+    /// The part of the followed route already driven: lighter than the route in light mode, dimmer in dark, with the line drawn thinner.
+    static let passedRoute = dynamic(light: 0x9CB3A3, dark: 0x56725F)
     /// Directions button: a shade darker than the accent in light mode so white text keeps its contrast.
     static let directionsFill = dynamic(light: 0x1F7A3A, dark: 0x30D158)
     static let directionsText = dynamic(light: 0xFFFFFF, dark: 0x000000)

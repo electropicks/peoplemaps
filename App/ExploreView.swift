@@ -69,6 +69,8 @@ struct ExploreView: View {
     @State private var lastOrigin: Place?
     /// The device's last fix, kept only while location is allowed.
     @State private var userLocation: Coordinate?
+    /// Compass heading, only while the map shows the user outside guidance; nil draws a plain dot.
+    @State private var userHeading: Double?
     /// The nearest indexed address of the open place when it has none of its own.
     @State private var placeNear: String?
     /// The place card's comparison and the request it answers; nil when no route could be found.
@@ -129,12 +131,13 @@ struct ExploreView: View {
     private var mapSelection: Place? { selectedPlace ?? (screen == .preview && request == nil ? destination : nil) }
     /// Stays set while guiding, so the comparison survives and End returns to the same routes.
     private var previewRequest: RouteRequest? { screen == .preview || screen == .navigating ? request : nil }
+    private var wantsCompass: Bool { userInCoverage != nil && !guiding && scenePhase == .active }
     private var guiding: Bool { screen == .navigating && navigator.isActive }
     private var guidance: Guidance? {
         guard guiding, !navigator.routeGeometry.isEmpty else { return nil }
         return Guidance(version: navigator.routeVersion, coordinates: navigator.routeGeometry, calmer: navigator.calmerRoute,
                         destination: navigator.routeGeometry.last!, user: navigator.coordinate, rawUser: navigator.rawCoordinate,
-                        reachedRoute: navigator.hasReachedRoute, heading: navigator.heading, moving: navigator.isMoving,
+                        reachedRoute: navigator.hasReachedRoute, heading: navigator.heading, moving: navigator.isMoving, travelled: navigator.travelledMeters,
                         camera: camera, inset: guidanceInset)
     }
 
@@ -294,7 +297,7 @@ struct ExploreView: View {
         GeometryReader { geo in
             ZStack {
                 SeattleMap(comparison: screen == .preview ? session.comparison : nil, selectedCalmer: selectedCalmer, recenter: recenter, locate: locateCount, selected: mapSelection,
-                           user: userInCoverage, coverage: coverage, onLongPress: dropPin, guidance: guidance,
+                           user: userInCoverage, userHeading: wantsCompass ? userHeading : nil, coverage: coverage, onLongPress: dropPin, guidance: guidance,
                            onCameraGesture: { if guiding { camera.pan() } else if centred { centred = false } }, padding: mapPadding(geo))
                     .ignoresSafeArea()
                     .accessibilityElement(children: .contain)
@@ -321,6 +324,7 @@ struct ExploreView: View {
         .onChange(of: voiceMuted) { navigator.setMuted(voiceMuted) }
         .reportContext(screen: String(String(describing: screen).prefix { $0 != "(" }), mode: mode, extraMinutes: budget, comparison: session.comparison, navigator: navigator, dataVersion: search.dataVersion)
         .onChange(of: userLocation) { followUser() }
+        .onChange(of: wantsCompass, initial: true) { permission.onHeading = { userHeading = $0 }; permission.compass(on: wantsCompass) }
         // Pulling the search sheet down is the same as Cancel, at wherever it was let go.
         .onChange(of: stop) { if screen == .search, stop != .large { homeStop = stop; query = ""; addingFavourite = false; screen = .home } }
         .onChange(of: scenePhase) {
