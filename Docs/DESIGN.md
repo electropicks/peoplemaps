@@ -7,8 +7,9 @@ touches every `App/` file. Read with `.claude/skills/product-rules/SKILL.md`,
 `Docs/SEARCH.md`.
 
 Decided, not open: Apple standards, Liquid Glass first, category colours for
-place types, green (`.calmer`) stays the calmer-route colour, minimum
-deployment target iOS 27.
+place types, a dusk blue (`.calmer`) for the route line, minimum deployment
+target iOS 27. The look comes from the owner-approved mockup (November 2026):
+`QuietAccent` phone 3 for the route panel and accent, `EvergreenGlass` for home.
 
 ## 0. Sources and what is unconfirmed
 
@@ -30,63 +31,108 @@ records anything renamed in the PR.
 | `@Environment(\.accessibilityReduceTransparency)`, `\.colorSchemeContrast`, `\.accessibilityReduceMotion` | fallbacks | stable; confirmed in Xcode 27.1 |
 | iOS 27 "clear to tinted" glass slider | users can make all glass more opaque | reported in press, unconfirmed |
 | Xcode 27 ignores `UIDesignRequiresCompatibility` | no opting out of glass | Apple forums thread 832543 |
+| `UISheetPresentationController.Detent.backgroundEffect`, `UIGlassEffect(style:)` | the sheet's glass (`SheetGlass`) | iOS 26.1; confirmed in Xcode 27.1 |
 
 `.containerConcentric` was not found in the Xcode 27.1 SDK; `ConcentricRectangle` exists, so use that for
 concentric corners (section 3).
 
-Partial-height system sheets get a glass background on iOS 26+ automatically;
-a custom `presentationBackground` replaces it. We rely on the system
-behaviour and never set our own sheet background.
+Partial-height system sheets draw their own glass, under any
+`presentationBackground`, and on a pale map it reads as plain off-white.
+`SheetGlass` sets each partial detent's `backgroundEffect` to `UIGlassEffect`,
+which lets the map show through; SwiftUI has no modifier for it. An empty
+`UIVisualEffect` doesn't remove the panel, so home at rest has no sheet at all
+(4.2).
 
 ## 1. Principles
 
 1. **Two layers.** The map is content. Everything that floats over it is the
    navigation layer: the sheet, the map control cluster, the guidance banner,
    chips and trip bar. Only the navigation layer is glass.
-2. **Glass holds controls, not reading.** Buttons, the search field, segmented
-   pickers, the turn arrow and short labels can sit straight on glass. Lists,
-   route cards, explanations and anything over two lines sit on an opaque
-   grouped surface (`.panelFill`) inside the sheet, so their contrast is
-   measured against a known colour, not whatever map is underneath.
+2. **Glass holds what you glance at; solid holds what you read.** The route
+   panel, place card, home and guidance sit straight on glass, split by hairlines,
+   with no opaque cards. Long reading (Behind the routes, About, the large stop)
+   is on a solid `panel`. Text on glass is checked from rendered pixels
+   (section 2, "On glass").
 3. **No glass on glass.** A glass button inside the glass sheet uses
    `.bordered`/plain styles, not `.glass`. One `GlassEffectContainer` per
    cluster (map buttons; guidance top chrome; trip bar).
-4. **Regular, not clear.** We use `Glass.regular` everywhere. `.clear` needs a
-   dimming layer and our map is busy; it is not used.
-5. **One accent, plus category colour.** Green means "the calmer route" and the
-   primary action (Directions, Start, Done). Nothing else is green: not links,
-   not toggles, not parks. Category colours appear only on place badges (list
-   rows, map markers, place card); they never tint glass, text or buttons.
-6. **Tint sparingly.** Only primary actions are tinted glass
-   (`.glassProminent` with `.tint(.calmer)`). Never tint the sheet or banner.
+4. **Clear, with a veil where it needs one.** `.clear` is what a person reads as
+   glass over this pale map: `.regular` frosts it to off-white, which is what the
+   owner couldn't see on the phone. Busy-map legibility comes from `glassVeil`
+   (`.light`) on text surfaces such as guidance, as Apple asks for `.clear`, and
+   `glassSheetVeil` in the dark sheet. `--glass-regular` swaps it in Debug builds.
+5. **No accent on controls, plus category colour.** Controls and text use the
+   label colour; the app's tint is `.primary`. Dusk blue (`.calmer`) is a map
+   colour only: the route line, its leader and the selected pin. Green no longer
+   means calmer, and no fill anywhere is a saturated blue or green. Rating colour
+   appears only on the rating word and bar. Category colours appear only on place
+   badges (list rows, map markers, place card); they never tint glass, text or
+   buttons.
+6. **Glass stays neutral.** The sheet and banner are never tinted. Start and the
+   other primary actions are `.glassProminent` with a white `primaryActionFill`
+   and dark `primaryActionText`, a token so they can move to dusk blue later.
 7. **Honest words survive the redesign.** Every "Estimate", "unknown" and
    source/date line in the current UI stays. No screen says "safe".
 
 ## 2. Colour tokens
 
 All tokens live in `App/PeoplemapsApp.swift` (`UIColor` + `ShapeStyle`
-extensions) as today; the redesign adds the category set and an
-`AccentColor` asset that matches `.calmer`. Values are sRGB.
+extensions), with an `AccentColor` asset that matches `.calmer`. Values are sRGB.
+Contrast figures are WCAG, computed from the values; "on glass" ones are from
+rendered pixels (below).
 
 ### Semantic
 
 | Token | Light | Dark | Use | Contrast |
 |---|---|---|---|---|
-| `calmer` | `#248A3D` | `#30D158` | calmer route line, selected-route bar | line vs map land 3.9 / 8.6 (≥3:1 graphic) |
-| `calmerText` | `#1F7A3A` | `#30D158` | green text, turn arrow | 4.8 / 6.9 on `panelFill` |
-| `directionsFill` | `#1F7A3A` | `#30D158` | primary button fill / glass tint | label 5.4 white / 10.4 black |
-| `directionsText` | white | black | label on the above | as above |
-| `fastest` | `#8E8E93` | `#8E8E93` | fastest line and bar | graphic only |
-| `passedRoute` | `#9CB3A3` | `#56725F` | the part of the followed route already driven, drawn 3.5 pt (the route is 5.5) | vs map land 2.0 / 3.3; vs the route ahead 2.0 / 2.6. Below 3:1 in light on purpose: it is a trail, not information, and the width, the puck at its end and the casing say "behind" without colour |
-| `panelFill` | elevated `secondarySystemBackground` | same | opaque content cards in the sheet | text uses `label`/`secondaryLabel` |
-| `calmBand` | `#3590D0` `#5393A5` `#928A7B` `#C47632` `#D9605F` | same | calm bar, Breezy to Yikes; blue through grey to orange and rose, not green to red, so it doesn't read as safe and unsafe | landed band black text ≥4.5; band vs `panelFill` ≥3 |
-| `mapLand`…`mapPath` | unchanged | unchanged | MapLibre style | — |
-| Location | `systemBlue` | `systemBlue` | the map marker and Current location row only. The marker always has a white ring and a faint dark halo, so it separates from the green and grey route lines by lightness, not hue (blue vs white ring 4.0 light; marker vs land 3.6 / 4.3 light/dark) | — |
+| `calmer` | `#4A6F97` | `#7FA3CC` | route line (white casing in light, black in dark), leader, selected pin, destination dot | vs land 4.6 / 6.1, vs water 3.4 / 3.9 (≥3:1 graphic) |
+| `fastest` | `#6B7872` | `#AEBAB3` | fastest line, dotted | vs land 4.1 / 7.9 |
+| `passedRoute` | `#A6B3C0` | `#53616F` | the part of the followed route already driven, drawn 3.5 pt (the route is 5.5) | vs land 1.9 / 2.5; vs the route ahead 2.5 / 2.4. Below 3:1 on purpose: it is a trail, not information, and the width, the puck at its end and the casing say "behind" without colour |
+| `primaryActionFill` | white 72% | white 86% | tint of `.glassProminent`: Directions, Start, Done | |
+| `primaryActionText` | `#20384F` | `#20384F` | label on the above | 12.1 on white, more than the glass ever lets through |
+| `glassVeil` | white 34% | `#101412` 42% | over `.clear` on text surfaces: guidance, landscape card, credit | |
+| `glassSheetVeil` | none | `#101412` 30% | over the sheet's glass, which lifts a dark map | |
+| `glassVeilDense` | white 72% | `#101412` 72% | Increase Contrast | |
+| `glassHairline` | `#142D23` 14% | white 14% | dividers on glass | decorative |
+| `glassTrack`, `glassWell`, `glassChosen` | `#142D23`/white, low alpha | same | rating track, close and mode wells, chosen mode | graphic only |
+| `panelFill` | elevated `secondarySystemBackground` | same | cards in solid modal sheets only, never on glass | text uses `label`/`secondaryLabel` |
+| `userLocation` | `#4A8FD6` | `#4A8FD6` | the map marker and Current location row only. White ring and a faint dark halo keep it clear of the route line by lightness (vs land 3.0 / 4.7) | |
 
-Removed: the hard-coded arrival circle colour in `GuidanceView`
-(`Color(red: 0x1F…)`) becomes `.directionsFill`. `panel` (opaque sheet
-background) goes away with the hand-drawn panel; it remains only as the
-Reduce Transparency fallback (section 6).
+### Rating
+
+The rating is a real progress bar: fill width is the 0 to 100 calm score, track
+`glassTrack`, fill and word coloured by level (`CalmMeter`). Blue through grey to
+orange and rose, not green to red, so it doesn't read as safe and unsafe. VoiceOver
+reads "Chill, 69 out of 100".
+
+| Level | Fill | Word light | Word dark | Word on glass, palest and darkest panel, L / D |
+|---|---|---|---|---|
+| Breezy | `#7FB2D6` | `#285A7E` | `#A3D0F0` | 6.0 / 6.8 |
+| Chill | `#6FAFA8` | `#1F5F5A` | `#93D8D0` | 6.1 / 6.8 |
+| Meh | `#B8AE9A` | `#5F5646` | `#D3CBB8` | 5.9 / 6.8 |
+| Spicy | `#D19A6B` | `#84491A` | `#F0BE8F` | 5.8 / 6.6 |
+| Yikes | `#CF8A88` | `#8C3B39` | `#F0AFAD` | 6.1 / 6.0 |
+
+Fills are 1.8 to 2.3 against the pale panel in light, 4.0 to 5.0 in dark. Below 3:1
+in light is accepted because the word next to the bar says the same thing.
+
+### Map
+
+| Token | Light | Dark |
+|---|---|---|
+| `mapLand` | `#F1F2EC` | `#1A2421` |
+| `mapStreet` | `#FBFBF8` | `#2C3A35` |
+| `mapArterial` | `#EFE5C6` | `#4A4631` |
+| `mapWater` | `#B9D5DF` | `#24454F` |
+| `mapPark` | `#CCDFCF` | `#27463A` |
+| `mapPath` | `#C9D4C3` | `#33423B` |
+| `mapLabel` | `#4F6359` (5.7 on land) | `#BDCBC3` (9.5) |
+| `mapWaterLabel` | `#3D6878` (4.0 on water) | `#B4D3DE` (6.5) |
+
+Water names are italic title case, districts tracked capitals. A district name a
+shown route runs through steps aside. The mockup's motorway `#E9D3B5` isn't drawn:
+`Scripts/build_tiles.py` merges motorway, trunk, primary and secondary into one
+`arterial` layer with no class, so it needs a tile rebuild and a data release.
 
 ### Place categories
 
@@ -94,30 +140,25 @@ Ten groups. Each place's raw `category` (from `Scripts/build_search.py`
 `category_of`, stored in `entries.category` and read by `Core/SearchIndex.swift`)
 maps to one group in a new `PlaceCategory` enum in `Core` (pure Swift, unit
 tested, so the mapping is shared and not in a view). Badge = SF Symbol on a
-filled circle. Light mode: white glyph on the light fill. Dark mode: glyph
-`#1C1C1E` on the brighter dark fill (white on the bright dark fills drops
-under 3:1).
+filled circle. Muted to sit with the quiet map. Light mode: white glyph on the
+light fill. Dark mode: glyph `#1C1C1E` on the brighter dark fill.
 
-| Group | Raw categories (top ones in the Oct 2026 index) | Symbol | Light fill | Dark fill | Glyph:fill L / D | Fill:panelFill L / D |
+| Group | Raw categories (top ones in the Oct 2026 index) | Symbol | Light fill | Dark fill | Glyph:fill L / D | Fill:land L / D |
 |---|---|---|---|---|---|---|
-| Food | restaurant, fast_food, bakery, deli, ice_cream, pastry | `fork.knife` | `#C75300` | `#FF9F0A` | 4.5 / 8.3 | 4.0 / 6.8 |
-| Coffee | cafe | `cup.and.saucer.fill` | `#8A5A2B` | `#C8935A` | 5.9 / 6.3 | 5.3 / 5.2 |
-| Nightlife | bar, pub, nightclub, wine, alcohol | `wineglass.fill` | `#8E3FC0` | `#BF5AF2` | 5.8 / 4.8 | 5.2 / 4.0 |
-| Shops | any `shop=*` not above: clothes, convenience, supermarket, books, gift, furniture… | `bag.fill` | `#4B49C8` | `#7D7AFF` | 6.8 / 4.9 | 6.1 / 4.0 |
-| Parks and nature | park, garden, wood, water, playground, nature_reserve, beach, dog_park | `leaf.fill` | `#0B7A6B` | `#3CC9B0` | 5.2 / 8.2 | 4.7 / 6.8 |
-| Sport | fitness_centre, sports_centre, pitch, stadium, swimming_pool | `figure.run` | `#00728F` | `#40C8E0` | 5.5 / 8.6 | 4.9 / 7.0 |
-| Transit and travel | station, halt, ferry_terminal, bicycle_parking, parking, fuel, charging_station, marina, hotel | `tram.fill` (station/halt), `ferry.fill`, `bicycle`, `parkingsign`, `fuelpump.fill`, `bolt.car.fill`, `bed.double.fill` | `#0064D2` | `#409CFF` | 5.6 / 6.0 | 5.0 / 4.9 |
-| Sights and culture | attraction, museum, viewpoint, gallery, artwork, memorial, monument, historic, theatre, arts_centre, cinema, library | `building.columns.fill` (museum), `binoculars.fill` (viewpoint), `theatermasks.fill`, `books.vertical.fill`, `paintpalette.fill`, `star.fill` (others) | `#C2185B` | `#FF6482` | 5.9 / 6.0 | 5.3 / 4.9 |
-| Health | clinic, doctors, dentist, pharmacy, hospital, veterinary | `cross.case.fill` | `#D70015` | `#FF6961` | 5.4 / 6.0 | 4.8 / 4.9 |
-| Services and other | bank, atm, hairdresser, beauty, office, craft, building, school, place_of_worship, post_office, community_centre, everything unmapped | `mappin` (plus `building.2.fill` for building/office) | `#6C6C70` | `#AEAEB2` | 5.2 / 7.7 | 4.7 / 6.3 |
+| Food | restaurant, fast_food, bakery, deli, ice_cream, pastry | `fork.knife` | `#BE6E46` | `#E09A72` | 3.8 / 7.3 | 3.4 / 6.9 |
+| Coffee | cafe | `cup.and.saucer.fill` | `#927050` | `#C8A583` | 4.5 / 7.4 | 4.0 / 7.0 |
+| Nightlife | bar, pub, nightclub, wine, alcohol | `wineglass.fill` | `#8C64A0` | `#BC97CF` | 4.7 / 6.9 | 4.2 / 6.4 |
+| Shops | any `shop=*` not above: clothes, convenience, supermarket, books, gift, furniture… | `bag.fill` | `#646CB0` | `#9BA2DB` | 4.9 / 7.0 | 4.3 / 6.5 |
+| Parks and nature | park, garden, wood, water, playground, nature_reserve, beach, dog_park | `leaf.fill` | `#48886C` | `#7DBD9F` | 4.2 / 7.8 | 3.7 / 7.3 |
+| Sport | fitness_centre, sports_centre, pitch, stadium, swimming_pool | `figure.run` | `#3F8A8F` | `#74BCC1` | 4.0 / 7.9 | 3.6 / 7.4 |
+| Transit and travel | station, halt, ferry_terminal, bicycle_parking, parking, fuel, charging_station, marina, hotel | `tram.fill` (station/halt), `ferry.fill`, `bicycle`, `parkingsign`, `fuelpump.fill`, `bolt.car.fill`, `bed.double.fill` | `#428096` | `#78B3C8` | 4.4 / 7.4 | 3.9 / 6.9 |
+| Sights and culture | attraction, museum, viewpoint, gallery, artwork, memorial, monument, historic, theatre, arts_centre, cinema, library | `building.columns.fill` (museum), `binoculars.fill` (viewpoint), `theatermasks.fill`, `books.vertical.fill`, `paintpalette.fill`, `star.fill` (others) | `#B0607C` | `#DB93AD` | 4.4 / 7.1 | 3.9 / 6.7 |
+| Health | clinic, doctors, dentist, pharmacy, hospital, veterinary | `cross.case.fill` | `#B85F60` | `#E29A9A` | 4.3 / 7.6 | 3.9 / 7.1 |
+| Services and other | bank, atm, hairdresser, beauty, office, craft, building, school, place_of_worship, post_office, community_centre, everything unmapped | `mappin` (plus `building.2.fill` for building/office) | `#77797C` | `#ADAFB2` | 4.4 / 7.7 | 3.9 / 7.2 |
 
-Fixed kinds keep their own look: Current location (blue circle,
+Fixed kinds keep their own look: Current location (`userLocation` circle,
 `location.fill`), address (`Services` grey, `mappin`), dropped pin (`mappin`,
 `systemRed` fill, as Apple's convention for a dropped pin).
-
-Parks deliberately use teal-green `#0B7A6B`, not `.calmer`, so a green badge
-is never mistaken for "calmer". The hue gap is about 40°; the symbol (leaf)
-carries the meaning too. See open question 2.
 
 Overture's long tail ("thai_restaurant", "shoe_store", "dermatology") reaches its
 group through suffix rules in `PlaceCategory`, after the exact table. Without
@@ -125,10 +166,8 @@ them 37% of the all-Seattle index fell through to grey Services.
 
 Map markers: the same fill and glyph, drawn from these tokens, on a 1.5 pt ring of
 `systemBackground` (2.5 pt with Increase Contrast). All fills clear 3:1 against
-`mapLand` in both modes (lowest: calmer 3.9, food 4.0 light). Glyph ratios in dark
-mode use `#1C1C1E`; the lowest are nightlife 4.8 and shops 4.9. Ratios above were
-computed with the WCAG formula; the Mac session re-checks rendered pixels with
-Xcode's Accessibility Inspector.
+`mapLand` in both modes (lowest: food 3.4 light), and all glyphs clear 3:1 against
+their fills (lowest: food 3.8 light).
 
 **Which places show, and when.** At runtime, from the bundled search index; no
 generated data. `Core/PlaceMarkers.swift` thins the whole index once, in the
@@ -165,13 +204,19 @@ background, so nothing depends on the camera:
 
 ### On glass
 
-Glass has no fixed colour, so text contrast on it can't be precomputed. Rules:
-only `label`/`secondaryLabel` and SF Symbols in `.primary` go directly on
-glass (the system adapts them); `calmerText` on glass is allowed only for the
-turn arrow and the calm-note chip, at semibold weight, and must be checked on
-four screenshots: light/dark over the lightest map (water `#D7E6EC`) and the
-darkest (`#1A1A1C`). If any fails 4.5:1, the chip gets a `panelFill` capsule
-behind its text inside the glass.
+Glass has no fixed colour, so contrast on it is measured from captures, on the
+all-Seattle map over land and water. Text uses `label`, `GuidanceOverlay.onGlass`
+(`.primary` at 75%, since `.secondary` measures under 4.5:1 there) or a rating
+word. Measured on `.clear`, 2 November 2026:
+
+| Where | Light, palest to deepest panel | Dark |
+|---|---|---|
+| Sheet background | `#F8F8F0` to `#D3EDF6` | `#384643` to `#365C67`, before `glassSheetVeil` |
+| Primary text | 17.2 | 7.3 |
+| `onGlass` text | 9.4 | 5.1 |
+| Rating words | 5.9 or more | 4.5 before the veil, which is why dark has one |
+
+Glass on a real phone can differ from the Simulator, so the phone has the last word.
 
 ## 3. Type, spacing, shapes, symbols
 
@@ -215,17 +260,12 @@ in light, dark, portrait and landscape.
 
 ### 4.1 Map chrome and attribution
 
-Current: `info.circle` + `viewfinder` in a `.regularMaterial` rounded rect
-with a shadow, top right; "© OpenStreetMap" pill bottom left over the panel
-(`home-favourites-light.png`).
-
-Proposed:
 - One vertical glass capsule, top trailing, in a `GlassEffectContainer`:
   **Locate** (`location`; always shown; centres on the user, and explains itself
   in an alert when it can't: permission not asked or denied, outside the map, no
   fix yet) and **Fit** (`viewfinder`; "Fit routes on map" in preview, "Centre on
   this place" on a place, "Fit map to Seattle" on home). About moves into the sheet (home footer "About PeopleMaps"), so
-  the cluster stays at two buttons. Each button 44×44, `.glass` style.
+  the cluster stays at two buttons. Each button 44×44, `.clear` glass.
 - The cluster rides above the sheet's detent and fades out when the sheet is
   at the large detent (Apple Maps behaviour).
 - Attribution: "© OpenStreetMap" stays always visible and linked (ODbL),
@@ -233,11 +273,12 @@ Proposed:
   Overture Places lands (branch `search/overture-places`). `.caption2`, on a small glass capsule just above the sheet's top edge,
   leading. It moves with the detent. At the large detent only the status bar is
   left above the sheet, so the credit moves inside it, pinned at the bottom
-  without the capsule. Size capped at `.large`, one line. The credit is positioned
+  in a `safeAreaBar`, so a list scrolling behind it stays legible. Size capped at `.large`, one line. The credit is positioned
   from the sheet's global frame, never its height: at low stops the system scales
   the sheet (0.86 at about 80 pt, 0.96 at about 100 pt and over) and floats it above
   the screen's edge, so its height doesn't say where its top is. It is a licence
-  term: `testPeekHoldsItsContentAndLeavesTheCreditVisible` holds it above the sheet.
+  term: `testPeekHoldsItsContentAndLeavesTheCreditVisible` holds it above home's
+  controls, and `testMapCreditStaysVisibleWhenTheSheetIsRaised` keeps it on screen.
 - Remove all custom `.shadow` calls on glass; glass draws its own.
 
 ```
@@ -252,46 +293,30 @@ Proposed:
 
 ### 4.2 Home: "Where to?"
 
-Current: hand-drawn panel with decorative grabber, "Search places" field,
-Favourites and Featured places (`home-favourites-light.png`).
+At rest home has no sheet (`floatingHome`): the map fills the screen, with only
+floating controls over it, each on its own `.clear` glass. Favourite chips above a
+56-pt "Where to?" capsule and a round More button (`home-more`), above the credit.
+First launch shows a one-line hint chip where the favourites go: "Search a place or
+address, or long-press the map" (D4).
 
-Proposed (with `ux-round-1`): a persistent system sheet,
-`presentationDetents([.height(peek), .medium, .large])`,
-`presentationBackgroundInteraction(.enabled(upThrough: .medium))`,
-`interactiveDismissDisabled()`. Peek = search field + Favourites row, plus the
-sheet content's own padding (20 top, 12 bottom), or the last of it is cut off.
-Recents and About stay out of sight at the peek: on a taller peek the system leaves
-room for the home indicator, and the next row would show half cut off there.
-- Search field labelled **"Where to?"**, capsule, `magnifyingglass` leading.
-- **Favourites row**, as in Apple Maps: a horizontal row of 56-pt circular
-  category badges (`@ScaledMetric`), each with the place's short name
-  (`Place.shortName`) in `.caption` under it, up to two lines, centred. Tapping a
-  badge opens the place card; long-press removes it, and Edit opens a list with
-  swipe to delete. The row ends in an **Add** badge: `plus` on a `systemGray5`
-  fill, label "Add", which raises the sheet to `.large` with the search field
-  focused; picking a result there favourites it. The row is hidden until there is
-  a favourite (owner, 1 November 2026): the star on a place card adds the first.
-  No `panelFill` group: the badges sit on the sheet, like Apple Maps.
-- **Recents** below, a vertical `panelFill` list with category badges,
-  visible from the medium detent. No Featured places (ux-round-1). Empty
-  first launch shows one line instead: "Search a place or address, or
-  long-press the map" (D4).
-- Footer row "About PeopleMaps" (`info.circle`), secondary.
+More, or dragging the capsule up, presents a system sheet at `.medium` and `.large`
+(`raiseHome`). It holds the same chips and field, then Recents and the rows **Edit
+favourites** and **About PeopleMaps**. Pulling it down dismisses it back to the
+floating controls.
+
+- **Favourite chips:** a horizontal row of capsules, a 30-pt category badge and the
+  place's short name (`Place.shortName`). Tapping one opens the place card;
+  long-press removes it. The row ends in a round **Add**, which raises the sheet to
+  `.large` with the search field focused; picking a result favourites it. The row
+  is hidden until there is a favourite (owner, 1 November 2026).
+- **Recents:** on the sheet's glass, split by hairlines, with category badges. No
+  Featured places (ux-round-1).
 
 ```
-╭────────────────────────────╮
-│          ───               │
-│ ( 🔍 Where to?           ) │
-│ Favourites                 │
-│  (🍃)    (☕)    (＋)       │  ← peek ends here
-│  Gas     Milstead  Add     │
-│  Works                     │
-│ Recents                    │
-│ ┌────────────────────────┐ │
-│ │ (☕) Milstead & Co.    › │ │
-│ │      Café · Fremont      │ │
-│ └────────────────────────┘ │
-│ ⓘ About PeopleMaps         │
+                         (map)
+ ( © OpenStreetMap · Overture )
+ ( (🍃) Gas Works Park ) ( + )
+ ( 🔍 Where to?        ) ( ⋯ )
 ```
 
 ### 4.3 Search and results
@@ -325,9 +350,6 @@ list. Each row:
 
 ### 4.4 Place card
 
-Current: name, subtitle, favourite and close buttons, green Directions,
-footnote (`place-light.png`).
-
 Proposed (with `ux-round-1` content): sheet sized to fit the card, so medium
 doesn't leave half of it empty; large at accessibility sizes.
 - Header: 44-pt category badge, name `.title2.bold()`, "Restaurant ·
@@ -335,8 +357,8 @@ doesn't leave half of it empty; large at accessibility sizes.
   (`xmark`) as small bordered circular buttons (not glass: they sit on
   glass).
 - Address line, or "Near 3400 Fremont Ave N".
-- **Directions**: full-width `.glassProminent`, `.tint(.directionsFill)`,
-  label `directionsText`, mode symbol leading. Two lines that describe what Start
+- **Directions**: full-width `.primaryAction()`, label `primaryActionText`, mode
+  symbol leading. Two lines that describe what Start
   would take: "Calmer: 12–14 min, 3.4 mi" and "Meh → Breezy, mostly fewer
   unsignalled lefts", or "9–11 min, 2.9 mi" and "Chill, best balance we found"
   with no calmer route (`Docs/STRESS_MODEL.md`, Calm score). "Estimate, no live
@@ -347,55 +369,45 @@ doesn't leave half of it empty; large at accessibility sizes.
 
 ### 4.5 Route preview
 
-Current: places group, mode segmented, extra-time segmented with a caption,
-calmer and fastest rows, Start, "Why this route" in green
-(`redesign-portrait-dark.png`).
+A floating glass panel, content straight on the glass, split by hairlines, no
+cards. It opens sized to its content (`fitHeight`), with the route and map above.
+Top to bottom:
 
-Proposed, top to bottom:
-1. Header row: "Directions" `.headline` + close.
-2. From / To group (`panelFill`): origin row (Current location, or empty
-   "Choose start" in secondary with `location` badge when denied, per
-   `ux-round-1`), destination row, swap button trailing.
-3. **Mode picker**: segmented, order **Drive, Cycle, Walk**, each with its
-   symbol and text (icon-only fails at large type). `.sensoryFeedback(.selection)`.
-4. **Extra time**: `Picker(.menu)` row "Most extra time for a calmer route: 10 min ›"
-   at the medium detent (D5); full segmented at the large detent and in
-   landscape.
-5. **"Calmer means: Default ›"** row (`slider.horizontal.3`), directly under
-   extra time. Shows "Custom" when any preference differs from default.
-6. Route cards in one `panelFill` group: Calmer first, Fastest second. Each
-   card: 4-pt colour bar (`calmer`/`fastest`), title + "12 min · 5.2 km",
-   benefit line in `calmerText` for Calmer, "Estimate, no live traffic" for
-   Fastest, checkmark on the selected one. Selecting a card morphs the map
-   line opacity (existing code).
-7. **Start**: `.glassProminent` tinted, pinned under the scroll, with a bordered
-   **Why this route** capsule beside it (D13: green is not a link colour), stacked
-   at accessibility sizes. Pinned because a row below Start got clipped at the
-   default size. Default stop is 0.66 of the screen, so routes and both buttons
-   show without scrolling; accessibility sizes open large.
-8. **Calm bar**, in Why this route and at the preview's large stop: the five bands
-   left to right with their words, the landed band highlighted, a marker each for
-   fastest (above) and calmer (below), no number axis, scores in text. One row per
-   level at accessibility sizes.
+1. **Header.** Destination (`choose-destination`), distance, "From Current location"
+   (`choose-origin`, or an empty "Choose start"), "Estimate, no live traffic", close.
+2. **Big rating word and time range.** `route-calmer`, or `route-fastest` with no
+   calmer route. Then the rating bar, full width.
+3. **Reason line:** what it costs and its biggest gain, "1 min more than fastest, 2
+   fewer unsignalled lefts" (`reasonLine`).
+4. **Fastest row:** "Fastest: Meh", its time, its own smaller bar; a checkmark when
+   chosen. Selecting a route morphs the map line opacity.
+5. **Why this route** and **Calmer means** (`route-preferences`) as text buttons.
+6. **Pinned:** icon-only travel modes (Drive, Cycle, Walk, named for VoiceOver and
+   in the large content viewer) beside **Start** (`.primaryAction()`).
+
+Raised (0.72 of the screen, or large, or in landscape and at accessibility sizes)
+it also shows **swap** and the **Extra time** menu. Accessibility sizes open large.
 
 ```
 ╭────────────────────────────╮
-│ Directions              ✕  │
-│ ┌────────────────────────┐ │
-│ │ ◉ Current location     ⇅│ │
-│ │ ● Gas Works Park        │ │
-│ └────────────────────────┘ │
-│ [🚗 Drive|🚲 Cycle|🚶 Walk] │
-│ Extra time: 10 min       ›  │
-│ ⚙ Calmer means: Default  ›  │
-│ ┌────────────────────────┐ │
-│ │▌Calmer 12 min · 5.2 km ✓│ │
-│ │▌Avoids 2 unsignalled…   │ │
-│ │▏Fastest 12 min · 5.2 km │ │
-│ │▏Estimate, no live traffic│ │
-│ └────────────────────────┘ │
-│ (    Start    ) (Why this route) │
+│ Gas Works Park     3.4 mi ✕│
+│ From Current location      │
+│ Breezy           12–14 min │
+│ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░ │
+│ 1 min more than fastest,   │
+│ 2 fewer unsignalled lefts  │
+│ ────────────────────────── │
+│ Fastest: Meh      11–13 min│
+│ ▒▒▒▒▒▒▒▒░░░░░░░░░░░░░░░░░░ │
+│ ────────────────────────── │
+│ Why this route Calmer means│
+│ (🚗 🚲 🚶)   (    Start    ) │
+╰────────────────────────────╯
 ```
+
+**Behind the routes** (`RouteDetails`) is a solid `panel` sheet, since it's long
+reading: a row per route with word, "NN of 100" and bar (`CalmBar`, `calm-bar`),
+then the reasons and metrics.
 
 ### 4.6 Route preferences sheet ("Calmer means")
 
@@ -443,17 +455,14 @@ toolbar (`.confirmationAction`). No "safe", no scores.
 
 ### 4.7 Guidance
 
-Current: opaque white turn card with "Then:" strip, calm chip, square
-material buttons, opaque trip bar (`nav-guidance-light.png`).
-
-Proposed (portrait): the persistent sheet is hidden; guidance owns the
-screen.
-- **Turn banner**: glass, top, full width minus 8. Arrow in `calmerText`,
+Portrait: the persistent sheet is hidden; guidance owns the screen. Every surface
+is `.clear` with `glassVeil` (`.light`), and `glassVeilDense` with Increase Contrast.
+- **Turn banner**: glass, top, full width minus 8. Arrow in `.primary`,
   distance `.largeTitle.bold()`, instruction `.title3.semibold`. The "Then:"
   row sits inside the same glass with a hairline divider, not a second fill
   (no glass on glass, no opaque strip).
 - **Calm chip** below the banner, leading: glass capsule, `octagon` /
-  `light.beacon.max` + text in `calmerText` semibold (see 2, "On glass").
+  `light.beacon.max` + text in `.primary` semibold (see 2, "On glass").
 - **Mute, compass + overview**: one horizontal glass capsule (vertical in
   landscape), trailing, same row as the chip: three 44×44 plain buttons with
   dividers. The compass turns with the map's heading and, in the overview,
@@ -508,14 +517,10 @@ would push mute, compass and overview off it. Secondary text on glass uses
 
 ### 4.8 Arrival
 
-Current: opaque bottom sheet, green check, notes list, Done
-(`nav-arrived.png`).
-
-Decided, not the returning sheet: a bottom glass card inside `GuidanceView`, no
-grabber. Check badge (`directionsFill`), "You've arrived at Gas Works Park",
-summary line, trip notes in a `panelFill` group, **Done** as `.glassProminent`
-tinted `directionsFill`, "Times are estimates. No live traffic." and the voice
-tip. `.sensoryFeedback(.success)` fires on arrival.
+A bottom glass card inside `GuidanceView`, not the returning sheet, no grabber.
+Check badge on `glassWell`, "You've arrived at Gas Works Park", summary line, trip
+notes split by hairlines, **Done** as `.primaryAction()`, "Times are estimates. No
+live traffic." and the voice tip. `.sensoryFeedback(.success)` fires on arrival.
 
 ### 4.9 About and Acknowledgements
 
@@ -529,7 +534,7 @@ ODbL link, snapshot date, USGS elevation, and "Overture Maps Foundation" once
 Overture Places lands on `search/overture-places`),
 "Coverage" (current copy), Acknowledgements (MapLibre, Ferrostar BSD-3, OSM,
 USGS). Remove "not turn-by-turn navigation". Links in `label` colour with
-`arrow.up.forward`, not green.
+`arrow.up.forward`.
 
 ## 5. Motion
 
@@ -557,11 +562,10 @@ All through `Motion` (`App/PeoplemapsApp.swift`); no new durations.
   custom `glassEffect` views, read `accessibilityReduceTransparency` and use
   `Glass.identity` plus an opaque `.panel` background with the same shape.
   One helper, `View.floatingSurface(in:)`, does both so no view branches by
-  hand.
-- **Increase Contrast** (`colorSchemeContrast == .increased`): glass gets a
-  1-pt `separator` border (system controls do this themselves); `calmer`
-  route line widens by 1 pt; category glyphs stay as specified (all
-  ≥4.5:1).
+  hand. The sheet gets a solid `panel` (`sheetBackdrop`).
+- **Increase Contrast** (`colorSchemeContrast == .increased`): glass takes
+  `glassVeilDense` and a 1-pt `separator` border (system controls do this
+  themselves); `calmer` route line widens by 1 pt.
 - **Dynamic Type**: test at `.large`, `.xxxLarge` and `.accessibility3`.
   Rows wrap, never truncate place names past two lines; trip bar stacks;
   preference segmented controls move under their label. The Favourites row
@@ -569,36 +573,34 @@ All through `Motion` (`App/PeoplemapsApp.swift`); no new durations.
   lines.
 - **VoiceOver order**: home: search field, favourites (each "Gas Works
   Park, park"), the Add badge ("Add a favourite"), recents, About, then
-  map controls (locate, fit), then the map. Preview: close, from, to, swap,
-  mode, extra time, Calmer means, calmer card, fastest card, Start, Why this
-  route. Guidance: banner (distance + instruction + then), calm note, trip
+  map controls (locate, fit), then the map. Preview: to, from, close, calmer
+  route, fastest route, Why this route, Calmer means, modes, Start; swap and extra
+  time when raised. Guidance: banner (distance + instruction + then), calm note, trip
   stats, End, mute, overview. Use `accessibilitySortPriority` on the sheet so
   it comes before the map controls. Category badges are hidden; the category
   word is in the row label.
-- **Contrast**: 4.5:1 for all text (table in section 2), 3:1 for route lines
-  and badges against the map.
+- **Contrast**: 4.5:1 for all text (section 2), 3:1 for route lines and badges
+  against the map. Rating fills are the one accepted exception (section 2, Rating).
 - Every control keeps its current `accessibilityIdentifier` so UI tests keep
   working; new controls get one (`locate`, `add-favourite`, `extra-time-menu`,
   `route-preferences`, `preference-<factor>`, `reset-preferences`).
 
 ## 6a. Glass audit, November 2026
 
-Every floating surface against section 1, from captures in both appearances, on the
-all-Seattle map.
+Every floating surface, from captures in both appearances on the all-Seattle map,
+after the owner phone-tested `.regular` twice and couldn't see glass.
 
 | Surface | Glass | Finding |
 |---|---|---|
-| Sheet | system, no custom background | Real glass. Markers beneath it blur through as soft colour, as they should. |
-| Map buttons (home, guidance) | `.regular` | Was inert under the finger. Now `.interactive()`. |
-| Credit | `.regular` | Text only, so not interactive. Was hidden behind the sheet; now above it. |
-| Turn banner, calm chip, trip bar, arrival card | `.regular` in one container | Fine. Reading text stays short or on `panelFill`. |
-| Re-centre pill | `.glass` button | Fine: over the map, not on the sheet. |
-| Landscape card | `.regular` | Fine. Lists are on `panelFill`. |
-| Directions, Start, Done | `.glassProminent` in the sheet | The one allowed glass-in-glass: the primary action (principle 6). |
-| Reduce Transparency | `floatingSurface` | Map buttons and credit vanished in dark mode, `panel` being nearly `mapLand`. The outline guidance had in its own copy of this helper is now in the helper. |
-
-Where glass reads milky in light mode, it's the pale land under it: glass takes its
-colour from what's behind. The map palette decides that, not the glass.
+| Sheet at its partial stops | `UIGlassEffect` per detent (`SheetGlass`), `glassSheetVeil` over it | Water and land colour clearly come through. `.regular` and `.clear` rendered the same here in the Simulator. |
+| Sheet at large | solid `panel` | Long lists and the keyboard. |
+| Home at rest | no sheet; `.clear` chips, capsule and More | Refracts the map; the dark map's streets show through. |
+| Map buttons | `.clear`, `.interactive()` | |
+| Credit, turn banner, calm chip, trip bar, landscape card, arrival card | `.clear` + `glassVeil` | |
+| Re-centre pill | `.glass` button | Over the map, not on the sheet. |
+| Directions, Start, Done | `.primaryAction()` | The one allowed glass-in-glass: the primary action (principle 6). |
+| Behind the routes, About, pickers | solid or system modal | Reading, not glance. |
+| Reduce Transparency | `floatingSurface`, `sheetBackdrop` | Solid `panel`, with an outline. |
 
 ## 7. Implementation plan
 
@@ -651,9 +653,10 @@ Run `python3 Scripts/generate_project.py` in any PR that adds an `App/` file
 
 ## 8. Decided 30 October 2026
 
-1. **Peek detent:** search field plus the Favourites row (4.2).
-2. **Parks colour:** teal-green `#0B7A6B`, so green means only "calmer".
+1. **Home at rest:** search field plus the favourite chips, floating with no sheet
+   (4.2, changed November 2026).
+2. **Parks colour:** a muted green; green no longer means calmer (section 2).
 3. **About:** moves from the map buttons to the home sheet's footer.
-4. **Extra time:** a menu at the medium detent; segmented at the large
-   detent and in landscape.
+4. **Extra time:** a menu on the raised preview and in landscape, not on the panel
+   as it opens (changed November 2026).
 5. **iPad:** iPhone only for now.
