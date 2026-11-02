@@ -4,7 +4,8 @@ Implemented 27 October 2026 in `Core/StressModel.swift`, with data from
 `Scripts/import_osm.py`. Differences from the first draft: walking has no
 per-turn cost (sidewalk geometry makes turn counts noise), and the whole-route
 factors (stop-and-go clusters, short freeway hops, side-street shortcuts) are
-scored on each candidate but are not visible to the search itself.
+scored on each candidate but are not visible to the search itself. Drive times
+were recalibrated on 31 October 2026 against a real trip (see Time).
 
 ## What we are optimizing
 
@@ -39,6 +40,83 @@ Stress means something different in each mode, so each mode has its own model:
    no sidewalk). Route stress = sum of events + sum of exposure.
 6. **Time stays honest.** Stress never changes the time estimate. Time has its
    own model (speeds, signal delay, and grade for bike and walk).
+
+## Time
+
+Time has its own model, `seconds(_:mode:)` and `transitionSeconds` in
+`Core/StressModel.swift`. Stress never changes it. Every number here is an
+estimate: there is no live traffic, signal timing, bridge schedule or time of
+day, and the UI says so.
+
+### Drive
+
+Each edge is driven at a free-flow speed, and every junction charges its
+slowdown once. The speed carries no urban factor; signals, stops and turns are
+what slow a Seattle driver down, and they are counted where they happen.
+
+| Road | Free-flow speed (mph) | Note |
+| --- | --- | --- |
+| Any road with a posted limit | the posted limit | 99.5% of non-service drive edges (89% of all drive edges) have `maxspeed`; Seattle posts 25 on arterials and 20 on residential streets |
+| motorway | 60 | capped at 43 (70 km/h), see below |
+| motorway_link | 35 | |
+| trunk | 40 | Aurora |
+| trunk_link | 30 | |
+| primary, secondary, tertiary and their links | 25 | the citywide arterial limit |
+| residential, unclassified | 20 | the citywide residential limit |
+| living_street, service | 10 | alleys, parking aisles |
+| anything else drivable | 15 | |
+
+| Junction | Delay (s) | Reasoning |
+| --- | --- | --- |
+| Signal | 15 | Expected value: red about half the time, for an average wait near 30 s |
+| All-way stop | 10 | Stop, then take turns |
+| Stop sign | 8 | A full stop and restart |
+| Yield | 3 | |
+| Unsigned cross street when leaving a local street (4 or more legs) | 3 | The residential grid mostly has no signs; you slow to look, and to yield to the right |
+| Turn (over 35° onto another way) | 5 | Slowing through the corner |
+
+**Why this table.** The first model had the same shape but double-counted.
+Its class table (motorway 70, trunk 50, primary 35, secondary 32, tertiary 28,
+residential 22, service 12) read like mph but was divided by 3.6, so it was
+km/h; posted limits were multiplied by 0.8 and then capped by that table; and
+the junction delays were added on top. Aurora (40 mph posted) came out at
+31 mph, a 25 mph arterial at 20 mph and a 20 mph residential street at 14 mph.
+A real trip on 31 October 2026, 3rd Ave NW and NW 43rd St to Bell St in
+Belltown, took 10 minutes door to door; the old model estimated 12 minutes for
+its fastest route (19 mph average) and 14 for the calmer one. The new table
+gives 10.5 minutes (21 mph average, 9 signals, 11 turns) without any trip
+being special-cased. Across the four audited drive trips, estimates fell by 9
+to 17 percent and three of the four fastest routes changed: with speeds at the
+posted limit and junctions dearer, the search now prefers through roads with
+fewer stops, which is also what a local does. Kerry Park to Gas Works now
+runs over the Fremont Bridge instead of Aurora, and no other route the search
+finds gains enough to offer.
+
+**The 70 km/h cap.** `NativeRouter`'s A* heuristic divides straight-line
+distance by 70 km/h, and A* is only exact when no edge is faster than that. So
+drive speeds are capped at 43 mph (`driveTopMph`) until the router reads its
+top speed from the time model, which would let motorways use their posted 60.
+Inside the bundled bounds the motorways are I-5 (posted 60) and SR 99 south
+of the Aurora Bridge (posted 40), and 43 is not far from a midday estimate on
+either.
+
+**Not in the estimate.** Traffic queues, signal coordination, waiting for a
+gap on an unsignalled left (charged as stress, not time), bridge openings and
+finding parking. Each would need data the app does not have offline; the first
+is the one most worth adding when real arrival times are recorded.
+
+### Bike
+
+18 km/h on streets, 14 on shared paths, 11 on tagged rough surfaces, plus
+about 3 s per metre climbed and a little back on descents, never faster than
+32 km/h. Signals add 8 s, stop signs 3, yields 1, turns 2. Checked on
+31 October 2026: these are km/h as intended, so bike times were left alone.
+
+### Walk
+
+1.4 m/s on the flat plus 2.5 s per metre climbed, close to Tobler's hiking
+function for city grades; 0.6 m/s on steps. A signalled crossing of anything
+busier than a side street waits 25 s. Unchanged.
 
 ## Drive
 
@@ -110,7 +188,7 @@ same distance by about 100 equivalent seconds, even at equal time.
 Built on Level of Traffic Stress (LTS), the standard method from Mekuria,
 Furth and Nixon (2012). It rates each street 1 to 4 from lanes, speed, bike
 facility and parking. Seattle's OSM data has the inputs: lanes (99%), maxspeed
-(98%), cycleway tags (54% of arterials) and parking (about 35% of arterials).
+(99.5% of non-service drive edges), cycleway tags (54% of arterials) and parking (about 35% of arterials).
 
 ### Exposure
 
@@ -131,7 +209,7 @@ facility and parking. Seattle's OSM data has the inputs: lanes (99%), maxspeed
 | Left turn on an arterial without a signal | 90 | At a signal: 15 |
 | Leaving a bike facility onto a street with no facility | 20 | Network gaps |
 | Stop sign | 10 | Stopping costs a cyclist momentum, more than it costs a driver |
-| Signal | 8 | Expected cost |
+| Signal | 14 | Waiting at a red beside traffic, then pulling away from it. Dearer than a stop sign (10), which is a quick stop and go. Stress only: the time estimate still adds 8 s |
 | Stop or signal on an uphill grade over 6% | +20 | **Needs elevation data**; restarting uphill is the worst kind of stop |
 | Turn (a decision) | 4 | |
 | Movable bridge | 15 | |
@@ -300,13 +378,101 @@ to be argued with evidence, not a preference.
 
 ## Choosing and explaining routes
 
+### What ships
+
+Changed on 1 November 2026, after the owner's call: the target audience would
+often add 5 to 10 minutes for a calmer route, so bias for calm.
+
+**Search.** One fastest search, then six searches minimizing `seconds + weight ×
+stress` at weights 0.25, 0.5, 1, 2, 4 and 8. The extra-time limit does not bound
+or steer these. It only filters their results afterwards, so 2, 5 and 10 minutes
+cost the same router time; "None" runs the fastest search alone.
+
+**Selection** (`NativeRouter.selectCalmer`). A candidate can be the calmer route
+when it is a different route from the fastest, fits the limit (default 10
+minutes), has at least 5% and 30 equivalent seconds less stress, and removes more
+than 15 equivalent seconds of stress per extra minute. Of those, the one with the
+most `stress saved − 0.25 × extra seconds` wins.
+
+**Nearly identical routes count.** The owner's call: "yes show them, the goal is
+that users trust that the route were giving them is the best option even if its
+exactly the same as the fastest route." A rule that hid any route sharing 90% of
+its length with the fastest is gone, because one block can be the whole point:
+DIY Tea Lab to Lassi and Spice by car shares 96% with the fastest route, costs
+seconds, and takes stress from 668 to 366.
+
+**When no calmer route qualifies** (`NoCalmerFinding`), the preview says what the
+router knows, and only that. "Calmest" is claimed only when no route it compared
+has less stress.
+
+| What the router saw | Title | Detail | Sampled trips, drive / bike / walk |
+| --- | --- | --- | ---: |
+| Extra time is None, so only the fastest search ran | Fastest route only | Extra time is None, so nothing else was checked. | not in the sample |
+| All six calm-weighted searches found this route | Already the calmest we found | By our estimates, every search found this route. | 7 / 3 / 0 |
+| Other routes compared, none with less stress | Already the calmest we found | Calmest of N routes compared, by our estimates. | 3 / 0 / 0 |
+| Less stress exists, but only beyond the limit | Calmest within this extra time | By our estimates, calmer routes take N+ min more. | 0 / 0 / 0 |
+| Less stress exists inside the limit, but under the floors or not worth its time, and nothing beyond the limit clears them | Best balance we found | By our estimates, other routes gain too little. | 4 / 3 / 2 |
+| Too little gain inside the limit, but a route beyond it clears the floors and the price | Best balance within this extra time | By our estimates, a clearly calmer route takes N+ min more. | 0 / 0 / 0 |
+
+The last row needs a limit shorter than the sample's 10 minutes: Kerry Park to
+Gas Works by bike says it at 2 and 5 minutes, and offers the route at 10.
+
+These describe the candidates only. The search does not prove no calmer route
+exists, and the Why this route sheet says so.
+
+**What the app shows first.** When a calmer route exists the preview lists it
+first and selects it, resetting on every new request, and Start follows the
+selection. This already leaned calm and did not change, including for routes
+that cost only seconds. The place card's Directions button still shows the
+fastest route's time, with the calmer route's cost on the line above it.
+
+**Why the 15 per minute.** The limit is a maximum, not a target, and the old rule
+took the least stressful candidate inside it however little that last stretch
+bought. At 10 minutes that means paying for scraps: Ballard Library to Hyson by
+car would go from 2 extra minutes at stress 848 to 5.6 extra minutes at stress
+828. Rule 4 prices one equivalent second at one second, so a neutral rate would be
+60 per minute; 15 is the bias for calm. An unsignalled left (120) can justify up
+to 8 extra minutes here, against 2 in the model alone, which fits the owner's 5
+to 10. Netting the time, rather than only filtering on it, is what stops a slower
+route winning when a nearly-as-calm quicker one exists. Like every weight here,
+15 is a hypothesis.
+
+Measured on 150 seeded random pairs of bundled places, in each mode. Extra time
+is for trips that show a calmer route; stress saved is against the fastest route.
+
+| Mode | Rule, limit | Calmer shown | Extra min, median / p90 / max | Stress saved, median |
+| --- | --- | ---: | ---: | ---: |
+| Drive | old, 5 min | 126 | 1.5 / 3.0 / 4.6 | 335 (44%) |
+| Drive | old, 10 min | 126 | 1.7 / 3.7 / 8.0 | 343 (45%) |
+| Drive | **new, 10 min** | 136 | 1.3 / 3.0 / 8.0 | 313 (44%) |
+| Bike | old, 5 min | 142 | 2.1 / 4.4 / 5.0 | 908 (49%) |
+| Bike | old, 10 min | 143 | 3.3 / 8.4 / 9.5 | 1016 (54%) |
+| Bike | **new, 10 min** | 144 | 2.9 / 8.1 / 9.3 | 1016 (53%) |
+| Walk | old, 5 min | 146 | 3.3 / 4.6 / 5.0 | 504 (50%) |
+| Walk | old, 10 min | 148 | 5.7 / 9.0 / 10.0 | 639 (59%) |
+| Walk | **new, 10 min** | 148 | 5.1 / 8.4 / 9.7 | 639 (59%) |
+
+"Old" is the least stressful candidate, with the 90% overlap rule; "new" is the
+rule above. Dropping the overlap rule adds 10 drive trips and 1 bike trip, and
+changes the pick on 4 more drives. The drive median falls because those added
+trips often save less, not because any trip got worse.
+
+Against the old rule at 10 minutes, the new one keeps nearly all the extra calm
+for less time: mean stress change from the old 5 minute default of −18, −107 and
+−99 (drive, bike, walk) rather than −6, −108 and −104, at a mean of 0.12, 1.47
+and 2.02 extra minutes rather than 0.24, 1.68 and 2.50. Trips that end up less
+calm than the old default give up at most 39 equivalent seconds. A limit beyond
+10 adds little: at 20 minutes under the old rule, drive is unchanged, bike saves
+54% either way, and walk goes from 59% to 65% for 2.6 more minutes at the median.
+`Evidence/route-audit.json` (`peoplemaps-audit`) has per-trip numbers.
+
+### Still to consider
+
 - **Use every best trade-off, not six fixed weights.** For each trip, compute
   the routes where you can't get less stress without more time (the Pareto
   frontier). The extra-time control moves along that curve instantly.
 - **Budget in minutes or percent.** The thread asked for a "least complicated"
   button within about 125% of the fastest time. Offer both.
-- **Real alternatives only.** A calmer route must differ meaningfully in path,
-  not just one block.
 - **Say the trade both ways.** Show the 2 or 3 biggest differences, benefits
   and costs together: "Avoids 2 unsignalled lefts on Aurora · +3 min · 1 more
   turn." Each factor says whether it came from map data or was estimated.

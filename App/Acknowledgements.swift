@@ -7,13 +7,15 @@ struct AcknowledgementsView: View {
             Section {
                 credit("OpenStreetMap", "© OpenStreetMap contributors. Streets, paths and places, under the Open Database License 1.0.",
                        link: "https://www.openstreetmap.org/copyright")
+                credit("Overture Maps Foundation", "Places: Overture Maps Foundation (release 2026-10-21), with data from Meta, Microsoft, BrightQuery, Foursquare, AllThePlaces, Uberall, Birdeye and DAC. Licences: CDLA Permissive 2.0, Apache 2.0, CC0 1.0. Foursquare data © Foursquare Labs, Inc. Combined with OpenStreetMap data in the search index, provided as is.",
+                       link: "https://docs.overturemaps.org/attribution/")
                 credit("USGS 3D Elevation Program", "Elevation from the U.S. Geological Survey 3DEP ground model, public domain.",
                        link: "https://www.usgs.gov/3d-elevation-program")
-            } header: { Text("Data") }
+            } header: { header("Data") }
             Section {
                 licence("MapLibre Native", "Map rendering · BSD 2-Clause", file: "MapLibre-LICENSE")
                 licence("Ferrostar", "Turn-by-turn navigation core · BSD 3-Clause, © Stadia Maps", file: "Ferrostar-LICENSE")
-            } header: { Text("Software") } footer: {
+            } header: { header("Software") } footer: {
                 Text("Ferrostar's navigation core includes open-source Rust libraries, each under the MIT, Apache 2.0 or MPL 2.0 licence. Apple frameworks and SF Symbols are used through the iOS SDK.")
             }
         }
@@ -21,11 +23,15 @@ struct AcknowledgementsView: View {
         .navigationTitle("Acknowledgements").navigationBarTitleDisplayMode(.inline)
     }
 
+    private func header(_ title: String) -> some View {
+        Text(title).font(.footnote.weight(.semibold)).textCase(nil).accessibilityAddTraits(.isHeader)
+    }
+
     private func credit(_ name: String, _ detail: String, link: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(name).font(.body.weight(.semibold))
             Text(detail).font(.subheadline).foregroundStyle(.secondary)
-            Link("Licence and attribution", destination: URL(string: link)!).font(.subheadline)
+            ExternalLink(title: "Licence and attribution", url: URL(string: link)!, font: .subheadline)
         }
     }
 

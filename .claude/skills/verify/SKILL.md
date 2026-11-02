@@ -24,6 +24,7 @@ Scripts/verify.sh --fast     # inner loop only: skips data reproduction and the 
 | `Core/`, `Tests/`, `Package.swift` | `verify.sh` | anywhere |
 | `Scripts/*.py`, `Data/` | `verify.sh` (data must reproduce byte for byte; if outputs changed on purpose, rerun `python3 Scripts/import_osm.py` and commit them with the code) | anywhere |
 | `App/`, `UITests/`, project generator | `verify.sh --ui`, plus screenshots (the `simulator-evidence` skill) for anything visible | macOS only |
+| `Backend/` | `npm test` and `npx tsc --noEmit` in `Backend/` (`verify.sh` does not cover it; CI runs it in the `backend` job) | anywhere with Node 22.13+ |
 | Docs only | read the rendered Markdown; check that every command and path in it exists | anywhere |
 | `.claude/`, `CLAUDE.md`, `.github/` | `verify.sh --fast`, and trigger the skill or hook you changed once | anywhere |
 

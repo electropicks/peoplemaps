@@ -26,7 +26,7 @@ newer than the routing extracts; the app shows it as "OpenStreetMap, Oct 2026".
 Coverage: 47.615°–47.678° N, 122.390°–122.300° W. Relations may reference source
 geometry outside this box; routing edges are kept only when all their geometry
 lies inside it. Water and park polygons are clipped. No public map tiles were
-downloaded. Search covers named places and OSM street addresses inside the box.
+downloaded. Search covers named places, Overture Maps businesses (below) and OSM street addresses inside the box.
 
 ## Street addresses: OpenStreetMap only
 
@@ -51,6 +51,47 @@ snapshot is archived here. OSM covers the area about as well already: 51,803 OSM
 objects with `addr:housenumber` against 50,529 County points in the same box
 (counts taken 2026-10-28), much of it from the earlier, permitted Seattle import
 into OSM.
+
+## Overture Maps Places
+
+`Data/seattle-overture-places.json.gz` is a bounded extract of the Overture Maps Foundation
+Places theme, release 2026-10-21.0, for 47.49–47.74 N, 122.44–122.24 W, fetched on 2026-10-30
+with `Scripts/fetch_overture.py`. It keeps each place's name, position, categories, confidence,
+operating status, freeform address and sources (dataset, record ID, licence, update time).
+The search index uses the name, position, category and source only; its addresses come from
+OpenStreetMap alone.
+It holds no phone numbers, emails, websites, social links or brands. Its SHA-256 is in
+`provenance.json`. The Places theme contains no OpenStreetMap data; each record is licensed by
+its source, and the importer keeps a record only if its first source is one of these under the
+licence shown:
+
+| Source | Licence | Rows in the shipped index |
+|---|---|---|
+| Meta | CDLA Permissive 2.0 | 3,034 |
+| BrightQuery | CDLA Permissive 2.0 | 2,514 |
+| Foursquare | Apache 2.0, "Copyright 2024 Foursquare Labs, Inc. All rights reserved" | 1,424 |
+| Microsoft | CDLA Permissive 2.0 | 1,404 |
+| AllThePlaces | CC0 1.0 | 243 |
+| Uberall | CDLA Permissive 2.0 | 15 |
+| Birdeye | CDLA Permissive 2.0 | 13 |
+| DAC | CDLA Permissive 2.0 | 8 |
+
+Attribution per source: https://github.com/OvertureMaps/docs/blob/main/docs/_generated_attribution.mdx
+(Places section). The licence texts are in `Data/licenses/`: `CDLA-Permissive-2.0.md`,
+`Apache-2.0.txt`, and Foursquare's `Foursquare-NOTICE.txt` (from
+https://opensource.foursquare.com/places-notice-txt/, with our notice of changes). The Foursquare
+data was transformed to the Overture schema by Overture on 2026-03-18; we filtered it further to the
+fields above and to Seattle. CC0 data needs no notice. Sources Overture attributes but that have
+no rows in the shipped index (PinMeTo, Krick, RenderSEO, OpenTravel) are not listed above.
+
+Merging these places with OpenStreetMap (removing duplicates, taking a missing category from
+Overture) makes `Core/Resources/seattle-search.sqlite.gz` a derivative database. The combined
+index is distributed under ODbL 1.0, with the attribution above and "© OpenStreetMap
+contributors"; every Overture-sourced row is identifiable by its `source` column (for example
+`Overture · Foursquare`, entry IDs starting `overture/`), and the OSM rows are marked
+`OpenStreetMap`. The data is provided as is, without warranties or conditions of any kind:
+records may be out of date, mislocated or wrongly categorised, and a business shown may have
+closed. The app shows the release date, not the age of each record.
 
 Rebuild derived data offline with `python3 Scripts/import_osm.py`. The queries
 are retained here for provenance, not called by the app. Any future refresh
