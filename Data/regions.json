@@ -1,5 +1,5 @@
 {
-  "release": "data-seattle-all-2026-11",
+  "release": "data-seattle-all-2026-11b",
   "regions": {
     "seattle-all": {
       "bbox": [
@@ -10,16 +10,16 @@
       ],
       "files": {
         "expected/provenance.json": {
-          "bytes": 19469,
-          "sha256": "ed83d5eb826849794779ceda2f6cb3c977d1c7bebb75a83e82e4ea776b0da255"
+          "bytes": 20002,
+          "sha256": "4ca2425ca41f23d7863515143a7038d2ee0acf37dcbe40dd79ef27a0efb40ed6"
         },
         "expected/seattle-graph.bin": {
           "bytes": 61490688,
           "sha256": "40129cc2973bef5a2d0933013807c29df5f4b0463af4bde27fcebe8eb731b0f1"
         },
-        "expected/seattle-map.geojson": {
-          "bytes": 15699572,
-          "sha256": "4199454ba63c852bf55db98638696d28b42668cc7cb6aa958c32450698e0d2f8"
+        "expected/seattle-map.pmtiles": {
+          "bytes": 3159741,
+          "sha256": "268851fc094f2f655da97b324a5025c1375de6a33cff5845657aad64d86c399e"
         },
         "expected/seattle-search.sqlite.gz": {
           "bytes": 16408517,
@@ -52,7 +52,7 @@
       },
       "outputs": [
         "seattle-graph.bin",
-        "seattle-map.geojson",
+        "seattle-map.pmtiles",
         "seattle-search.sqlite.gz",
         "provenance.json"
       ]
