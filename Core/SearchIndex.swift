@@ -163,6 +163,17 @@ public final class SearchIndex: @unchecked Sendable {
         return found
     }
 
+    /// Every named place, for `PlaceMarkers`. A full scan, so call it once and off the main thread.
+    public func markerCandidates() -> [PlaceMarker] {
+        lock.lock(); defer { lock.unlock() }
+        var found: [PlaceMarker] = []
+        Self.rows(db, "SELECT osm, name, category, lat, lon, weight FROM entries WHERE kind = 'place'", []) {
+            found.append(PlaceMarker(id: Self.text($0, 0) ?? "", name: Self.text($0, 1) ?? "", raw: Self.text($0, 2) ?? "",
+                                     lat: sqlite3_column_double($0, 3), lon: sqlite3_column_double($0, 4), weight: Int(sqlite3_column_int($0, 5))))
+        }
+        return found
+    }
+
     /// The indexed entry for an OSM ID ("relation/1047789"), which carries the newest address; nil when not indexed.
     public func place(id: String) -> Place? {
         lock.lock(); defer { lock.unlock() }

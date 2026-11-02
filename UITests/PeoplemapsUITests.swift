@@ -724,6 +724,96 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["recenter"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].exists)
     }
+    /// Any marker the map says is on screen.
+    @MainActor private func marker(_ app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'map-place-'")).firstMatch
+    }
+    @MainActor private func waitForMarkers(_ app: XCUIApplication) {
+        let ready = NSPredicate { _, _ in !self.probe(app, "debug-place-markers").isEmpty }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: ready, object: nil)], timeout: 20), .completed, "No marker feed")
+    }
+    @MainActor func testTappingAPlaceMarkerOpensItsCardAndRoutesClearTheMarkers() {
+        let app = launchHome(location: "47.6505,-122.35")
+        waitForMarkers(app)
+        XCTAssertTrue(marker(app).waitForExistence(timeout: 10), "Neighbourhood zoom shows markers, at \(probe(app, "debug-zoom"))")
+        // One in the open: not under the map buttons at the top right.
+        let found = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'map-place-'")).allElementsBoundByIndex
+            .first { $0.frame.midY > 200 && $0.frame.midX < 300 }
+        guard let found else { return XCTFail("No marker in the open") }
+        let label = found.label
+        // A plain tap on the map where the marker is, the way a finger gets there.
+        found.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(app.buttons["close-place"].waitForExistence(timeout: 5))
+        let name = String(label[..<(label.range(of: ",", options: .backwards)?.lowerBound ?? label.endIndex)])
+        XCTAssertTrue(app.staticTexts[name].exists || app.staticTexts[String(name.prefix(while: { $0 != "," }))].exists, "\(label) opened another card")
+        capture("place-from-marker", app: app)
+        XCTAssertTrue(app.buttons["directions"].waitForExistence(timeout: 5))
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["start-navigation"].waitForExistence(timeout: 20))
+        XCTAssertFalse(marker(app).exists, "Markers stay off the map while comparing routes")
+    }
+    @MainActor func testZoomedOutMapHasNoMarkers() {
+        let app = launchHome()
+        waitForMarkers(app)
+        Thread.sleep(forTimeInterval: 2)
+        XCTAssertLessThan(Double(probe(app, "debug-zoom")) ?? 99, 13.5)
+        XCTAssertFalse(marker(app).exists)
+    }
+    /// The credit is a licence term, so it has to clear the sheet, and the sheet has to hold all of what it stops for,
+    /// at each height the fit stop can take.
+    @MainActor func testPeekHoldsItsContentAndLeavesTheCreditVisible() {
+        func check(_ app: XCUIApplication, last: XCUIElement, _ state: String) {
+            Thread.sleep(forTimeInterval: 1)
+            let edges = probe(app, "debug-sheet").split(separator: " ").compactMap { Double($0) }
+            XCTAssertEqual(edges.count, 3, state)
+            let credit = app.links["Map data © OpenStreetMap contributors"]
+            XCTAssertTrue(credit.exists, state)
+            XCTAssertLessThanOrEqual(credit.frame.maxY, edges[0], "\(state): credit behind the sheet")
+            let field = app.buttons["search-field"]
+            XCTAssertGreaterThanOrEqual(field.frame.minY, edges[0], state)
+            XCTAssertLessThanOrEqual(field.frame.maxY, edges[1], "\(state): field cut off")
+            XCTAssertLessThanOrEqual(last.frame.maxY, edges[1], "\(state): content cut off")
+            print("sheet \(state): \(probe(app, "debug-sheet")) credit \(credit.frame) field \(field.frame) last \(last.frame)")
+            capture("peek-\(state)", app: app)
+        }
+        let app = launchHome()
+        check(app, last: app.staticTexts["home-hint"], "first-launch")
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["close-preview"].waitForExistence(timeout: 5))
+        app.buttons["close-preview"].tap()
+        XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
+        check(app, last: app.buttons["search-field"], "recents-only")
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        app.buttons["favourite"].tap()
+        app.buttons["close-place"].tap()
+        XCTAssertTrue(app.buttons["add-favourite"].waitForExistence(timeout: 5))
+        check(app, last: app.buttons["add-favourite"], "favourites")
+    }
+    /// Frame times while panning a zoomed-in map, for `Docs/PERFORMANCE.md`. Skipped unless `TEST_RUNNER_PEOPLEMAPS_PAN=1`;
+    /// `TEST_RUNNER_PEOPLEMAPS_NO_MARKERS=1` measures the map without markers to compare.
+    @MainActor func testPanFrameTimes() throws {
+        let environment = ProcessInfo.processInfo.environment
+        try XCTSkipUnless(environment["PEOPLEMAPS_PAN"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_PAN=1")
+        let off = environment["PEOPLEMAPS_NO_MARKERS"] == "1"
+        let app = launchHome(location: "47.6155,-122.3380", extra: ["--measure-frames"] + (off ? ["--no-place-markers"] : []))
+        if !off { waitForMarkers(app) }
+        let window = app.windows.firstMatch
+        // About zoom 16, Downtown: the most markers the map ever has in view.
+        window.pinch(withScale: 2.2, velocity: 2)
+        Thread.sleep(forTimeInterval: 1)
+        window.pinch(withScale: 2.2, velocity: 2)
+        Thread.sleep(forTimeInterval: 2)
+        let middle = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4))
+        let offsets = [CGVector(dx: -260, dy: 120), CGVector(dx: 260, dy: -120), CGVector(dx: 180, dy: 220), CGVector(dx: -180, dy: -220)]
+        for round in 0..<32 {
+            middle.press(forDuration: 0.02, thenDragTo: middle.withOffset(offsets[round % offsets.count]), withVelocity: .fast, thenHoldForDuration: 0)
+        }
+        Thread.sleep(forTimeInterval: 1)
+        let line = "pan frames \(off ? "without" : "with") markers at z\(probe(app, "debug-zoom")): \(probe(app, "debug-frames")); feed \(probe(app, "debug-place-markers"))"
+        print(line)
+        let attachment = XCTAttachment(string: line); attachment.name = "pan-frames"; attachment.lifetime = .keepAlways; add(attachment)
+    }
     @MainActor func testHomeSaysWhereToWithAHintAndNoRoutes() {
         let app = launchHome()
         XCTAssertEqual(app.buttons["search-field"].label, "Where to?")

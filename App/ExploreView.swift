@@ -92,6 +92,11 @@ struct ExploreView: View {
     @State private var asking = false
     @State private var notice: LocationNotice?
     @State private var saved = SavedPlacesStore()
+    /// The map's place markers, ready shortly after launch; home never waits for them.
+    @State private var markerFeed: PlaceMarkerFeed?
+    /// What the map last drew, for VoiceOver.
+    @State private var visiblePlaces: [VisiblePlace] = []
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @State private var preferences = RoutePreferencesStore()
     @AppStorage("voiceMuted", store: ExploreView.voiceStore) private var voiceMuted = false
     @Environment(\.scenePhase) private var scenePhase
@@ -211,6 +216,43 @@ struct ExploreView: View {
     private func endNavigation() { navigator.stop(); show(.preview) }
     private func finishNavigation() { navigator.stop(); show(.home) }
 
+    /// Places show while browsing, never over a route or guidance.
+    private var showsPlaces: Bool { screen == .home || screen == .search || selectedPlace != nil }
+    /// Map symbols are invisible to VoiceOver, so the ones on screen get elements of their own. UI tests read them too.
+    private var reportsPlaces: Bool { voiceOver || Motion.off }
+    /// `--no-place-markers`, in debug builds: the map without markers, to measure what they cost.
+    private static var markersOff: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("--no-place-markers")
+        #else
+        return false
+        #endif
+    }
+
+    private func openMarker(_ id: String) {
+        guard showsPlaces, let place = search.place(id: id) else { return }
+        open(place)
+    }
+
+    /// One element per marker on screen, at its place on the map. Taps fall through to the map, which is what opens the card.
+    private var placeElements: some View {
+        ZStack(alignment: .topLeading) {
+            Color.clear
+            ForEach(visiblePlaces) { place in
+                Color.clear.frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .accessibilityElement()
+                    .accessibilityLabel("\(place.name), \(place.kind)")
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction { openMarker(place.id) }
+                    .accessibilityIdentifier("map-place-\(place.id)")
+                    .position(place.point)
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
     /// Every change of screen goes through here, so the sheet's stop always belongs to the screen's detents.
     private func show(_ next: Screen) {
         if screen == .home, next != .home { homeStop = stop }
@@ -270,8 +312,9 @@ struct ExploreView: View {
     // MARK: Sheet stops
 
     private let previewDetent = PresentationDetent.fraction(0.66)
-    /// The system adds room for the home indicator itself. Never so tall that the map disappears; past that it scrolls.
-    private var fitHeight: CGFloat { min(fitContent + 6, screenHeight * 0.7) }
+    /// `fitContent` plus the padding `scrolling` puts around it, or the last of the content is cut off by the sheet's edge.
+    /// Never so tall that the map disappears; past that it scrolls.
+    private var fitHeight: CGFloat { min(fitContent + Layout.sheetTop + Layout.sheetBottom, screenHeight * 0.7) }
     private func detent(_ stop: Stop) -> PresentationDetent {
         switch stop {
         case .fit: .height(fitHeight)
@@ -298,10 +341,12 @@ struct ExploreView: View {
             ZStack {
                 SeattleMap(comparison: screen == .preview ? session.comparison : nil, selectedCalmer: selectedCalmer, recenter: recenter, locate: locateCount, selected: mapSelection,
                            user: userInCoverage, userHeading: wantsCompass ? userHeading : nil, coverage: coverage, onLongPress: dropPin, guidance: guidance,
-                           onCameraGesture: { if guiding { camera.pan() } else if centred { centred = false } }, padding: mapPadding(geo))
+                           onCameraGesture: { if guiding { camera.pan() } else if centred { centred = false } }, padding: mapPadding(geo),
+                           markerFeed: markerFeed, showsPlaces: showsPlaces, onPlaceTap: openMarker, reportsPlaces: reportsPlaces, onVisiblePlaces: { visiblePlaces = $0 })
                     .ignoresSafeArea()
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(screen == .preview ? "Seattle offline map. Routes are also described in the panel." : "Seattle offline map")
+                if reportsPlaces && showsPlaces { placeElements }
                 if screen == .navigating {
                     GuidanceOverlay(navigator: navigator, landscape: landscape, cardWidth: cardWidth, attribution: AnyView(attribution), camera: $camera, muted: $voiceMuted,
                                     onInsets: { guidanceInset = $0 }, onEnd: endNavigation, onDone: finishNavigation)
@@ -320,6 +365,7 @@ struct ExploreView: View {
             if let previewRequest { selectedCalmer = true; session.start(previewRequest) } else { session.cancel() }
         }
         .task { await locate(prompting: true) }
+        .task { if !Self.markersOff { markerFeed = await PlaceMarkerFeed.load(search) } }
         .onDisappear { session.cancel(); navigator.stop() }
         .onChange(of: voiceMuted) { navigator.setMuted(voiceMuted) }
         .reportContext(screen: String(String(describing: screen).prefix { $0 != "(" }), mode: mode, extraMinutes: budget, comparison: session.comparison, navigator: navigator, dataVersion: search.dataVersion)
@@ -411,10 +457,16 @@ struct ExploreView: View {
             .presentationBackgroundInteraction(.enabled(upThrough: screen == .preview ? previewDetent : .medium))
             .presentationDragIndicator(.visible)
             .interactiveDismissDisabled()
-            .onGeometryChange(for: CGFloat.self) { $0.size.height + $0.safeAreaInsets.bottom } action: { height in
+            // At its lower stops the system shrinks the sheet and floats it above the screen's edge, so its own height says nothing
+            // about where its top is. The global frame includes that.
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { top in
+                let height = screenHeight - top
                 sheetCover = height
                 if stop != .large, screen != .search { mapCover = height }
             }
+            #if DEBUG
+            .onGeometryChange(for: String.self) { "\(Int($0.frame(in: .global).minY)) \(Int($0.frame(in: .global).maxY)) \(Int($0.safeAreaInsets.bottom))" } action: { MapDebug.shared.sheet = $0 }
+            #endif
     }
 
     private func landscapeLayout(_ geo: GeometryProxy) -> some View {
@@ -458,7 +510,7 @@ struct ExploreView: View {
     private func scrolling<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         ScrollView {
             content()
-                .padding(.horizontal, inset).padding(.top, landscape ? Layout.cardInset : 20).padding(.bottom, 12)
+                .padding(.horizontal, inset).padding(.top, landscape ? Layout.cardInset : Layout.sheetTop).padding(.bottom, Layout.sheetBottom)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                     // The first measurement sizes the card at launch without animating it open.
                     var launch = Transaction(); launch.disablesAnimations = contentHeight == 0
@@ -488,7 +540,7 @@ struct ExploreView: View {
             }
             .buttonStyle(.plain)
             .font(.system(size: 19)).foregroundStyle(.primary)
-            .floatingSurface(in: Capsule())
+            .floatingSurface(in: Capsule(), interactive: true)
         }
     }
 
@@ -509,6 +561,8 @@ struct ExploreView: View {
     }
 
     // MARK: Home
+
+    private var peeking: Bool { stop == .fit && !landscape }
 
     private var homeContent: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -535,17 +589,24 @@ struct ExploreView: View {
                 }
             }
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fitContent = $0 }
-            if !saved.recents.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Recents").font(.footnote.weight(.semibold)).foregroundStyle(GuidanceOverlay.onGlass).padding(.leading, 4)
-                        .accessibilityAddTraits(.isHeader)
-                    PlaceList(places: Array(saved.recents.prefix(landscape ? 3 : 5)), minHeight: landscape ? 46 : 52, identifier: { "home-recent-\($0.id)" }, action: open)
+            // The peek stops at the search field and favourites. On a taller peek the system leaves room for the home indicator, and
+            // the next row would show half cut off in it. Not fully transparent, which would take these out of VoiceOver too.
+            VStack(alignment: .leading, spacing: 20) {
+                if !saved.recents.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Recents").font(.footnote.weight(.semibold)).foregroundStyle(GuidanceOverlay.onGlass).padding(.leading, 4)
+                            .accessibilityAddTraits(.isHeader)
+                        PlaceList(places: Array(saved.recents.prefix(landscape ? 3 : 5)), minHeight: landscape ? 46 : 52, identifier: { "home-recent-\($0.id)" }, action: open)
+                    }
                 }
+                Button { sheet = .about } label: {
+                    Label("About PeopleMaps", systemImage: "info.circle").font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
+                }.buttonStyle(.plain).padding(.leading, 4).accessibilityIdentifier("about")
             }
-            Button { sheet = .about } label: {
-                Label("About PeopleMaps", systemImage: "info.circle").font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
-            }.buttonStyle(.plain).padding(.leading, 4).accessibilityIdentifier("about")
+            .opacity(peeking ? 0.01 : 1)
+            .allowsHitTesting(!peeking)
+            .animation(Motion.content(reduceMotion), value: peeking)
         }
     }
 

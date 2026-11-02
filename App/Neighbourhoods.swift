@@ -1,9 +1,10 @@
 import PeoplemapsCore
 
 extension Place {
-    var categoryLabel: String {
-        let words = category.replacingOccurrences(of: "_", with: " ")
-        switch category { case "cafe": return "Café"; default: return words.prefix(1).uppercased() + words.dropFirst() }
+    var categoryLabel: String { Self.categoryLabel(category) }
+    static func categoryLabel(_ raw: String) -> String {
+        let words = raw.replacingOccurrences(of: "_", with: " ")
+        switch raw { case "cafe": return "Café"; default: return words.prefix(1).uppercased() + words.dropFirst() }
     }
     /// "Category · Address" when the map has the place's address, else "Category · Neighbourhood" when one is clearly
     /// nearest, else just the category. Addresses read "Address · Neighbourhood". A dropped pin named from a nearby
