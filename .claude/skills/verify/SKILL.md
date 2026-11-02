@@ -11,7 +11,7 @@ Run the checks, paste the summary, say what was not covered. Never skip, weaken 
 
 ```bash
 Scripts/verify.sh            # every change; ~5 min on a Mac, less on Linux
-Scripts/verify.sh --ui       # also the 28-test UI suite (macOS only, ~7 min)
+Scripts/verify.sh --ui       # also the full UI suite (macOS only, ~15 min)
 Scripts/verify.sh --fast     # inner loop only: skips data reproduction and the app build
 ```
 
@@ -27,6 +27,14 @@ Scripts/verify.sh --fast     # inner loop only: skips data reproduction and the 
 | `Backend/` | `npm test` and `npx tsc --noEmit` in `Backend/` (`verify.sh` does not cover it; CI runs it in the `backend` job) | anywhere with Node 22.13+ |
 | Docs only | read the rendered Markdown; check that every command and path in it exists | anywhere |
 | `.claude/`, `CLAUDE.md`, `.github/` | `verify.sh --fast`, and trigger the skill or hook you changed once | anywhere |
+
+The full UI suite passing on a Mac is the final check before a tag. Workers run only the UI tests their change affects; the suite runs once per batch.
+
+To keep the Mac quiet, or from a session with no Xcode, GitHub can do the build and tests. It takes about 50 minutes for the UI suite, and its screenshots land in the run's `ui-screenshots` artifact:
+
+```bash
+gh workflow run ci.yml --ref <branch> [-f region=true]   # region=true bundles full Seattle data
+```
 
 ## 3. Cloud and Linux sessions
 

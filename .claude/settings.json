@@ -1,4 +1,20 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(xcrun simctl list *)",
+      "Bash(xcrun xcresulttool get *)",
+      "Bash(git -C * status *)",
+      "Bash(git -C * log *)",
+      "Bash(pmset -g *)",
+      "Bash(plutil -p *)",
+      "Bash(shasum *)",
+      "Bash(log show *)",
+      "mcp__ccd_session_mgmt__list_events",
+      "mcp__ccd_session_mgmt__list_sessions",
+      "mcp__ccd_session_mgmt__get_session",
+      "mcp__ccd_pr__get_status"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
