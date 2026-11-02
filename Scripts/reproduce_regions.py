@@ -19,7 +19,11 @@ for name, r in sorted(m['regions'].items()):
     p = subprocess.run([sys.executable, str(root / 'Scripts/import_osm.py'), '--out', str(out)], env=env, capture_output=True, text=True)
     if p.returncode:
         print(p.stdout[-2000:], p.stderr[-2000:]); bad += 1; continue
+    # The search index's bytes (and so provenance.json's size line) depend on the SQLite version, as in verify.sh.
+    built = __import__('sqlite3').sqlite_version; shipped = json.loads((d / 'expected/provenance.json').read_text())['search']['sqlite'] if (d / 'expected/provenance.json').is_file() else built
     for f in r['outputs']:
+        if built != shipped and (f.endswith('.sqlite.gz') or f == 'provenance.json'):
+            print(f'region {name}: SQLite {built} here, {shipped} shipped: {f} not compared'); continue
         if (out / f).read_bytes() != (d / 'expected' / f).read_bytes():
             print(f'region {name}: differs from a fresh import: {f}'); bad += 1
 if not m['regions']: print('SKIPPED regions: none listed in Data/regions.json')

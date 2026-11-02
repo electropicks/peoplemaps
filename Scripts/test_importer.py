@@ -1,6 +1,6 @@
-import collections, gzip, json, pathlib, sqlite3, tempfile, unittest
+import array, collections, gzip, json, pathlib, sqlite3, struct, tempfile, unittest
 import build_search
-from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,simplify_line,map_geojson
+from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,simplify_line,map_geojson,load_dem
 
 class ImportPolicyTests(unittest.TestCase):
     def test_private_road_excluded(self):
@@ -9,6 +9,11 @@ class ImportPolicyTests(unittest.TestCase):
         self.assertTrue(access({'highway':'path','access':'no','bicycle':'designated'},'bike'))
     def test_footpath_without_bike_permission_excluded(self):
         self.assertFalse(access({'highway':'footway'},'bike'))
+    def test_hov_only_way_is_not_drivable_solo(self):
+        self.assertFalse(access({'highway':'motorway','hov':'designated'},'drive'))
+        self.assertTrue(access({'highway':'motorway','hov':'lane'},'drive'))  # one lane of several: still the road
+        self.assertTrue(access({'highway':'motorway','hov:lanes':'|designated'},'drive'))
+        self.assertTrue(access({'highway':'cycleway','hov':'designated'},'bike'))  # only drivers are affected
     def test_cycleway_is_not_drivable(self):
         self.assertFalse(access({'highway':'cycleway'},'drive'))
     def test_conditional_access_excluded(self):
@@ -262,5 +267,34 @@ class SearchIndexTests(unittest.TestCase):
             self.assertEqual(summary['overture']['shipped'], 1)
             self.assertEqual(summary['overture']['shippedBySource'], {'Overture · Foursquare': 1})
             db.close()
+
+def tiled_dem(blocks, tile=2, across=2, down=2):
+    """A gzipped uncompressed float32 tiled GeoTIFF; a block given as None is sparse (byte count 0)."""
+    w, h = tile * across, tile * down; n = len(blocks); data = b''; offsets = []; counts = []
+    ifd_len = 2 + 12 * 14 + 4; arrays_at = 8 + ifd_len; scale_at = arrays_at + 8 * n; tie_at = scale_at + 24; data_at = tie_at + 48
+    for b in blocks:
+        offsets.append(data_at + len(data)); counts.append(0 if b is None else 4 * tile * tile)
+        data += b'' if b is None else array.array('f', b).tobytes()
+    entries = [(256,3,1,w),(257,3,1,h),(258,3,1,32),(259,3,1,1),(262,3,1,1),(277,3,1,1),(284,3,1,1),(322,3,1,tile),(323,3,1,tile),
+               (324,4,n,8+ifd_len),(325,4,n,8+ifd_len+4*n),(339,3,1,3),(33550,12,3,scale_at),(33922,12,6,tie_at)]
+    ifd = struct.pack('<H', len(entries)) + b''.join(struct.pack('<HHII', *e) for e in entries) + struct.pack('<I', 0)
+    blob = b'II*\x00' + struct.pack('<I', 8) + ifd + struct.pack(f'<{n}I', *offsets) + struct.pack(f'<{n}I', *counts) \
+        + struct.pack('<3d', 1, 1, 0) + struct.pack('<6d', 0, 0, 0, 0, down * tile, 0) + data
+    return gzip.compress(blob, mtime=0)
+
+class ElevationTests(unittest.TestCase):
+    def sample(self, blocks):
+        with tempfile.TemporaryDirectory() as d:
+            path = pathlib.Path(d) / 'dem.tif.gz'; path.write_bytes(tiled_dem(blocks))
+            z, _ = load_dem(path)
+        return lambda x, y: z(4 - (y + 0.5), x + 0.5)  # pixel centres; north is the top row
+    def test_blocks_land_where_they_belong(self):
+        at = self.sample([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+        self.assertEqual([at(0, 0), at(1, 0), at(2, 0), at(3, 0), at(0, 1), at(3, 3)], [1, 2, 5, 6, 3, 16])
+    def test_sparse_block_does_not_shear_the_blocks_after_it(self):
+        # Water tiles have blocks whose byte count is 0. Assigning their empty slice used to shrink the grid.
+        at = self.sample([[1, 2, 3, 4], None, [9, 10, 11, 12], [13, 14, 15, 16]])
+        self.assertEqual([at(0, 0), at(1, 1), at(2, 0), at(3, 0), at(3, 1)], [1, 4, 0, 0, 0])  # the gap reads as 0 m
+        self.assertEqual([at(0, 2), at(1, 3), at(2, 2), at(3, 3)], [9, 12, 13, 16])
 
 if __name__=='__main__':unittest.main()

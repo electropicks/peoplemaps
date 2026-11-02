@@ -20,11 +20,13 @@ def read_tiff(b):
     assert tags[259][0] == 1 and tags[258][0] == 32 and tags[339][0] == 3, 'expected uncompressed float32'
     g = array.array('f', bytes(4 * tw * th)); across = (tw + tw_w - 1) // tw_w
     for k, (o, c) in enumerate(zip(tags[324], tags[325])):
+        if c == 0: continue  # sparse block (water): no data. Assigning its empty slice would shrink the array and shear every block after it.
         t = array.array('f', b[o:o+c]); ty, tx = divmod(k, across)
         for r in range(tw_h):
             y = ty * tw_h + r
             if y >= th: break
             x0 = tx * tw_w; n = min(tw_w, tw - x0); g[y*tw+x0:y*tw+x0+n] = t[r*tw_w:r*tw_w+n]
+    assert len(g) == tw * th, 'DEM grid changed size while reading blocks'
     return tw, th, g
 
 for r in range(rows):

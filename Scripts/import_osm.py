@@ -8,7 +8,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = pathlib.Path(os.environ.get('PEOPLEMAPS_OUT', ROOT / 'Core/Resources'))
 DATA = pathlib.Path(os.environ.get('PEOPLEMAPS_DATA', ROOT / 'Data'))
 def shown(path):
-    return str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else path.name
+    # A fetched region's files are named alone, so provenance doesn't depend on where the checkout is or how the import was started.
+    return str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) and not path.is_relative_to(ROOT / 'Data/region') else path.name
 REPORT = DATA  # provenance.json; --out redirects it with the outputs
 BBOX = [float(x) for x in os.environ['PEOPLEMAPS_BBOX'].split(',')] if os.environ.get('PEOPLEMAPS_BBOX') else [47.615, -122.390, 47.678, -122.300]  # S,W,N,E
 MODES = ['drive', 'bike', 'walk']
@@ -35,6 +36,7 @@ def access(tags, mode):
         return False
     h = tags.get('highway','')
     if mode == 'drive':
+        if tags.get('hov') == 'designated': return False  # the whole way is HOV-only; lane-level hov:lanes stays routable
         return h in ROAD and tags.get('service') not in {'driveway','parking_aisle','emergency_access'}
     if h in HIGHWAY:
         return False
@@ -154,12 +156,14 @@ def load_dem(path):
     w, h, tw, th = tags[256][0], tags[257][0], tags[322][0], tags[323][0]
     grid = array.array('f', bytes(4*w*h)); across = (w+tw-1)//tw
     for k, (o, c) in enumerate(zip(tags[324], tags[325])):
+        if c == 0: continue  # sparse block (water): no data, stays 0. Assigning its empty slice would shrink the array and shear every block after it.
         tile = array.array('f', b[o:o+c]); ty, tx = divmod(k, across)
         for r in range(th):
             y = ty*th + r
             if y >= h: break
             x0 = tx*tw; n = min(tw, w-x0)
             grid[y*w+x0:y*w+x0+n] = tile[r*tw:r*tw+n]
+    assert len(grid) == w*h, 'DEM grid changed size while reading blocks'
     sx, sy = tags[33550][:2]; lon0, lat0 = tags[33922][3:5]
     def z(lat, lon):
         fx = (lon-lon0)/sx - 0.5; fy = (lat0-lat)/sy - 0.5
@@ -289,8 +293,12 @@ def read_snapshot(basename):
     p = json.loads(data)
     if p.get('remark'): raise ValueError(p['remark'])
     if raw.exists(): archive.write_bytes(gzip.compress(data,mtime=0))  # archive a fresh download
-    return p, {'file':shown(archive),'sha256':hashlib.sha256(data).hexdigest(),
-               'osmBaseTimestamp':p['osm3s']['timestamp_osm_base']}
+    source = {'file':shown(archive),'sha256':hashlib.sha256(data).hexdigest(),
+              'osmBaseTimestamp':p['osm3s']['timestamp_osm_base']}
+    # A snapshot made by pbf_to_snapshot.py names the Geofabrik extract it came from.
+    for key,name in [('source_url','sourceUrl'),('source_file','sourceFile'),('source_sha256','sourceSha256')]:
+        if key in p['osm3s']: source[name]=p['osm3s'][key]
+    return p, source
 
 def read_sources():
     elements = {}; sources = []
