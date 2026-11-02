@@ -17,6 +17,12 @@
     "drive": 47989,
     "walk": 162294
   },
+  "map": {
+    "addressedTiles": 314,
+    "bytes": 835326,
+    "distinctTiles": 244,
+    "tileEntries": 267
+  },
   "nodes": 73354,
   "places": 519,
   "search": {
@@ -99,6 +105,11 @@
       "file": "Data/seattle-search.json.gz",
       "osmBaseTimestamp": "2026-10-29T05:43:15Z",
       "sha256": "095c2921683bab7232628cbaa76fc597a6d478cdcba5a8e519dad333f2730030"
+    },
+    {
+      "file": "Data/seattle-coast.json.gz",
+      "osmBaseTimestamp": "2026-11-02T01:23:48Z",
+      "sha256": "e69c1c66122c42c04b14886f21801874e087a3fdd3a380fbe6f028dd2a09f3fe"
     }
   ],
   "structureNodesInterpolated": 995,

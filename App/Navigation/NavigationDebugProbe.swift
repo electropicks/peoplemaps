@@ -15,6 +15,8 @@ final class MapDebug {
     var lineStyle = ""
     /// Which route line the map draws above the other in the preview.
     var topRoute = ""
+    /// Base-map features (water, roads, arterials) in view once the map is idle. 0 means no tiles drew.
+    var baseFeatures = 0
 }
 
 extension UIColor {
@@ -68,8 +70,9 @@ struct NavigationDebugProbe: View {
             probe("debug-leader", String(Int(map.leaderMeters.rounded())))
             probe("debug-line-style", map.lineStyle)
             probe("debug-top-route", map.topRoute)
+            probe("debug-map-features", String(map.baseFeatures))
         }
-        .frame(width: 1, height: 9).allowsHitTesting(false)
+        .frame(width: 1, height: 10).allowsHitTesting(false)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
