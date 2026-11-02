@@ -53,9 +53,11 @@ extension UIColor {
     static let userLocation = hex(0x4A8FD6)
     /// Start, Directions and Done: glass made brighter, with dark text. Swap these two to change the primary action everywhere.
     static let primaryActionFill = dynamic(light: 0xFFFFFF, lightAlpha: 0.72, dark: 0xFFFFFF, darkAlpha: 0.86)
+    /// On a solid panel, where the glass one would vanish.
+    static let primaryActionSolidFill = dynamic(light: 0xDCE3EA, lightAlpha: 1, dark: 0xFFFFFF, darkAlpha: 0.86)
     static let primaryActionText = hex(0x20384F)
     /// Laid over the glass of a panel, so text holds its contrast over a busy map. Neutral: glass is never tinted a hue.
-    static let glassVeil = dynamic(light: 0xFFFFFF, lightAlpha: 0.34, dark: 0x101412, darkAlpha: 0.42)
+    static let glassVeil = dynamic(light: 0xFFFFFF, lightAlpha: 0.34, dark: 0x101412, darkAlpha: 0.5)
     /// The heavier veil for a surface read at length, or at a glance while driving.
     /// Over the sheet's glass, which lifts a dark map more than the controls' does.
     static let glassSheetVeil = dynamic(light: 0xFFFFFF, lightAlpha: 0, dark: 0x101412, darkAlpha: 0.3)
@@ -122,6 +124,7 @@ extension ShapeStyle where Self == Color {
     static var calmer: Color { Color(uiColor: .calmer) }
     static var fastest: Color { Color(uiColor: .fastest) }
     static var primaryActionFill: Color { Color(uiColor: .primaryActionFill) }
+    static var primaryActionSolidFill: Color { Color(uiColor: .primaryActionSolidFill) }
     static var primaryActionText: Color { Color(uiColor: .primaryActionText) }
     static var panel: Color { Color(uiColor: .panel) }
     static var panelFill: Color { Color(uiColor: .panelFill) }

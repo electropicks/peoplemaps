@@ -128,7 +128,8 @@ extension RouteComparison {
         guard let calmer else { return noCalmer.title }
         if tradesStress { return calmSummary }
         let shown = calmer.minutes - fastest.minutes
-        let cost = extraSeconds < 1 ? "No extra time" : shown <= 0 ? "Under a minute more than fastest" : "\(shown) min more than fastest"
+        // By the real difference, not only the displayed minutes: 10 s across a minute boundary isn't "1 min more".
+        let cost = extraSeconds < 1 ? "No extra time" : extraSeconds < 60 || shown <= 0 ? "Under a minute more than fastest" : "\(shown) min more than fastest"
         guard let top = gains.first?.factor else { return "\(cost), fewer small hassles" }
         // A count only where the short form counts things, and not for one: "1 fewer unsignalled lefts" isn't English.
         let saved = Int((fastest.metrics.breakdown[top].amount - calmer.metrics.breakdown[top].amount).rounded())

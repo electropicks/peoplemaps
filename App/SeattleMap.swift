@@ -268,7 +268,9 @@ struct SeattleMap: UIViewRepresentable {
                     let start = MapOrigin(), end = MapDestination()
                     start.coordinate = CLLocationCoordinate2D(latitude: c.snappedOrigin.lat, longitude: c.snappedOrigin.lon)
                     end.coordinate = CLLocationCoordinate2D(latitude: c.snappedDestination.lat, longitude: c.snappedDestination.lon)
-                    endpoints = [start, end]
+                    // Starting from the user, their own dot already marks it, and a ring on top only hides it.
+                    let fromUser = latest.user.map { abs($0.lat - c.snappedOrigin.lat) < 0.002 && abs($0.lon - c.snappedOrigin.lon) < 0.003 } ?? false
+                    endpoints = fromUser ? [end] : [start, end]
                     map.addAnnotations(endpoints)
                 }
             }

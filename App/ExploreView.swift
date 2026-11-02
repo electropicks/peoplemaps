@@ -499,8 +499,8 @@ struct ExploreView: View {
     /// What the sheet shows over its glass (`SheetGlass`): the tint that keeps text legible, or a solid panel when raised to read or when asked for.
     @ViewBuilder private var sheetBackdrop: some View {
         if reduceTransparency || GlassFlags.reduceTransparency || stop == .large { Color.panel }
-        else if contrast == .increased { Color.glassVeilDense }
-        else { Color.glassSheetVeil }
+        else if contrast == .increased { Color(uiColor: .glassVeilDense) }
+        else { Color(uiColor: .glassSheetVeil) }
     }
 
     private func landscapeLayout(_ geo: GeometryProxy) -> some View {
@@ -537,7 +537,7 @@ struct ExploreView: View {
             }.id(screen.panelID).transition(.opacity)
         }
         .tint(.primary)
-        .environment(\.onGlassPanel, true)
+        .environment(\.onGlassPanel, true).environment(\.solidSurface, stop == .large && !landscape)
         .animation(Motion.content(reduceMotion), value: screen.panelID)
     }
 
@@ -897,30 +897,32 @@ struct ExploreView: View {
     private var previewHeader: some View {
         HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                let line = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8))
+                line {
                     placeButton(place: destination, target: .destination)
-                    Spacer(minLength: 0)
+                    if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
                     if let chosenRoute { Text(chosenRoute.distance).font(.subheadline.weight(.medium)).monospacedDigit().accessibilityIdentifier("preview-distance") }
                 }
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         placeButton(place: origin, target: .origin).fixedSize()
                         Spacer(minLength: 0)
-                        estimateCaveat
+                        estimateCaveat.lineLimit(1).fixedSize()
                     }
                     VStack(alignment: .leading, spacing: 2) {
-                        placeButton(place: origin, target: .origin)
-                        estimateCaveat
+                        placeButton(place: origin, target: .origin).fixedSize(horizontal: false, vertical: true)
+                        estimateCaveat.fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             closeButton(label: "Close routes", id: "close-preview") { show(.home) }
                 .padding(.top, -7).padding(.trailing, -7)
         }
     }
 
     private var estimateCaveat: some View {
-        Text("Estimate, no live traffic").font(.footnote).foregroundStyle(GuidanceOverlay.onGlass).lineLimit(1).fixedSize()
+        Text("Estimate, no live traffic").font(.footnote).foregroundStyle(GuidanceOverlay.onGlass)
     }
 
     private var chosenRoute: Route? {
@@ -936,7 +938,7 @@ struct ExploreView: View {
             Text(shown)
                 .font(origin && place != nil ? .footnote : .subheadline.weight(place == nil ? .semibold : .medium))
                 .foregroundStyle(origin && place != nil ? GuidanceOverlay.onGlass : .primary)
-                .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
                 .contentShape(Rectangle().inset(by: -6))
         }.buttonStyle(.plain)
             .accessibilityLabel(place.map { "\(origin ? "Starting from" : "Going to"), \($0.shortName)" } ?? empty)

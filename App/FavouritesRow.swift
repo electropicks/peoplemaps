@@ -85,7 +85,7 @@ struct FavouritesEditor: View {
             .navigationTitle("Favourites").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { EditButton().accessibilityIdentifier("edit-favourites-list") }
-                ToolbarItem(placement: .confirmationAction) { Button(role: .close) { dismiss() }.accessibilityIdentifier("close-favourites") }
+                ToolbarItem(placement: .topBarTrailing) { Button(role: .close) { dismiss() }.accessibilityIdentifier("close-favourites") }
             }
         }
         .tint(.primary).presentationDetents([.medium, .large])

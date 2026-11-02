@@ -45,7 +45,7 @@ struct ReportComposerView: View {
                 }
             }
             .navigationTitle("Report a problem").navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .close) { dismiss() }.accessibilityIdentifier("close-report") } }
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button(role: .close) { dismiss() }.accessibilityIdentifier("close-report") } }
         }
         .tint(.primary)
         .task { writeFile(); focused = report.moment == nil }

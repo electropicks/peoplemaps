@@ -3,7 +3,7 @@ import PeoplemapsCore
 
 /// Guidance chrome on Liquid Glass (`Docs/DESIGN.md` 4.7, 4.8): turn banner with a "Then:" row, calm-note chip,
 /// trip bar, rerouting state and arrival card. Portrait floats glass at the top and bottom; landscape uses one
-/// leading glass card. Everything sits straight on the glass, whose dense veil holds the text's contrast at a glance.
+/// leading glass card. Everything sits straight on the glass, whose veil holds the text's contrast at a glance.
 struct GuidanceOverlay: View {
     let navigator: NavigationController
     let landscape: Bool

@@ -108,8 +108,17 @@ extension View {
     }
 
     /// The style of a primary action (Start, Directions, Done): glass, brighter than the panel it sits on, with dark text.
-    func primaryAction(shape: ButtonBorderShape = .capsule) -> some View {
-        buttonStyle(.glassProminent).buttonBorderShape(shape).tint(.primaryActionFill).controlSize(.large)
+    func primaryAction(shape: ButtonBorderShape = .capsule) -> some View { modifier(PrimaryAction(shape: shape)) }
+}
+
+private struct PrimaryAction: ViewModifier {
+    let shape: ButtonBorderShape
+    @Environment(\.solidSurface) private var solid
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    /// White on a solid white panel wouldn't show.
+    private var fill: Color { solid || reduceTransparency || GlassFlags.reduceTransparency ? .primaryActionSolidFill : .primaryActionFill }
+    func body(content: Content) -> some View {
+        content.buttonStyle(.glassProminent).buttonBorderShape(shape).tint(fill).controlSize(.large)
     }
 }
 
@@ -119,6 +128,8 @@ struct Hairline: View {
 }
 
 extension EnvironmentValues {
+    /// The panel is solid here, at the large stop: no glass behind the content.
+    @Entry var solidSurface = false
     /// The content is straight on a glass panel: no opaque groups, and secondary text uses `GuidanceOverlay.onGlass`.
     @Entry var onGlassPanel = false
 }

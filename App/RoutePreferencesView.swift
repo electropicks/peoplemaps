@@ -53,7 +53,7 @@ struct RoutePreferencesView: View {
             .listStyle(.insetGrouped)
             .navigationTitle("Calmer means").navigationSubtitle(mode.activity).navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button(role: .close) { dismiss() }.accessibilityIdentifier("preferences-done") }
+                ToolbarItem(placement: .topBarTrailing) { Button(role: .close) { dismiss() }.accessibilityIdentifier("preferences-done") }
             }
         }
         .tint(.primary).presentationDetents([.medium, .large])
