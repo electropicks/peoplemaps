@@ -9,6 +9,11 @@ on:
     branches: [main]
     paths-ignore: ['Docs/**', '**/*.md', '.claude/**']
   workflow_dispatch:
+    inputs:
+      region:
+        description: Bundle full Seattle data for the UI suite instead of the fixture
+        type: boolean
+        default: false
 
 # A newer run on the same branch or PR cancels the older one, on main too; the newest commit always runs.
 # Docs-only pushes start no run, so they cancel nothing. Label events get their own groups so they never cancel a code run:
@@ -50,8 +55,7 @@ jobs:
       - run: npx tsc --noEmit
 
   # The iOS app build, on every PR push (not on label events: the head already ran it). The UI suite runs only when asked,
-  # since it is the slowest job. Whether the xcode-27 runner is billed is unconfirmed: standard runners are free in a public
-  # repo, but this label is not one of GitHub's standard ones.
+  # since it is the slowest job. xcode-27 is a standard runner: free in a public repo, 3 cores and 7 GB.
   ios-build:
     if: github.event.action != 'labeled'
     runs-on: xcode-27
@@ -63,7 +67,7 @@ jobs:
           key: spm-${{ hashFiles('Peoplemaps.xcodeproj/project.pbxproj', 'Package.swift') }}
       - run: PEOPLEMAPS_XCODE="$(xcode-select -p)" Scripts/verify.sh
 
-  # Push to main, a manual run, or a PR labelled "ui-tests".
+  # Push to main, a manual run, or a PR labelled "ui-tests". Its screenshots land in the run's "ui-screenshots" artifact.
   ui-tests:
     if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'ui-tests') && (github.event.action != 'labeled' || github.event.label.name == 'ui-tests'))
     runs-on: xcode-27
@@ -74,4 +78,14 @@ jobs:
         with:
           path: ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
           key: spm-${{ hashFiles('Peoplemaps.xcodeproj/project.pbxproj', 'Package.swift') }}
-      - run: PEOPLEMAPS_XCODE="$(xcode-select -p)" Scripts/verify.sh --fast --ui
+      - if: inputs.region
+        run: Scripts/fetch_data seattle-all
+      - run: PEOPLEMAPS_XCODE="$(xcode-select -p)" PEOPLEMAPS_UI_RESULT="$RUNNER_TEMP/ui-tests.xcresult" Scripts/verify.sh --fast --ui
+      - if: always()
+        run: xcrun xcresulttool export attachments --path "$RUNNER_TEMP/ui-tests.xcresult" --output-path "$RUNNER_TEMP/ui-screenshots"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots
+          path: ${{ runner.temp }}/ui-screenshots
+          retention-days: 7
