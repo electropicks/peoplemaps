@@ -1,5 +1,5 @@
 {
-  "approachesWithTurnLaneData": 1527,
+  "approachesWithTurnLaneData": 1567,
   "bounds": [
     47.615,
     -122.39,
@@ -8,14 +8,14 @@
   ],
   "crossingSegments": {
     "None": 6,
-    "marked": 2703,
+    "marked": 2704,
     "signal": 2866,
     "unmarked": 15010
   },
   "directedEdgesByMode": {
-    "bike": 64268,
-    "drive": 47989,
-    "walk": 162294
+    "bike": 64603,
+    "drive": 48318,
+    "walk": 162758
   },
   "map": {
     "addressedTiles": 314,
@@ -23,12 +23,20 @@
     "distinctTiles": 244,
     "tileEntries": 267
   },
-  "nodes": 73354,
+  "nodes": 73369,
   "places": 519,
+  "restrictionClasses": {
+    "conditionalIgnored": 14,
+    "malformedIgnored": 16,
+    "viaNode": 1398,
+    "viaWayFinalTransitionBanned": 10,
+    "viaWayNoUTurnIgnored": 32,
+    "viaWayOnlyIgnored": 2
+  },
   "search": {
     "addresses": 50026,
-    "gzippedBytes": 4413854,
-    "inflatedBytes": 14671872,
+    "gzippedBytes": 4426173,
+    "inflatedBytes": 14675968,
     "overture": {
       "archive": {
         "file": "Data/seattle-overture-places.json.gz",
@@ -69,22 +77,23 @@
       }
     },
     "places": 15397,
-    "sqlite": "3.45.1",
+    "sqlite": "3.54.1",
     "unsnapped": {
       "bike": 5,
       "drive": 15,
       "walk": 0
     }
   },
-  "segments": 101658,
-  "sidewalkTaggedRoadSegments": 20407,
+  "segments": 102106,
+  "shortSegmentsKept": 296,
+  "sidewalkTaggedRoadSegments": 20622,
   "sidewalksBesideRoad": {
-    "arterial": 8946,
-    "busy": 2570,
-    "local": 24452,
-    "none": 819
+    "arterial": 9045,
+    "busy": 2548,
+    "local": 24609,
+    "none": 778
   },
-  "signalNodes": 460,
+  "signalNodes": 463,
   "sources": [
     {
       "file": "Data/seattle-osm.json.gz",
@@ -113,304 +122,6 @@
     }
   ],
   "structureNodesInterpolated": 995,
-  "supportedRestrictions": 1357,
-  "surfaceTaggedSegments": 83109,
-  "unsupportedRestrictionsConservativelyExcluded": [
-    {
-      "mode": "drive",
-      "osmID": 4510872
-    },
-    {
-      "mode": "bike",
-      "osmID": 4510872
-    },
-    {
-      "mode": "drive",
-      "osmID": 4655998
-    },
-    {
-      "mode": "bike",
-      "osmID": 4655998
-    },
-    {
-      "mode": "drive",
-      "osmID": 4656368
-    },
-    {
-      "mode": "bike",
-      "osmID": 4656368
-    },
-    {
-      "mode": "drive",
-      "osmID": 4656370
-    },
-    {
-      "mode": "bike",
-      "osmID": 4656370
-    },
-    {
-      "mode": "drive",
-      "osmID": 4656387
-    },
-    {
-      "mode": "bike",
-      "osmID": 4656387
-    },
-    {
-      "mode": "drive",
-      "osmID": 4656388
-    },
-    {
-      "mode": "bike",
-      "osmID": 4656388
-    },
-    {
-      "mode": "drive",
-      "osmID": 4658650
-    },
-    {
-      "mode": "bike",
-      "osmID": 4658650
-    },
-    {
-      "mode": "drive",
-      "osmID": 4661067
-    },
-    {
-      "mode": "bike",
-      "osmID": 4661067
-    },
-    {
-      "mode": "drive",
-      "osmID": 4661072
-    },
-    {
-      "mode": "bike",
-      "osmID": 4661072
-    },
-    {
-      "mode": "drive",
-      "osmID": 4661073
-    },
-    {
-      "mode": "bike",
-      "osmID": 4661073
-    },
-    {
-      "mode": "drive",
-      "osmID": 4661074
-    },
-    {
-      "mode": "bike",
-      "osmID": 4661074
-    },
-    {
-      "mode": "drive",
-      "osmID": 4661078
-    },
-    {
-      "mode": "bike",
-      "osmID": 4661078
-    },
-    {
-      "mode": "drive",
-      "osmID": 5927726
-    },
-    {
-      "mode": "bike",
-      "osmID": 5927726
-    },
-    {
-      "mode": "drive",
-      "osmID": 6269005
-    },
-    {
-      "mode": "bike",
-      "osmID": 6269005
-    },
-    {
-      "mode": "drive",
-      "osmID": 6269018
-    },
-    {
-      "mode": "bike",
-      "osmID": 6269018
-    },
-    {
-      "mode": "drive",
-      "osmID": 6897007
-    },
-    {
-      "mode": "bike",
-      "osmID": 6897007
-    },
-    {
-      "mode": "drive",
-      "osmID": 7644876
-    },
-    {
-      "mode": "bike",
-      "osmID": 7644876
-    },
-    {
-      "mode": "drive",
-      "osmID": 7655569
-    },
-    {
-      "mode": "bike",
-      "osmID": 7655569
-    },
-    {
-      "mode": "drive",
-      "osmID": 7663499
-    },
-    {
-      "mode": "bike",
-      "osmID": 7663499
-    },
-    {
-      "mode": "drive",
-      "osmID": 7703088
-    },
-    {
-      "mode": "bike",
-      "osmID": 7703088
-    },
-    {
-      "mode": "drive",
-      "osmID": 9602075
-    },
-    {
-      "mode": "bike",
-      "osmID": 9602075
-    },
-    {
-      "mode": "drive",
-      "osmID": 10963770
-    },
-    {
-      "mode": "bike",
-      "osmID": 10963770
-    },
-    {
-      "mode": "drive",
-      "osmID": 10964994
-    },
-    {
-      "mode": "bike",
-      "osmID": 10964994
-    },
-    {
-      "mode": "drive",
-      "osmID": 11122765
-    },
-    {
-      "mode": "bike",
-      "osmID": 11122765
-    },
-    {
-      "mode": "drive",
-      "osmID": 11324885
-    },
-    {
-      "mode": "bike",
-      "osmID": 11324885
-    },
-    {
-      "mode": "drive",
-      "osmID": 11642894
-    },
-    {
-      "mode": "bike",
-      "osmID": 11642894
-    },
-    {
-      "mode": "drive",
-      "osmID": 12954090
-    },
-    {
-      "mode": "bike",
-      "osmID": 12954090
-    },
-    {
-      "mode": "drive",
-      "osmID": 13210352
-    },
-    {
-      "mode": "bike",
-      "osmID": 13210352
-    },
-    {
-      "mode": "drive",
-      "osmID": 13490611
-    },
-    {
-      "mode": "bike",
-      "osmID": 13490611
-    },
-    {
-      "mode": "drive",
-      "osmID": 13503181
-    },
-    {
-      "mode": "bike",
-      "osmID": 13503181
-    },
-    {
-      "mode": "drive",
-      "osmID": 14635486
-    },
-    {
-      "mode": "bike",
-      "osmID": 14635486
-    },
-    {
-      "mode": "drive",
-      "osmID": 14635487
-    },
-    {
-      "mode": "bike",
-      "osmID": 14635487
-    },
-    {
-      "mode": "drive",
-      "osmID": 16135827
-    },
-    {
-      "mode": "bike",
-      "osmID": 16135827
-    },
-    {
-      "mode": "drive",
-      "osmID": 18097434
-    },
-    {
-      "mode": "bike",
-      "osmID": 18097434
-    },
-    {
-      "mode": "drive",
-      "osmID": 18624886
-    },
-    {
-      "mode": "bike",
-      "osmID": 18624886
-    },
-    {
-      "mode": "drive",
-      "osmID": 18777202
-    },
-    {
-      "mode": "bike",
-      "osmID": 18777202
-    },
-    {
-      "mode": "drive",
-      "osmID": 19740652
-    },
-    {
-      "mode": "bike",
-      "osmID": 19740652
-    }
-  ]
+  "supportedRestrictions": 1367,
+  "surfaceTaggedSegments": 83493
 }
