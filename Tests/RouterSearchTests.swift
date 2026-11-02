@@ -24,6 +24,36 @@ final class RouterSearchTests: XCTestCase {
         do { _ = try await task.value; XCTFail("A cancelled compare should throw") } catch { XCTAssertTrue(error is CancellationError, "\(error)") }
     }
 
+    func testTheConcurrencyCapDoesNotChangeRoutes() throws {
+        let request = try request(5)
+        let wide = try NativeRouter(graph: Self.graph, limits: .init(concurrentSearches: 8, longMeters: [:])).compute(request)
+        let one = try NativeRouter(graph: Self.graph, limits: .init(concurrentSearches: 1, longMeters: [:])).compute(request)
+        XCTAssertEqual(one.fastest.edgeIDs, wide.fastest.edgeIDs)
+        XCTAssertEqual(one.calmer?.edgeIDs, wide.calmer?.edgeIDs)
+        XCTAssertEqual(one.candidateCount, wide.candidateCount)
+        XCTAssertEqual(one.noCalmer, wide.noCalmer)
+    }
+
+    func testALongTripRunsFewerSearchesButKeepsTheFastestAndACalmerOne() throws {
+        let request = try request(5)
+        let full = try Self.router.compute(request)
+        // Everything counts as long: 100 m, then past 2.5 times that.
+        let two = try NativeRouter(graph: Self.graph, limits: .init(concurrentSearches: 3, longMeters: [.walk: 100])).compute(request)
+        let one = try NativeRouter(graph: Self.graph, limits: .init(concurrentSearches: 3, longMeters: [.walk: 10])).compute(request)
+        for bounded in [two, one] {
+            XCTAssertEqual(bounded.fastest.edgeIDs, full.fastest.edgeIDs, "The fastest route is never bounded")
+            if bounded.calmer == nil {
+                switch bounded.noCalmer {
+                case .notChecked, .onlyRoute, .calmestCompared, .calmerTakesLonger, .tooLittleGain: XCTFail("\(bounded.noCalmer) claims a full search")
+                case .fewerChecked, .clearlyCalmerTakesLonger: break
+                }
+            }
+        }
+        XCTAssertLessThanOrEqual(two.candidateCount, 3)
+        XCTAssertLessThanOrEqual(one.candidateCount, 2)
+        XCTAssertLessThan(one.candidateCount, full.candidateCount)
+    }
+
     func testConcurrentRequestsMatchOneAtATime() throws {
         let request = try request(5)
         let alone = try Self.router.compute(request)

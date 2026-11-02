@@ -19,3 +19,17 @@ private final class Slots<T: Sendable>: @unchecked Sendable {
     func set(_ i: Int, _ value: T) { lock.lock(); items[i] = value; lock.unlock() }
     func values() -> [T] { items.map { $0! } }
 }
+
+/// `body(0..<count)` with at most `limit` running at once; each thread takes the next index when it finishes one.
+func parallelFor(_ count: Int, limit: Int, _ body: (Int) -> Void) {
+    let next = Ticket()
+    DispatchQueue.concurrentPerform(iterations: max(1, min(count, limit))) { _ in
+        while let i = next.take(below: count) { body(i) }
+    }
+}
+
+private final class Ticket: @unchecked Sendable {
+    private let lock = NSLock()
+    private var n = 0
+    func take(below count: Int) -> Int? { lock.lock(); defer { lock.unlock() }; defer { n += 1 }; return n < count ? n : nil }
+}

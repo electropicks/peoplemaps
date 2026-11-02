@@ -39,6 +39,8 @@ public enum NoCalmerFinding: Sendable, Equatable {
     case notChecked
     /// Every search, including those favouring calm, found this one route.
     case onlyRoute
+    /// A long trip, so fewer alternatives were searched; none of those compared is calmer for its time.
+    case fewerChecked(routes: Int)
     /// Other routes were compared and none has less stress.
     case calmestCompared(routes: Int)
     /// Routes with less stress exist, but only beyond the limit.
@@ -52,6 +54,7 @@ public enum NoCalmerFinding: Sendable, Equatable {
         switch self {
         case .notChecked: "Fastest route only"
         case .onlyRoute, .calmestCompared: "Already the calmest we found"
+        case .fewerChecked: "Best of the routes we checked"
         case .calmerTakesLonger: "Calmest within this extra time"
         case .tooLittleGain: "Best balance we found"
         case .clearlyCalmerTakesLonger: "Best balance within this extra time"
@@ -62,6 +65,7 @@ public enum NoCalmerFinding: Sendable, Equatable {
         case .notChecked: "Extra time is None, so nothing else was checked."
         case .onlyRoute: "By our estimates, every search found this route."
         case let .calmestCompared(routes): "Calmest of \(routes) routes compared, by our estimates."
+        case let .fewerChecked(routes): "This is a long trip, so we compared only \(routes) \(routes == 1 ? "route" : "routes"). By our estimates, none is calmer for its time."
         case let .calmerTakesLonger(minutes): "By our estimates, calmer routes take \(minutes)+ min more."
         case .tooLittleGain: "By our estimates, other routes gain too little."
         case let .clearlyCalmerTakesLonger(minutes): "By our estimates, a clearly calmer route takes \(minutes)+ min more."
@@ -134,6 +138,35 @@ extension Factor {
     }
 }
 
+/// How much searching one request may do, so a phone's memory and a very long walk or ride cannot run away with it.
+public struct SearchLimits: Sendable, Equatable {
+    /// Searches running at once. Each owns a buffer set the size of the graph (about 19 MB measured at all-Seattle scale),
+    /// and an iPhone 15 has 6 cores but a jetsam limit near 3 GB for the whole app, so phones take three: the 7 searches of a
+    /// request then run in three waves and hold about 60 MB, not 130.
+    public var concurrentSearches: Int
+    /// Straight-line distance beyond which a walk or bike request runs two calmer searches instead of six,
+    /// and beyond `farFactor` times it, one. The fastest search and at least one calmer search always run.
+    public var longMeters: [TravelMode: Double]
+    public static let farFactor = 2.5
+
+    public init(concurrentSearches: Int, longMeters: [TravelMode: Double]) {
+        self.concurrentSearches = max(1, concurrentSearches); self.longMeters = longMeters
+    }
+
+    #if os(iOS)
+    public static let standard = SearchLimits(concurrentSearches: 3, longMeters: [.walk: 12_000, .bike: 25_000])
+    #else
+    public static let standard = SearchLimits(concurrentSearches: 8, longMeters: [.walk: 12_000, .bike: 25_000])
+    #endif
+    public static let unbounded = SearchLimits(concurrentSearches: 8, longMeters: [:])
+
+    /// The calmer-search weights to run for a trip of `meters` in a straight line.
+    func weights(_ all: [Double], mode: TravelMode, meters: Double) -> [Double] {
+        guard let long = longMeters[mode], meters > long, all.count > 2 else { return all }
+        return meters > long * Self.farFactor ? [all[all.count / 2]] : [all[all.count / 2 - 1], all[all.count - 2]]
+    }
+}
+
 /// Owned, offline edge-state Dijkstra router. Small enough to audit; intentionally not navigation software.
 public final class NativeRouter: RouteComputing, Sendable {
     public let graph: StreetGraph
@@ -157,12 +190,14 @@ public final class NativeRouter: RouteComputing, Sendable {
     /// The part of `edgeStress` each preference option accounts for, kept only for edges where it's nonzero.
     private let edgeOptionStress: [TravelMode: OptionShares]
     private let buffers = BufferPool()
+    let limits: SearchLimits
 
     /// Searches trading time against stress; each extra weight finds another point on the time/stress curve.
     static let weights = [0.25, 0.5, 1, 2, 4, 8]
 
-    public init(graph: StreetGraph) {
+    public init(graph: StreetGraph, limits: SearchLimits = .standard) {
         self.graph = graph
+        self.limits = limits
         let nodeCount = graph.nodes.count
         let out = Adjacency(nodes: nodeCount, edges: graph.edges, node: \.from)
         let inc = Adjacency(nodes: nodeCount, edges: graph.edges, node: \.to)
@@ -254,11 +289,12 @@ public final class NativeRouter: RouteComputing, Sendable {
         let stress = exposure(mode: request.mode, scale: nil)
         let transitions = TransitionCache()
         let scale = FactorScale(request.preferences, mode: request.mode)
-        let weights = request.extraMinutes > 0 ? Self.weights : []
+        let weights = request.extraMinutes > 0 ? limits.weights(Self.weights, mode: request.mode, meters: nodePoints[start.node].distance(to: nodePoints[end.node])) : []
+        let bounded = weights.count < Self.weights.count && !weights.isEmpty
         let scaled = scale == nil || weights.isEmpty ? stress : exposure(mode: request.mode, scale: scale)
         // The fastest route and the base weights don't depend on each other, so they run side by side; candidates keep weight order.
         let found = Found(count: 1 + weights.count)
-        DispatchQueue.concurrentPerform(iterations: found.count) { i in
+        parallelFor(found.count, limit: limits.concurrentSearches) { i in
             found.set(i, Result {
                 try shortest(from: start.node, to: end.node, mode: request.mode, weight: i == 0 ? 0 : weights[i - 1], stress: i == 0 ? stress : scaled,
                              scale: i == 0 ? nil : scale, transitions: transitions, cancel: cancel)
@@ -272,7 +308,9 @@ public final class NativeRouter: RouteComputing, Sendable {
         if var weight = weights.last {
             let limit = fastest.metrics.seconds + Double(request.extraMinutes) * 60 + 0.000_001
             // Avoid can make even the lightest weight detour past the budget; then look closer to the fastest route.
-            while scale != nil, weight > Self.weights[0] / 4, !candidates.dropFirst().contains(where: { $0.metrics.seconds <= limit }) {
+            var retries = bounded ? 1 : Int.max
+            while retries > 0, scale != nil, weight > Self.weights[0] / 4, !candidates.dropFirst().contains(where: { $0.metrics.seconds <= limit }) {
+                retries -= 1
                 weight = min(weight, Self.weights[0]) / 2
                 try cancel.check()
                 add(try shortest(from: start.node, to: end.node, mode: request.mode, weight: weight, stress: scaled, scale: scale, transitions: transitions, cancel: cancel))
@@ -283,7 +321,7 @@ public final class NativeRouter: RouteComputing, Sendable {
         return RouteComparison(request: request, fastest: fastest, calmer: calmer, candidateCount: candidates.count,
                                originSnapMeters: start.distance, destinationSnapMeters: end.distance,
                                snappedOrigin: graph.nodes[start.node].coordinate, snappedDestination: graph.nodes[end.node].coordinate,
-                               noCalmer: Self.noCalmerFinding(candidates: candidates, fastest: fastest, extraMinutes: request.extraMinutes, stress: weighed))
+                               noCalmer: Self.noCalmerFinding(candidates: candidates, fastest: fastest, extraMinutes: request.extraMinutes, stress: weighed, bounded: bounded))
     }
 
     /// Stress a slower route must remove per extra second to be worth it: 15 equivalent seconds per extra minute.
@@ -312,8 +350,17 @@ public final class NativeRouter: RouteComputing, Sendable {
     }
 
     /// What the candidates show when `selectCalmer` offered none.
+    /// When `bounded`, fewer searches ran, so findings that say the calmest was found become `fewerChecked`.
     public static func noCalmerFinding(candidates: [Route], fastest: Route, extraMinutes: Int,
-                                       stress: (Route) -> Double = { $0.metrics.stress }) -> NoCalmerFinding {
+                                       stress: (Route) -> Double = { $0.metrics.stress }, bounded: Bool = false) -> NoCalmerFinding {
+        let found = plainFinding(candidates: candidates, fastest: fastest, extraMinutes: extraMinutes, stress: stress)
+        switch found {
+        case .notChecked, .clearlyCalmerTakesLonger: return found
+        default: return bounded ? .fewerChecked(routes: candidates.count) : found
+        }
+    }
+
+    private static func plainFinding(candidates: [Route], fastest: Route, extraMinutes: Int, stress: (Route) -> Double) -> NoCalmerFinding {
         guard extraMinutes > 0 else { return .notChecked }
         let others = candidates.filter { $0.edgeIDs != fastest.edgeIDs }
         guard !others.isEmpty else { return .onlyRoute }
