@@ -20,7 +20,7 @@ a claim of parity with mature routing engines.
 ## Data boundaries
 
 `Scripts/import_osm.py` compiles the preserved Overpass responses into a graph
-and display GeoJSON. Routing segments retain full geometry, OSM way IDs, names,
+and the map tiles. Routing segments retain full geometry, OSM way IDs, names,
 road classes, mode permissions, surfaces, posted speed text, incline text, and
 direction-specific cycleway tags. Shared nodes, signals, barriers, endpoints,
 and restriction nodes split segments. The app never infers missing attributes
@@ -47,6 +47,43 @@ Routing remains incomplete: lane-specific maneuvers, vehicle dimensions,
 conditional schedules, construction, seasonal closures, traffic, ferry routing,
 turn-protection phases, complex intersection rules, and many access subtleties
 are not modeled. Missing OSM restrictions can still produce infeasible routes.
+
+## Map tiles
+
+`Core/Resources/seattle-map.pmtiles` is PMTiles v3 holding Mapbox Vector Tiles (version 2), zoom 8 to 14, overzoomed
+by MapLibre to the app's maximum of 18. The app opens it with `pmtiles://file://`. `Scripts/build_tiles.py` writes
+it, stdlib only. Each tile has at most one feature per source layer (all lines one MultiLineString, all polygons one
+MultiPolygon), with no properties or names. The style never filters, so zoom detail is decided only by what each
+layer holds.
+
+| Source layer | Type | Contents and first zoom |
+|---|---|---|
+| `water` | polygon | z8: coast polygons, `natural=water` |
+| `park` | polygon | z10: `leisure=park/garden/pitch` |
+| `arterial` | line | z8: motorway, trunk. z10: primary. z11: secondary |
+| `road` | line | z11: tertiary and the motorway, trunk and primary links. z12: secondary and tertiary links, residential, unclassified, living street, busway. z13: pedestrian, service with no `service` tag or an alley. z14: other service |
+| `path` | line | z12: cycleway. z14: footway, path, steps, track |
+
+Other `highway` values and `area=yes` ways are not drawn.
+
+| Zoom | Extent | Buffer | Simplify | Drop polygon under |
+|---:|---:|---:|---:|---:|
+| 14 | 8192 | 128 | 1.5 units (0.3 m) | 1 unit |
+| 12 to 13 | 4096 | 64 | 6 | 8 units |
+| 8 to 11 | 4096 | 64 | 10 | 8 units |
+
+Tiles and directories are stored **uncompressed**: gzip would save about 22% of the file, but the bytes would then
+depend on a zlib build, and the App Store compresses the download anyway. The output is deterministic, so
+`Scripts/verify.sh` compares it with a fresh import.
+
+**Coastline.** Puget Sound is not a polygon in OSM; `natural=coastline` ways have land on their left and water on
+their right. `coast_water` joins the ways end to start without reversing them, clips the chains to the water box
+(the routing box plus 0.1°), and closes each run clockwise along the box edge, so the water side is filled. A coastline
+that ends inside the box fails the import rather than flooding the map. Islands become holes.
+
+`python3 Scripts/import_osm.py --tiles-only` rewrites only the tiles and the `sources` and `map` entries of
+`Data/provenance.json`. Use it on a machine whose SQLite differs from the one that built the shipped search index; a
+full import there would rewrite the index.
 
 ## Region data
 
@@ -78,16 +115,16 @@ Add or update a region file:
 
 ### seattle-all
 
-All of Seattle (47.49, -122.44, 47.74, -122.24), release `data-seattle-all-2026-11`. The app bundle ships it when it is
+All of Seattle (47.49, -122.44, 47.74, -122.24), release `data-seattle-all-2026-11b` (the first release, `data-seattle-all-2026-11`, had a GeoJSON map and still holds the 365 MB source extract). The app bundle ships it when it is
 fetched and the fixture otherwise: a "Bundle fetched region" build phase (from `Scripts/generate_project.py`) copies
-`Data/region/seattle-all/expected/{seattle-graph.bin,seattle-map.geojson,seattle-search.sqlite.gz}` into the app,
+`Data/region/seattle-all/expected/{seattle-graph.bin,seattle-map.pmtiles,seattle-search.sqlite.gz}` into the app,
 and `Bundle.dataFile` in Core prefers the app bundle's copy over the package's fixture. `swift test` and CI never see it.
 Run `Scripts/fetch_data seattle-all` and rebuild the app to switch.
 
 Its inputs are made, not downloaded as Overpass JSON: `Scripts/pbf_to_snapshot.py` turns one dated Geofabrik Washington
 extract into `seattle-osm`, `seattle-parks`, `seattle-search` (and `seattle-coast`) snapshots in the importer's format, in about
 15 seconds with the standard library. The extract's URL, SHA-256 and date go into each snapshot and from there into
-`provenance.json`. The extract itself is the unpinned release asset `seattle-all--source__washington-261031.osm.pbf`.
+`provenance.json`. The extract itself is the unpinned asset `seattle-all--source__washington-261031.osm.pbf` on release `data-seattle-all-2026-11`.
 Elevation comes from `Scripts/fetch_dem_tiles.py 47.45 -122.45 47.75 -122.20 ...` (a 0.05 degree margin, so no 0 m fringe).
 The full import takes about 11 minutes and 3 GB.
 

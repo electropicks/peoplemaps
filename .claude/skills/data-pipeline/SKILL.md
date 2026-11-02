@@ -16,11 +16,12 @@ Scripts/verify.sh                  # "data reproduces byte for byte" must pass
 
 - Outputs:
   - `seattle-graph.bin`: binary graph; the format is documented in the importer and read by `Core/GraphBinary.swift`.
-  - `seattle-map.geojson`: map layer.
+  - `seattle-map.pmtiles`: map layer (vector tiles, written by `Scripts/build_tiles.py`; schema in `Docs/ARCHITECTURE.md`).
   - `seattle-search.sqlite.gz`: FTS5 search index.
 - Output must be deterministic: no timestamps or dict-order dependence, and gzip uses `mtime=0`.
 - When outputs change on purpose, commit the code and the regenerated files together, and say why in the message (sizes before → after).
-- Snapshots are archived in `Data/`. Fetch new ones only when asked; record the query, date and source in `Data/provenance.json`.
+- Don't run a full import in place on a Mac whose SQLite differs from `Data/provenance.json`'s `search.sqlite`: it rewrites the search index and provenance. For a map-only change run `python3 Scripts/import_osm.py --tiles-only`, which writes just `seattle-map.pmtiles` and the provenance entries it changes; CI's Linux job proves the rest still reproduces.
+- Snapshots are archived in `Data/`. `seattle-coast` (OSM `natural=coastline`, query `Data/seattle-coast.overpassql`) feeds the water polygons only, not the graph. Fetch new ones only when asked; record the query, date and source in `Data/provenance.json`.
 - `PEOPLEMAPS_BBOX`, `PEOPLEMAPS_DATA` and `PEOPLEMAPS_OUT` (and `--out`) redirect an import for spikes. Never point them at the shipped files.
 
 ## Region data

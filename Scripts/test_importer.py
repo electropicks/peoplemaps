@@ -1,6 +1,6 @@
 import array, collections, gzip, json, pathlib, sqlite3, struct, tempfile, unittest
-import build_search
-from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,simplify_line,map_geojson,load_dem
+import build_search, build_tiles
+from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,load_dem
 
 class ImportPolicyTests(unittest.TestCase):
     def test_private_road_excluded(self):
@@ -72,15 +72,212 @@ class ImportPolicyTests(unittest.TestCase):
     def test_walkers_pass_bollards_drivers_do_not(self):
         self.assertFalse(node_blocks({'barrier':'bollard'},'walk'))
         self.assertTrue(node_blocks({'barrier':'bollard'},'drive'))
-    def test_map_lines_are_rounded_and_simplified(self):
-        self.assertEqual(simplify_line([[-122.12345678,47.1],[-122.12345679,47.1]]),None)  # collapses to a point
-        line=simplify_line([[-122.1,47.1],[-122.0999,47.10000001],[-122.0998,47.1]])  # middle point is within 0.3 m
-        self.assertEqual(line,[[-122.1,47.1],[-122.0998,47.1]])
-        bend=simplify_line([[-122.1,47.1],[-122.0999,47.1005],[-122.0998,47.1]])  # 55 m off the chord stays
-        self.assertEqual(len(bend),3)
-    def test_map_merges_lines_by_kind_without_names(self):
-        out=map_geojson([],{'path':[[[0,0],[1,1]],[[2,2],[3,3]]]})
-        self.assertEqual(out['features'],[{'type':'Feature','properties':{'kind':'path'},'geometry':{'type':'MultiLineString','coordinates':[[[0,0],[1,1]],[[2,2],[3,3]]]}}])
+
+def coast_ways(*lines):
+    """OSM-style coastline ways (ids from 1) and nodes from point lists; a list that ends where it starts is a closed way."""
+    nodes = {}; ways = []; nid = 1
+    for i, pts in enumerate(lines):
+        ids = []
+        for p in pts:
+            nodes[nid] = {'lon': p[0], 'lat': p[1]}; ids.append(nid); nid += 1
+        if pts[0] == pts[-1]: ids[-1] = ids[0]
+        ways.append({'id': i + 1, 'nodes': ids})
+    return ways, nodes
+
+def ring_area(ring):
+    return abs(sum(a[0]*b[1] - b[0]*a[1] for a, b in zip(ring, ring[1:])) / 2)
+
+class CoastlineTests(unittest.TestCase):
+    BOX = (0.0, 0.0, 10.0, 10.0)  # S,W,N,E
+    def water(self, *lines):
+        return build_tiles.coast_water(*coast_ways(*lines), self.BOX)
+    def test_east_going_coast_puts_water_south(self):
+        out = self.water([(-1, 5), (11, 5)])
+        self.assertEqual(len(out), 1); self.assertAlmostEqual(ring_area(out[0][0]), 50)
+        self.assertTrue(all(y <= 5 for x, y in out[0][0]))
+    def test_west_going_coast_puts_water_north(self):
+        out = self.water([(11, 5), (-1, 5)])
+        self.assertAlmostEqual(ring_area(out[0][0]), 50); self.assertTrue(all(y >= 5 for x, y in out[0][0]))
+    def test_coast_split_in_two_ways_joins(self):
+        ways = [{'id': 1, 'nodes': [1, 2]}, {'id': 2, 'nodes': [2, 3]}]
+        nodes = {1: {'lon': -1, 'lat': 5}, 2: {'lon': 5, 'lat': 5}, 3: {'lon': 11, 'lat': 5}}
+        self.assertAlmostEqual(ring_area(build_tiles.coast_water(ways, nodes, self.BOX)[0][0]), 50)
+    def test_channel(self):
+        out = self.water([(3, -1), (3, 11)], [(7, 11), (7, -1)])
+        self.assertEqual(len(out), 1); self.assertAlmostEqual(ring_area(out[0][0]), 40)
+    def test_two_shores_make_two_waters(self):
+        out = self.water([(7, -1), (7, 11)], [(3, 11), (3, -1)])
+        self.assertEqual([round(ring_area(p[0])) for p in out], [30, 30])
+    def test_island_is_a_hole(self):
+        out = self.water([(-1, 5), (11, 5)], [(2, 2), (4, 2), (4, 4), (2, 4), (2, 2)])
+        self.assertEqual([len(p) for p in out], [2]); self.assertAlmostEqual(ring_area(out[0][1]), 4)
+    def test_island_alone_floods_the_box(self):
+        out = self.water([(2, 2), (4, 2), (4, 4), (2, 4), (2, 2)])
+        self.assertEqual(len(out), 1); self.assertEqual(len(out[0]), 2); self.assertAlmostEqual(ring_area(out[0][0]), 100)
+    def test_island_crossing_the_edge(self):
+        out = self.water([(-2, 2), (2, 2), (2, 8), (-2, 8), (-2, 2)])
+        self.assertAlmostEqual(ring_area(out[0][0]), 88)
+    def test_corner_to_corner(self):
+        self.assertAlmostEqual(ring_area(self.water([(-1, -1), (11, 11)])[0][0]), 50)
+    def test_coast_ending_inside_the_box_fails_the_import(self):
+        with self.assertRaises(ValueError): self.water([(-1, 5), (5, 5)])
+    def test_no_coast_no_water(self):
+        self.assertEqual(self.water([(20, 20), (21, 21)]), [])
+
+# A small reader for the archive, independent of the writer's helpers.
+def varint(b, p):
+    n = s = 0
+    while True:
+        c = b[p]; p += 1; n |= (c & 0x7F) << s; s += 7
+        if c < 0x80: return n, p
+
+def read_directory(b):
+    n, p = varint(b, 0); ids = []; last = 0
+    for _ in range(n):
+        d, p = varint(b, p); last += d; ids.append(last)
+    cols = []
+    for _ in range(3):
+        col = []
+        for _ in range(n):
+            v, p = varint(b, p); col.append(v)
+        cols.append(col)
+    runs, lens, raw = cols; offs = []
+    for i in range(n): offs.append(offs[-1] + lens[i - 1] if raw[i] == 0 else raw[i] - 1)
+    return list(zip(ids, runs, lens, offs))
+
+def read_archive(b):
+    """Header fields and {tile id: tile bytes} read back through the root and leaf directories."""
+    ro, rl, mo, ml, lo, ll, do, dl, addressed, entries, contents = struct.unpack('<11Q', b[8:96])
+    ic, tc, tt, minz, maxz = b[97], b[98], b[99], b[100], b[101]
+    head = dict(root=(ro, rl), meta=json.loads(b[mo:mo + ml]), leaf=(lo, ll), addressed=addressed, entries=entries, contents=contents,
+                comp=(ic, tc), type=tt, zooms=(minz, maxz), bounds=[v / 1e7 for v in struct.unpack('<4i', b[102:118])])
+    found = {}
+    def walk(d):
+        for tid, run, ln, off in read_directory(d):
+            if run == 0: walk(b[lo + off:lo + off + ln])
+            else:
+                for k in range(run): found[tid + k] = b[do + off:do + off + ln]
+    walk(b[ro:ro + rl])
+    return head, found
+
+def decode_tile(raw):
+    """{layer: (extent, [(geometry type, [rings or lines of (x, y)])])}"""
+    out = {}; p = 0
+    while p < len(raw):
+        key, p = varint(raw, p); n, p = varint(raw, p); layer = raw[p:p + n]; p += n
+        q = 0; name = ext = None; feats = []
+        while q < len(layer):
+            key, q = varint(layer, q)
+            if key & 7 == 2:
+                n, q = varint(layer, q); v = layer[q:q + n]; q += n
+                if key >> 3 == 1: name = v.decode()
+                else:
+                    r = 0; typ = geom = None
+                    while r < len(v):
+                        k, r = varint(v, r)
+                        if k >> 3 == 3: typ, r = varint(v, r)
+                        else:
+                            n2, r = varint(v, r); gb = v[r:r + n2]; r += n2; geom = []; s = 0
+                            while s < len(gb): u, s = varint(gb, s); geom.append(u)
+                    feats.append((typ, shapes(geom)))
+            else:
+                v, q = varint(layer, q)
+                if key >> 3 == 5: ext = v
+        out[name] = (ext, feats)
+    return out
+
+def shapes(g):
+    i = x = y = 0; out = []; unzig = lambda u: (u >> 1) ^ -(u & 1)
+    while i < len(g):
+        cmd, cnt = g[i] & 7, g[i] >> 3; i += 1
+        if cmd == 7: out[-1].append(out[-1][0]); continue
+        for _ in range(cnt):
+            x += unzig(g[i]); y += unzig(g[i + 1]); i += 2
+            if cmd == 1: out.append([(x, y)])
+            else: out[-1].append((x, y))
+    return out
+
+def zoom_of(tid):
+    z = 0
+    while tid >= (4 ** (z + 1) - 1) // 3: z += 1
+    return z
+
+def tile_at(lon, lat, z):
+    wx, wy = build_tiles.world(lon, lat); return int(wx * 2 ** z), int(wy * 2 ** z), wx * 2 ** z, wy * 2 ** z
+
+class TileWriterTests(unittest.TestCase):
+    LINE = [(-122.350, 47.620), (-122.340, 47.625), (-122.335, 47.630)]
+    SQUARE = [(-122.35, 47.62), (-122.34, 47.62), (-122.34, 47.63), (-122.35, 47.63), (-122.35, 47.62)]
+    HOLE = [(-122.347, 47.623), (-122.347, 47.627), (-122.343, 47.627), (-122.343, 47.623), (-122.347, 47.623)]
+    def small(self):
+        return build_tiles.build({'arterial': [(8, self.LINE)], 'path': [(14, [(-122.3455, 47.6212), (-122.3445, 47.6214)])]},
+                                 {'water': [[self.SQUARE, self.HOLE]], 'park': [[[(-122.33, 47.62), (-122.32, 47.62), (-122.32, 47.63), (-122.33, 47.62)]]]})
+    def test_hilbert_ids(self):
+        keys = [(0,0,0),(1,0,0),(1,0,1),(1,1,1),(1,1,0),(2,0,0)]
+        self.assertEqual([build_tiles.zxy_to_id(*k) for k in keys], [0, 1, 2, 3, 4, 5])
+    def test_which_ways_the_map_draws(self):
+        m = build_tiles.map_line
+        self.assertEqual(m({'highway': 'footway'}), ('path', 14))
+        self.assertEqual(m({'highway': 'cycleway'}), ('path', 12))
+        self.assertIsNone(m({'highway': 'proposed'}))
+        self.assertEqual(m({'highway': 'service', 'service': 'alley'}), ('road', 13))
+        self.assertEqual(m({'highway': 'service'}), ('road', 13))
+        self.assertEqual(m({'highway': 'service', 'service': 'driveway'}), ('road', 14))
+        self.assertEqual(m({'highway': 'motorway'}), ('arterial', 8))
+        self.assertEqual(m({'highway': 'secondary'}), ('arterial', 11))
+    def test_archive_structure(self):
+        data, summary = self.small(); head, tiles = read_archive(data)
+        self.assertEqual(data[:8], b'PMTiles\x03')
+        self.assertEqual((head['comp'], head['type'], head['zooms']), ((1, 1), 1, (8, 14)))
+        self.assertLessEqual(127 + head['root'][1], 16384)
+        self.assertEqual(head['leaf'][1], 0)
+        self.assertEqual((summary['bytes'], summary['addressedTiles']), (len(data), head['addressed']))
+        self.assertEqual(summary['tileEntries'], head['entries']); self.assertEqual(summary['distinctTiles'], head['contents'])
+        self.assertEqual([l['id'] for l in head['meta']['vector_layers']], ['arterial', 'park', 'path', 'road', 'water'])
+        self.assertEqual(head['meta']['attribution'], '© OpenStreetMap contributors')
+        W, S, E, N = head['bounds']; self.assertTrue(W <= -122.35 and E >= -122.32 and S <= 47.62 and N >= 47.63)
+    def test_layers_appear_at_their_first_zoom(self):
+        _, tiles = read_archive(self.small()[0]); zooms = {}
+        for tid, raw in tiles.items():
+            for name in decode_tile(raw): zooms.setdefault(name, set()).add(zoom_of(tid))
+        self.assertEqual((min(zooms['arterial']), max(zooms['arterial'])), (8, 14))
+        self.assertEqual(min(zooms['water']), 8); self.assertEqual(min(zooms['park']), 10); self.assertEqual(min(zooms['path']), 14)
+        self.assertNotIn('road', zooms)
+        self.assertEqual({zoom_of(t) for t in tiles}, set(range(8, 15)))
+    def test_z14_line_stays_within_two_units_of_the_source(self):
+        _, tiles = read_archive(self.small()[0])
+        x, y, fx, fy = tile_at(*self.LINE[0], 14)
+        ext, feats = decode_tile(tiles[build_tiles.zxy_to_id(14, x, y)])['arterial']
+        self.assertEqual(ext, 8192)
+        (typ, parts), = feats; self.assertEqual(typ, 2)
+        want = ((fx - x) * ext, (fy - y) * ext)
+        self.assertLessEqual(max(abs(parts[0][0][0] - want[0]), abs(parts[0][0][1] - want[1])), 2)
+    def test_winding(self):
+        _, tiles = read_archive(self.small()[0])
+        x, y, _, _ = tile_at(-122.345, 47.625, 14)
+        ext, feats = decode_tile(tiles[build_tiles.zxy_to_id(14, x, y)])['water']
+        (typ, rings), = feats; self.assertEqual(typ, 3)
+        area = lambda r: sum(a[0]*b[1] - b[0]*a[1] for a, b in zip(r, r[1:]))
+        self.assertEqual(sorted(area(r) > 0 for r in rings), [False, True])  # a hole (negative) inside its exterior (positive)
+    def test_identical_neighbours_share_one_entry(self):
+        sea = [[(-122.45, 47.55), (-122.25, 47.55), (-122.25, 47.75), (-122.45, 47.75), (-122.45, 47.55)]]
+        data, summary = build_tiles.build({}, {'water': [sea]}); head, tiles = read_archive(data)
+        self.assertLess(summary['distinctTiles'], summary['addressedTiles'])
+        self.assertLess(summary['tileEntries'], summary['addressedTiles'])
+        self.assertEqual(len(tiles), summary['addressedTiles'])
+    def test_empty_tiles_are_not_written(self):
+        data, summary = build_tiles.build({'road': [(12, [(-122.35, 47.62), (-122.35, 47.62)])]}, {})
+        self.assertEqual(summary['addressedTiles'], 0)
+    def test_many_tiles_need_leaf_directories(self):
+        # 60 x 60 short z14 lines, one per tile with its own bytes: more directory entries than fit in the root.
+        lines = {'path': [(14, [(-123.0 + i * 0.03, 47.0 + j * 0.02), (-123.0 + i * 0.03 + 0.0005, 47.0 + j * 0.02 + 0.0004 * (1 + (i + j) % 7))])
+                          for i in range(60) for j in range(60)]}
+        data, summary = build_tiles.build(lines, {}); head, tiles = read_archive(data)
+        self.assertGreater(head['leaf'][1], 0); self.assertLessEqual(127 + head['root'][1], 16384)
+        self.assertEqual(len(tiles), summary['addressedTiles'])
+        self.assertTrue(all(decode_tile(t) for t in tiles.values()))
+    def test_same_input_same_bytes(self):
+        self.assertEqual(self.small()[0], self.small()[0])
 
 class SearchIndexTests(unittest.TestCase):
     @staticmethod

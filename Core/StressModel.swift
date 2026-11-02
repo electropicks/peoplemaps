@@ -138,7 +138,8 @@ struct NoRecord: StressRecorder {
 
 public struct Breakdown: StressRecorder, Sendable {
     public private(set) var tallies: [Factor: Tally] = [:]
-    public var stress: Double { tallies.values.reduce(0) { $0 + $1.cost } }
+    /// Summed in a fixed order: floating-point sums depend on order, and a tie between routes must not flip per launch.
+    public var stress: Double { Factor.allCases.reduce(0) { $0 + (tallies[$1]?.cost ?? 0) } }
     public subscript(_ factor: Factor) -> Tally { tallies[factor] ?? Tally() }
     public init() {}
     mutating func add(_ factor: Factor, amount: Double, cost: Double) {

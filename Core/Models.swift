@@ -182,7 +182,7 @@ public struct StreetGraph: Sendable {
         try graph.validate()
         return graph
     }
-    public static var mapURL: URL? { Bundle.dataFile("seattle-map", "geojson") }
+    public static var mapURL: URL? { Bundle.dataFile("seattle-map", "pmtiles") }
 
     public func validate() throws {
         guard bounds.count == 4, !nodes.isEmpty,
@@ -218,8 +218,11 @@ public struct RouteRequest: Hashable, Sendable {
     public let destination: Place
     public let mode: TravelMode
     public let extraMinutes: Int
-    public init(origin: Place, destination: Place, mode: TravelMode, extraMinutes: Int) {
+    /// What this person minds more or less; only the calmer search reads it.
+    public let preferences: RoutePreferences
+    public init(origin: Place, destination: Place, mode: TravelMode, extraMinutes: Int, preferences: RoutePreferences? = nil) {
         self.origin = origin; self.destination = destination; self.mode = mode; self.extraMinutes = extraMinutes
+        self.preferences = preferences ?? .default(for: mode)
     }
 }
 
