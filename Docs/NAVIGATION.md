@@ -65,9 +65,11 @@ sense of direction.
   when the user pans, pinches or double-taps: following stops and the map stays
   where they left it. The map keeps the last heading while the user is stopped,
   so it never swings back north at a light.
-- **Controls.** The compass button (`guidance-compass`) flips heading-up and
-  north-up and resumes following; its glyph points north on screen. The overview
-  button toggles the fitted view. In `free`, a "Re-centre" pill
+- **Controls.** Mute, compass and overview are one glass capsule. The compass
+  button (`guidance-compass`) flips heading-up and north-up and resumes
+  following; its glyph points north on screen and stays put during a free look.
+  In the overview a tap only leaves the overview and does not flip the
+  orientation. The overview button toggles the fitted view. In `free`, a "Re-centre" pill
   (`guidance-recenter`) returns to the follow mode the user left, as Apple Maps
   does. Camera turns animate with `Motion.camera`: a cut under Reduce Motion and
   `--ui-testing`.

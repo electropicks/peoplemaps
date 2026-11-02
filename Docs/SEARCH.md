@@ -77,9 +77,21 @@ on paper but returns Apple data, so do not rely on it either.
   that row, and nothing asks again.
 - **Near an address.** A place with no address of its own shows the nearest
   indexed address within 40 m ("Near 211 West Highland Drive"), else its
-  neighbourhood (`SearchIndex.nearestAddress`).
-- **Drop a pin.** Long-press the map for "Dropped pin" plus the nearest
-  address from the index.
+  neighbourhood (`SearchIndex.nearestAddress`). Neighbourhoods are centroids,
+  not boundaries, so one shows only within 800 m and when no other centroid is
+  within 1.5 times as far (`Neighbourhoods.nearest`); otherwise no label.
+- **Drop a pin.** Long-press the map. The pin takes the name of the nearest
+  address or place within 50 m (`SearchIndex.droppedPin`): plainly within 15 m,
+  as "Near ..." farther out, since the pin is not the thing itself. With
+  nothing close it stays "Dropped pin" with its neighbourhood (when clear) and
+  coordinates.
+- **Category words.** "gas station", "coffee", "grocery", "pharmacy" and the
+  like map to index categories (`SearchIndex.categoryWords`, query side) and
+  list those places after the name matches, ahead of text found only in a
+  category or address.
+- **Start outside the map.** When the start is outside the routing bounds
+  (`graph.contains`), the preview says so and offers "Choose start"; the router
+  throws `RoutingError.startOutsideCoverage`.
 - **Recents and favourites.** Stored on the device as our own place IDs and
   coordinates.
 
