@@ -337,6 +337,44 @@ final class RouterTests: XCTestCase {
     }
 }
 
+/// A stop that snaps to a stretch only a banned turn leads into or out of. Nodes: 0 south, 1 the junction, 4 east.
+/// Way 10 joins 0 and 1, way 21 joins 1 and 4, both two-way. Nothing else connects them.
+final class SnapRetryTests: XCTestCase {
+    private func graph(_ restrictions: [TurnRestriction]) -> StreetGraph {
+        func e(_ id: Int, _ from: Int, _ to: Int, _ way: Int64, _ meters: Double) -> GraphEdge { Fixture.edge(id: id, from: from, to: to, way: way, meters: meters) }
+        return StreetGraph(bounds: [47.6, -122.4, 47.7, -122.3],
+                           nodes: Fixture.points.enumerated().map { GraphNode(osm: Int64($0.offset), lat: $0.element.lat, lon: $0.element.lon) },
+                           edges: [e(0, 0, 1, 10, 111), e(1, 1, 0, 10, 111), e(2, 1, 4, 21, 150), e(3, 4, 1, 21, 150)],
+                           restrictions: restrictions, places: [])
+    }
+    private let south = Place(id: "south", name: "South", lat: Fixture.points[0].lat, lon: Fixture.points[0].lon, category: "test")
+    private let east = Place(id: "east", name: "East", lat: Fixture.points[4].lat, lon: Fixture.points[4].lon, category: "test")
+
+    func testDestinationReachableOnlyThroughABannedTurnFallsBackToTheNextNode() throws {
+        let ban = TurnRestriction(via: 1, fromWay: 10, toWay: 21, kind: "no_right_turn", mode: .drive, osmID: 1)
+        let router = NativeRouter(graph: graph([ban]))
+        XCTAssertThrowsError(try router.compute(.init(origin: south, destination: east, mode: .drive, extraMinutes: 0), cancel: CancelFlag(), snapLimit: 1)) {
+            XCTAssertEqual($0 as? RoutingError, .noConnection)
+        }
+        let result = try router.compute(.init(origin: south, destination: east, mode: .drive, extraMinutes: 0))
+        XCTAssertEqual(result.snappedDestination, Fixture.points[1], "the junction is the nearest node from which the destination can be reached")
+        XCTAssertGreaterThan(result.destinationSnapMeters, 100)
+        XCTAssertEqual(result.fastest.edgeIDs, [0])
+        XCTAssertEqual(try router.compute(.init(origin: south, destination: east, mode: .bike, extraMinutes: 0)).snappedDestination, Fixture.points[4], "the ban is drive only")
+    }
+    func testStartThatCannotLeaveThroughABannedTurnFallsBackToTheNextNode() throws {
+        let ban = TurnRestriction(via: 1, fromWay: 21, toWay: 10, kind: "no_left_turn", mode: .drive, osmID: 2)
+        let router = NativeRouter(graph: graph([ban]))
+        XCTAssertThrowsError(try router.compute(.init(origin: east, destination: south, mode: .drive, extraMinutes: 0), cancel: CancelFlag(), snapLimit: 1)) {
+            XCTAssertEqual($0 as? RoutingError, .noConnection)
+        }
+        // East can't get to South, but it can get to the junction, 111 m from South: the nearest pair that connects.
+        let result = try router.compute(.init(origin: east, destination: south, mode: .drive, extraMinutes: 0))
+        XCTAssertEqual([result.snappedOrigin, result.snappedDestination], [Fixture.points[4], Fixture.points[1]])
+        XCTAssertEqual(result.fastest.edgeIDs, [3])
+    }
+}
+
 /// Against the real bundled Seattle data.
 final class SeattleTests: XCTestCase {
     private static let graph = try! StreetGraph.bundled()

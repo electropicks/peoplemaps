@@ -279,14 +279,25 @@ public final class NativeRouter: RouteComputing, Sendable {
 
     public func compute(_ request: RouteRequest) throws -> RouteComparison { try compute(request, cancel: CancelFlag()) }
 
-    func compute(_ request: RouteRequest, cancel: CancelFlag) throws -> RouteComparison {
+    func compute(_ request: RouteRequest, cancel: CancelFlag, snapLimit: Int = 3) throws -> RouteComparison {
         guard (0...20).contains(request.extraMinutes) else { throw RoutingError.invalidBudget }
         guard request.origin.id != request.destination.id, request.origin.coordinate.distance(to: request.destination.coordinate) >= 10 else { throw RoutingError.samePlace }
         guard graph.contains(request.origin.coordinate) else { throw RoutingError.startOutsideCoverage }
         guard graph.contains(request.destination.coordinate) else { throw RoutingError.outsideCoverage }
-        let start = try snap(request.origin, mode: request.mode, departing: true)
-        let end = try snap(request.destination, mode: request.mode, departing: false)
-        guard start.node != end.node else { throw RoutingError.samePlace }
+        // A stop can snap to a stretch that only a banned turn leads into or out of. On noConnection, try the next nearest usable
+        // nodes (within the same 400 m), a few at most, nearest pairs first.
+        let starts = try snapCandidates(request.origin, mode: request.mode, departing: true, limit: snapLimit)
+        let ends = try snapCandidates(request.destination, mode: request.mode, departing: false, limit: snapLimit)
+        let pairs = starts.indices.flatMap { i in ends.indices.map { (i, $0) } }.sorted { ($0.0 + $0.1, $0.0) < ($1.0 + $1.1, $1.0) }
+        guard starts[0].node != ends[0].node else { throw RoutingError.samePlace }
+        for (i, j) in pairs where starts[i].node != ends[j].node {
+            do { return try compute(request, start: starts[i], end: ends[j], cancel: cancel) }
+            catch RoutingError.noConnection { try cancel.check() }
+        }
+        throw RoutingError.noConnection
+    }
+
+    private func compute(_ request: RouteRequest, start: (node: Int, distance: Double), end: (node: Int, distance: Double), cancel: CancelFlag) throws -> RouteComparison {
         let stress = exposure(mode: request.mode, scale: nil)
         let transitions = TransitionCache()
         let scale = FactorScale(request.preferences, mode: request.mode)
@@ -396,25 +407,29 @@ public final class NativeRouter: RouteComputing, Sendable {
     }
 
     func snap(_ place: Place, mode: TravelMode, departing: Bool) throws -> (node: Int, distance: Double) {
+        try snapCandidates(place, mode: mode, departing: departing, limit: 1)[0]
+    }
+
+    /// Usable nodes for a stop, best first: the index's stored node when still valid, then the nearest within 400 m (lowest id on a tie).
+    func snapCandidates(_ place: Place, mode: TravelMode, departing: Bool, limit: Int = 3) throws -> [(node: Int, distance: Double)] {
         guard let connected = connectedNodes[mode] else { throw RoutingError.noConnection }
         let point = place.coordinate
         func usable(_ i: Int) -> Bool {
             (departing ? outgoing : incoming).row(i).contains(where: { graph.edges[Int($0)].modes.contains(mode) && !graph.edges[Int($0)].isHighway })
         }
-        // The search index stores the node the importer picked; use it when it is still a valid start or end here.
-        if let i = place.snap[mode], graph.nodes.indices.contains(i), connected[i], usable(i) {
-            return (i, point.distance(to: nodePoints[i]))
-        }
-        // The nearest usable node within 400 m, the lowest id on a tie.
-        var best: (node: Int, distance: Double)?
+        var found: [(node: Int, distance: Double)] = []
+        if let i = place.snap[mode], graph.nodes.indices.contains(i), connected[i], usable(i) { found.append((i, point.distance(to: nodePoints[i]))) }
+        var near: [(node: Int, distance: Double)] = []
         grid.forEachNode(within: 400, of: point) { i in
             guard connected[i] else { return }
             let d = point.distance(to: nodePoints[i])
-            guard d <= 400, best == nil || d < best!.distance || (d == best!.distance && i < best!.node), usable(i) else { return }
-            best = (i, d)
+            guard d <= 400, usable(i) else { return }
+            near.append((i, d))
         }
-        guard let best else { throw RoutingError.noConnection }
-        return best
+        near.sort { ($0.distance, $0.node) < ($1.distance, $1.node) }
+        for candidate in near where found.count < limit && !found.contains(where: { $0.node == candidate.node }) { found.append(candidate) }
+        guard !found.isEmpty else { throw RoutingError.noConnection }
+        return Array(found.prefix(limit))
     }
 
     /// Snap to the main connected network, rather than an isolated mapped driveway or campus loop.
