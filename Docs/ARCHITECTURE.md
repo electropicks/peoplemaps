@@ -62,10 +62,14 @@ from winning merely because it is closest. Turn restrictions are still checked
 during search. Snapping can select the wrong side of a physical barrier; endpoint
 gaps are not routed, are excluded from ETA, and are disclosed in the UI.
 
-Six additional searches minimize `estimated seconds + weight × comfort cost`,
-using weights 0.15, 0.4, 1, 2.5, 6, and 15. Distinct candidates are compared using
-their exact seconds. A calmer candidate must fit `fastest seconds + budget × 60`
-and reduce comfort cost by more than 2%. Lowest cost wins; time breaks ties.
+Six additional searches minimize `estimated seconds + weight × stress`,
+using weights 0.25, 0.5, 1, 2, 4, and 8. The budget does not bound these searches.
+Distinct candidates are compared using their exact seconds. A calmer candidate must
+fit `fastest seconds + budget × 60`, reduce stress by at least 5% and 30 equivalent
+seconds, and remove more than 15 equivalent seconds of stress per extra minute. The
+most stress saved net of that rate wins. When none qualifies, `NoCalmerFinding` records
+what the candidates showed, for the preview to say (`Docs/STRESS_MODEL.md`, Choosing
+and explaining routes).
 This candidate search does not prove the global optimum under a time constraint.
 No extra time searches only the fastest route. No suitable candidate is an
 ordinary first-class result. Displayed minutes round up; filtering never does.

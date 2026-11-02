@@ -65,8 +65,22 @@ final class PeoplemapsUITests: XCTestCase {
         let x = ["Drive", "Cycle", "Walk"].map { app.buttons[$0].frame.midX }
         XCTAssertEqual(x, x.sorted(), "Mode order")
         XCTAssertTrue(app.buttons["Drive"].isSelected)
+        XCTAssertTrue(app.buttons["10 min"].isSelected, "The default leans to calm")
+        // Routes with less stress exist here but gain too little, so this one must not be called the calmest.
+        let finding = app.descendants(matching: .any)["no-alternative"]
+        XCTAssertTrue(finding.waitForExistence(timeout: 10))
+        XCTAssertTrue(finding.label.contains("Best balance we found"), finding.label)
+        XCTAssertTrue(finding.label.contains("estimates"), finding.label)
+        XCTAssertFalse(finding.label.localizedCaseInsensitiveContains("calmest"), finding.label)
+        XCTAssertFalse(finding.label.localizedCaseInsensitiveContains("safe"), finding.label)
         app.buttons["None"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["no-alternative"].waitForExistence(timeout: 10))
+        let unchecked = NSPredicate { _, _ in finding.exists && finding.label.contains("nothing else was checked") }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: unchecked, object: nil)], timeout: 10), .completed, "None says it did not look")
+        app.buttons["route-details"].tap()
+        XCTAssertTrue(app.navigationBars["Behind the routes"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS '1 distinct route was found'")).firstMatch.exists, "One route reads properly")
+        capture("02-none-details", app: app)
+        app.buttons["close-details"].tap()
         app.buttons["5 min"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
         app.buttons["Cycle"].tap()
@@ -82,6 +96,20 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["close-details"].tap()
         app.buttons["Drive"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10))
+    }
+    @MainActor func testSelectedRouteLineDrawsOnTop() {
+        let app = launchHome(location: Self.atBallardLibrary)
+        showGasWorksRoutes(app)
+        XCTAssertTrue(app.buttons["route-calmer"].waitForExistence(timeout: 10))
+        func waitForTop(_ route: String) {
+            let onTop = NSPredicate { _, _ in self.probe(app, "debug-top-route") == route }
+            XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: onTop, object: nil)], timeout: 5), .completed, "\(route) is not on top")
+        }
+        waitForTop("calmer")
+        app.buttons["route-fastest"].tap()
+        waitForTop("fastest")
+        app.buttons["route-calmer"].tap()
+        waitForTop("calmer")
     }
     // MARK: Real location (Simulator location injection and the system permission alert)
 
@@ -537,8 +565,8 @@ final class PeoplemapsUITests: XCTestCase {
             XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
         }
     }
-    /// Kerry Park to Gas Works has no calmer drive at any budget: the fastest route is already the calmest, so the
-    /// card adds nothing under the name (Docs/STRESS_MODEL.md, Time).
+    /// Kerry Park to Gas Works has no calmer drive to offer at any budget: the routes with less stress gain too little,
+    /// so the card adds nothing under the name (Docs/STRESS_MODEL.md, Time).
     @MainActor func testPlaceCardSaysNothingWhenThereIsNoCalmerDrive() {
         let app = launchHome(location: Self.atKerryPark)
         openPlace(app, "Gas Works", id: "relation/1047789")

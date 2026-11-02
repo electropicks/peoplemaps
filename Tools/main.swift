@@ -6,7 +6,7 @@ let graph = try StreetGraph.bundled()
 let graphDone = Date()
 let router = NativeRouter(graph: graph)
 FileHandle.standardError.write("load + router init: \(Date().timeIntervalSince(loadStart)) s (StreetGraph.bundled \(graphDone.timeIntervalSince(loadStart)) s)\n".data(using: .utf8)!)
-let pairs = [("way/37056567","relation/1047789"), ("way/37058377","way/160545994"), ("node/693337509","relation/1047789")]
+let pairs = [("way/37056567","relation/1047789"), ("way/37058377","way/160545994"), ("node/693337509","relation/1047789"), ("way/37058377","way/37057155"), ("way/37056567","node/12786894083"), ("node/8156900401","node/6332022081")]
 var rows: [[String: Any]] = []
 /// Stress per factor, largest first: [factor, amount, cost].
 func factors(_ route: Route) -> [[Any]] {
