@@ -53,12 +53,12 @@ for name,sources,resources in [('app',app_sources,app_resources),('test',test_so
         else:settings['TEST_TARGET_NAME']='Peoplemaps'
         obj(name+'-'+config,f'isa = XCBuildConfiguration; name = {config}; buildSettings = {{'+''.join(f'{k} = {v};' for k,v in settings.items())+'};')
     obj(name+'-config',f'isa = XCConfigurationList; buildConfigurations = ({ref(name+"-Debug")},{ref(name+"-Release")}); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')
-# A fetched region (Scripts/fetch_data seattle-all) overwrites the Seattle test fixture's files inside the app bundle (the package's resources land in the app root); with none fetched the fixture stays.
+# A fetched region (Scripts/fetch_data seattle-all) is copied into the app bundle root, where Core's Bundle.dataFile finds it before the fixture, which stays unused in the package's resource bundle. With none fetched the fixture is used.
 REGION_SCRIPT=r'''region="$SRCROOT/Data/region/seattle-all/expected"
 dest="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH"
 files="seattle-graph.bin seattle-map.pmtiles seattle-search.sqlite.gz"
 ok=1; for f in $files; do [ -f "$region/$f" ] || ok=0; done
-if [ $ok = 1 ]; then for f in $files; do cp "$region/$f" "$dest/$f"; done; echo "Bundled the fetched seattle-all region"
+if [ $ok = 1 ]; then for f in $files; do cp "$region/$f" "$dest/$f"; chmod 644 "$dest/$f"; done; echo "Bundled the fetched seattle-all region"
 else echo "seattle-all not fetched (Scripts/fetch_data seattle-all): bundling the Seattle fixture"; fi
 '''
 obj('app-region','isa = PBXShellScriptBuildPhase; buildActionMask = 2147483647; files = (); inputPaths = (); name = "Bundle fetched region"; outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "'+REGION_SCRIPT.replace('\\','\\\\').replace('"','\\"').replace('\n','\\n')+'"; alwaysOutOfDate = 1;')

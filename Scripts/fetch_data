@@ -36,6 +36,7 @@ def main(names):
                 with urllib.request.urlopen(url) as r, open(tmp, 'wb') as f: shutil.copyfileobj(r, f)
                 got = sha256(tmp)
                 if got != pin['sha256']: sys.exit(f'{url}: SHA-256 {got} does not match the pin {pin["sha256"]}')
+                os.chmod(tmp, 0o644)  # mkstemp makes it 0600; the build copies it into the app
                 os.replace(tmp, target)
             finally:
                 if os.path.exists(tmp): os.unlink(tmp)
