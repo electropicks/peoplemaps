@@ -470,6 +470,44 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["done-navigation"].tap()
         XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 10))
     }
+    /// A tap on the compass while in the overview only leaves it: the orientation it had stays.
+    @MainActor func testCompassInOverviewOnlyLeavesTheOverview() {
+        let app = launch(simulateRoute: true)
+        startSimulatedGuidance(app)
+        let compass = app.buttons["guidance-compass"], overview = app.buttons["guidance-overview"]
+        XCTAssertTrue(compass.waitForExistence(timeout: 5))
+        XCTAssertEqual(compass.label, "Heading up")
+        overview.tap()
+        XCTAssertEqual(overview.label, "Follow my position")
+        compass.tap()
+        XCTAssertEqual(overview.label, "Route overview", "The compass should leave the overview")
+        XCTAssertEqual(compass.label, "Heading up", "Leaving the overview must not flip the orientation")
+    }
+    /// At AX3 the chrome still leaves the three map buttons, End and the map's own gestures reachable.
+    @MainActor func testGuidanceAtAX3KeepsButtonsReachableAndMapPannable() {
+        let app = launchHome(location: Self.atKerryPark, extra: ["--simulate-route", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL"])
+        showGasWorksRoutes(app)
+        startSimulatedGuidance(app)
+        for id in ["guidance-mute", "guidance-compass", "guidance-overview", "end-navigation"] {
+            XCTAssertTrue(app.buttons[id].waitForExistence(timeout: 5), id)
+            XCTAssertTrue(app.buttons[id].isHittable, "\(id) is not hittable at AX3")
+        }
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5))
+        from.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.35)))
+        XCTAssertTrue(app.buttons["guidance-recenter"].waitForExistence(timeout: 5), "A pan should reach the map at AX3")
+    }
+    @MainActor func testLandscapeGuidanceKeepsEndAndMuteHittable() {
+        let app = launch(simulateRoute: true)
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        startSimulatedGuidance(app)
+        let window = app.windows.firstMatch.frame
+        XCTAssertGreaterThan(window.width, window.height, "The device did not rotate to landscape")
+        XCTAssertTrue(app.buttons["end-navigation"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["end-navigation"].isHittable, "End must be reachable in the landscape card")
+        XCTAssertTrue(app.buttons["guidance-mute"].isHittable, "Mute must be reachable in the trailing capsule")
+        capture("11-guidance-landscape", app: app)
+    }
     @MainActor func testSearchEmptyCancelAndSelection() {
         let app = launch()
         let before = app.buttons["choose-origin"].label
@@ -760,12 +798,12 @@ final class PeoplemapsUITests: XCTestCase {
     @MainActor func testLongPressDropsPinWithDirections() {
         let app = launchHome(location: Self.atKerryPark)
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.3)).press(forDuration: 1.2)
-        XCTAssertTrue(app.staticTexts["Dropped pin"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["place-subtitle"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS '° N'")).firstMatch.exists)
         capture("09-dropped-pin", app: app)
         app.buttons["directions"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
-        XCTAssertTrue(app.buttons["choose-destination"].label.contains("Dropped pin"))
+        XCTAssertTrue(app.buttons["choose-destination"].label.hasPrefix("Going to, "))
         // Far outside the routing bounds: the card says so instead of offering directions.
         app.buttons["close-preview"].tap()
         let map = app.otherElements["Seattle offline map"]
@@ -774,6 +812,20 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["outside-coverage"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["directions"].exists)
         capture("10-dropped-pin-outside", app: app)
+    }
+
+    /// Current location far outside the routing bounds: Directions says the start is outside and offers to pick another.
+    @MainActor func testStartOutsideCoverageSaysSoAndLetsYouPickAStart() {
+        let app = launchHome(location: "47.4000,-122.2000")
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["start-outside-coverage"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Your start is outside the area we cover"].exists)
+        XCTAssertFalse(app.buttons["route-fastest"].exists)
+        XCTAssertFalse(app.buttons["retry-route"].exists, "not a generic failure")
+        capture("10b-start-outside", app: app)
+        app.buttons["Choose start"].tap()
+        XCTAssertTrue(app.textFields["place-search"].waitForExistence(timeout: 5))
     }
 
     @MainActor func testFavouriteSurvivesRelaunchAndSwipesAway() {
@@ -892,7 +944,7 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(row.isHittable)
         capture("15-home-favourites-landscape", app: app)
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.5)).press(forDuration: 1.2)
-        XCTAssertTrue(app.staticTexts["Dropped pin"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["place-subtitle"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["directions"].isHittable)
         capture("16-dropped-pin-landscape", app: app)
     }

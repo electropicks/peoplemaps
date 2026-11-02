@@ -227,11 +227,12 @@ public struct RouteRequest: Hashable, Sendable {
 }
 
 public enum RoutingError: Error, LocalizedError, Equatable, Sendable {
-    case missingData, outsideCoverage, samePlace, noConnection, invalidBudget
+    case missingData, outsideCoverage, startOutsideCoverage, samePlace, noConnection, invalidBudget
     public var errorDescription: String? {
         switch self {
         case .missingData: "The Seattle dataset could not be loaded. Rebuild the app with its bundled data."
         case .outsideCoverage: "This place is outside the Seattle demo area. Choose a place from the offline list."
+        case .startOutsideCoverage: "Your start is outside the area PeopleMaps covers. Choose a start inside Seattle's offline map."
         case .samePlace: "Choose two different places to compare routes."
         case .noConnection: "No connected route was found in this extract. Try another nearby place or travel mode."
         case .invalidBudget: "Choose an extra-time budget from 0 to 20 minutes."

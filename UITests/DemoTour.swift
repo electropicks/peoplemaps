@@ -56,7 +56,7 @@ final class DemoTour: XCTestCase {
 
         // 4. Drop a pin on the map; the saved favourite waits on home.
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.3)).press(forDuration: 1.2)
-        XCTAssertTrue(app.staticTexts["Dropped pin"].waitForExistence(timeout: 5)); pause(3)
+        XCTAssertTrue(app.staticTexts["place-subtitle"].waitForExistence(timeout: 5)); pause(3)
         app.buttons["close-place"].tap(); pause(3)
 
         // 5. Nothing found: hand off to Apple Maps (not followed).

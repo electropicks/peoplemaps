@@ -282,7 +282,8 @@ public final class NativeRouter: RouteComputing, Sendable {
     func compute(_ request: RouteRequest, cancel: CancelFlag) throws -> RouteComparison {
         guard (0...20).contains(request.extraMinutes) else { throw RoutingError.invalidBudget }
         guard request.origin.id != request.destination.id, request.origin.coordinate.distance(to: request.destination.coordinate) >= 10 else { throw RoutingError.samePlace }
-        guard graph.contains(request.origin.coordinate), graph.contains(request.destination.coordinate) else { throw RoutingError.outsideCoverage }
+        guard graph.contains(request.origin.coordinate) else { throw RoutingError.startOutsideCoverage }
+        guard graph.contains(request.destination.coordinate) else { throw RoutingError.outsideCoverage }
         let start = try snap(request.origin, mode: request.mode, departing: true)
         let end = try snap(request.destination, mode: request.mode, departing: false)
         guard start.node != end.node else { throw RoutingError.samePlace }
