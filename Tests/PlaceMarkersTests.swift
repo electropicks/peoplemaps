@@ -100,11 +100,35 @@ final class PlaceMarkersTests: XCTestCase {
                 screens["\(Int(x / 402))/\(Int(y / 874))", default: 0] += 1
             }
             let busiest = screens.values.max() ?? 0
-            print("markers: z\(tier.zoom) shows \(shown.count), busiest phone screen \(busiest)")
+            print("markers: z\(tier.zoom) shows \(shown.count), busiest phone screen \(busiest), bus stops \(shown.filter(\.isBusStop).count)")
             // Even a phone screen full of downtown stays a map, not a wall of badges.
             XCTAssertLessThanOrEqual(busiest, 402 * 874 / Int(tier.spacing * tier.spacing), "z\(tier.zoom)")
         }
         XCTAssertLessThan(kept.count, 25_000)
+        print("markers: bus stops \(candidates.filter(\.isBusStop).count) in the index, \(kept.filter(\.isBusStop).count) on the map")
+        XCTAssertTrue(kept.filter(\.isBusStop).allSatisfy { $0.firstZoom == PlaceMarkers.tiers.last?.zoom })
+    }
+
+    func testBusStopsAreRecognisedByNameAndStationsAreNot() {
+        func marker(_ name: String, _ raw: String = "station") -> PlaceMarker { PlaceMarker(id: name, name: name, raw: raw, lat: 47.6, lon: -122.3, weight: 65) }
+        for stop in ["Metro Bus Stop #9142", "King County Metro Stop #420", "Metro E Line Bustop - Aurora N & 100Th", "2nd Ave & Stewart St",
+                     "Sound Transit-Northgate Transit Center - Bay 1"] {
+            XCTAssertTrue(marker(stop).isBusStop, stop)
+        }
+        for station in ["Westlake", "Northgate Link Station", "Mt Baker Transit Center", "King Street Station"] {
+            XCTAssertFalse(marker(station).isBusStop, station)
+        }
+        XCTAssertFalse(marker("Bus Stop Cafe", "cafe").isBusStop)
+        XCTAssertFalse(marker("Bed & Breakfast", "hotel").isBusStop)
+    }
+
+    /// The stop would win every tier on its weight alone. It waits for the last one, and there it loses to anything in reach.
+    func testBusStopsOnlyFillGapsAtTheLastTier() {
+        let stop = PlaceMarker(id: "stop", name: "Metro Bus Stop #1", raw: "station", lat: 47.65, lon: -122.35, weight: 65)
+        let alone = PlaceMarkers.thin([stop])
+        XCTAssertEqual(alone.first?.firstZoom, PlaceMarkers.tiers.last?.zoom)
+        let cafe = place("cafe", 47.65001, -122.35001, raw: "cafe", weight: 25)
+        XCTAssertEqual(PlaceMarkers.thin([stop, cafe]).map(\.id), ["cafe"])
     }
 
     func testEmptyInput() { XCTAssertTrue(PlaceMarkers.thin([]).isEmpty) }

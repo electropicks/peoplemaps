@@ -18,12 +18,20 @@ public struct PlaceMarker: Sendable, Equatable {
     public var group: PlaceCategory { PlaceCategory(raw: raw) }
     /// The search index's weight, moved so a neighbourhood's first markers are places people go to, not its offices.
     public var rank: Int {
-        switch group {
+        if isBusStop { return weight - 60 }
+        return switch group {
         case .services: weight - 20
         case .health: weight - 12
         case .food, .coffee, .nightlife: weight + 6
         default: weight
         }
+    }
+    /// Overture files bus stops under `station` with the weight of a Link station, and they have no category of their own to go by.
+    public var isBusStop: Bool {
+        guard group == .transit else { return false }
+        let lower = name.lowercased()
+        if raw == "station", lower.contains(" & ") { return true }
+        return ["bus stop", "bustop", "metro stop", " - bay "].contains { lower.contains($0) }
     }
 }
 
@@ -55,10 +63,12 @@ public enum PlaceMarkers {
 
     /// The best-ranked place wins its neighbourhood at each zoom, ties broken by ID, so the answer doesn't depend on input order.
     /// Markers kept at a zoom hold their spot at every later zoom. Places still crowded out at the last zoom are dropped.
+    /// Bus stops wait for the last tier and rank below everything else, so they only fill gaps.
     public static func thin(_ places: [PlaceMarker], tiers: [(zoom: Int, spacing: Double)] = PlaceMarkers.tiers) -> [PlaceMarker] {
         // Ranks are worked out once: each one is a category lookup, and sorting asks for them about a million times.
-        let ordered = places.filter { isMarked(raw: $0.raw) }.map { (rank: $0.rank, place: $0) }
-            .sorted { ($0.rank, $1.place.id) > ($1.rank, $0.place.id) }.map(\.place)
+        let ranked = places.filter { isMarked(raw: $0.raw) }.map { (rank: $0.rank, lastTier: $0.isBusStop, place: $0) }
+            .sorted { ($0.rank, $1.place.id) > ($1.rank, $0.place.id) }
+        let ordered = ranked.map(\.place), lastTier = ranked.map(\.lastTier)
         let points = ordered.map { position(lat: $0.lat, lon: $0.lon) }
         var first = [Int32](repeating: -1, count: ordered.count)
         for tier in tiers {
@@ -72,7 +82,7 @@ public enum PlaceMarkers {
                 grid[key(cx, cy), default: []].append(Int32(i))
             }
             // Kept markers are all in the grid first: a new one has to clear them as well as its better-ranked neighbours.
-            for i in ordered.indices where first[i] < 0 {
+            for i in ordered.indices where first[i] < 0 && (!lastTier[i] || tier.zoom == tiers.last?.zoom) {
                 let (cx, cy) = cell(i), x = points[i].x * world, y = points[i].y * world
                 var clear = true
                 search: for nx in (cx - 1)...(cx + 1) {
