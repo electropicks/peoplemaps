@@ -204,6 +204,7 @@ struct ExploreView: View {
         .task { await locate(prompting: true) }
         .onDisappear { session.cancel(); navigator.stop() }
         .onChange(of: voiceMuted) { navigator.setMuted(voiceMuted) }
+        .reportContext(screen: String(String(describing: screen).prefix { $0 != "(" }), mode: mode, extraMinutes: budget, comparison: session.comparison, navigator: navigator)
         .onChange(of: userLocation) { followUser() }
         .onChange(of: scenePhase) {
             if scenePhase == .background { navigator.pause() } else if scenePhase == .active {

@@ -16,6 +16,7 @@ struct GuidanceOverlay: View {
     let onEnd: () -> Void
     let onDone: () -> Void
 
+    private let reports = ReportCenter.shared
     @State private var topEdge: CGFloat = 0
     @State private var bottomEdge: CGFloat = .infinity
     @State private var leadingEdge: CGFloat = 0
@@ -285,8 +286,8 @@ struct GuidanceOverlay: View {
 
     private var mapButtons: some View {
         Group {
-            if landscape { VStack(spacing: 8) { muteButton; compassButton; overviewButton } }
-            else { HStack(spacing: 8) { muteButton; compassButton; overviewButton } }
+            if landscape { VStack(spacing: 8) { muteButton; compassButton; overviewButton; markButton } }
+            else { HStack(spacing: 8) { muteButton; compassButton; overviewButton; markButton } }
         }
     }
 
@@ -321,6 +322,23 @@ struct GuidanceOverlay: View {
             Image(systemName: overview ? "location.fill" : "arrow.up.left.and.arrow.down.right").contentTransition(.symbolEffect(.replace))
         }
         .accessibilityLabel(overview ? "Follow my position" : "Route overview").accessibilityIdentifier("guidance-overview")
+    }
+
+    /// One tap saves the moment on this phone, with a light confirmation and no sheet; the user describes it after the trip.
+    private var markButton: some View {
+        let marked = reports.justMarked
+        return Button { reports.mark(navigator) } label: {
+            Group {
+                if marked { Label("Marked", systemImage: "checkmark").font(.body.weight(.semibold)).padding(.horizontal, 12).frame(minWidth: 44, minHeight: 44) }
+                else { Image(systemName: "flag").font(.system(size: 19)).frame(width: 44, height: 44) }
+            }.contentShape(Rectangle())
+        }
+        .buttonStyle(.plain).foregroundStyle(marked ? Color.calmerText : .primary)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .shadow(color: .black.opacity(0.12), radius: 8, y: 1)
+        .animation(Motion.content(reduceMotion), value: marked)
+        .accessibilityLabel(marked ? "Marked" : "Mark this moment").accessibilityHint("Saves where you are on this phone, to report later")
+        .accessibilityIdentifier("mark-moment")
     }
 
     /// Shown after the user pans or pinches; returns to the follow mode they left, as Apple Maps does.
@@ -384,6 +402,13 @@ struct GuidanceOverlay: View {
                 Text("Done").font(.body.weight(.semibold)).frame(maxWidth: .infinity).frame(height: 50)
                     .foregroundStyle(.directionsText).background(.directionsFill, in: RoundedRectangle(cornerRadius: 12)).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityIdentifier("done-navigation")
+            let marks = reports.marked(in: navigator.tripID)
+            if let last = marks.last {
+                Button { reports.open(editing: last) } label: {
+                    Text(marks.count == 1 ? "Add words to your marked moment" : "Add words to your \(marks.count) marked moments").font(.body.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }.buttonStyle(.plain).foregroundStyle(.primary).accessibilityIdentifier("add-words")
+            }
             Text("Times are estimates. No live traffic.").font(.footnote).foregroundStyle(.secondary).padding(.horizontal, 4)
             VoiceUpgradeTip()
         }

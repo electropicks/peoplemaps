@@ -81,6 +81,11 @@ final class NavigationController {
     /// Last instruction the engine asked to be spoken, recorded even when muted. Read by the UI-test probe only.
     private(set) var lastSpoken = ""
     private(set) var keepingAwake = false
+    /// The last few spoken lines with the time each was said, for problem reports.
+    @ObservationIgnored private(set) var spokenLog: [(text: String, at: Date)] = []
+    /// Changes with every trip, so marked moments can be matched to the trip that ends.
+    private(set) var tripID = UUID()
+    @ObservationIgnored private var tripDraft: UsageLogger.Draft?
     var isPaused: Bool { paused }
 
     init(router: any RouteComputing) { self.router = router }
@@ -150,7 +155,8 @@ final class NavigationController {
         tripMeters = adapted.plan.meters; tripSeconds = adapted.plan.seconds
         tripNotes = Self.notes(comparison, calmer: usingCalmer)
         hasArrived = false; isRerouting = false; isActive = true; rerouteCount = 0
-        arrivalHandled = false; paused = false; lastSpoken = ""
+        arrivalHandled = false; paused = false; lastSpoken = ""; spokenLog = []; tripID = UUID()
+        tripDraft = UsageLogger.Draft(comparison: comparison, started: usingCalmer ? .calmer : .fastest)
         keepAwake(true)
         subscription = core.$state.receive(on: DispatchQueue.main).sink { [weak self] state in
             MainActor.assumeIsolated { self?.apply(state) }
@@ -195,14 +201,33 @@ final class NavigationController {
     private func arrive() {
         guard !arrivalHandled else { return }
         arrivalHandled = true
+        finishTrip(.arrived)
         location?.stopUpdating()
         keepAwake(false)
         guard let observer, let name = destination?.shortName else { return }
         lastSpoken = SpokenText.normalize("You've arrived at \(name)")
+        spokenLog.append((lastSpoken, Date()))
         observer.spokenInstructionTriggered(SpokenInstruction(text: "You've arrived at \(name)", ssml: nil, triggerDistanceBeforeManeuver: 0, utteranceId: UUID()))
     }
 
+    /// Logs the trip once, only when the usage log is on. A trip that stops without arriving ended early.
+    private func finishTrip(_ ended: UsageLog.Ended) {
+        guard var draft = tripDraft else { return }
+        tripDraft = nil
+        draft.reroutes = rerouteCount
+        UsageLogger.record(draft, ended: ended)
+    }
+
+    /// Where the trip is now, for a marked moment; nil when not guiding.
+    func moment() -> ProblemReport.Moment? {
+        guard isActive, let fix = rawCoordinate ?? coordinate else { return nil }
+        return ProblemReport.Moment(at: Date(), stepIndex: stepIndex, stepCount: active?.plan.steps.count ?? 0, instruction: instruction,
+                                    remainingMeters: remainingMeters.rounded(), remainingSeconds: remainingSeconds.rounded(),
+                                    cell: ReportCell.of(lat: fix.lat, lon: fix.lon), location: .init(lat: fix.lat, lon: fix.lon))
+    }
+
     func stop() {
+        if !hasArrived { finishTrip(.endedEarly) }
         subscription = nil
         core?.stopNavigation()
         location?.stopUpdating()
@@ -276,7 +301,11 @@ final class NavigationController {
             rawCoordinate = Coordinate(lat: raw.coordinates.lat, lon: raw.coordinates.lng)
             gate.observe(distanceToRoute: rawCoordinate!.distance(toPolyline: routeGeometry), accuracy: raw.horizontalAccuracy)
             hasReachedRoute = gate.hasReachedRoute
-            if let spoken, !spoken.text.isEmpty { lastSpoken = SpokenText.normalize(spoken.text) }
+            if let spoken, !spoken.text.isEmpty {
+                let text = SpokenText.normalize(spoken.text)
+                if text != lastSpoken { spokenLog = Array((spokenLog + [(text, Date())]).suffix(3)) }
+                lastSpoken = text
+            }
             hasArrived = false
             distanceToManeuver = progress.distanceToNextManeuver
             remainingMeters = progress.distanceRemaining
@@ -304,7 +333,9 @@ extension NavigationController: @preconcurrency FerrostarCoreDelegate {
         }
         let fix = RerouteGate.Fix(coordinate: Coordinate(lat: location.coordinates.lat, lon: location.coordinates.lng), metersOffRoute: meters,
                                   accuracy: location.horizontalAccuracy, speed: location.speed?.value, time: Date())
-        return gate.shouldReroute(fix) ? .getNewRoutes(waypoints: waypoints) : .doNothing
+        guard gate.shouldReroute(fix) else { return .doNothing }
+        tripDraft?.departures.append(fix.coordinate)
+        return .getNewRoutes(waypoints: waypoints)
     }
 
     /// The reroute's route is installed the way the engine would without a delegate; `apply` then follows it to its plan.
