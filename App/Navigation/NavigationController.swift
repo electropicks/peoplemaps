@@ -131,7 +131,7 @@ final class NavigationController {
         guard let adapted = try? FerrostarAdapter.convert(chosen.navigationPlan(mode: request.mode), destination: request.destination) else { return }
 
         let provider = OwnRouteProvider(router: router, destination: request.destination, mode: request.mode,
-                                        extraMinutes: request.extraMinutes, preferCalmer: usingCalmer) { [weak self] adapted in
+                                        extraMinutes: request.extraMinutes, preferences: request.preferences, preferCalmer: usingCalmer) { [weak self] adapted in
             Task { @MainActor in self?.remember(adapted) }
         }
         let location: LocationProviding

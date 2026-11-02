@@ -9,17 +9,17 @@ struct RoutePreferencesRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: "slider.horizontal.3").foregroundStyle(.secondary).frame(width: 22)
-                Text("Calmer means").foregroundStyle(.primary)
+            HStack(spacing: 8) {
+                Image(systemName: "slider.horizontal.3").foregroundStyle(.secondary)
+                Text("Calmer means").foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 8)
                 Text(value).foregroundStyle(.secondary)
-                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
             }
-            .font(.body)
+            .font(.subheadline)
             .padding(.horizontal, 14).padding(.vertical, 8)
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-            .background(.panelFill, in: RoundedRectangle(cornerRadius: 12))
+            .background(.panelFill, in: RoundedRectangle(cornerRadius: Layout.groupRadius))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -50,8 +50,6 @@ struct RoutePreferencesView: View {
             Form {
                 Section {
                     ForEach(RoutePreferences.Option.available(in: mode), id: \.self) { row($0) }
-                } header: {
-                    Text(mode.activity).textCase(nil).font(.subheadline).foregroundStyle(.secondary)
                 }
                 Section {
                     Button("Reset to defaults") { draft = .default(for: mode) }
@@ -61,15 +59,13 @@ struct RoutePreferencesView: View {
                     Text("Times stay estimates.").font(.footnote).foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("Calmer means")
-            .navigationBarTitleDisplayMode(.inline)
+            .listStyle(.insetGrouped)
+            .navigationTitle("Calmer means").navigationSubtitle(mode.activity).navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }.accessibilityIdentifier("preferences-done")
-                }
+                ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() }.accessibilityIdentifier("preferences-done") }
             }
         }
-        .presentationDetents([.medium, .large])
+        .tint(.primary).presentationDetents([.medium, .large])
         .onChange(of: draft) { store[mode] = draft }
     }
 
@@ -90,10 +86,10 @@ struct RoutePreferencesView: View {
 
     private func symbol(_ option: RoutePreferences.Option) -> String {
         switch option {
-        case .trafficLights: "trafficlight"
+        case .trafficLights: "light.beacon.max"
         case .stopSigns: "octagon"
         case .unprotectedLefts: "arrow.turn.up.left"
-        case .busyStreets: "car.2"
+        case .busyStreets: "car.2.fill"
         case .busyCrossings: mode == .walk ? "figure.walk.motion" : "arrow.left.and.right"
         case .hills: "mountain.2"
         case .turns: "arrow.triangle.turn.up.right.diamond"
