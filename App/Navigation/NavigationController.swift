@@ -55,14 +55,23 @@ final class NavigationController {
     var instruction: String {
         guard let step = currentStep else { return "" }
         if step.maneuver == .arrive, let destination { return "Arrive at \(destination.shortName)" }
-        return step.instruction
+        return Self.longened(step.instruction)
+    }
+
+    /// `--long-street-names` (UI tests) pads street names so text sizes can be checked against the longest Seattle ones.
+    static func longened(_ text: String) -> String {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--long-street-names"), text.contains(" onto ") { return text + " Northeast Boulevard Extension" }
+        #endif
+        return text
     }
 
     /// "right onto Halladay St": the next maneuver in lower case, for the "Then:" row.
     var thenText: String {
         guard let step = thenStep else { return "" }
         if step.maneuver == .arrive, let destination { return "arrive at \(destination.shortName)" }
-        let text = step.instruction.hasPrefix("Turn ") ? String(step.instruction.dropFirst(5)) : step.instruction
+        let long = Self.longened(step.instruction)
+        let text = long.hasPrefix("Turn ") ? String(long.dropFirst(5)) : long
         return text.prefix(1).lowercased() + text.dropFirst()
     }
 

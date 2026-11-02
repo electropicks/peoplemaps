@@ -15,3 +15,6 @@ __pycache__/
 Spikes/
 .claude/worktrees/
 .claude/settings.local.json
+
+# Region data: fetched by Scripts/fetch_data from a GitHub release
+Data/region/
