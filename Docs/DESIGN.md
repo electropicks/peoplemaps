@@ -89,8 +89,9 @@ rendered pixels (below).
 | `fastest` | `#6B7872` | `#AEBAB3` | fastest line, dotted | vs land 4.1 / 7.9 |
 | `passedRoute` | `#A6B3C0` | `#53616F` | the part of the followed route already driven, drawn 3.5 pt (the route is 5.5) | vs land 1.9 / 2.5; vs the route ahead 2.5 / 2.4. Below 3:1 on purpose: it is a trail, not information, and the width, the puck at its end and the casing say "behind" without colour |
 | `primaryActionFill` | white 72% | white 86% | tint of `.glassProminent`: Directions, Start, Done | |
-| `primaryActionText` | `#20384F` | `#20384F` | label on the above | 12.1 on white, more than the glass ever lets through |
-| `glassVeil` | white 34% | `#101412` 42% | over `.clear` on text surfaces: guidance, landscape card, credit | |
+| `primaryActionSolidFill` | `#DCE3EA` | white 86% | the same on a solid panel: the large stop, Reduce Transparency | |
+| `primaryActionText` | `#20384F` | `#20384F` | label on the above | 12.1 on white, 9.3 on the solid fill |
+| `glassVeil` | white 34% | `#101412` 50% | over `.clear` on text surfaces: guidance, landscape card, credit | |
 | `glassSheetVeil` | none | `#101412` 30% | over the sheet's glass, which lifts a dark map | |
 | `glassVeilDense` | white 72% | `#101412` 72% | Increase Contrast | |
 | `glassHairline` | `#142D23` 14% | white 14% | dividers on glass | decorative |
@@ -209,12 +210,20 @@ all-Seattle map over land and water. Text uses `label`, `GuidanceOverlay.onGlass
 (`.primary` at 75%, since `.secondary` measures under 4.5:1 there) or a rating
 word. Measured on `.clear`, 2 November 2026:
 
-| Where | Light, palest to deepest panel | Dark |
-|---|---|---|
-| Sheet background | `#F8F8F0` to `#D3EDF6` | `#384643` to `#365C67`, before `glassSheetVeil` |
-| Primary text | 17.2 | 7.3 |
-| `onGlass` text | 9.4 | 5.1 |
-| Rating words | 5.9 or more | 4.5 before the veil, which is why dark has one |
+Worst case over the map under each surface, in contrast ratio:
+
+| Where | Background, light | Background, dark | Primary, L / D | `onGlass`, L / D |
+|---|---|---|---|---|
+| Sheet | `#F8F8F0` to `#D3EDF6` | `#2D3632` to `#2B464D` | 17.2 / 10.1 | 9.3 / 6.5 |
+| Home capsule and chips (no veil) | white to `#CEECF7` | `#38423F` to `#3F626D` | 17.0 / 6.6 | none on them |
+| Guidance banner, route under the text | white to `#ABC1D8` | `#232A28` to `#4C5F70` | 11.4 / 6.6 | 7.2 / 4.6 |
+| Trip bar | white to `#EBF8ED` | `#242B29` to `#293C35` | 19.2 / 11.7 | 9.9 / 7.4 |
+| Landscape card | white to `#C3D6DC` | `#242B29` to `#45565B` | 14.0 / 7.7 | 8.2 / 5.2 |
+
+Rating words on the sheet are 5.9 or more in light and 6.1 or more in dark.
+Behind the routes is solid: its headers and footers measure 9.7 / 10.0, once they use
+`onGlass` instead of the list's own grey (3.1). A marker under the landscape card shows
+through as a soft shape; text over one still measures 7.5.
 
 Glass on a real phone can differ from the Simulator, so the phone has the last word.
 
