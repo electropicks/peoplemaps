@@ -758,7 +758,7 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertFalse(app.buttons["route-fastest"].exists)
         XCTAssertFalse(app.buttons["retry-route"].exists, "not a generic failure")
         capture("10b-start-outside", app: app)
-        app.buttons["choose-start-inside"].tap()
+        app.buttons["Choose start"].tap()
         XCTAssertTrue(app.textFields["place-search"].waitForExistence(timeout: 5))
     }
 

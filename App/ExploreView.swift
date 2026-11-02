@@ -613,7 +613,6 @@ struct ExploreView: View {
                     Text("PeopleMaps can route only inside its offline Seattle area for now. Choose a start inside it.")
                         .font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     Button("Choose start") { sheet = .origin }.font(.subheadline.weight(.semibold)).padding(.top, 2)
-                        .accessibilityIdentifier("choose-start-inside")
                 }
             }.padding(14).frame(maxWidth: .infinity, minHeight: routeListHeight, alignment: .leading)
         }.accessibilityIdentifier(outside ? "start-outside-coverage" : "needs-place")
