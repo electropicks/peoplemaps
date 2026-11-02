@@ -167,8 +167,8 @@ final class NavigationController {
 
     /// Up to three facts for the arrival summary: what the calmer route avoided, then what it cost in time.
     private static func notes(_ comparison: RouteComparison, calmer: Bool) -> [String] {
-        guard calmer else { return [] }
-        let gains = comparison.reasons.filter { !$0.hasPrefix("Tradeoff") && !$0.hasPrefix("No calmer") }.prefix(2)
+        guard calmer, comparison.calmer != nil else { return [] }
+        let gains = comparison.reasons.filter { !$0.hasPrefix("Tradeoff") }.prefix(2)
         let extra = comparison.extraTimeLabel
         let cost = extra == "No extra time" ? "No extra time compared with the fastest route"
             : extra.hasPrefix("<1") ? "Under a minute longer than the fastest route"

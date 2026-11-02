@@ -42,18 +42,82 @@ final class SelectionTests: XCTestCase {
                                                              Fixture.route(id: 3, seconds: 400, stress: 1)], fastest: fast, extraMinutes: 2)
         XCTAssertEqual(picked?.edgeIDs, [2])
     }
+    func testFurtherMinutesMustEarnTheirPlace() {
+        // Twilight to Microsoft Café by car with a 10 minute limit: 6 more minutes for 17 less stress.
+        let fast = Fixture.route(id: 0, seconds: 750, stress: 1087)
+        let nearly = Fixture.route(id: 1, seconds: 762, stress: 606), slow = Fixture.route(id: 2, seconds: 1140, stress: 589)
+        XCTAssertEqual(NativeRouter.selectCalmer(candidates: [nearly, slow], fastest: fast, extraMinutes: 10)?.edgeIDs, [1])
+        XCTAssertEqual(NativeRouter.selectCalmer(candidates: [slow, nearly], fastest: fast, extraMinutes: 10)?.edgeIDs, [1])
+    }
+    func testTenMinutesForATinyGainIsNotOffered() {
+        let fast = Fixture.route(id: 0, seconds: 600, stress: 1000)
+        XCTAssertNil(NativeRouter.selectCalmer(candidates: [Fixture.route(id: 1, seconds: 1200, stress: 850)], fastest: fast, extraMinutes: 10),
+                     "10 minutes must remove more than 150 equivalent seconds")
+        XCTAssertNotNil(NativeRouter.selectCalmer(candidates: [Fixture.route(id: 1, seconds: 1200, stress: 849)], fastest: fast, extraMinutes: 10))
+    }
+    func testCalmerRouteThatCostsOnlySecondsIsOffered() {
+        let fast = Fixture.route(id: 0, seconds: 900, stress: 1104)
+        XCTAssertEqual(NativeRouter.selectCalmer(candidates: [Fixture.route(id: 1, seconds: 925, stress: 696)], fastest: fast, extraMinutes: 10)?.edgeIDs, [1])
+    }
     func testSmallOrNegligibleImprovementsAreNotAlternatives() {
         let fast = Fixture.route(id: 0, seconds: 100, stress: 500)
         XCTAssertNil(NativeRouter.selectCalmer(candidates: [fast, Fixture.route(id: 1, seconds: 101, stress: 490)], fastest: fast, extraMinutes: 5))
-        XCTAssertNil(NativeRouter.selectCalmer(candidates: [Fixture.route(id: 1, seconds: 101, stress: 475)], fastest: fast, extraMinutes: 5),
-                     "Under 30 equivalent seconds calmer is not worth showing")
     }
-    func testNearlyIdenticalPathIsNotAnAlternative() {
-        var m = RouteMetrics(); m.meters = 1000; m.seconds = 100; m.breakdown.add(.turn, amount: 1, cost: 500)
-        let fast = Route(edgeIDs: [1, 2, 3], edgeMeters: [450, 450, 100], coordinates: [], metrics: m, streetNames: [])
-        var c = RouteMetrics(); c.meters = 1000; c.seconds = 110; c.breakdown.add(.turn, amount: 1, cost: 100)
-        let oneBlockDifferent = Route(edgeIDs: [1, 2, 4], edgeMeters: [450, 450, 100], coordinates: [], metrics: c, streetNames: [])
-        XCTAssertNil(NativeRouter.selectCalmer(candidates: [oneBlockDifferent], fastest: fast, extraMinutes: 5))
+    func testThirtySecondFloorHoldsOnItsOwn() {
+        let fast = Fixture.route(id: 0, seconds: 100, stress: 200)
+        func offered(_ stress: Double) -> Bool {
+            NativeRouter.selectCalmer(candidates: [Fixture.route(id: 1, seconds: 101, stress: stress)], fastest: fast, extraMinutes: 5) != nil
+        }
+        XCTAssertFalse(offered(175), "25 less clears the 5% floor and the price, but not the 30 floor")
+        XCTAssertTrue(offered(170))
+    }
+    func testFivePercentFloorHoldsOnItsOwn() {
+        let fast = Fixture.route(id: 0, seconds: 100, stress: 1000)
+        func offered(_ stress: Double) -> Bool {
+            NativeRouter.selectCalmer(candidates: [Fixture.route(id: 1, seconds: 101, stress: stress)], fastest: fast, extraMinutes: 5) != nil
+        }
+        XCTAssertFalse(offered(960), "40 less clears the 30 floor and the price, but not the 5% floor")
+        XCTAssertFalse(offered(950), "Exactly 5% is not under the floor")
+        XCTAssertTrue(offered(949))
+    }
+    func testNearlyIdenticalPathCountsOnlyWhenItIsMeaningfullyCalmer() {
+        func route(_ ids: [Int], stress: Double) -> Route {
+            var m = RouteMetrics(); m.meters = 1000; m.seconds = ids == [1, 2, 3] ? 100 : 110; m.breakdown.add(.turn, amount: 1, cost: stress)
+            return Route(edgeIDs: ids, edgeMeters: [450, 450, 100], coordinates: [], metrics: m, streetNames: [])
+        }
+        let fast = route([1, 2, 3], stress: 500)
+        XCTAssertEqual(NativeRouter.selectCalmer(candidates: [route([1, 2, 4], stress: 100)], fastest: fast, extraMinutes: 5)?.edgeIDs, [1, 2, 4],
+                       "One block different is a real choice when that block is the stressful one")
+        XCTAssertNil(NativeRouter.selectCalmer(candidates: [route([1, 2, 4], stress: 480)], fastest: fast, extraMinutes: 5),
+                     "One block different with no meaningful stress difference is not")
+        XCTAssertNil(NativeRouter.selectCalmer(candidates: [route([1, 2, 3], stress: 100)], fastest: fast, extraMinutes: 5),
+                     "A literally identical route is not an alternative")
+    }
+    func testNoCalmerFindingClaimsOnlyWhatWasCompared() {
+        let fast = Fixture.route(id: 0, seconds: 600, stress: 500)
+        func finding(_ candidates: [Route], extra: Int = 10) -> NoCalmerFinding {
+            let all = [fast] + candidates
+            XCTAssertNil(NativeRouter.selectCalmer(candidates: all, fastest: fast, extraMinutes: extra))
+            return NativeRouter.noCalmerFinding(candidates: all, fastest: fast, extraMinutes: extra)
+        }
+        XCTAssertEqual(finding([], extra: 0), .notChecked, "None runs only the fastest search")
+        XCTAssertEqual(finding([]), .onlyRoute)
+        XCTAssertEqual(finding([Fixture.route(id: 1, seconds: 650, stress: 500), Fixture.route(id: 2, seconds: 700, stress: 600)]), .calmestCompared(routes: 3))
+        XCTAssertEqual(finding([Fixture.route(id: 1, seconds: 1300, stress: 100)]), .calmerTakesLonger(limitMinutes: 10))
+        XCTAssertEqual(finding([Fixture.route(id: 1, seconds: 610, stress: 490)]), .tooLittleGain, "Calmer, but under the 30 and 5% floors")
+        XCTAssertEqual(finding([Fixture.route(id: 1, seconds: 1200, stress: 400)]), .tooLittleGain, "Calmer, but not worth 10 minutes")
+        let small = Fixture.route(id: 1, seconds: 610, stress: 490)
+        XCTAssertEqual(finding([small, Fixture.route(id: 2, seconds: 1300, stress: 100)]), .clearlyCalmerTakesLonger(limitMinutes: 10),
+                       "A small gain inside the limit must not hide a clear one past it")
+        XCTAssertEqual(finding([small, Fixture.route(id: 2, seconds: 1300, stress: 400)]), .tooLittleGain, "Past the limit, but not worth its time")
+        XCTAssertEqual(finding([small, Fixture.route(id: 2, seconds: 1300, stress: 490)]), .tooLittleGain, "Past the limit, but under the floors")
+    }
+    func testNoCalmerWordingSaysEstimateAndNeverSafe() {
+        for finding in [NoCalmerFinding.notChecked, .onlyRoute, .calmestCompared(routes: 3), .calmerTakesLonger(limitMinutes: 2), .tooLittleGain, .clearlyCalmerTakesLonger(limitMinutes: 2)] {
+            let text = (finding.title + " " + finding.detail).lowercased()
+            XCTAssertFalse(text.contains("safe"), text)
+            if finding != .notChecked { XCTAssertTrue(text.contains("estimates"), text) }
+        }
     }
 }
 
@@ -223,6 +287,8 @@ final class RouterTests: XCTestCase {
         let a = Place(id: "a", name: "A", lat: 47.64, lon: -122.36, category: "test")
         let outside = Place(id: "b", name: "B", lat: 48, lon: -122.35, category: "test")
         XCTAssertThrowsError(try router.compute(.init(origin: a, destination: outside, mode: .drive, extraMinutes: 5))) { XCTAssertEqual($0 as? RoutingError, .outsideCoverage) }
+        XCTAssertThrowsError(try router.compute(.init(origin: outside, destination: a, mode: .drive, extraMinutes: 5))) { XCTAssertEqual($0 as? RoutingError, .startOutsideCoverage) }
+        XCTAssertEqual(RoutingError.startOutsideCoverage.errorDescription, "Your start is outside the area PeopleMaps covers. Choose a start inside Seattle's offline map.")
         XCTAssertThrowsError(try router.compute(.init(origin: a, destination: a, mode: .drive, extraMinutes: 5))) { XCTAssertEqual($0 as? RoutingError, .samePlace) }
         XCTAssertThrowsError(try router.compute(.init(origin: a, destination: a, mode: .drive, extraMinutes: -1))) { XCTAssertEqual($0 as? RoutingError, .invalidBudget) }
     }
@@ -284,6 +350,45 @@ final class SeattleTests: XCTestCase {
             XCTAssertLessThan(c.destinationSnapMeters, 100)
             XCTAssertGreaterThan(c.fastest.metrics.meters, 3000)
         }
+    }
+    func testTenMinuteLimitDoesNotPayForScrapsOnALongDrive() throws {
+        let a = try place("way/37056567"), b = try place("node/12786894083")
+        let five = try Self.router.compute(.init(origin: a, destination: b, mode: .drive, extraMinutes: 5))
+        let ten = try Self.router.compute(.init(origin: a, destination: b, mode: .drive, extraMinutes: 10))
+        XCTAssertNotNil(ten.calmer)
+        XCTAssertEqual(ten.calmer?.edgeIDs, five.calmer?.edgeIDs, "A candidate 3.5 minutes slower for 20 less stress must not win")
+    }
+    func testFremontToCapitolHillDriveOffersACalmerRouteAtTheDefaultLimit() throws {
+        let c = try Self.router.compute(.init(origin: try place("way/37058377"), destination: try place("way/37057155"), mode: .drive, extraMinutes: 10))
+        let calmer = try XCTUnwrap(c.calmer)
+        XCTAssertLessThan(calmer.metrics.stress, c.fastest.metrics.stress * 0.7)
+        XCTAssertLessThanOrEqual(c.extraSeconds, 600)
+    }
+    func testDIYTeaLabToLassiAndSpiceDriveChoosesTheNearlyIdenticalCalmerRoute() throws {
+        let c = try Self.router.compute(.init(origin: try place("node/6238815765"), destination: try place("node/6309416486"), mode: .drive, extraMinutes: 10))
+        let calmer = try XCTUnwrap(c.calmer, "Most of its length is shared with the fastest route, and it is still the calmer choice")
+        XCTAssertLessThan(calmer.metrics.stress, c.fastest.metrics.stress * 0.7)
+        XCTAssertLessThan(c.extraSeconds, 60)
+        let shared = Set(c.fastest.edgeIDs)
+        let sharedMeters = zip(calmer.edgeIDs, calmer.edgeMeters).filter { shared.contains($0.0) }.reduce(0) { $0 + $1.1 }
+        XCTAssertGreaterThan(sharedMeters / calmer.metrics.meters, 0.9)
+    }
+    func testNoExtraTimeSaysNothingElseWasChecked() throws {
+        let c = try Self.router.compute(.init(origin: try place("way/37056567"), destination: try place("relation/1047789"), mode: .drive, extraMinutes: 0))
+        XCTAssertNil(c.calmer)
+        XCTAssertEqual(c.noCalmer, .notChecked)
+        XCTAssertEqual(c.reasons, [NoCalmerFinding.notChecked.detail])
+    }
+    func testComputeReportsWhatItFound() throws {
+        let kerry = try place("node/693337509"), gasWorks = try place("relation/1047789")
+        let bike = try Self.router.compute(.init(origin: kerry, destination: gasWorks, mode: .bike, extraMinutes: 5))
+        XCTAssertNil(bike.calmer)
+        XCTAssertEqual(bike.noCalmer, .clearlyCalmerTakesLonger(limitMinutes: 5))
+        let longer = try Self.router.compute(.init(origin: kerry, destination: gasWorks, mode: .bike, extraMinutes: 10))
+        XCTAssertNotNil(longer.calmer, "The route the 5 minute message points at")
+        let drive = try Self.router.compute(.init(origin: kerry, destination: gasWorks, mode: .drive, extraMinutes: 10))
+        XCTAssertNil(drive.calmer)
+        XCTAssertEqual(drive.noCalmer, .tooLittleGain)
     }
     func testCancelledSearchStopsBeforeReturning() async throws {
         let request = RouteRequest(origin: try place("node/693337509"), destination: try place("relation/1047789"), mode: .walk, extraMinutes: 10)

@@ -29,7 +29,7 @@ struct ExploreView: View {
     @State private var destination: Place?
     /// The last mode used; the place card's estimate uses it too.
     @State private var mode: TravelMode = .drive
-    @State private var budget = 5
+    @State private var budget = 10
     @State private var selectedCalmer = true
     @State private var sheet: Sheet?
     @State private var screen = Screen.home
@@ -156,7 +156,7 @@ struct ExploreView: View {
     private func dropPin(_ c: Coordinate) {
         guard screen == .home || selectedPlace != nil else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        open(.droppedPin(at: c))
+        open(search.droppedPin(at: c))
     }
 
     /// Current location when allowed; otherwise the start the user chose last, unless that is where they are going.
@@ -171,7 +171,7 @@ struct ExploreView: View {
     }
 
     private var request: RouteRequest? {
-        guard let origin, let destination else { return nil }
+        guard let origin, let destination, graph.contains(origin.coordinate) else { return nil }
         return .init(origin: origin, destination: destination, mode: mode, extraMinutes: budget)
     }
     /// Landscape on a phone: the panel becomes a floating card at the leading edge.
@@ -326,11 +326,16 @@ struct ExploreView: View {
     }
 
     private var attribution: some View {
-        Link("© OpenStreetMap", destination: URL(string: "https://www.openstreetmap.org/copyright")!)
-            .font(.caption2).foregroundStyle(.secondary)
-            .padding(.horizontal, 6).padding(.vertical, 2)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 4))
-            .accessibilityLabel("Map data © OpenStreetMap contributors")
+        HStack(spacing: 4) {
+            Link("© OpenStreetMap", destination: URL(string: "https://www.openstreetmap.org/copyright")!)
+                .accessibilityLabel("Map data © OpenStreetMap contributors")
+            Text("·")
+            Link("Overture Maps Foundation", destination: URL(string: "https://docs.overturemaps.org/attribution/")!)
+                .accessibilityLabel("Places from Overture Maps Foundation")
+        }
+        .font(.caption2).foregroundStyle(.secondary)
+        .padding(.horizontal, 6).padding(.vertical, 2)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 4))
     }
 
     @ViewBuilder private var panelContent: some View {
@@ -449,6 +454,7 @@ struct ExploreView: View {
                 }
                 // Full width under the subtitle, clear of the buttons, so it rarely wraps.
                 estimateLine(place)
+                if let source = place.source { Text(source).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("place-source") }
             }
             if graph.contains(place.coordinate) {
                 directionsButton(place)
@@ -573,7 +579,7 @@ struct ExploreView: View {
                 ForEach(TravelMode.displayOrder) { Text($0.title).tag($0) }
             }.pickerStyle(.segmented)
             VStack(alignment: .leading, spacing: landscape ? 4 : 6) {
-                Text("Extra time you'd spend for an easier route").font(.footnote).foregroundStyle(.secondary)
+                Text("Most extra time for a calmer route").font(.footnote).foregroundStyle(.secondary)
                 Picker("Extra time", selection: $budget) {
                     ForEach([0, 2, 5, 10], id: \.self) { Text($0 == 0 ? "None" : "\($0) min").tag($0) }
                 }.pickerStyle(.segmented)
@@ -597,13 +603,20 @@ struct ExploreView: View {
         }
     }
 
-    /// No start (location off or unavailable) or no destination yet: say what to do, and show no route.
+    /// No start (location off or unavailable), a start outside the area we cover, or no destination yet: say what to do, and show no route.
     private var needsPlace: some View {
-        card {
-            Text(origin == nil ? "Choose a start to compare routes." : "Choose a destination to compare routes.")
-                .font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                .padding(14).frame(maxWidth: .infinity, minHeight: routeListHeight, alignment: .leading)
-        }.accessibilityIdentifier("needs-place")
+        let outside = origin.map { !graph.contains($0.coordinate) } ?? false
+        return card {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(outside ? "Your start is outside the area we cover" : origin == nil ? "Choose a start to compare routes." : "Choose a destination to compare routes.")
+                    .font(outside ? .headline : .subheadline).foregroundStyle(outside ? .primary : .secondary).fixedSize(horizontal: false, vertical: true)
+                if outside {
+                    Text("PeopleMaps can route only inside its offline Seattle area for now. Choose a start inside it.")
+                        .font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Button("Choose start") { sheet = .origin }.font(.subheadline.weight(.semibold)).padding(.top, 2)
+                }
+            }.padding(14).frame(maxWidth: .infinity, minHeight: routeListHeight, alignment: .leading)
+        }.accessibilityIdentifier(outside ? "start-outside-coverage" : "needs-place")
     }
 
     private var places: some View {
@@ -661,8 +674,8 @@ struct ExploreView: View {
                     HStack(spacing: 12) {
                         Image(systemName: "equal.circle").font(.title3).foregroundStyle(.secondary)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("No calmer route").font(.headline)
-                            Text("Nothing easier within this extra time.").font(.footnote).foregroundStyle(.secondary)
+                            Text(comparison.noCalmer.title).font(.headline).fixedSize(horizontal: false, vertical: true)
+                            Text(comparison.noCalmer.detail).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(minLength: 0)
                     }.padding(.horizontal, 14).padding(.vertical, 10).frame(minHeight: rowHeight)

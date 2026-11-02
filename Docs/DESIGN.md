@@ -225,8 +225,8 @@ Proposed (with `ux-round-1`): a persistent system sheet,
   on the sheet, like Apple Maps.
 - **Recents** below, a vertical `panelFill` list with category badges,
   visible from the medium detent. No Featured places (ux-round-1). Empty
-  first launch shows one line instead: "Routes with fewer stressful turns,
-  for a few minutes more." (D4).
+  first launch shows one line instead: "Search a place or address, or
+  long-press the map" (D4).
 - Footer row "About PeopleMaps" (`info.circle`), secondary.
 
 ```
@@ -310,7 +310,7 @@ Proposed, top to bottom:
    `ux-round-1`), destination row, swap button trailing.
 3. **Mode picker**: segmented, order **Drive, Cycle, Walk**, each with its
    symbol and text (icon-only fails at large type). `.sensoryFeedback(.selection)`.
-4. **Extra time**: `Picker(.menu)` row "Extra time for a calmer route: 5 min ›"
+4. **Extra time**: `Picker(.menu)` row "Most extra time for a calmer route: 10 min ›"
    at the medium detent (D5); full segmented at the large detent and in
    landscape.
 5. **"Calmer means: Default ›"** row (`slider.horizontal.3`), directly under
@@ -331,7 +331,7 @@ Proposed, top to bottom:
 │ │ ● Gas Works Park        │ │
 │ └────────────────────────┘ │
 │ [🚗 Drive|🚲 Cycle|🚶 Walk] │
-│ Extra time: 5 min        ›  │
+│ Extra time: 10 min       ›  │
 │ ⚙ Calmer means: Default  ›  │
 │ ┌────────────────────────┐ │
 │ │▌Calmer 12 min · 5.2 km ✓│ │
@@ -400,18 +400,26 @@ screen.
   (no glass on glass, no opaque strip).
 - **Calm chip** below the banner, leading: glass capsule, `octagon` /
   `trafficlight` + text in `calmerText` semibold (see 2, "On glass").
-- **Mute + overview**: a horizontal glass capsule, trailing, same row as the
-  chip; banner, chip and buttons share one `GlassEffectContainer` so they
-  merge/morph as the chip appears.
+- **Mute, compass + overview**: one horizontal glass capsule (vertical in
+  landscape), trailing, same row as the chip: three 44×44 plain buttons with
+  dividers. The compass turns with the map's heading and, in the overview,
+  only leaves the overview. Banner, chip and buttons share one
+  `GlassEffectContainer` so they merge/morph as the chip appears.
 - **Rerouting**: same banner, "Finding a calmer way…" with a spinner; copy
   unchanged.
 - **Trip bar**: glass, bottom. Arrival · min left · distance left, End as a
-  `.glass` capsule button (destructive role, red label), caption "Estimate,
+  `.bordered` capsule button (destructive role, red tint; not glass, since it
+  sits on glass), caption "Estimate,
   no live traffic" below. At accessibility sizes the three stats stack.
 
 Landscape: one leading glass card (banner, chip, trip stats, End), buttons
-trailing, as today but glass. Width `min(360, 40% of width)` instead of fixed
-330 (D6).
+trailing, as today but glass. Width `min(cardWidth, 40% of width)`, where
+`ExploreView` passes `cardWidth` = 330 (D6).
+
+At accessibility sizes the chrome's type stops growing at `accessibility2`: the
+banner and the stacked trip bar together fill the screen at larger sizes, which
+would push mute, compass and overview off it. Secondary text on glass uses
+`.primary` at 75% opacity, because `.secondary` measures under 4.5:1 there.
 
 ```
 ┌──────────────────────────────┐
@@ -434,10 +442,11 @@ trailing, as today but glass. Width `min(360, 40% of width)` instead of fixed
 Current: opaque bottom sheet, green check, notes list, Done
 (`nav-arrived.png`).
 
-Proposed: the persistent sheet returns at `.medium` with the arrival content:
-check badge (`directionsFill`), "You've arrived at Gas Works Park", summary
-line, trip notes in a `panelFill` group, **Done** as `.glassProminent`, "Times
-are estimates. No live traffic." and the voice tip. `.sensoryFeedback(.success)`.
+Decided, not the returning sheet: a bottom glass card inside `GuidanceView`, no
+grabber. Check badge (`directionsFill`), "You've arrived at Gas Works Park",
+summary line, trip notes in a `panelFill` group, **Done** as `.glassProminent`
+tinted `directionsFill`, "Times are estimates. No live traffic." and the voice
+tip. `.sensoryFeedback(.success)` fires on arrival.
 
 ### 4.9 About and Acknowledgements
 
