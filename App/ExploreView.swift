@@ -318,6 +318,7 @@ struct ExploreView: View {
         .task { await locate(prompting: true) }
         .onDisappear { session.cancel(); navigator.stop() }
         .onChange(of: voiceMuted) { navigator.setMuted(voiceMuted) }
+        .reportContext(screen: String(String(describing: screen).prefix { $0 != "(" }), mode: mode, extraMinutes: budget, comparison: session.comparison, navigator: navigator, dataVersion: search.dataVersion)
         .onChange(of: userLocation) { followUser() }
         // Pulling the search sheet down is the same as Cancel, at wherever it was let go.
         .onChange(of: stop) { if screen == .search, stop != .large { homeStop = stop; query = ""; addingFavourite = false; screen = .home } }

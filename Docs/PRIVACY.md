@@ -24,7 +24,16 @@ one is wrong and gets fixed.
   sent from our server (see Deleting for the limits). The app contacts the
   server only when you tap Send, Check status or Delete my reports.
 
+> **Alpha builds.** No server is deployed yet, so nothing below about sending to our server happens: a report is a
+> `.json` file you share yourself from the share sheet (for example to iCloud Drive), after seeing what is in it. The app
+> contacts no server. See `Docs/REPORTS.md` section 11.
+
 ## What the app keeps on your phone
+
+- Problem reports you start, until you swipe them away, and moments you mark during guidance.
+- A usage log, only if you turn it on in About: each trip's mode, route choice, time estimates and where you left the
+  route (rounded to about 100 m unless you choose exact places). It stays on the phone unless you share the file, and
+  **Clear** deletes it.
 
 - Recent destinations and favourites.
 - Your voice setting (muted or not).
