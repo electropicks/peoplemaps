@@ -470,6 +470,44 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["done-navigation"].tap()
         XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 10))
     }
+    /// A tap on the compass while in the overview only leaves it: the orientation it had stays.
+    @MainActor func testCompassInOverviewOnlyLeavesTheOverview() {
+        let app = launch(simulateRoute: true)
+        startSimulatedGuidance(app)
+        let compass = app.buttons["guidance-compass"], overview = app.buttons["guidance-overview"]
+        XCTAssertTrue(compass.waitForExistence(timeout: 5))
+        XCTAssertEqual(compass.label, "Heading up")
+        overview.tap()
+        XCTAssertEqual(overview.label, "Follow my position")
+        compass.tap()
+        XCTAssertEqual(overview.label, "Route overview", "The compass should leave the overview")
+        XCTAssertEqual(compass.label, "Heading up", "Leaving the overview must not flip the orientation")
+    }
+    /// At AX3 the chrome still leaves the three map buttons, End and the map's own gestures reachable.
+    @MainActor func testGuidanceAtAX3KeepsButtonsReachableAndMapPannable() {
+        let app = launchHome(location: Self.atKerryPark, extra: ["--simulate-route", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL"])
+        showGasWorksRoutes(app)
+        startSimulatedGuidance(app)
+        for id in ["guidance-mute", "guidance-compass", "guidance-overview", "end-navigation"] {
+            XCTAssertTrue(app.buttons[id].waitForExistence(timeout: 5), id)
+            XCTAssertTrue(app.buttons[id].isHittable, "\(id) is not hittable at AX3")
+        }
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5))
+        from.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.35)))
+        XCTAssertTrue(app.buttons["guidance-recenter"].waitForExistence(timeout: 5), "A pan should reach the map at AX3")
+    }
+    @MainActor func testLandscapeGuidanceKeepsEndAndMuteHittable() {
+        let app = launch(simulateRoute: true)
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        startSimulatedGuidance(app)
+        let window = app.windows.firstMatch.frame
+        XCTAssertGreaterThan(window.width, window.height, "The device did not rotate to landscape")
+        XCTAssertTrue(app.buttons["end-navigation"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["end-navigation"].isHittable, "End must be reachable in the landscape card")
+        XCTAssertTrue(app.buttons["guidance-mute"].isHittable, "Mute must be reachable in the trailing capsule")
+        capture("11-guidance-landscape", app: app)
+    }
     @MainActor func testSearchEmptyCancelAndSelection() {
         let app = launch()
         let before = app.buttons["choose-origin"].label
