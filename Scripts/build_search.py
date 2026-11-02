@@ -414,7 +414,7 @@ def build(search_json, graph_places, nodes, segments, inside, graph_sha256, out_
         shipped = [x for x in entries if x['osm'].startswith('overture/')]
         summary['overture'] = {
             'release': header['release'], 'fetched': header['fetched'], 'bbox': header['bbox'], 'source': header['source'],
-            'archive': {'file': 'Data/seattle-overture-places.json.gz', 'sha256': hashlib.sha256(overture_path.read_bytes()).hexdigest(),
+            'archive': {'file': overture_path.name if overture_path.parent.parent.name == 'region' else 'Data/' + overture_path.name, 'sha256': hashlib.sha256(overture_path.read_bytes()).hexdigest(),
                         'records': header['count']},
             'minConfidence': MIN_CONFIDENCE, 'stages': dict(stats), 'shipped': len(shipped),
             'shippedBySource': dict(sorted(collections.Counter(x['source'] for x in shipped).items()))}

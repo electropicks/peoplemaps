@@ -1,6 +1,6 @@
 import array, collections, gzip, json, pathlib, sqlite3, struct, tempfile, unittest
 import build_search, build_tiles
-from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,load_dem
+from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,load_dem,compile_restrictions
 
 class ImportPolicyTests(unittest.TestCase):
     def test_private_road_excluded(self):
@@ -478,6 +478,42 @@ def tiled_dem(blocks, tile=2, across=2, down=2):
     blob = b'II*\x00' + struct.pack('<I', 8) + ifd + struct.pack(f'<{n}I', *offsets) + struct.pack(f'<{n}I', *counts) \
         + struct.pack('<3d', 1, 1, 0) + struct.pack('<6d', 0, 0, 0, 0, down * tile, 0) + data
     return gzip.compress(blob, mtime=0)
+
+def restriction(id_, kind, members, **tags):
+    return {'type': 'relation', 'id': id_, 'tags': {'type': 'restriction', 'restriction': kind, **tags},
+            'members': [{'type': t, 'ref': r, 'role': role} for role, t, r in members]}
+
+class RestrictionTests(unittest.TestCase):
+    # F (1,2,3) meets V (3,4) at 3; V meets T (4,5,6) at 4.
+    WAYS = {1: {'nodes': [1, 2, 3]}, 2: {'nodes': [3, 4]}, 3: {'nodes': [4, 5, 6]}}
+    def compile(self, *relations): return compile_restrictions(list(relations), self.WAYS)
+    def test_via_node_is_kept(self):
+        r, c = self.compile(restriction(10, 'no_left_turn', [('from', 'way', 1), ('via', 'node', 3), ('to', 'way', 2)]))
+        self.assertEqual([(x['viaOSM'], x['fromWay'], x['toWay']) for x in r], [(3, 1, 2), (3, 1, 2)])  # drive and bike
+        self.assertEqual(c['viaNode'], 2)
+    def test_via_way_no_bans_only_the_final_transition(self):
+        r, c = self.compile(restriction(11, 'no_right_turn', [('from', 'way', 1), ('via', 'way', 2), ('to', 'way', 3)]))
+        self.assertEqual({(x['viaOSM'], x['fromWay'], x['toWay'], x['mode']) for x in r}, {(4, 2, 3, 'drive'), (4, 2, 3, 'bike')})
+        self.assertEqual(c['viaWayFinalTransitionBanned'], 2)
+    def test_via_way_only_and_u_turn_are_ignored_and_counted(self):
+        r, c = self.compile(restriction(12, 'only_straight_on', [('from', 'way', 1), ('via', 'way', 2), ('to', 'way', 3)]),
+                            restriction(13, 'no_u_turn', [('from', 'way', 1), ('via', 'way', 2), ('to', 'way', 3)]))
+        self.assertEqual(r, [])
+        self.assertEqual((c['viaWayOnlyIgnored'], c['viaWayNoUTurnIgnored']), (2, 2))
+    def test_conditional_and_malformed_are_ignored_and_counted(self):
+        r, c = self.compile(restriction(14, 'no_left_turn', [('from', 'way', 1), ('via', 'node', 3), ('to', 'way', 2)], **{'restriction:conditional': 'no_left_turn @ (Mo-Fr)'}),
+                            restriction(15, 'no_left_turn', [('from', 'way', 1), ('to', 'way', 2)]))
+        self.assertEqual(r, [])
+        self.assertEqual((c['conditionalIgnored'], c['malformedIgnored']), (2, 2))
+
+class BarrierTests(unittest.TestCase):
+    def test_lift_gate_blocks_except_on_a_bridge_or_with_access_yes(self):
+        gate = {'barrier': 'lift_gate'}
+        self.assertTrue(node_blocks(gate, 'drive')); self.assertTrue(node_blocks(gate, 'bike'))
+        self.assertFalse(node_blocks(gate, 'drive', bridge_node=True)); self.assertFalse(node_blocks(gate, 'bike', bridge_node=True))
+        self.assertFalse(node_blocks({**gate, 'access': 'yes'}, 'drive'))
+        self.assertTrue(node_blocks({**gate, 'access': 'no'}, 'drive', bridge_node=True))  # an explicit ban still wins
+        self.assertTrue(node_blocks({'barrier': 'gate'}, 'drive', bridge_node=True))  # only lift gates are special
 
 class ElevationTests(unittest.TestCase):
     def sample(self, blocks):
