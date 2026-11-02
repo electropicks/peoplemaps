@@ -124,7 +124,9 @@ struct SeattleMap: UIViewRepresentable {
             ("water", .mapWater), ("parks", .mapPark), ("roads", .mapStreet), ("arterials", .mapArterial), ("paths", .mapPath),
         ]
 
+        func mapViewDidBecomeIdle(_ map: MLNMapView) { AppEvents.shared.log(.map, "map idle", coalesce: true, ["zoom": map.zoomLevel]) }
         func mapView(_ map: MLNMapView, didFinishLoading style: MLNStyle) {
+            AppEvents.shared.log(.map, "map style loaded")
             guard let url = StreetGraph.mapURL else { return }
             let source = MLNShapeSource(identifier: "seattle", url: url, options: [.simplificationTolerance: 0.3])
             style.addSource(source)
@@ -261,6 +263,7 @@ struct SeattleMap: UIViewRepresentable {
 
         /// A fitted camera is centred on its bounds, so it needs the same padding it was fitted with; following uses the content inset.
         private func move(_ map: MLNMapView, to camera: MLNMapCamera, duration: TimeInterval, timing: CAMediaTimingFunctionName = .easeInEaseOut, padding: UIEdgeInsets? = nil) {
+            AppEvents.shared.log(.map, "camera move", coalesce: true, ["ms": duration * 1000, "animated": duration > 0 ? 1 : 0, "zoom": map.zoomLevel])
             map.setCamera(camera, withDuration: duration, animationTimingFunction: CAMediaTimingFunction(name: timing),
                           edgePadding: padding ?? .zero, completionHandler: nil)
         }

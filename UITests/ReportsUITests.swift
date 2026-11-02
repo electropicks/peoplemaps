@@ -56,6 +56,8 @@ final class ReportsUITests: XCTestCase {
         XCTAssertTrue(json.waitForExistence(timeout: 5))
         XCTAssertTrue(json.label.contains("\"exactLocations\" : false"), json.label)
         XCTAssertTrue(json.label.contains("\"screen\" : \"about, over home\""), json.label)
+        XCTAssertTrue(json.label.contains("\"events\""), "The recent app events are listed")
+        XCTAssertTrue(json.label.contains("map style loaded"), json.label)
         capture("reports-01-composer")
         app.switches["report-exact"].switches.firstMatch.tap()
         let exactOn = NSPredicate { _, _ in json.label.contains("\"exactLocations\" : true") }
