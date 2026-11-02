@@ -2,7 +2,7 @@ import XCTest
 @testable import PeoplemapsCore
 
 /// Synthetic streets around one junction at node 1: node 0 is south, 2 is west, 3 is north, 4 is east.
-private enum Fixture {
+enum Fixture {
     static let points = [Coordinate(lat: 47.640, lon: -122.350), Coordinate(lat: 47.641, lon: -122.350),
                          Coordinate(lat: 47.641, lon: -122.352), Coordinate(lat: 47.642, lon: -122.350),
                          Coordinate(lat: 47.641, lon: -122.348)]
@@ -112,8 +112,51 @@ final class SelectionTests: XCTestCase {
         XCTAssertEqual(finding([small, Fixture.route(id: 2, seconds: 1300, stress: 400)]), .tooLittleGain, "Past the limit, but not worth its time")
         XCTAssertEqual(finding([small, Fixture.route(id: 2, seconds: 1300, stress: 490)]), .tooLittleGain, "Past the limit, but under the floors")
     }
+    func testBoundedSearchNeverClaimsTheSearchesItSkipped() {
+        let fast = Fixture.route(id: 0, seconds: 600, stress: 500)
+        func finding(_ candidates: [Route], bounded: Bool) -> NoCalmerFinding {
+            NativeRouter.noCalmerFinding(candidates: [fast] + candidates, fastest: fast, extraMinutes: 10, bounded: bounded)
+        }
+        let same = [Fixture.route(id: 1, seconds: 650, stress: 500)], longer = [Fixture.route(id: 1, seconds: 1300, stress: 100)]
+        let small = [Fixture.route(id: 1, seconds: 610, stress: 490)]
+        XCTAssertEqual(finding([], bounded: true), .fewerChecked(routes: 1), "Not \"every search found this\"")
+        XCTAssertEqual(finding(same, bounded: true), .fewerChecked(routes: 2))
+        XCTAssertEqual(finding(small, bounded: true), .fewerChecked(routes: 2))
+        XCTAssertEqual(finding(longer, bounded: true), .calmerTakesLonger(limitMinutes: 10), "A calmer route found past the limit is reported, not \"none is calmer\"")
+        XCTAssertEqual(finding(small + [Fixture.route(id: 2, seconds: 1300, stress: 100)], bounded: true), .clearlyCalmerTakesLonger(limitMinutes: 10),
+                       "A route that was found and is clearly calmer is still reported")
+        XCTAssertEqual(NativeRouter.noCalmerFinding(candidates: [fast], fastest: fast, extraMinutes: 0, bounded: true), .notChecked)
+        XCTAssertEqual(finding(same, bounded: false), .calmestCompared(routes: 2))
+        XCTAssertTrue(NoCalmerFinding.fewerChecked(routes: 2).detail.contains("fewer alternatives (2 routes compared)"))
+        XCTAssertTrue(NoCalmerFinding.fewerChecked(routes: 1).detail.contains("(1 route compared)"))
+    }
+    func testSearchLimitsKeepTheFastestPlusAtLeastOneCalmerSearch() {
+        let limits = SearchLimits(concurrentSearches: 3, longMeters: [.walk: 1000])
+        let all = NativeRouter.weights
+        XCTAssertEqual(limits.weights(all, mode: .walk, meters: 1000), all, "At the threshold nothing is dropped")
+        XCTAssertEqual(limits.weights(all, mode: .walk, meters: 1001), [1, 4])
+        XCTAssertEqual(limits.weights(all, mode: .walk, meters: 2501), [2])
+        XCTAssertEqual(limits.weights(all, mode: .walk, meters: 1e9).count, 1)
+        XCTAssertEqual(limits.weights(all, mode: .bike, meters: 1e9), all, "A mode without a threshold is never bounded")
+        XCTAssertEqual(limits.weights(all, mode: .drive, meters: 1e9), all)
+        XCTAssertEqual(SearchLimits.standard.weights(all, mode: .drive, meters: 1e9), all)
+        XCTAssertEqual(SearchLimits(concurrentSearches: 0, longMeters: [:]).concurrentSearches, 1)
+    }
+    func testParallelForRunsEveryIndexOnceWithinTheLimit() {
+        for limit in [1, 3] {
+            nonisolated(unsafe) var seen = [Int](repeating: 0, count: 20), running = 0, peak = 0
+            let lock = NSLock()
+            parallelFor(seen.count, limit: limit) { i in
+                lock.lock(); running += 1; peak = max(peak, running); seen[i] += 1; lock.unlock()
+                Thread.sleep(forTimeInterval: 0.002)
+                lock.lock(); running -= 1; lock.unlock()
+            }
+            XCTAssertEqual(seen, [Int](repeating: 1, count: 20))
+            XCTAssertLessThanOrEqual(peak, limit)
+        }
+    }
     func testNoCalmerWordingSaysEstimateAndNeverSafe() {
-        for finding in [NoCalmerFinding.notChecked, .onlyRoute, .calmestCompared(routes: 3), .calmerTakesLonger(limitMinutes: 2), .tooLittleGain, .clearlyCalmerTakesLonger(limitMinutes: 2)] {
+        for finding in [NoCalmerFinding.notChecked, .onlyRoute, .fewerChecked(routes: 3), .calmestCompared(routes: 3), .calmerTakesLonger(limitMinutes: 2), .tooLittleGain, .clearlyCalmerTakesLonger(limitMinutes: 2)] {
             let text = (finding.title + " " + finding.detail).lowercased()
             XCTAssertFalse(text.contains("safe"), text)
             if finding != .notChecked { XCTAssertTrue(text.contains("estimates"), text) }

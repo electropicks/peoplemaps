@@ -15,6 +15,8 @@ public final class SearchIndex: @unchecked Sendable {
     /// "OpenStreetMap, Oct 2026": the source and date of the OSM extract. Each `Place.source` names its own row's
     /// source ("Overture (Foursquare), Oct 2026" for a business from Overture, dated by the release).
     public let source: String
+    /// "osm-2026-10-29": the OSM extract's date, for problem reports; "osm-unknown" when the index has none.
+    public let dataVersion: String
     private let overtureDate: String?
     /// The row columns to select; indexes built before the per-row `source` column are all OpenStreetMap.
     private let columns: String
@@ -61,6 +63,7 @@ public final class SearchIndex: @unchecked Sendable {
         snapsMatchGraph = graphNodeCount.map { String($0) == meta["graphNodes"] } ?? false
         source = [meta["source"], Self.monthYear(meta["sourceDate"])].compactMap { $0 }.joined(separator: ", ")
         overtureDate = Self.monthYear(meta["overtureDate"])
+        dataVersion = "osm-" + (meta["sourceDate"] ?? "unknown")
         var hasSource = false
         Self.rows(db, "SELECT 1 FROM pragma_table_info('entries') WHERE name = 'source'", []) { _ in hasSource = true }
         columns = "osm, kind, name, category, address, lat, lon, walk, bike, drive, " + (hasSource ? "source" : "NULL")

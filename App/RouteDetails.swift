@@ -58,6 +58,8 @@ struct RouteDetails: View {
                     streets("Fastest", comparison.fastest, color: .fastest)
                     if let calmer = comparison.calmer { streets("Calmer", calmer, color: .calmer) }
                 }
+                Section { Button { ReportCenter.shared.open(from: "route details") } label: { Label("Report a problem", systemImage: "exclamationmark.bubble") }
+                    .accessibilityIdentifier("report-problem-details") }
             }.listStyle(.insetGrouped)
                 .navigationTitle("Behind the routes").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() }.accessibilityIdentifier("close-details") } }
@@ -111,6 +113,7 @@ struct AboutView: View {
                     Text("North of Denny Way through southern Green Lake, from east Ballard to the University District. Map detail stops at the extract boundary.")
                     Text("Missing restrictions, conditional access, temporary closures, and entrances can affect feasibility. Unsupported turn-restriction forms are conservatively excluded. This prototype has not been field validated.").foregroundStyle(.secondary)
                 } header: { header("Coverage") }
+                ReportsAboutSection()
             }.listStyle(.insetGrouped)
                 .task { edgeCount = graph.edges.isEmpty ? await Task.detached { try? StreetGraph.bundledEdgeCount() }.value : graph.edges.count }
                 .navigationTitle("About PeopleMaps").navigationBarTitleDisplayMode(.inline)

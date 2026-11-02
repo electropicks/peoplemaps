@@ -1,7 +1,8 @@
 # Problem reports
 
 Design for in-app problem reports. `Backend/` and `Core/Reports*.swift` build from it; the app screens in section 8 are
-not built yet. The user-facing version of the data rules is `Docs/PRIVACY.md`; keep the two in step. Read with
+not built yet. **For the alpha the backend is not deployed: the app uses section 11 instead (a share-sheet file and a local
+usage log) and never calls `ReportsClient`.** The user-facing version of the data rules is `Docs/PRIVACY.md`; keep the two in step. Read with
 `.claude/skills/product-rules/SKILL.md`.
 
 Decided, not open: a Cloudflare Worker and D1 database in `Backend/`, written so the handlers depend on neither (7.1),
@@ -674,3 +675,22 @@ Considered, not chosen: TestFlight feedback through the App Store Connect API (n
 sender); a stateless Worker writing to R2 with a lifecycle rule (no idempotency or per-install caps); client-side
 encryption of the exact fields to a maintainer key (worth revisiting if exact locations get common); an OHTTP relay so
 Cloudflare never sees client IPs (out of proportion at this volume).
+
+## 11. Alpha: reports by share sheet, and the usage log
+
+The backend is not deployed, so the app calls nothing and mints no IDs. `Core/ProblemReport.swift` is a small report
+built on the 2.4 pieces that fit (`Report.Spoken`, `App`, `Device`, `Chosen`, `ReportCell`, five-decimal points): one
+free-form note, no category, and the screen, mode, extra-time limit, both routes' estimates and streets, the recent spoken
+lines, app and data version and device. Exact locations are off by default; with them off the file has the snapped corner
+of the start and destination and a 550 m cell for a marked moment, as in 2.2. "What's included" shows the file's text.
+
+- **Open** by shaking the phone, or "Report a problem" in About and Route details. `App/Reports/` holds the screens.
+- **Send** is a share sheet with one `peoplemaps-<date>-<words>.json` file; the owner saves it to iCloud Drive,
+  `PeopleMaps Reports`. Reports (up to 50) stay on the phone until swiped away in About, where they can be shared again.
+- **Guidance**: the flag button saves the moment (time, step in the plan, spoken lines, position) with a light
+  confirmation and no sheet. After the trip, or from the About list, the user adds words and shares.
+- **Usage log** (`Core/UsageLog.swift`): off by default, a toggle in About. When on, one JSON line per trip in
+  `usage-log.jsonl`: date and time, mode, extra-time limit, which route was started, both estimates, whether a calmer
+  route was offered, reroute count, each point the user left the route (rounded to about 100 m unless "Exact places in the
+  log" is on) and whether the trip arrived or ended early. The last 500 trips are kept. It is shared or cleared from About
+  and has no network code. A trip the app is killed during is not logged.
