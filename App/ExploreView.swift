@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 import PeoplemapsCore
 
-private enum Sheet: String, Identifiable { case origin, destination, details, about, favourites; var id: String { rawValue } }
+private enum Sheet: String, Identifiable { case origin, destination, details, about, favourites, preferences; var id: String { rawValue } }
 
 private enum Screen: Equatable {
     case home, search, place(Place), preview, navigating
@@ -92,6 +92,7 @@ struct ExploreView: View {
     @State private var asking = false
     @State private var notice: LocationNotice?
     @State private var saved = SavedPlacesStore()
+    @State private var preferences = RoutePreferencesStore()
     @AppStorage("voiceMuted", store: ExploreView.voiceStore) private var voiceMuted = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -258,7 +259,7 @@ struct ExploreView: View {
 
     private var request: RouteRequest? {
         guard let origin, let destination, graph.contains(origin.coordinate) else { return nil }
-        return .init(origin: origin, destination: destination, mode: mode, extraMinutes: budget)
+        return .init(origin: origin, destination: destination, mode: mode, extraMinutes: budget, preferences: preferences[mode])
     }
     /// Landscape on a phone: the panel becomes a floating card at the leading edge.
     private var landscape: Bool { verticalSizeClass == .compact }
@@ -360,6 +361,8 @@ struct ExploreView: View {
                     AboutView(graph: graph)
                 case .favourites:
                     FavouritesEditor(saved: saved)
+                case .preferences:
+                    RoutePreferencesView(store: preferences, mode: mode)
                 }
             }
     }
@@ -770,7 +773,7 @@ struct ExploreView: View {
                 ForEach(TravelMode.displayOrder) { Text($0.title).tag($0) }
             }.pickerStyle(.segmented).sensoryFeedback(.selection, trigger: mode)
             extraTime.sensoryFeedback(.selection, trigger: budget)
-            // Route preferences add their "Calmer means" row here, directly under extra time (Docs/DESIGN.md 4.5).
+            RoutePreferencesRow(isCustom: !preferences[mode].isDefault(in: mode)) { sheet = .preferences }
             ZStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: landscape ? 8 : 12) {
                     if request == nil { needsPlace } else { stateContent }

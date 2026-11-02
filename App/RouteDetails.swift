@@ -33,7 +33,7 @@ struct RouteDetails: View {
                         }
                     }
                 } header: {
-                    Text(comparison.calmer == nil ? "Why one route" : "Why the calmer route")
+                    Text(comparison.calmer == nil ? "Why one route" : comparison.tradesStress ? "What this route avoids" : "Why the calmer route")
                 } footer: {
                     Text("The extra-time limit is a maximum, applied to unrounded estimates. A slower route must also remove enough estimated stress to be worth its extra time. \(comparison.candidateCount == 1 ? "1 distinct route was found" : "\(comparison.candidateCount) distinct candidates were compared"); the search does not guarantee the calmest possible route.")
                 }
@@ -55,7 +55,7 @@ struct RouteDetails: View {
                     Text("Ordered by how much each adds to the fastest route's stress.")
                 }
                 Section("Good to know") {
-                    Text("No route is labeled safe; \"calmer\" means fewer of the things listed above.")
+                    Text(goodToKnowCalmer)
                     Text("Times use assumed speeds, hills and junction delays. They do not include live traffic, closures, parking, signal timing, or verified travel times.")
                     Text(modeNote)
                     Text("Hills come from a 16 ft USGS ground model; bridges and tunnels are interpolated between their ends.")
@@ -72,6 +72,13 @@ struct RouteDetails: View {
                 .navigationTitle("Behind the routes").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() }.accessibilityIdentifier("close-details") } }
         }.tint(.primary).presentationDetents([.medium, .large])
+    }
+    /// With the person's own Calmer means settings the second route is the one that avoids what they chose, which isn't always less stress overall.
+    private var goodToKnowCalmer: String {
+        let custom = !comparison.request.preferences.isDefault(in: comparison.request.mode)
+        if comparison.tradesStress { return "No route is labeled safe. With your Calmer means settings, this route avoids more of what you chose to avoid, and by our estimates has more of other things listed above. It is not calmer overall." }
+        if custom { return "No route is labeled safe. With your Calmer means settings, \"calmer\" means fewer of what you chose to avoid, which can come with more of something else." }
+        return "No route is labeled safe; \"calmer\" means fewer of the things listed above."
     }
     private var modeNote: String {
         switch comparison.request.mode {
