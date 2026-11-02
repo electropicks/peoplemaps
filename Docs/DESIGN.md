@@ -136,15 +136,19 @@ background, so nothing depends on the camera:
 
 | Tier (zoom) | Shows from | Least gap between centres | On the map in all Seattle | On the busiest phone screen |
 |---|---|---|---|---|
-| 14 | 13.5, where Home's neighbourhood view lands | 96 pt | 1,245 | 24 |
-| 15 | 15 | 72 pt | 4,083 | 42 |
-| 16 | 16 | 56 pt | 9,476 | 61 |
-| 17 | 17 | 44 pt | 16,455 (of 41,901 places) | 57 |
+| 14 | 13.5, where Home's neighbourhood view lands | 96 pt | 1,243 | 24 |
+| 15 | 15 | 72 pt | 4,089 | 42 |
+| 16 | 16 | 56 pt | 9,472 | 62 |
+| 17 | 17 | 44 pt | 16,458 (of 41,901 places) | 57 |
 
 - Best-ranked first, ties by ID, so the result doesn't depend on input order. Rank
   is the search weight, down 20 for Services and 12 for Health, up 6 for Food,
   Coffee and Nightlife: a neighbourhood's first markers are where people go.
 - A marker kept at a zoom stays at every zoom above it, so zooming in only adds.
+- Bus stops wait for the last tier and rank below everything, so they only fill
+  gaps: 17 of the index's 33. Overture files them under `station` with a Link
+  station's weight and no category of their own, so they're told apart by name
+  (`PlaceMarker.isBusStop`).
 - No marker, though search still finds them: buildings, offices, apartments,
   parking, ATMs, lockers and the like.
 - Size 20 pt at zoom 14 to 26 pt at 18, zoom-driven. A tier fades in over the last
@@ -367,7 +371,7 @@ Proposed, top to bottom:
 7. **Start**: `.glassProminent` tinted, pinned under the scroll, with a bordered
    **Why this route** capsule beside it (D13: green is not a link colour), stacked
    at accessibility sizes. Pinned because a row below Start got clipped at the
-   default size. Default stop is 0.7 of the screen, so routes and both buttons
+   default size. Default stop is 0.66 of the screen, so routes and both buttons
    show without scrolling; accessibility sizes open large.
 8. **Calm bar**, in Why this route and at the preview's large stop: the five bands
    left to right with their words, the landed band highlighted, a marker each for

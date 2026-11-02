@@ -311,7 +311,7 @@ struct ExploreView: View {
 
     // MARK: Sheet stops
 
-    private let previewDetent = PresentationDetent.fraction(0.7)
+    private let previewDetent = PresentationDetent.fraction(0.66)
     /// `fitContent` plus the padding `scrolling` puts around it, or the last of the content is cut off by the sheet's edge.
     /// Never so tall that the map disappears; past that it scrolls.
     private var fitHeight: CGFloat { min(fitContent + Layout.sheetTop + Layout.sheetBottom, screenHeight * 0.7) }

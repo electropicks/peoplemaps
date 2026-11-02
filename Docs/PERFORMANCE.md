@@ -93,7 +93,7 @@ Scale 4 (293416 nodes, 795852 edges) against scale 1, same trips and routes:
 
 ## Map place markers
 
-What the coloured markers cost on the map, all Seattle: 16,455 markers from 41,901 places (`Docs/DESIGN.md` section 2). Measured by `testPanFrameTimes` in Peoplemaps UI tests, with `TEST_RUNNER_PEOPLEMAPS_PAN=1` and `TEST_RUNNER_PEOPLEMAPS_NO_MARKERS=1` to compare: 32 fast drags around Downtown, two runs each, Debug build, a 402 by 874 pt iPhone simulator on a Mac. **A simulator's frame times say nothing absolute about a phone**, so the comparison is what to read. The device has not been measured.
+What the coloured markers cost on the map, all Seattle: about 16,450 markers from 41,901 places (`Docs/DESIGN.md` section 2). Measured by `testPanFrameTimes` in Peoplemaps UI tests, with `TEST_RUNNER_PEOPLEMAPS_PAN=1` and `TEST_RUNNER_PEOPLEMAPS_NO_MARKERS=1` to compare: 32 fast drags around Downtown, two runs each, Debug build, a 402 by 874 pt iPhone simulator on a Mac. **A simulator's frame times say nothing absolute about a phone**, so the comparison is what to read. The device has not been measured.
 
 | | Zoom | Frames | p50 / p95 / p99 | Longest | Long frames (over 25 ms) | Memory |
 |---|---|---|---|---|---|---|
