@@ -91,6 +91,21 @@ Scale 4 (293416 nodes, 795852 edges) against scale 1, same trips and routes:
 - **The finding stays true.** When a request was bounded and no calmer route is offered, the preview says "Best of the routes we checked" and how many were compared (`NoCalmerFinding.fewerChecked`: "none is clearly calmer for its time"), not that every search found one route or that this is the calmest. A calmer route that was found past the time limit, clearly or not, is reported as for any request.
 - **What the bound costs.** Dropping weights 0.25 and 0.5 lost the calmer route on bounded requests at default settings. So when nothing calmer is on offer, a bounded request tries 0.5, then 0.25, and stops as soon as one is offered (at most two more searches, only on such trips). Measured with the limit lowered to 4 km, 5 extra minutes, 50 seeded trips of 4 to 12 km per mode on the shipped box, against the unbounded router: a calmer route lost on 16 bike and 8 walk trips before the retry, 0 and 0 after. A different calmer route was chosen on 21 bike and 15 walk trips before, 5 and 7 after; those routes are slightly less calm (summed over the 50 trips, the stress gap to the unbounded choice is 267 bike and 403 walk). With Avoid preferences the earlier retry stays, once.
 
+## Map place markers
+
+What the coloured markers cost on the map, all Seattle: 16,455 markers from 41,901 places (`Docs/DESIGN.md` section 2). Measured by `testPanFrameTimes` in Peoplemaps UI tests, with `TEST_RUNNER_PEOPLEMAPS_PAN=1` and `TEST_RUNNER_PEOPLEMAPS_NO_MARKERS=1` to compare: 32 fast drags around Downtown, two runs each, Debug build, a 402 by 874 pt iPhone simulator on a Mac. **A simulator's frame times say nothing absolute about a phone**, so the comparison is what to read. The device has not been measured.
+
+| | Zoom | Frames | p50 / p95 / p99 | Longest | Long frames (over 25 ms) | Memory |
+|---|---|---|---|---|---|---|
+| With markers | 14.9 | 1,290, 1,290 | 17 / 17 / 17 ms | 43, 54 ms | 1, 2 | 397 MB |
+| Without | 14.9 | 1,290, 1,260 | 17 / 17 / 17 ms | 35, 17 ms | 1, 0 | 389 MB |
+| With markers | 15.85 | 1,320, 1,320 | 17 / 17 / 17 ms | 17, 17 ms | 0, 0 | 395 MB |
+| Without | 15.85 | 1,350, 1,350 | 17 / 17 / 17 ms | 17, 69 ms | 0, 3 | 387 MB |
+
+- **Reading and thinning, once, off the main thread: 240 to 340 ms in a Debug build** (read 18 ms, thin 240 ms on the Mac in Swift tests). Home doesn't wait for it; markers appear when it finishes.
+- **Why a computed source.** The first version wrote the markers to a GeoJSON file for a MapLibre shape source. Frame times were the same, but it held 144 MB more (534 against 390 MB), since MapLibre keeps every feature and its properties in its own index. A computed shape source (`App/PlaceMarkerFeed.swift`) keeps one sorted array in Swift and answers one tile at a time on MapLibre's own queue: 8 MB more, no file. Panning runs none of our code on the main thread.
+- **Why no collision checks.** Thinning already keeps markers apart, so the layers set `icon-allow-overlap` and `icon-ignore-placement`. Markers don't flicker as tiles load, and placement has nothing to do for them.
+
 ## Budgets
 
 Proposed, for this box in a release build, as limits on the medians above (current worst case in brackets). Re-measure on a device before treating the absolute numbers as product requirements.

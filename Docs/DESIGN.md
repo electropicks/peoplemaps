@@ -119,12 +119,45 @@ Parks deliberately use teal-green `#0B7A6B`, not `.calmer`, so a green badge
 is never mistaken for "calmer". The hue gap is about 40°; the symbol (leaf)
 carries the meaning too. See open question 2.
 
-Map markers: the same fill and glyph at 24 pt (28 pt selected, with a 2 pt
-`systemBackground` ring). All fills clear 3:1 against `mapLand` in both modes
-(lowest: calmer 3.9, food 4.0 light). Glyph ratios in dark mode use `#1C1C1E`; the
-lowest are nightlife 4.8 and shops 4.9. Ratios above were computed with the WCAG
-formula; the Mac session re-checks rendered pixels with Xcode's Accessibility
-Inspector.
+Overture's long tail ("thai_restaurant", "shoe_store", "dermatology") reaches its
+group through suffix rules in `PlaceCategory`, after the exact table. Without
+them 37% of the all-Seattle index fell through to grey Services.
+
+Map markers: the same fill and glyph, drawn from these tokens, on a 1.5 pt ring of
+`systemBackground` (2.5 pt with Increase Contrast). All fills clear 3:1 against
+`mapLand` in both modes (lowest: calmer 3.9, food 4.0 light). Glyph ratios in dark
+mode use `#1C1C1E`; the lowest are nightlife 4.8 and shops 4.9. Ratios above were
+computed with the WCAG formula; the Mac session re-checks rendered pixels with
+Xcode's Accessibility Inspector.
+
+**Which places show, and when.** At runtime, from the bundled search index; no
+generated data. `Core/PlaceMarkers.swift` thins the whole index once, in the
+background, so nothing depends on the camera:
+
+| Tier (zoom) | Shows from | Least gap between centres | On the map in all Seattle | On the busiest phone screen |
+|---|---|---|---|---|
+| 14 | 13.5, where Home's neighbourhood view lands | 96 pt | 1,245 | 24 |
+| 15 | 15 | 72 pt | 4,083 | 42 |
+| 16 | 16 | 56 pt | 9,476 | 61 |
+| 17 | 17 | 44 pt | 16,455 (of 41,901 places) | 57 |
+
+- Best-ranked first, ties by ID, so the result doesn't depend on input order. Rank
+  is the search weight, down 20 for Services and 12 for Health, up 6 for Food,
+  Coffee and Nightlife: a neighbourhood's first markers are where people go.
+- A marker kept at a zoom stays at every zoom above it, so zooming in only adds.
+- No marker, though search still finds them: buildings, offices, apartments,
+  parking, ATMs, lockers and the like.
+- Size 20 pt at zoom 14 to 26 pt at 18, zoom-driven. A tier fades in over the last
+  0.12 of a zoom. Keep this narrow: a pinch can stop anywhere, and a wide fade leaves
+  a whole tier washed out.
+- Shown while browsing (home, search, place card). Never over a route preview or
+  guidance. The selected place's marker steps aside for its pin.
+- A tap within 22 pt of a marker opens the nearest one's place card, after the
+  double-tap wait. Long-press still drops a pin.
+- **VoiceOver:** map symbols aren't accessible, so up to 24 on-screen markers get an
+  element at their position once the map stops ("Tilikum Place Cafe, Restaurant"),
+  nearest the middle first. UI tests use the same elements.
+- **Never colour alone:** every marker carries its category glyph.
 
 ### On glass
 
@@ -196,7 +229,11 @@ Proposed:
   Overture Places lands (branch `search/overture-places`). `.caption2`, on a small glass capsule just above the sheet's top edge,
   leading. It moves with the detent. At the large detent only the status bar is
   left above the sheet, so the credit moves inside it, pinned at the bottom
-  without the capsule. Size capped at `.large`, one line.
+  without the capsule. Size capped at `.large`, one line. The credit is positioned
+  from the sheet's global frame, never its height: at low stops the system scales
+  the sheet (0.86 at about 80 pt, 0.96 at about 100 pt and over) and floats it above
+  the screen's edge, so its height doesn't say where its top is. It is a licence
+  term: `testPeekHoldsItsContentAndLeavesTheCreditVisible` holds it above the sheet.
 - Remove all custom `.shadow` calls on glass; glass draws its own.
 
 ```
@@ -217,7 +254,10 @@ Favourites and Featured places (`home-favourites-light.png`).
 Proposed (with `ux-round-1`): a persistent system sheet,
 `presentationDetents([.height(peek), .medium, .large])`,
 `presentationBackgroundInteraction(.enabled(upThrough: .medium))`,
-`interactiveDismissDisabled()`. Peek = search field + Favourites row.
+`interactiveDismissDisabled()`. Peek = search field + Favourites row, plus the
+sheet content's own padding (20 top, 12 bottom), or the last of it is cut off.
+Recents and About stay out of sight at the peek: on a taller peek the system leaves
+room for the home indicator, and the next row would show half cut off there.
 - Search field labelled **"Where to?"**, capsule, `magnifyingglass` leading.
 - **Favourites row**, as in Apple Maps: a horizontal row of 56-pt circular
   category badges (`@ScaledMetric`), each with the place's short name
@@ -327,7 +367,7 @@ Proposed, top to bottom:
 7. **Start**: `.glassProminent` tinted, pinned under the scroll, with a bordered
    **Why this route** capsule beside it (D13: green is not a link colour), stacked
    at accessibility sizes. Pinned because a row below Start got clipped at the
-   default size. Default stop is 0.66 of the screen, so routes and both buttons
+   default size. Default stop is 0.7 of the screen, so routes and both buttons
    show without scrolling; accessibility sizes open large.
 8. **Calm bar**, in Why this route and at the preview's large stop: the five bands
    left to right with their words, the landed band highlighted, a marker each for
@@ -536,6 +576,25 @@ All through `Motion` (`App/PeoplemapsApp.swift`); no new durations.
 - Every control keeps its current `accessibilityIdentifier` so UI tests keep
   working; new controls get one (`locate`, `add-favourite`, `extra-time-menu`,
   `route-preferences`, `preference-<factor>`, `reset-preferences`).
+
+## 6a. Glass audit, November 2026
+
+Every floating surface against section 1, from captures in both appearances, on the
+all-Seattle map.
+
+| Surface | Glass | Finding |
+|---|---|---|
+| Sheet | system, no custom background | Real glass. Markers beneath it blur through as soft colour, as they should. |
+| Map buttons (home, guidance) | `.regular` | Was inert under the finger. Now `.interactive()`. |
+| Credit | `.regular` | Text only, so not interactive. Was hidden behind the sheet; now above it. |
+| Turn banner, calm chip, trip bar, arrival card | `.regular` in one container | Fine. Reading text stays short or on `panelFill`. |
+| Re-centre pill | `.glass` button | Fine: over the map, not on the sheet. |
+| Landscape card | `.regular` | Fine. Lists are on `panelFill`. |
+| Directions, Start, Done | `.glassProminent` in the sheet | The one allowed glass-in-glass: the primary action (principle 6). |
+| Reduce Transparency | `floatingSurface` | Map buttons and credit vanished in dark mode, `panel` being nearly `mapLand`. The outline guidance had in its own copy of this helper is now in the helper. |
+
+Where glass reads milky in light mode, it's the pale land under it: glass takes its
+colour from what's behind. The map palette decides that, not the glass.
 
 ## 7. Implementation plan
 
