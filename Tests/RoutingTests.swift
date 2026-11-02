@@ -2,7 +2,7 @@ import XCTest
 @testable import PeoplemapsCore
 
 /// Synthetic streets around one junction at node 1: node 0 is south, 2 is west, 3 is north, 4 is east.
-private enum Fixture {
+enum Fixture {
     static let points = [Coordinate(lat: 47.640, lon: -122.350), Coordinate(lat: 47.641, lon: -122.350),
                          Coordinate(lat: 47.641, lon: -122.352), Coordinate(lat: 47.642, lon: -122.350),
                          Coordinate(lat: 47.641, lon: -122.348)]
