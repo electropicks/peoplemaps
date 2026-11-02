@@ -18,11 +18,12 @@ on:
 # A newer run on the same branch or PR cancels the older one, on main too; the newest commit always runs.
 # Docs-only pushes start no run, so they cancel nothing. Label events get their own groups so they never cancel a code run:
 # the ui-tests label has one per PR, any other label a group of its own (its jobs are all skipped).
+# Manual runs have their own group, so a merge never cancels one.
 concurrency:
   group: >-
     ${{ github.event.action == 'labeled'
     && (github.event.label.name == 'ui-tests' && format('ci-ui-label-{0}', github.ref) || format('ci-other-label-{0}', github.run_id))
-    || format('ci-{0}', github.ref) }}
+    || format('ci-{0}-{1}', github.event_name == 'workflow_dispatch' && 'manual' || 'auto', github.ref) }}
   cancel-in-progress: true
 
 jobs:
@@ -54,10 +55,11 @@ jobs:
       - run: npm test
       - run: npx tsc --noEmit
 
-  # The iOS app build, on every PR push (not on label events: the head already ran it). The UI suite runs only when asked,
+  # The iOS app build, on every PR push and manual run; not on label events (the head already ran it) or merges to main
+  # (the PR just ran it, and the next PR catches a break). The UI suite runs only when asked,
   # since it is the slowest job. xcode-27 is a standard runner: free in a public repo, 3 cores and 7 GB.
   ios-build:
-    if: github.event.action != 'labeled'
+    if: github.event.action != 'labeled' && github.event_name != 'push'
     runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
@@ -67,9 +69,10 @@ jobs:
           key: spm-${{ hashFiles('Peoplemaps.xcodeproj/project.pbxproj', 'Package.swift') }}
       - run: PEOPLEMAPS_XCODE="$(xcode-select -p)" Scripts/verify.sh
 
-  # Push to main, a manual run, or a PR labelled "ui-tests". Its screenshots land in the run's "ui-screenshots" artifact.
+  # A manual run or a PR labelled "ui-tests", about 50 minutes. The Mac is the final check before a tag (see the verify skill).
+  # Its screenshots land in the run's "ui-screenshots" artifact.
   ui-tests:
-    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'ui-tests') && (github.event.action != 'labeled' || github.event.label.name == 'ui-tests'))
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ui-tests') && (github.event.action != 'labeled' || github.event.label.name == 'ui-tests'))
     runs-on: xcode-27
     timeout-minutes: 120
     steps:

@@ -18,7 +18,8 @@ An offline iOS maps app for Seattle that picks the calmer route a local would ch
 
 ```bash
 Scripts/verify.sh                 # importer tests, data reproduction, Swift tests, iOS build (macOS)
-Scripts/verify.sh --ui            # plus the UI suite (macOS)
+Scripts/verify.sh --ui            # plus the UI suite (macOS), the final check before a tag
+gh workflow run ci.yml --ref BRANCH [-f region=true]   # the same on GitHub, keeps the Mac quiet; about 50 min
 swift build -c release --product peoplemaps-bench && .build/release/peoplemaps-bench [--scale 4] [--json]   # router timings
 python3 Scripts/import_osm.py     # regenerate Core/Resources from Data/
 python3 Scripts/generate_project.py   # after adding or removing App/ or UITests/ files
