@@ -82,6 +82,14 @@ Scale 4 (293416 nodes, 795852 edges) against scale 1, same trips and routes:
 
 **Memory went up while routing.** A long trip now costs about 130 MB over the idle router at scale 1 (before: 5 MB): seven buffer sets, the turn cache, and per-thread allocator arenas. At scale 4 the short trips add 10 to 35 MB. The turn-cost cache and the search buffers beyond two sets belong to one request and are freed when it returns; the router keeps at most two buffer sets (enough for sequential searches to reuse), so idle memory does not grow with use. Peak RSS is a high-water mark and cannot show that release, so these rows measure the peak during a request, not what stays resident. If the all-Seattle graph is bundled (3.6 times larger), the buffer sets grow with it. Reducing concurrency, or a smaller cache, trades time for memory; decide when we measure on a device.
 
+## Limits on one request
+
+`SearchLimits` (`Core/RoutingEngine.swift`), passed to `NativeRouter(graph:limits:)`.
+
+- **Concurrent searches: 3 on iOS, 8 elsewhere.** Each running search owns a buffer set the size of the graph, and memory at all-Seattle scale rose from 409 to 542 MB (about 19 MB a search). An iPhone 15 has 6 cores and about 3 GB for the app, so phones run three at a time: the seven searches of a request go in three waves, hold about 60 MB at that scale instead of 130, and cost up to about 1.3 to 1.5 times the wall time (Ballard to Madrona on a Mac: walk 232 to 289 ms, bike 69 to 97, drive 56 to 86). Routes are identical at any cap (`testTheConcurrencyCapDoesNotChangeRoutes`). Peak RSS after the long trips on the shipped box: 223 MB at 8, 192 MB at 3.
+- **Long walks and bikes search less.** Past 12 km in a straight line for a walk, or 25 km for a bike, a request runs the fastest search and two calmer ones (weights 1 and 4); past 2.5 times that, the fastest and one (weight 2). Driving is never bounded. A lighter-weight retry for Avoid preferences runs at most once when bounded. The thresholds are about the point where a walk of 3 hours or a ride of 1.5 hours starts costing seconds on a phone (Federal Way to Bothell on foot is 62 km and took 22.6 s on a Mac). They could not be measured on the shipped box, whose longest trip is about 10 km, so `peoplemaps-bench --bound METERS` lowers them: at 5 km Ballard to Madrona on foot runs 3 searches (224 ms, against 289) and by bike 3 (84 ms, against 97).
+- **The finding stays true.** When a request was bounded and no calmer route is offered, the preview says "Best of the routes we checked" and how many were compared (`NoCalmerFinding.fewerChecked`), not that every search found one route or that this is the calmest. A clearly calmer route that was found past the time limit is still reported.
+
 ## Budgets
 
 Proposed, for this box in a release build, as limits on the medians above (current worst case in brackets). Re-measure on a device before treating the absolute numbers as product requirements.
