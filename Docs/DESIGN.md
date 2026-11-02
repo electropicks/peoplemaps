@@ -364,7 +364,7 @@ unmarked crossings instead, shown as one "Unsignalled crossings" row in place
 of those two. Confirm the per-mode set against the route-preferences PR before
 building; the table is a starting point.
 
-Each row: symbol (`trafficlight`, `octagon`, `arrow.turn.up.left`,
+Each row: symbol (`light.beacon.max`, `octagon`, `arrow.turn.up.left`,
 `car.2.fill`, `mountain.2`, `arrow.triangle.turn.up.right.diamond`), label,
 and a three-way segmented control **Avoid / Normal / Don't mind**. At
 accessibility sizes the control drops below the label. Changes recompute the
@@ -399,7 +399,7 @@ screen.
   row sits inside the same glass with a hairline divider, not a second fill
   (no glass on glass, no opaque strip).
 - **Calm chip** below the banner, leading: glass capsule, `octagon` /
-  `trafficlight` + text in `calmerText` semibold (see 2, "On glass").
+  `light.beacon.max` + text in `calmerText` semibold (see 2, "On glass").
 - **Mute, compass + overview**: one horizontal glass capsule (vertical in
   landscape), trailing, same row as the chip: three 44×44 plain buttons with
   dividers. The compass turns with the map's heading and, in the overview,
