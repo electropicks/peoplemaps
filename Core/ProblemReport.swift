@@ -7,8 +7,6 @@ import Foundation
 public struct ProblemReport: Codable, Equatable, Sendable, Identifiable {
     public static let schemaVersion = 2
     public static let limit = 50
-    /// The OpenStreetMap snapshot the bundled graph was built from (Data/provenance.json).
-    public static let dataVersion = "osm-2026-10-11"
 
     public struct Point: Codable, Equatable, Sendable {
         public var lat: Double
@@ -75,7 +73,7 @@ public struct ProblemReport: Codable, Equatable, Sendable, Identifiable {
     public init(id: String = UUID().uuidString, createdAt: Date = Date(), note: String = "", includeExact: Bool = false, screen: String,
                 mode: TravelMode, extraMinutes: Int, origin: Place? = nil, destination: Place? = nil, routes: [RouteInfo] = [],
                 chosen: Report.Chosen? = nil, moment: Moment? = nil, spoken: [Report.Spoken] = [], rerouteCount: Int? = nil,
-                app: Report.App, dataVersion: String = ProblemReport.dataVersion, device: Report.Device) {
+                app: Report.App, dataVersion: String, device: Report.Device) {
         self.id = id; self.createdAt = createdAt; self.note = note; self.includeExact = includeExact; self.screen = screen
         self.mode = mode; self.extraMinutes = extraMinutes; self.origin = origin; self.destination = destination; self.routes = routes
         self.chosen = chosen; self.moment = moment; self.spoken = spoken; self.rerouteCount = rerouteCount

@@ -11,7 +11,7 @@ final class ProblemReportTests: XCTestCase {
                       moment: .init(at: Date(timeIntervalSince1970: 1_793_500_100), stepIndex: 2, stepCount: 9, instruction: "Turn left onto N 45th St",
                                     remainingMeters: 900, remainingSeconds: 120, cell: "r30c10", location: .init(lat: 47.66, lon: -122.34)),
                       spoken: [.init(text: "Turn left", secondsBefore: 4)], rerouteCount: 1,
-                      app: .init(version: "0.1.0", build: "1"), device: .init(model: "iPhone", os: "iOS 27.0"))
+                      app: .init(version: "0.1.0", build: "1"), dataVersion: "osm-2026-10-29", device: .init(model: "iPhone", os: "iOS 27.0"))
     }
 
     func testExactLocationsAreLeftOutByDefault() throws {
