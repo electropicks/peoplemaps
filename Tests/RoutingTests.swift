@@ -287,6 +287,8 @@ final class RouterTests: XCTestCase {
         let a = Place(id: "a", name: "A", lat: 47.64, lon: -122.36, category: "test")
         let outside = Place(id: "b", name: "B", lat: 48, lon: -122.35, category: "test")
         XCTAssertThrowsError(try router.compute(.init(origin: a, destination: outside, mode: .drive, extraMinutes: 5))) { XCTAssertEqual($0 as? RoutingError, .outsideCoverage) }
+        XCTAssertThrowsError(try router.compute(.init(origin: outside, destination: a, mode: .drive, extraMinutes: 5))) { XCTAssertEqual($0 as? RoutingError, .startOutsideCoverage) }
+        XCTAssertEqual(RoutingError.startOutsideCoverage.errorDescription, "Your start is outside the area PeopleMaps covers. Choose a start inside Seattle's offline map.")
         XCTAssertThrowsError(try router.compute(.init(origin: a, destination: a, mode: .drive, extraMinutes: 5))) { XCTAssertEqual($0 as? RoutingError, .samePlace) }
         XCTAssertThrowsError(try router.compute(.init(origin: a, destination: a, mode: .drive, extraMinutes: -1))) { XCTAssertEqual($0 as? RoutingError, .invalidBudget) }
     }

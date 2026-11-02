@@ -156,7 +156,7 @@ struct ExploreView: View {
     private func dropPin(_ c: Coordinate) {
         guard screen == .home || selectedPlace != nil else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        open(.droppedPin(at: c))
+        open(search.droppedPin(at: c))
     }
 
     /// Current location when allowed; otherwise the start the user chose last, unless that is where they are going.
@@ -171,7 +171,7 @@ struct ExploreView: View {
     }
 
     private var request: RouteRequest? {
-        guard let origin, let destination else { return nil }
+        guard let origin, let destination, graph.contains(origin.coordinate) else { return nil }
         return .init(origin: origin, destination: destination, mode: mode, extraMinutes: budget)
     }
     /// Landscape on a phone: the panel becomes a floating card at the leading edge.
@@ -602,13 +602,20 @@ struct ExploreView: View {
         }
     }
 
-    /// No start (location off or unavailable) or no destination yet: say what to do, and show no route.
+    /// No start (location off or unavailable), a start outside the area we cover, or no destination yet: say what to do, and show no route.
     private var needsPlace: some View {
-        card {
-            Text(origin == nil ? "Choose a start to compare routes." : "Choose a destination to compare routes.")
-                .font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                .padding(14).frame(maxWidth: .infinity, minHeight: routeListHeight, alignment: .leading)
-        }.accessibilityIdentifier("needs-place")
+        let outside = origin.map { !graph.contains($0.coordinate) } ?? false
+        return card {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(outside ? "Your start is outside the area we cover" : origin == nil ? "Choose a start to compare routes." : "Choose a destination to compare routes.")
+                    .font(outside ? .headline : .subheadline).foregroundStyle(outside ? .primary : .secondary).fixedSize(horizontal: false, vertical: true)
+                if outside {
+                    Text("PeopleMaps can route only inside its offline Seattle area for now. Choose a start inside it.")
+                        .font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Button("Choose start") { sheet = .origin }.font(.subheadline.weight(.semibold)).padding(.top, 2)
+                }
+            }.padding(14).frame(maxWidth: .infinity, minHeight: routeListHeight, alignment: .leading)
+        }.accessibilityIdentifier(outside ? "start-outside-coverage" : "needs-place")
     }
 
     private var places: some View {

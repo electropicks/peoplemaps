@@ -77,6 +77,32 @@ final class SearchTests: XCTestCase {
     func testNearestAddressIsNilFarFromAny() {
         XCTAssertNil(index.nearestAddress(to: Coordinate(lat: 47.637, lon: -122.336), within: 40), "middle of Lake Union")
     }
+    func testCategoryWordsFindPlacesByCategoryBelowNameMatches() {
+        for (query, category) in [("gas station", "fuel"), ("gas stations", "fuel"), ("petrol", "fuel"), ("coffee shop", "cafe"),
+                                  ("grocery", "supermarket"), ("pharmacy", "pharmacy"), ("drugstore", "pharmacy")] {
+            let hits = index.search(query, near: Self.fremont)
+            XCTAssertGreaterThanOrEqual(hits.count, 5, query)
+            XCTAssertTrue(hits.prefix(30).contains { $0.category == category }, query)
+        }
+        let restaurants = index.search("restaurants", near: Self.fremont)
+        XCTAssertTrue(restaurants.contains { $0.category == "thai_restaurant" || $0.category == "restaurant" })
+        XCTAssertTrue(restaurants.allSatisfy { $0.kind == .place })
+    }
+    func testCategoryMatchesComeAfterNameMatches() throws {
+        let hits = index.search("gas", near: Self.fremont)
+        let named: (Place) -> Bool = { SearchIndex.normalize($0.name).split(separator: " ").contains { $0.hasPrefix("gas") } }
+        XCTAssertEqual(hits.first?.name, "Gas Works Park", "a name match stays first")
+        let shell = try XCTUnwrap(hits.firstIndex { $0.category == "fuel" && !named($0) })
+        XCTAssertGreaterThan(shell, try XCTUnwrap(hits.lastIndex(where: named)))
+        XCTAssertLessThan(shell, 30, "ahead of text found only in a category such as gastroenterology")
+        XCTAssertEqual(Set(hits.map(\.id)).count, hits.count, "no duplicates")
+        XCTAssertEqual(index.search("coffee", near: Self.fremont).first?.name.lowercased().contains("coffee"), true)
+        XCTAssertEqual(index.search("gas station", near: Self.fremont).first?.category, "fuel")
+    }
+    func testNonCategoryQueriesAreUnchanged() {
+        XCTAssertTrue(index.search("zzzz qqqq").isEmpty)
+        XCTAssertEqual(index.search("gas works").first?.id, "relation/1047789")
+    }
     func testRepeatedQueriesReuseTheLastAnswer() {
         let first = index.search("gas works", near: Self.fremont)
         XCTAssertEqual(index.search("gas works", near: Self.fremont).map(\.id), first.map(\.id))
