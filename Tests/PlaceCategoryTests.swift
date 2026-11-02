@@ -49,6 +49,18 @@ final class PlaceCategoryTests: XCTestCase {
         for raw in ["proposed", "vacant", "street_vendor", "shelter"] { XCTAssertEqual(PlaceCategory(raw: raw), .services, raw) }
     }
 
+    /// Overture's own words for things, which are most of the all-Seattle index's long tail.
+    func testOvertureLongTail() {
+        let expected: [(String, PlaceCategory)] = [
+            ("thai_restaurant", .food), ("sandwich_shop", .food), ("bubble_tea_shop", .coffee), ("brewery", .nightlife),
+            ("shoe_store", .shops), ("gift_shop", .shops), ("farmers_market", .shops), ("pediatric_clinic", .health),
+            ("dermatology", .health), ("psychiatry", .health), ("health_care", .health), ("yoga_studio", .sport),
+            ("boxing_gym", .sport), ("arts_and_entertainment", .sights), ("airport", .transit),
+            ("massage_therapy", .services), ("auto_body_shop", .services), ("government_office", .services),
+        ]
+        for (raw, group) in expected { XCTAssertEqual(PlaceCategory(raw: raw), group, raw) }
+    }
+
     func testUnknownIsServices() {
         XCTAssertEqual(PlaceCategory(raw: "no_such_category"), .services)
         XCTAssertEqual(PlaceCategory(raw: ""), .services)

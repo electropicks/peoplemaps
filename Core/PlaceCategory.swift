@@ -5,8 +5,21 @@ public enum PlaceCategory: String, CaseIterable, Sendable {
     /// Maps a raw index category. The OSM key is already lost, so `clothes`, `bicycle` and `art` are shop values.
     /// Anything not listed is `.services`.
     public init(raw: String) {
-        self = Self.lookup[raw.lowercased()] ?? .services
+        let raw = raw.lowercased()
+        self = Self.lookup[raw] ?? Self.bySuffix(raw) ?? .services
     }
+
+    /// Overture's long tail names its kind in the last word ("thai_restaurant", "shoe_store", "pediatric_clinic").
+    private static func bySuffix(_ raw: String) -> PlaceCategory? {
+        suffixes.first { $0.endings.contains { raw.hasSuffix($0) } }?.group
+    }
+
+    private static let suffixes: [(group: PlaceCategory, endings: [String])] = [
+        (.food, ["_restaurant"]),
+        (.health, ["_clinic", "_medicine", "_therapy", "_surgery", "ology", "iatry", "_health_care", "_care_facility", "_treatment_center"]),
+        (.shops, ["_store", "_shop", "_boutique", "_market"]),
+        (.sport, ["_gym", "_field", "_court"]),
+    ]
 
     private static let lookup: [String: PlaceCategory] = {
         var table: [String: PlaceCategory] = [:]
@@ -16,10 +29,13 @@ public enum PlaceCategory: String, CaseIterable, Sendable {
 
     private static let groups: [(PlaceCategory, [String])] = [
         (.food, ["restaurant", "fast_food", "bakery", "deli", "ice_cream", "pastry", "food_court", "confectionery",
-                 "chocolate", "seafood", "restaurants", "greengrocer"]),
-        (.coffee, ["cafe", "coffee", "tea"]),
-        (.nightlife, ["bar", "pub", "nightclub", "wine", "alcohol", "stripclub", "hookah_lounge", "music_venue"]),
-        (.shops, ["clothes", "convenience", "supermarket", "books", "gift", "furniture", "bicycle", "art", "music",
+                 "chocolate", "seafood", "restaurants", "greengrocer", "food_truck_stand", "sandwich_shop", "delicatessen", "diner",
+                 "ice_cream_shop", "dessert_shop", "donut_shop", "bagel_shop", "steakhouse", "salad_bar", "smoothie_juice_bar",
+                 "chocolatier", "soul_food", "food_and_drink", "butcher", "butcher_shop", "fishmonger", "seafood_market"]),
+        (.coffee, ["cafe", "coffee", "tea", "tea_room", "bubble_tea_shop"]),
+        (.nightlife, ["bar", "pub", "nightclub", "wine", "alcohol", "stripclub", "hookah_lounge", "music_venue", "brewery", "winery",
+                      "distillery", "tapas_bar", "dance_club", "nightlife_venue", "adult_entertainment_venue"]),
+        (.shops, ["shopping", "cannabis_dispensary", "clothes","convenience", "supermarket", "books", "gift", "furniture", "bicycle", "art", "music",
                   "tobacco", "outdoor", "pet", "interior_decoration", "mobile_phone", "florist", "antiques", "shoes",
                   "jewelry", "photo", "musical_instrument", "frame", "sports", "doityourself", "garden_centre",
                   "e-cigarette", "paint", "cannabis", "marketplace", "trade", "second_hand", "grocery", "variety_store",
@@ -29,18 +45,27 @@ public enum PlaceCategory: String, CaseIterable, Sendable {
                   "general",
                   "kitchen", "bridal", "window_blind", "rugs", "posters", "printer_ink", "video", "vacuum_cleaner", "upholstery", "flooring", "fireplace", "glass", "cabinets", "building_supply", "bathroom_supply_store", "bathroom_furnishing", "canvas", "computer", "clock", "plants", "pottery", "nutrition_supplements", "herbalist", "esoteric", "concrete", "hairdresser_supply", "erotic", "pawnbroker", "marine_supply", "ship_chandler", "university_bookstore", "charity"]),
         (.parks, ["park", "garden", "wood", "water", "playground", "nature_reserve", "beach", "dog_park", "peak",
-                  "paddling_pool", "fishing"]),
+                  "paddling_pool", "fishing", "picnic_site", "skate_park", "public_plaza"]),
         (.sport, ["fitness_centre", "sports_centre", "pitch", "stadium", "swimming_pool", "dojo", "golf_course",
-                  "miniature_golf", "track", "pitch_area", "sports;skate", "dance", "scuba_diving", "dancing_school"]),
+                  "miniature_golf", "track", "pitch_area", "sports;skate", "dance", "scuba_diving", "dancing_school",
+                  "sports_and_recreation", "sport_or_fitness_facility", "sport_or_recreation_club", "sport_league", "yoga_studio",
+                  "pilates_studio", "dance_studio", "martial_arts_club", "fitness_trainer", "gymnastics_center", "soccer_club",
+                  "sailing_club", "bowling_alley", "boot_camp"]),
         (.transit, ["station", "halt", "ferry_terminal", "bicycle_parking", "parking", "fuel", "charging_station",
                     "marina", "hotel", "car_sharing", "car_rental", "boat_rental", "boat", "slipway", "motel",
-                    "guest_house", "boat_sales", "ship"]),
+                    "guest_house", "boat_sales", "ship", "travel_and_transportation", "airport", "airport_shuttle", "ev_charging_station",
+                    "public_transit_facility_or_service", "boat_rental_and_training", "pier"]),
         (.sights, ["attraction", "museum", "viewpoint", "gallery", "artwork", "memorial", "monument", "historic",
                    "theatre", "arts_centre", "cinema", "library", "public_bookcase", "events_venue", "information",
-                   "zoo", "comedy_club", "amusement_arcade", "escape_game", "maze", "event_space", "stage"]),
+                   "zoo", "comedy_club", "amusement_arcade", "escape_game", "maze", "event_space", "stage",
+                   "arts_and_entertainment", "aquarium", "festival_venue", "escape_room", "casino", "boat_tour", "sightseeing_tour_agency"]),
         (.health, ["clinic", "doctors", "dentist", "pharmacy", "hospital", "veterinary", "optician", "chemist",
-                   "hearing_aids", "medical_supply", "alternative_medicine", "nursing_home", "therapist", "health_supply"]),
-        (.services, ["building", "office", "craft", "hairdresser", "beauty", "bank", "atm", "school", "place_of_worship",
+                   "hearing_aids", "medical_supply", "alternative_medicine", "nursing_home", "therapist", "health_supply",
+                   "health_care", "counseling", "chiropractic", "acupuncture", "psychotherapy", "nursing", "surgery", "optometry",
+                   "orthopedics", "podiatry", "family_practice", "family_counseling", "emergency_department", "diagnostic_imaging",
+                   "laboratory_testing", "ear_nose_and_throat", "midwifery", "drugstore", "surgery_center", "rehabilitation_center",
+                   "maternity_center", "retirement_home"]),
+        (.services, ["massage_therapy", "auto_body_shop", "tire_shop", "building","office", "craft", "hairdresser", "beauty", "bank", "atm", "school", "place_of_worship",
                      "post_office", "community_centre", "address", "social_facility", "massage", "car_repair",
                      "student_accommodation", "dry_cleaning", "kindergarten", "tattoo", "copyshop", "storage_rental",
                      "parcel_locker", "animal_boarding", "laundry", "fire_station", "tailor", "pet_grooming",
