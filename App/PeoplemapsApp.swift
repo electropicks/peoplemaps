@@ -6,10 +6,13 @@ struct PeoplemapsApp: App {
     /// Home needs only the graph's bounds and search; the router builds behind it and routing requests wait for it.
     private let ready: Result<(graph: StreetGraph, router: DeferredRouter, search: SearchIndex), Error>
     init() {
+        AppEventHooks.start()
         ready = Result {
-            let header = try StreetGraph.bundledHeader()
-            return (header.boundsOnly, DeferredRouter { Self.holdForTests(); return NativeRouter(graph: try StreetGraph.bundled()) }, try SearchIndex.bundled(graphNodes: header.nodes))
+            let header = try AppEvents.shared.timed(.data, "graph header loaded") { try StreetGraph.bundledHeader() }
+            let router = DeferredRouter { Self.holdForTests(); return try AppEvents.shared.timed(.data, "router ready") { NativeRouter(graph: try StreetGraph.bundled()) } }
+            return (header.boundsOnly, router, try AppEvents.shared.timed(.data, "search index loaded") { try SearchIndex.bundled(graphNodes: header.nodes) })
         }
+        if case let .failure(error) = ready { AppEvents.shared.log(.error, "bundled data failed to load", error: error) }
     }
     /// UI tests pass `--hold-router` to keep the router from being ready, proving home never waits for it.
     private nonisolated static func holdForTests() {
@@ -42,6 +45,8 @@ extension UIColor {
     /// The accent in small text, a shade darker in light mode to keep 4.5:1 contrast.
     static let calmerText = dynamic(light: 0x1F7A3A, dark: 0x30D158)
     static let fastest = hex(0x8E8E93)
+    /// The part of the followed route already driven: lighter than the route in light mode, dimmer in dark, with the line drawn thinner.
+    static let passedRoute = dynamic(light: 0x9CB3A3, dark: 0x56725F)
     /// Directions button: a shade darker than the accent in light mode so white text keeps its contrast.
     static let directionsFill = dynamic(light: 0x1F7A3A, dark: 0x30D158)
     static let directionsText = dynamic(light: 0xFFFFFF, dark: 0x000000)
@@ -64,6 +69,17 @@ extension UIColor {
         case .sights: dynamic(light: 0xC2185B, dark: 0xFF6482)
         case .health: dynamic(light: 0xD70015, dark: 0xFF6961)
         case .services: dynamic(light: 0x6C6C70, dark: 0xAEAEB2)
+        }
+    }
+    /// Calm rating bands: blue through a warm grey to orange, which stays readable with colour blindness. Not green,
+    /// which means only the calmer route, and not a traffic light. Black text clears 4.5:1 on each; each clears 3:1 on `panelFill`.
+    static func calmBand(_ level: CalmLevel) -> UIColor {
+        switch level {
+        case .breezy: hex(0x3590D0)
+        case .chill: hex(0x5393A5)
+        case .meh: hex(0x928A7B)
+        case .spicy: hex(0xC47632)
+        case .yikes: hex(0xD9605F)
         }
     }
     /// The glyph on a category fill: white in light mode, near-black in dark mode where the fills are brighter.
@@ -89,6 +105,8 @@ extension ShapeStyle where Self == Color {
 extension Color {
     static func categoryFill(_ group: PlaceCategory) -> Color { Color(uiColor: .categoryFill(group)) }
     static var categoryGlyph: Color { Color(uiColor: .categoryGlyph) }
+    static func calmBand(_ level: CalmLevel) -> Color { Color(uiColor: .calmBand(level)) }
+    static let calmBandText = Color.black
 }
 
 /// One set of short, physical timings for every screen, like Apple Maps. Reduce Motion keeps crossfades and drops

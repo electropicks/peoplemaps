@@ -36,6 +36,8 @@ struct Guidance: Equatable {
     var heading: Double?
     /// The puck shows its heading wedge only while moving.
     var moving = false
+    /// Metres of `coordinates` already driven, 0 on a fresh or rerouted line. The line is drawn in two parts at this point.
+    var travelled = 0.0
     var camera = GuidanceCamera()
     /// Space the guidance chrome covers; the puck is centred in the rest.
     var inset = UIEdgeInsets.zero
@@ -45,16 +47,20 @@ struct SeattleMap: UIViewRepresentable {
     let comparison: RouteComparison?
     let selectedCalmer: Bool
     let recenter: Int
+    /// Bumped by Locate: frames the user at neighbourhood zoom, whatever else is on the map.
+    var locate = 0
     /// The selected place: the only green pin, centred in the visible map.
     var selected: Place?
     /// Where the device is, when known and inside coverage: a blue dot, and what Home frames at neighbourhood zoom.
     var user: Coordinate?
+    /// Which way the device faces, in degrees from north, when known outside guidance. Nil draws a plain dot: no direction is invented.
+    var userHeading: Double?
     /// South-west and north-east corners of the area we cover, framed by Home when the user's location is unknown.
     var coverage: [Coordinate] = []
     /// A long-press on the map, at that spot.
     var onLongPress: (Coordinate) -> Void = { _ in }
     var guidance: Guidance?
-    /// The user panned or pinched while guiding, so following should stop.
+    /// The user panned or pinched: following stops while guiding, and Locate is no longer centred otherwise.
     var onCameraGesture: () -> Void = {}
     /// Space covered by the panel and map buttons, kept clear when fitting routes.
     let padding: UIEdgeInsets
@@ -80,14 +86,19 @@ struct SeattleMap: UIViewRepresentable {
     }
     func updateUIView(_ map: MLNMapView, context: Context) {
         context.coordinator.latest = self
+        // Read here, where the environment is live, not later from a stored copy of this struct.
+        context.coordinator.reduce = reduceMotion
         context.coordinator.update(map)
     }
 
     // MapLibre delivers its view delegate callbacks on the UI thread; its ObjC protocol predates Swift concurrency.
     @MainActor final class Coordinator: NSObject, @preconcurrency MLNMapViewDelegate {
         var latest: SeattleMap?
+        /// Reduce Motion, copied from the environment on every update.
+        var reduce = false
         private var routeKey = ""
         private var recenterID = -1
+        private var locateID = -1
         private var fittedPadding = UIEdgeInsets.zero
         private var styleReady = false
         private var appliedScheme: ColorScheme?
@@ -119,18 +130,28 @@ struct SeattleMap: UIViewRepresentable {
         private var lastFollow = Date.distantPast
         /// While the zoom-in runs, later positions retarget it instead of cutting it short.
         private var zoomUntil = Date.distantPast
+        /// While a fly runs, follow ticks leave the camera alone: a new `setCamera` would cancel the flight.
+        private var flyUntil = Date.distantPast
+        /// Padding follows the sheet's live height, so a refit waits until it has stopped changing.
+        private var paddingRefit: DispatchWorkItem?
+        private var paddingSettled = false
+        /// Where the passed/ahead split was last drawn, in metres along the line; -1 forces a redraw.
+        private var splitAt = -1.0
+        private var userDotHeading: Double?
 
         private static let baseLayers: [(id: String, color: UIColor)] = [
             ("water", .mapWater), ("parks", .mapPark), ("roads", .mapStreet), ("arterials", .mapArterial), ("paths", .mapPath),
         ]
 
-        #if DEBUG
         func mapViewDidBecomeIdle(_ map: MLNMapView) {
+            AppEvents.shared.log(.map, "map idle", coalesce: true, ["zoom": map.zoomLevel])
+            #if DEBUG
             MapDebug.shared.baseFeatures = map.visibleFeatures(in: map.bounds, styleLayerIdentifiers: ["water", "roads", "arterials"]).count
+            #endif
         }
-        #endif
 
         func mapView(_ map: MLNMapView, didFinishLoading style: MLNStyle) {
+            AppEvents.shared.log(.map, "map style loaded")
             guard let url = StreetGraph.mapURL, let tiles = URL(string: "pmtiles://" + url.absoluteString) else { return }
             let source = MLNVectorTileSource(identifier: "seattle", configurationURL: tiles)
             style.addSource(source)
@@ -156,6 +177,16 @@ struct SeattleMap: UIViewRepresentable {
                 layer.lineJoin = NSExpression(forConstantValue: "round")
                 layer.lineCap = NSExpression(forConstantValue: "round")
                 layer.lineOpacityTransition = MLNTransition(duration: 0.25, delay: 0)
+                style.addLayer(layer)
+            }
+            // The part of the followed route already driven: thinner and muted, above the route lines and below the leader.
+            for (id, width) in [("passed-casing", 6.0), ("passed", 3.5)] {
+                let source = MLNShapeSource(identifier: id, shape: nil, options: nil)
+                style.addSource(source)
+                let layer = MLNLineStyleLayer(identifier: id, source: source)
+                layer.lineWidth = NSExpression(forConstantValue: width)
+                layer.lineJoin = NSExpression(forConstantValue: "round")
+                layer.lineCap = NSExpression(forConstantValue: "round")
                 style.addLayer(layer)
             }
             // Dashed line from the puck to a route that starts some way off, in the route's colour.
@@ -216,20 +247,33 @@ struct SeattleMap: UIViewRepresentable {
                 userDot = latest.user.map { user in
                     let dot = MapPuck(); dot.coordinate = CLLocationCoordinate2D(latitude: user.lat, longitude: user.lon); return dot
                 }
+                userDotHeading = latest.userHeading
                 if let userDot { map.addAnnotation(userDot) }
+            } else if let userDot, latest.userHeading != userDotHeading {
+                userDotHeading = latest.userHeading
+                (map.view(for: userDot) as? PuckView)?.show(heading: latest.userHeading, arrow: false, duration: Motion.camera(reduce, 0.25))
             }
+            #if DEBUG
+            MapDebug.shared.marker = latest.user == nil ? "none" : latest.userHeading.map { "dot \(Int($0.rounded()))" } ?? "dot"
+            #endif
             // Home refits once when the user's location first becomes known, never on later fixes.
             let focus = c != nil ? "route" : latest.selected?.id ?? (latest.user != nil ? "home-user" : "home")
             let focusChanged = focus != focusKey
             let paddingChanged = (abs(fittedPadding.bottom - latest.padding.bottom) > 1 || abs(fittedPadding.left - latest.padding.left) > 1)
             let recentered = recenterID >= 0 && recenterID != latest.recenter
-            if focusChanged || paddingChanged || recentered || (changed && c != nil) {
-                var points = (c?.fastest.coordinates ?? []) + (c?.calmer?.coordinates ?? [])
-                if points.isEmpty, let place = latest.selected {
+            let located = locateID >= 0 && locateID != latest.locate && latest.user != nil
+            // Padding tracks the sheet's live height, so it changes on every frame of a detent move or drag. Fitting on each
+            // one restarted the camera animation 60 times a second; it refits once, after the sheet has stopped.
+            let refit = paddingChanged && paddingSettled
+            if paddingChanged && !refit && !(focusChanged || recentered || located || (changed && c != nil)) { schedulePaddingRefit(map) }
+            if focusChanged || refit || recentered || located || (changed && c != nil) {
+                paddingRefit?.cancel(); paddingSettled = false
+                var points = located ? [] : (c?.fastest.coordinates ?? []) + (c?.calmer?.coordinates ?? [])
+                if !located, points.isEmpty, let place = latest.selected {
                     // A neighbourhood-sized window around the place, so it lands in the middle of the visible map.
                     points = [Coordinate(lat: place.lat - 0.004, lon: place.lon - 0.006), Coordinate(lat: place.lat + 0.004, lon: place.lon + 0.006)]
                 }
-                if points.isEmpty, let user = latest.user {
+                if points.isEmpty, !recentered, let user = latest.user {
                     points = [Coordinate(lat: user.lat - 0.004, lon: user.lon - 0.006), Coordinate(lat: user.lat + 0.004, lon: user.lon + 0.006)]
                 }
                 if points.isEmpty { points = latest.coverage }
@@ -238,12 +282,13 @@ struct SeattleMap: UIViewRepresentable {
                     let ne = CLLocationCoordinate2D(latitude: points.map(\.lat).max()!, longitude: points.map(\.lon).max()!)
                     let pad = fitting(latest.padding, in: map.bounds.size)
                     let camera = map.cameraThatFitsCoordinateBounds(MLNCoordinateBounds(sw: sw, ne: ne), edgePadding: pad)
-                    move(map, to: camera, duration: hasFitted ? Motion.camera(latest.reduceMotion) : 0, padding: pad)
+                    // A padding-only refit is a small correction; a real change of focus may be a long way.
+                    move(map, to: camera, duration: hasFitted ? 0.5 : 0, padding: pad, mayFly: !refit)
                     fittedPadding = latest.padding; hasFitted = true
                 }
             }
             focusKey = focus
-            routeKey = key; recenterID = latest.recenter
+            routeKey = key; recenterID = latest.recenter; locateID = latest.locate
         }
 
         private func setRouteOpacity(_ style: MLNStyle, _ value: (String) -> Double) {
@@ -255,11 +300,11 @@ struct SeattleMap: UIViewRepresentable {
 
         /// The selected route draws on top, so it stays visible where the two nearly overlap.
         private func raiseRoute(_ id: String, _ style: MLNStyle) {
-            guard let leader = style.layer(withIdentifier: "leader") else { return }
+            guard let passed = style.layer(withIdentifier: "passed-casing") else { return }
             for layerID in [id + "-casing", id] {
                 guard let layer = style.layer(withIdentifier: layerID) else { continue }
                 style.removeLayer(layer)
-                style.insertLayer(layer, below: leader)
+                style.insertLayer(layer, below: passed)
             }
             #if DEBUG
             let drawn = style.layers.map(\.identifier)
@@ -267,10 +312,76 @@ struct SeattleMap: UIViewRepresentable {
             #endif
         }
 
+        /// Refits once the padding has stopped changing, not on each frame of the sheet's move.
+        private func schedulePaddingRefit(_ map: MLNMapView) {
+            paddingRefit?.cancel()
+            let work = DispatchWorkItem { [weak self, weak map] in
+                guard let self, let map else { return }
+                self.paddingSettled = true
+                self.update(map)
+                self.paddingSettled = false
+            }
+            paddingRefit = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: work)
+        }
+
+        /// The one place the camera moves. `duration` is what a normal move takes; Reduce Motion and `--ui-testing` drop it here,
+        /// so no caller can cut by accident, and a move that crosses a lot of map flies instead of sweeping.
+        ///
+        /// - Near: a timed ease (`timing`).
+        /// - Far (more than three-quarters of the screen away, or more than 2.5 zoom levels apart): `fly(to:)`, which
+        ///   zooms out and back in, so the tiles in between are loaded at a coarse zoom instead of flashing past blank.
+        /// - Reduce Motion: near moves cut; far moves dip the map out and in (a cross-fade), never a sweep.
         /// A fitted camera is centred on its bounds, so it needs the same padding it was fitted with; following uses the content inset.
-        private func move(_ map: MLNMapView, to camera: MLNMapCamera, duration: TimeInterval, timing: CAMediaTimingFunctionName = .easeInEaseOut, padding: UIEdgeInsets? = nil) {
-            map.setCamera(camera, withDuration: duration, animationTimingFunction: CAMediaTimingFunction(name: timing),
-                          edgePadding: padding ?? .zero, completionHandler: nil)
+        private func move(_ map: MLNMapView, to camera: MLNMapCamera, duration: TimeInterval, timing: CAMediaTimingFunctionName = .easeInEaseOut,
+                          padding: UIEdgeInsets? = nil, mayFly: Bool = true) {
+            let pad = padding ?? .zero
+            let far = mayFly && duration > 0 && crossesALot(map, to: camera)
+            AppEvents.shared.log(.map, "camera move", coalesce: true, ["ms": (Motion.off ? 0 : duration) * 1000, "animated": duration > 0 && !Motion.off ? 1 : 0, "zoom": map.zoomLevel])
+            #if DEBUG
+            let kind = far ? (reduce ? "fade" : "fly") : duration > 0 ? "glide" : "cut"; if mayFly || kind != "cut" { MapDebug.shared.moves = Array((MapDebug.shared.moves + [kind]).suffix(12)) }
+            #endif
+            let cut = { map.setCamera(camera, withDuration: 0, animationTimingFunction: nil, edgePadding: pad, completionHandler: nil) }
+            if Motion.off || duration <= 0 {
+                cut()
+            } else if reduce {
+                if far { crossFade(map, jump: cut) } else { cut() }
+            } else if far {
+                let span = Double(map.bounds.width) * map.metersPerPoint(atLatitude: map.centerCoordinate.latitude)
+                let ratio = Self.distance(map.centerCoordinate, camera.centerCoordinate) / max(span, 1)
+                let flight = min(1.8, max(1.0, 0.7 + 0.25 * log2(1 + ratio)))
+                flyUntil = Date().addingTimeInterval(flight)
+                map.fly(to: camera, edgePadding: pad, withDuration: flight, completionHandler: nil)
+            } else {
+                flyUntil = .distantPast
+                map.setCamera(camera, withDuration: duration, animationTimingFunction: CAMediaTimingFunction(name: timing), edgePadding: pad, completionHandler: nil)
+            }
+        }
+
+        private static func distance(_ a: CLLocationCoordinate2D, _ b: CLLocationCoordinate2D) -> Double {
+            Coordinate(lat: a.latitude, lon: a.longitude).distance(to: Coordinate(lat: b.latitude, lon: b.longitude))
+        }
+
+        private func crossesALot(_ map: MLNMapView, to camera: MLNMapCamera) -> Bool {
+            guard map.bounds.width > 0 else { return false }
+            let span = Double(map.bounds.width) * map.metersPerPoint(atLatitude: map.centerCoordinate.latitude)
+            let zoom = MLNZoomLevelForAltitude(camera.altitude, camera.pitch, camera.centerCoordinate.latitude, map.bounds.size)
+            return Self.distance(map.centerCoordinate, camera.centerCoordinate) > span * 0.75 || abs(zoom - map.zoomLevel) > 2.5
+        }
+
+        /// Reduce Motion's stand-in for a long camera move: the map fades out, jumps while unseen and fades back in.
+        private func crossFade(_ map: MLNMapView, jump: @escaping () -> Void) {
+            UIView.animate(withDuration: 0.12, delay: 0, options: [.beginFromCurrentState, .curveEaseIn]) { map.alpha = 0 } completion: { _ in
+                jump()
+                UIView.animate(withDuration: 0.25, delay: 0.1, options: [.beginFromCurrentState, .curveEaseOut]) { map.alpha = 1 }
+            }
+        }
+
+        /// Changing the inset directly cuts the camera to the new centre; this eases it over the same time as the move around it.
+        private func setInset(_ map: MLNMapView, _ inset: UIEdgeInsets) {
+            guard map.contentInset != inset else { return }
+            let animated = !Motion.off && !reduce
+            map.setContentInset(inset, animated: animated, completionHandler: nil)
         }
 
         private func clearRoutes(_ style: MLNStyle) {
@@ -278,6 +389,8 @@ struct SeattleMap: UIViewRepresentable {
                 (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = nil
                 (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineOpacity = NSExpression(forConstantValue: 1.0)
             }
+            for id in ["passed-casing", "passed"] { (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = nil }
+            splitAt = -1
             #if DEBUG
             if guiding { MapDebug.shared.routeClears += 1 }
             #endif
@@ -302,7 +415,7 @@ struct SeattleMap: UIViewRepresentable {
                 switch g.camera.mode {
                 case .overview:
                     followZoom = true
-                    map.contentInset = .zero
+                    setInset(map, .zero)
                     let lats = g.coordinates.map(\.lat), lons = g.coordinates.map(\.lon)
                     let sw = CLLocationCoordinate2D(latitude: lats.min()!, longitude: lons.min()!)
                     let ne = CLLocationCoordinate2D(latitude: lats.max()!, longitude: lons.max()!)
@@ -310,13 +423,13 @@ struct SeattleMap: UIViewRepresentable {
                     let fitted = fitting(pad, in: map.bounds.size)
                     let northUp = map.camera; northUp.heading = 0
                     let camera = map.camera(northUp, fitting: MLNCoordinateBounds(sw: sw, ne: ne), edgePadding: fitted)
-                    move(map, to: camera, duration: Motion.camera(latest?.reduceMotion ?? false), padding: fitted)
+                    move(map, to: camera, duration: 0.5, padding: fitted)
                 case .followCourseUp, .followNorthUp:
                     // Coming back from the overview or a free look zooms back in; flipping heading-up and north-up eases the
                     // turn over `Motion.camera`; a reroute keeps the current zoom.
                     if cameraMode != .followCourseUp && cameraMode != .followNorthUp { followZoom = true }
-                    else if cameraMode != g.camera.mode { zoomUntil = Date().addingTimeInterval(Motion.camera(latest?.reduceMotion ?? false)) }
-                    map.contentInset = followInset(g, in: map.bounds.size)
+                    else if cameraMode != g.camera.mode { zoomUntil = Date().addingTimeInterval(Motion.camera(reduce)) }
+                    setInset(map, followInset(g, in: map.bounds.size))
                 case .free:
                     break
                 }
@@ -326,9 +439,7 @@ struct SeattleMap: UIViewRepresentable {
                 // A reroute replaces the line in place: the new shape goes in, and only the other pair is emptied.
                 // Until the replacement arrives the previous route stays drawn.
                 let prefix = g.calmer ? "calmer" : "fastest"
-                var coords = g.coordinates.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
-                let line = coords.count > 1 ? MLNPolyline(coordinates: &coords, count: UInt(coords.count)) : nil
-                for id in [prefix, prefix + "-casing"] { (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = line }
+                splitAt = -1
                 let other = g.calmer ? "fastest" : "calmer"
                 if (style.source(withIdentifier: other) as? MLNShapeSource)?.shape != nil {
                     for id in [other, other + "-casing"] { (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = nil }
@@ -339,6 +450,7 @@ struct SeattleMap: UIViewRepresentable {
                 let colour: (String) -> String = { id in ((style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineColor?.constantValue as? UIColor)?.hexString ?? "none" }
                 MapDebug.shared.lineStyle = "\(prefix) \(colour(prefix)) leader \(colour("leader"))"
                 #endif
+                drawProgress(g, style: style)
                 map.removeAnnotations(guidanceAnnotations)
                 let end = MapDestination()
                 end.coordinate = CLLocationCoordinate2D(latitude: g.destination.lat, longitude: g.destination.lon)
@@ -346,9 +458,10 @@ struct SeattleMap: UIViewRepresentable {
                 map.addAnnotations(guidanceAnnotations)
                 guidanceKey = key
             }
-            let heading = g.moving ? g.heading : nil
+            drawProgress(g, style: style)
+            // The arrow keeps the last known course while stopped, as the map does; the dot never invents one.
+            let heading = g.heading
             if let user = g.user, user != lastUser || heading != lastHeading || g.rawUser != lastRaw || g.reachedRoute != lastReached {
-                let reduce = latest?.reduceMotion ?? false
                 let tick = Motion.camera(reduce, min(1, max(0.1, Date().timeIntervalSince(lastFollow))))
                 lastFollow = Date()
                 placePuck(user, heading: heading, map: map, duration: tick)
@@ -356,6 +469,29 @@ struct SeattleMap: UIViewRepresentable {
                 drawLeader(from: g.rawUser ?? user, g, style: style)
                 lastUser = user; lastHeading = heading; lastRaw = g.rawUser; lastReached = g.reachedRoute
             }
+        }
+
+        /// Splits the followed line at the user's progress: the part behind goes to the muted `passed` layers, the part ahead stays on
+        /// the route's own layers. Only the two sources' shapes change, in place and in the same turn, so nothing blanks and no
+        /// layer is added or removed. It redraws every 4 m of progress, and on a new line (`splitAt` reset).
+        private func drawProgress(_ g: Guidance, style: MLNStyle) {
+            let travelled = min(max(0, g.travelled), RouteLine.length(g.coordinates))
+            guard splitAt < 0 || abs(travelled - splitAt) >= 4 else { return }
+            splitAt = travelled
+            let (passed, ahead) = RouteLine.split(g.coordinates, atMeters: travelled)
+            func shape(_ line: [Coordinate]) -> MLNPolyline? {
+                guard line.count > 1 else { return nil }
+                var coords = line.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+                return MLNPolyline(coordinates: &coords, count: UInt(coords.count))
+            }
+            let prefix = g.calmer ? "calmer" : "fastest"
+            let aheadShape = shape(ahead), passedShape = shape(passed)
+            for id in [prefix, prefix + "-casing"] { (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = aheadShape }
+            for id in ["passed", "passed-casing"] { (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = passedShape }
+            #if DEBUG
+            let colour = ((style.layer(withIdentifier: "passed") as? MLNLineStyleLayer)?.lineColor?.constantValue as? UIColor)?.hexString ?? "none"
+            MapDebug.shared.passed = "\(Int(RouteLine.length(passed).rounded())) ahead \(Int(RouteLine.length(ahead).rounded())) \(colour)"
+            #endif
         }
 
         /// A dashed leader from the device's own fix to the route's first coordinate while they are apart and the reroute gate
@@ -382,7 +518,7 @@ struct SeattleMap: UIViewRepresentable {
             return inset
         }
 
-        /// Glides the puck between position updates and turns its heading wedge, so following looks continuous.
+        /// Glides the puck between position updates and turns its arrow, so following looks continuous.
         private func placePuck(_ user: Coordinate, heading: Double?, map: MLNMapView, duration: TimeInterval) {
             let point = CLLocationCoordinate2D(latitude: user.lat, longitude: user.lon)
             if let puck {
@@ -392,22 +528,27 @@ struct SeattleMap: UIViewRepresentable {
                 let new = MapPuck(); new.coordinate = point; puck = new; map.addAnnotation(new)
             }
             puckHeading = heading
-            (puck.flatMap { map.view(for: $0) } as? PuckView)?.show(heading: heading, duration: duration)
+            (puck.flatMap { map.view(for: $0) } as? PuckView)?.show(heading: heading, arrow: true, duration: duration)
+            #if DEBUG
+            MapDebug.shared.marker = heading.map { "arrow \(Int($0.rounded()))" } ?? "dot"
+            #endif
         }
 
         /// Moves the camera onto the user. Zooming in (start, leaving the overview or a free look) is a longer eased move;
         /// in between, positions and heading changes glide linearly over the time since the last fix.
         private func aim(at user: Coordinate, map: MLNMapView, courseUp: Bool, heading: Double?, tick: TimeInterval = 0) {
             let point = CLLocationCoordinate2D(latitude: user.lat, longitude: user.lon)
-            let reduce = latest?.reduceMotion ?? false
+            guard Date() >= flyUntil else { return }
             let camera = map.camera
             camera.centerCoordinate = point
             camera.heading = courseUp ? (heading ?? camera.heading) : 0
             let zooming = Date() < zoomUntil
             if followZoom || zooming {
                 camera.altitude = MLNAltitudeForZoomLevel(16, 0, point.latitude, map.bounds.size)
+                let first = followZoom
                 if followZoom { zoomUntil = Date().addingTimeInterval(Motion.camera(reduce, 0.8)); followZoom = false }
-                move(map, to: camera, duration: max(0, zoomUntil.timeIntervalSinceNow))
+                // The first call is the zoom-in (it may fly); later ones while it runs retarget with an ease-out, not a new ease-in.
+                move(map, to: camera, duration: first ? 0.8 : max(0, zoomUntil.timeIntervalSinceNow), timing: first ? .easeInEaseOut : .easeOut, mayFly: first)
             } else {
                 move(map, to: camera, duration: tick, timing: .linear)
             }
@@ -417,9 +558,9 @@ struct SeattleMap: UIViewRepresentable {
             guiding = false
             map.removeAnnotations(guidanceAnnotations + (puck.map { [$0] } ?? []))
             guidanceAnnotations = []; puck = nil; lastUser = nil; lastHeading = nil; puckHeading = nil; cameraMode = nil
-            guidanceKey = ""; guidanceMode = ""; lastFollow = .distantPast; zoomUntil = .distantPast
-            map.contentInset = .zero
-            if map.camera.heading != 0 { let camera = map.camera; camera.heading = 0; move(map, to: camera, duration: Motion.camera(latest?.reduceMotion ?? false)) }
+            guidanceKey = ""; guidanceMode = ""; lastFollow = .distantPast; zoomUntil = .distantPast; flyUntil = .distantPast; splitAt = -1
+            setInset(map, .zero)
+            if map.camera.heading != 0 { let camera = map.camera; camera.heading = 0; move(map, to: camera, duration: 0.5, mayFly: false) }
             clearRoutes(style)
             (style.source(withIdentifier: "leader") as? MLNShapeSource)?.shape = nil
             #if DEBUG
@@ -428,9 +569,9 @@ struct SeattleMap: UIViewRepresentable {
             routeKey = ""; focusKey = ""; pinKey = ""
         }
 
-        /// A pan, pinch or zoom gesture while following or in the overview hands the camera to the user.
+        /// A pan, pinch or zoom gesture hands the camera to the user.
         func mapView(_ mapView: MLNMapView, regionWillChangeWith reason: MLNCameraChangeReason, animated: Bool) {
-            guard guiding, let g = latest?.guidance, g.camera.mode != .free else { return }
+            if guiding, latest?.guidance?.camera.mode == .free { return }
             let gestures: MLNCameraChangeReason = [.gesturePan, .gesturePinch, .gestureZoomIn, .gestureZoomOut, .gestureOneFingerZoom, .gestureRotate]
             if !reason.isDisjoint(with: gestures) { latest?.onCameraGesture() }
         }
@@ -457,6 +598,9 @@ struct SeattleMap: UIViewRepresentable {
                 if let line = style.layer(withIdentifier: id) as? MLNLineStyleLayer { line.lineColor = constant(color) }
             }
             for (id, color) in [("fastest-casing", UIColor.systemBackground), ("fastest", .fastest), ("calmer-casing", .systemBackground), ("calmer", .calmer)] {
+                (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineColor = constant(color)
+            }
+            for (id, color) in [("passed-casing", UIColor.systemBackground), ("passed", .passedRoute)] {
                 (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineColor = constant(color)
             }
             (style.layer(withIdentifier: "leader") as? MLNLineStyleLayer)?.lineColor = constant(latest?.guidance?.calmer == true ? .calmer : .fastest)
@@ -495,7 +639,8 @@ struct SeattleMap: UIViewRepresentable {
                 view.layer.cornerRadius = 9
             case let dot as MapPuck:
                 let puckView = PuckView(traits: traits)
-                if dot === puck { puckView.show(heading: puckHeading, duration: 0) }
+                if dot === puck { puckView.show(heading: puckHeading, arrow: true, duration: 0) }
+                else if let heading = userDotHeading { puckView.show(heading: heading, arrow: false, duration: 0) }
                 view = puckView
             case is MapDestination:
                 view = MLNAnnotationView(reuseIdentifier: nil)
@@ -532,7 +677,7 @@ struct SeattleMap: UIViewRepresentable {
 
         /// The selected pin and route ends fade in instead of popping onto the map.
         private func fadeIn(_ view: UIView) {
-            guard Motion.camera(latest?.reduceMotion ?? false) > 0 else { return }
+            guard Motion.camera(reduce) > 0 else { return }
             view.alpha = 0
             UIView.animate(withDuration: 0.25, delay: 0.1, options: .curveEaseOut) { view.alpha = 1 }
         }
@@ -550,10 +695,19 @@ private final class MapPin: MLNPointAnnotation {
 private final class MapOrigin: MLNPointAnnotation {}
 private final class MapPuck: MLNPointAnnotation {}
 
-/// The user's blue dot with a heading wedge behind it. The view turns with the map, so the wedge's own rotation is the
-/// course from north and heading-up leaves it pointing at the top of the screen.
+/// The user's marker, always `systemBlue` with a white ring and a faint dark halo, so it reads on light and dark land and on the
+/// green or grey route line (the colour alone is not what separates them). The view turns with the map, so a layer's own rotation
+/// is the course from north and heading-up leaves it pointing at the top of the screen.
+///
+/// - Plain dot: heading unknown. No direction is drawn.
+/// - Dot with a beam and a rim tip: heading known outside guidance.
+/// - Arrow: guidance, once a course is known. It replaces the dot, and keeps the last course while stopped.
 private final class PuckView: MLNAnnotationView {
-    private let wedge = CAGradientLayer()
+    private let turning = CALayer()
+    private let beam = CAGradientLayer()
+    private let tip = CAShapeLayer()
+    private let dot = CALayer()
+    private let arrow = CALayer()
     private var shown: Double?
     init(traits: UITraitCollection) {
         super.init(reuseIdentifier: nil)
@@ -561,36 +715,68 @@ private final class PuckView: MLNAnnotationView {
         rotatesToMatchCamera = true
         let blue = UIColor.systemBlue.resolvedColor(with: traits)
         let centre = CGPoint(x: 36, y: 36)
-        let path = UIBezierPath()
-        path.move(to: centre)
-        path.addArc(withCenter: centre, radius: 36, startAngle: -.pi / 2 - .pi / 5.5, endAngle: -.pi / 2 + .pi / 5.5, clockwise: true)
-        path.close()
-        let mask = CAShapeLayer(); mask.path = path.cgPath
-        wedge.frame = bounds; wedge.mask = mask
-        wedge.type = .radial
-        wedge.startPoint = CGPoint(x: 0.5, y: 0.5); wedge.endPoint = CGPoint(x: 1, y: 1)
-        wedge.colors = [blue.withAlphaComponent(0.55).cgColor, blue.withAlphaComponent(0.0).cgColor]
-        wedge.opacity = 0
-        layer.addSublayer(wedge)
-        let dot = CALayer()
+        turning.frame = bounds
+        let cone = UIBezierPath()
+        cone.move(to: centre)
+        cone.addArc(withCenter: centre, radius: 36, startAngle: -.pi / 2 - .pi / 6, endAngle: -.pi / 2 + .pi / 6, clockwise: true)
+        cone.close()
+        let mask = CAShapeLayer(); mask.path = cone.cgPath
+        beam.frame = bounds; beam.mask = mask; beam.type = .radial
+        beam.startPoint = CGPoint(x: 0.5, y: 0.5); beam.endPoint = CGPoint(x: 1, y: 1)
+        beam.colors = [blue.withAlphaComponent(0.6).cgColor, blue.withAlphaComponent(0).cgColor]
+        turning.addSublayer(beam)
+        // A small triangle on the dot's rim, pointing out: the heading cue that survives when the beam is faint.
+        let nub = UIBezierPath()
+        nub.move(to: CGPoint(x: 36, y: 11)); nub.addLine(to: CGPoint(x: 43, y: 25)); nub.addLine(to: CGPoint(x: 29, y: 25)); nub.close()
+        tip.path = nub.cgPath; tip.fillColor = blue.cgColor
+        tip.strokeColor = UIColor.white.cgColor; tip.lineWidth = 2.5; tip.lineJoin = .round
+        turning.addSublayer(tip)
+        layer.addSublayer(turning)
         dot.frame = CGRect(x: 25, y: 25, width: 22, height: 22)
         dot.backgroundColor = blue.cgColor
         dot.borderColor = UIColor.white.cgColor; dot.borderWidth = 3.5; dot.cornerRadius = 11
-        dot.shadowColor = UIColor.black.cgColor; dot.shadowOpacity = 0.3; dot.shadowRadius = 3; dot.shadowOffset = CGSize(width: 0, height: 1)
+        dot.shadowColor = UIColor.black.cgColor; dot.shadowOpacity = 0.35; dot.shadowRadius = 3; dot.shadowOffset = CGSize(width: 0, height: 1)
         layer.addSublayer(dot)
+        // The navigation arrow: a chevron with a notch, 34 pt tall, centred on the position.
+        arrow.frame = bounds
+        let shape = UIBezierPath()
+        shape.move(to: CGPoint(x: 36, y: 17)); shape.addLine(to: CGPoint(x: 50, y: 53)); shape.addLine(to: CGPoint(x: 36, y: 45))
+        shape.addLine(to: CGPoint(x: 22, y: 53)); shape.close()
+        let halo = CAShapeLayer()
+        halo.path = shape.cgPath; halo.fillColor = UIColor.black.withAlphaComponent(0.35).cgColor
+        halo.strokeColor = UIColor.black.withAlphaComponent(0.35).cgColor; halo.lineWidth = 7; halo.lineJoin = .round
+        let body = CAShapeLayer()
+        body.path = shape.cgPath; body.fillColor = blue.cgColor
+        body.strokeColor = UIColor.white.cgColor; body.lineWidth = 3.5; body.lineJoin = .round
+        arrow.addSublayer(halo); arrow.addSublayer(body)
+        arrow.shadowColor = UIColor.black.cgColor; arrow.shadowOpacity = 0.3; arrow.shadowRadius = 3; arrow.shadowOffset = CGSize(width: 0, height: 1)
+        arrow.opacity = 0
+        layer.addSublayer(arrow)
+        turning.opacity = 0
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
-    /// Turns the wedge to `heading` (degrees from north) over `duration`, or fades it out when the heading is unknown.
-    func show(heading: Double?, duration: TimeInterval) {
+    /// Shows the right marker for `heading` (degrees from north), turning it over `duration`. Without a heading it is a plain dot.
+    func show(heading: Double?, arrow useArrow: Bool, duration: TimeInterval) {
         defer { shown = heading }
-        guard let heading else { animate(duration) { wedge.opacity = 0 }; return }
+        let known = heading != nil
+        guard let heading else {
+            animate(duration) { turning.opacity = 0; arrow.opacity = 0; dot.opacity = 1 }
+            return
+        }
         let rotation = CATransform3DMakeRotation(heading * .pi / 180, 0, 0, 1)
         if shown == nil {
-            // Appearing after a stop: turn first, unseen, then fade in.
-            CATransaction.begin(); CATransaction.setDisableActions(true); wedge.transform = rotation; CATransaction.commit()
+            // Appearing after not knowing: turn first, unseen, then fade in.
+            CATransaction.begin(); CATransaction.setDisableActions(true)
+            turning.transform = rotation; arrow.transform = rotation
+            CATransaction.commit()
         }
-        animate(duration) { wedge.transform = rotation; wedge.opacity = 1 }
+        animate(duration) {
+            turning.transform = rotation; arrow.transform = rotation
+            turning.opacity = known && !useArrow ? 1 : 0
+            arrow.opacity = known && useArrow ? 1 : 0
+            dot.opacity = useArrow ? 0 : 1
+        }
     }
     private func animate(_ duration: TimeInterval, _ changes: () -> Void) {
         CATransaction.begin()

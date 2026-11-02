@@ -53,7 +53,8 @@ Screens: the "navigation" rows of the design canvas
 Added 1 November 2026, after a drive where a north-up map and a plain dot gave no
 sense of direction.
 
-- **The puck shows its heading.** A translucent wedge behind the blue dot points
+- **The puck shows its heading** as an arrow once the course is known, and as a plain dot
+  before that (`DESIGN.md` 4.7). The first version used a wedge: a translucent wedge behind the blue dot pointed
   along the course Ferrostar snapped to the route, smoothed halfway towards each
   new fix along the shorter arc (changes under 2° are ignored). It fades out below
   1 m/s or when the course is unknown; an unknown speed with a known course (the

@@ -75,7 +75,7 @@ final class ReportCenter {
         let guiding = (navigator ?? c.navigator).flatMap { $0.isActive ? $0 : nil }
         var report = ProblemReport(screen: screen, mode: c.comparison?.request.mode ?? c.mode,
                                    extraMinutes: c.comparison?.request.extraMinutes ?? c.extraMinutes,
-                                   app: Self.app, dataVersion: c.dataVersion, device: Self.device)
+                                   app: Self.app, dataVersion: c.dataVersion, device: Self.device, events: AppEvents.shared.snapshot())
         if let comparison = c.comparison {
             report.origin = Self.place(comparison.snappedOrigin, comparison.request.origin)
             report.destination = Self.place(comparison.snappedDestination, comparison.request.destination)

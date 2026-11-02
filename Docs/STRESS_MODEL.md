@@ -423,8 +423,10 @@ exists, and the Why this route sheet says so.
 **What the app shows first.** When a calmer route exists the preview lists it
 first and selects it, resetting on every new request, and Start follows the
 selection. This already leaned calm and did not change, including for routes
-that cost only seconds. The place card's Directions button still shows the
-fastest route's time, with the calmer route's cost on the line above it.
+that cost only seconds. The place card's Directions button shows the route Start
+would take: "Calmer: 12–14 min, 3.4 mi" over "Meh → Breezy, mostly fewer
+unsignalled lefts", or the fastest route and what the router found when there is
+no calmer one.
 
 **Why the 15 per minute.** The limit is a maximum, not a target, and the old rule
 took the least stressful candidate inside it however little that last stretch
@@ -465,6 +467,42 @@ calm than the old default give up at most 39 equivalent seconds. A limit beyond
 10 adds little: at 20 minutes under the old rule, drive is unchanged, bike saves
 54% either way, and walk goes from 59% to 65% for 2.6 more minutes at the median.
 `Evidence/route-audit.json` (`peoplemaps-audit`) has per-trip numbers.
+
+### Calm score
+
+What people see instead of stress numbers (`Core/CalmScore.swift`). The 15 per
+minute price stays internal.
+
+`score = 100 / (1 + (rate / R)²)`, rounded, higher is calmer, where `rate` is
+stress per minute of the fastest route's time, with a 5 minute floor. Both routes
+in a comparison divide by the same time, so a route can't look calmer just for
+being slower, and the floor stops one left turn on a two minute trip from reading
+as Yikes. Stress means different things per mode, so R is per mode: **drive 50,
+bike 65, walk 12**, about where a typical fastest route lands in Spicy to Meh.
+
+| Level | Breezy | Chill | Meh | Spicy | Yikes |
+| --- | --- | --- | --- | --- | --- |
+| Score | 80+ | 60–79 | 40–59 | 20–39 | under 20 |
+
+The cutoffs are even so the bar's bands can be even, with no number axis. R was
+set on real trips: 150 seeded pairs in each mode, 10 minute limit
+(`peoplemaps-audit --calm-sample 150`). Counts below are Breezy / Chill / Meh /
+Spicy / Yikes.
+
+| Mode | Fastest | Calmer, where shown | Same level | Same score |
+| --- | --- | --- | ---: | ---: |
+| Drive | 3 / 18 / 42 / 73 / 14 | 13 / 71 / 37 / 6 / 0 (127) | 11 | 0 |
+| Bike | 2 / 4 / 35 / 100 / 9 | 18 / 69 / 48 / 9 / 0 (144) | 23 | 0 |
+| Walk | 9 / 8 / 29 / 81 / 23 | 54 / 68 / 23 / 2 / 0 (147) | 12 | 0 |
+
+All five levels get used. Fastest routes skew Spicy and calmer ones Chill, which
+is the point of the app; no calmer route landed in Yikes or scored worse than its
+fastest. When both share a level the summary shows scores ("Meh, 44 → 53"). Like
+the weights, R and the cutoffs are hypotheses: the score only knows what the map
+knows, so it is labelled an estimate.
+
+The time range is −5% to +12% of the estimate, a judgement call with no live
+traffic to measure against, not a measured spread.
 
 ### Still to consider
 

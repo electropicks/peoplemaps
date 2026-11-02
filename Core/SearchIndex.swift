@@ -88,7 +88,9 @@ public final class SearchIndex: @unchecked Sendable {
         // Views ask again on every redraw while the text is unchanged, so the last answer is kept.
         let key = "\(query)|\(near?.lat ?? 0)|\(near?.lon ?? 0)|\(limit)"
         if let last, last.key == key { return last.results }
+        let began = DispatchTime.now().uptimeNanoseconds
         let results = lookUp(query, near: near, limit: limit)
+        AppEvents.shared.log(.search, "search", coalesce: true, ["ms": Double(DispatchTime.now().uptimeNanoseconds - began) / 1e6, "results": Double(results.count)])
         last = (key, results)
         return results
     }
