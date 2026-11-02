@@ -33,8 +33,6 @@ public enum CalmLevel: Int, CaseIterable, Sendable, Identifiable {
 public struct CalmScore: Hashable, Sendable {
     public let value: Int
     public var level: CalmLevel { CalmLevel(score: value) }
-    /// Where this score sits along the bar: 0 at the Breezy end, 1 at the Yikes end.
-    public var barPosition: Double { Double(100 - value) / 100 }
 
     public init(value: Int) { self.value = min(100, max(0, value)) }
 
@@ -99,15 +97,20 @@ extension RouteComparison {
 
     /// What the calmer route mostly saves: "mostly fewer unsignalled lefts", or the two biggest when none is the majority.
     public var mainGain: String? {
-        guard let calmer else { return nil }
-        let f = fastest.metrics.breakdown, c = calmer.metrics.breakdown
-        let scale = FactorScale(request.preferences, mode: request.mode)
-        let gains = Factor.allCases.filter { !$0.isUnknown && $0.isNoticeable(abs(f[$0].amount - c[$0].amount)) }
-            .map { (factor: $0, saved: (f[$0].cost - c[$0].cost) * (scale?[$0] ?? 1)) }.filter { $0.saved > 0 }.sorted { $0.saved > $1.saved }
+        guard calmer != nil else { return nil }
         guard let top = gains.first else { return "fewer small hassles" }
         let total = gains.reduce(0) { $0 + $1.saved }
         if top.saved >= total * 0.5 || gains.count == 1 { return "mostly \(top.factor.gain)" }
         return "\(top.factor.gain) and \(gains[1].factor.gain)"
+    }
+
+    /// What the calmer route saves that's big enough to notice, biggest first.
+    private var gains: [(factor: Factor, saved: Double)] {
+        guard let calmer else { return [] }
+        let f = fastest.metrics.breakdown, c = calmer.metrics.breakdown
+        let scale = FactorScale(request.preferences, mode: request.mode)
+        return Factor.allCases.filter { !$0.isUnknown && $0.isNoticeable(abs(f[$0].amount - c[$0].amount)) }
+            .map { (factor: $0, saved: (f[$0].cost - c[$0].cost) * (scale?[$0] ?? 1)) }.filter { $0.saved > 0 }.sorted { $0.saved > $1.saved }
     }
 
     /// The line under the time: "Yikes → Chill, mostly fewer unsignalled lefts", or what the router found: "Meh, already the calmest we found".
@@ -118,6 +121,18 @@ extension RouteComparison {
         if tradesStress, let mainGain { return "Avoids \(mainGain.replacingOccurrences(of: "mostly ", with: "")) as you chose, not calmer overall by our estimates" }
         if let mainGain { return "\(change), \(mainGain)" }
         return "\(change), \(noCalmer.title.prefix(1).lowercased())\(noCalmer.title.dropFirst())"
+    }
+
+    /// The line under the rating: what the calmer route costs and its biggest gain, "3 min more than fastest, 4 fewer unsignalled lefts".
+    public var reasonLine: String {
+        guard let calmer else { return noCalmer.title }
+        if tradesStress { return calmSummary }
+        let shown = calmer.minutes - fastest.minutes
+        let cost = extraSeconds < 1 ? "No extra time" : shown <= 0 ? "Under a minute more than fastest" : "\(shown) min more than fastest"
+        guard let top = gains.first?.factor else { return "\(cost), fewer small hassles" }
+        // A count only where the short form counts things, and not for one: "1 fewer unsignalled lefts" isn't English.
+        let saved = Int((fastest.metrics.breakdown[top].amount - calmer.metrics.breakdown[top].amount).rounded())
+        return top.isExposure || !top.gain.hasPrefix("fewer") || saved < 2 ? "\(cost), \(top.gain)" : "\(cost), \(saved) \(top.gain)"
     }
 
     /// The route Start defaults to, as a headline: "Calmer: 16–19 min, 6.2 mi", or "16–19 min, 6.2 mi" when it's the only one.

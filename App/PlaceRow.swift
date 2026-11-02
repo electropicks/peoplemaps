@@ -15,6 +15,8 @@ struct PlaceRow: View {
     private var meters: Double? { near.map { $0.distance(to: place.coordinate) } }
 
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.onGlassPanel) private var onGlass
+    private var secondary: Color { onGlass ? GuidanceOverlay.onGlass : .secondary }
 
     var body: some View {
         Button(action: action) {
@@ -22,9 +24,9 @@ struct PlaceRow: View {
                 CategoryBadge(badge: place.badge, raw: place.category)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title).font(.body).foregroundStyle(.primary).lineLimit(typeSize.isAccessibilitySize ? nil : 2)
-                    Text(place.subtitle).font(.subheadline).foregroundStyle(.secondary)
+                    Text(place.subtitle).font(.subheadline).foregroundStyle(secondary)
                     if searching, let source = place.source {
-                        Text(source).font(.caption).foregroundStyle(.secondary)
+                        Text(source).font(.caption).foregroundStyle(secondary)
                     }
                     if typeSize.isAccessibilitySize, !selected, let distance { distance }
                 }
@@ -45,7 +47,7 @@ struct PlaceRow: View {
     }
 
     private var distance: Text? {
-        meters.map { Text(NavigationFormat.distance($0)).font(.subheadline.monospacedDigit()).foregroundColor(.secondary) }
+        meters.map { Text(NavigationFormat.distance($0)).font(.subheadline.monospacedDigit()).foregroundColor(secondary) }
     }
 
     private var label: String {
@@ -80,12 +82,12 @@ struct PlaceList: View {
     var body: some View {
         VStack(spacing: 0) {
             ForEach(Array(places.enumerated()), id: \.element.id) { index, place in
-                if index > 0 { Divider().padding(.leading, 60) }
+                if index > 0 { Hairline().padding(.leading, 60) }
                 PlaceRow(place: place, query: query, selected: place.id == selectedID, near: near, minHeight: minHeight) { action(place) }
                     .accessibilityIdentifier(identifier(place))
             }
         }
-        .background(.panelFill, in: RoundedRectangle(cornerRadius: Layout.groupRadius))
+        .rowGroup()
         .animation(Motion.content(reduceMotion), value: places.map(\.id))
     }
 }

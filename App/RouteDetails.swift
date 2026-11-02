@@ -29,7 +29,7 @@ struct RouteDetails: View {
                         } icon: {
                             // With no calmer route the reason is a finding, not a benefit.
                             Image(systemName: tradeoff ? "minus" : comparison.calmer == nil ? "info.circle" : "checkmark").fontWeight(.semibold)
-                                .foregroundStyle(tradeoff || comparison.calmer == nil ? Color.secondary : Color.calmerText)
+                                .foregroundStyle(tradeoff || comparison.calmer == nil ? Color.secondary : Color.primary)
                         }
                     }
                 } header: {
@@ -70,8 +70,9 @@ struct RouteDetails: View {
                     .accessibilityIdentifier("report-problem-details") }
             }.listStyle(.insetGrouped)
                 .navigationTitle("Behind the routes").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() }.accessibilityIdentifier("close-details") } }
-        }.tint(.primary).presentationDetents([.medium, .large])
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .close) { dismiss() }.accessibilityIdentifier("close-details") } }
+        // Long reading, with secondary text: solid, not glass.
+        }.tint(.primary).presentationDetents([.medium, .large]).presentationBackground(Color.panel)
     }
     /// With the person's own Calmer means settings the second route is the one that avoids what they chose, which isn't always less stress overall.
     private var goodToKnowCalmer: String {
@@ -92,7 +93,7 @@ struct RouteDetails: View {
             Text(name)
             Spacer()
             Text(fastest).foregroundStyle(.secondary).frame(minWidth: 64, alignment: .trailing)
-            Text(calmer ?? "—").fontWeight(.semibold).foregroundStyle(.calmerText).frame(minWidth: 64, alignment: .trailing)
+            Text(calmer ?? "—").fontWeight(.semibold).frame(minWidth: 64, alignment: .trailing)
         }.font(.subheadline.monospacedDigit())
     }
     private func streets(_ title: String, _ route: Route, color: Color) -> some View {
@@ -132,7 +133,7 @@ struct AboutView: View {
             }.listStyle(.insetGrouped)
                 .task { edgeCount = graph.edges.isEmpty ? await Task.detached { try? StreetGraph.bundledEdgeCount() }.value : graph.edges.count }
                 .navigationTitle("About PeopleMaps").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() }.accessibilityIdentifier("close-about") } }
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .close) { dismiss() }.accessibilityIdentifier("close-about") } }
         }.tint(.primary).presentationDetents([.large])
     }
     private func header(_ title: String) -> some View {

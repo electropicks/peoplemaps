@@ -49,7 +49,7 @@ struct SeattleMap: UIViewRepresentable {
     let recenter: Int
     /// Bumped by Locate: frames the user at neighbourhood zoom, whatever else is on the map.
     var locate = 0
-    /// The selected place: the only green pin, centred in the visible map.
+    /// The selected place: its pin, centred in the visible map.
     var selected: Place?
     /// Where the device is, when known and inside coverage: a blue dot, and what Home frames at neighbourhood zoom.
     var user: Coordinate?
@@ -121,6 +121,7 @@ struct SeattleMap: UIViewRepresentable {
         private var appliedScheme: ColorScheme?
         private var traits = UITraitCollection(userInterfaceStyle: .light)
         private var labels: [MapLabel] = []
+        private var shownLabels: [MapLabel] = []
         private var endpoints: [MLNPointAnnotation] = []
         private var pinAnnotations: [MLNPointAnnotation] = []
         private var pinKey = ""
@@ -208,6 +209,8 @@ struct SeattleMap: UIViewRepresentable {
                 layer.lineJoin = NSExpression(forConstantValue: "round")
                 layer.lineCap = NSExpression(forConstantValue: "round")
                 layer.lineOpacityTransition = MLNTransition(duration: 0.25, delay: 0)
+                // The fastest route is dotted: round dots two widths apart, in line widths.
+                if id == "fastest" { layer.lineDashPattern = NSExpression(forConstantValue: [0.01, 2]) }
                 style.addLayer(layer)
             }
             // The part of the followed route already driven: thinner and muted, above the route lines and below the leader.
@@ -228,7 +231,7 @@ struct SeattleMap: UIViewRepresentable {
             leader.lineDashPattern = NSExpression(forConstantValue: [1.5, 1.5])
             leader.lineOpacity = NSExpression(forConstantValue: 0.9)
             style.addLayer(leader)
-            let places: [(String, Double, Double)] = [("BALLARD",47.668,-122.382),("FREMONT",47.652,-122.351),("WALLINGFORD",47.663,-122.335),("QUEEN ANNE",47.637,-122.360),("LAKE UNION",47.639,-122.335),("UNIVERSITY\nDISTRICT",47.665,-122.313)]
+            let places: [(String, Double, Double)] = [("BALLARD",47.668,-122.382),("FREMONT",47.652,-122.351),("WALLINGFORD",47.663,-122.335),("QUEEN ANNE",47.637,-122.360),("Lake Union",47.639,-122.335),("UNIVERSITY\nDISTRICT",47.665,-122.313)]
             labels = places.map { title, lat, lon in
                 let annotation = MapLabel(); annotation.title = title
                 annotation.coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
@@ -252,12 +255,14 @@ struct SeattleMap: UIViewRepresentable {
                 let appearing = c != nil && !routeKey.hasPrefix(c!.fastest.id)
                 for id in ["fastest-casing", "fastest"] { (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = shape(c?.fastest) }
                 for id in ["calmer-casing", "calmer"] { (style.source(withIdentifier: id) as? MLNShapeSource)?.shape = shape(c?.calmer) }
-                let opacities = ["fastest": latest.selectedCalmer && c?.calmer != nil ? 0.55 : 1.0, "calmer": latest.selectedCalmer ? 1.0 : 0.4]
+                let opacities = ["fastest": latest.selectedCalmer && c?.calmer != nil ? 0.85 : 1.0, "calmer": latest.selectedCalmer ? 1.0 : 0.4]
                 // New routes fade in over the opacity transition; switching calmer and fastest crossfades the same way.
                 raiseRoute(latest.selectedCalmer ? "calmer" : "fastest", style)
                 if appearing { setRouteOpacity(style) { _ in 0 } }
                 let apply: () -> Void = { [weak self] in self?.setRouteOpacity(style) { opacities[$0] ?? 1 } }
                 if appearing { DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { apply() } } else { apply() }
+                let clear = labels.filter { !crosses($0, routes: [c?.fastest, c?.calmer].compactMap { $0 }) }
+                if clear != shownLabels { map.removeAnnotations(shownLabels); shownLabels = clear; map.addAnnotations(shownLabels) }
                 map.removeAnnotations(endpoints); endpoints = []
                 if let c {
                     let start = MapOrigin(), end = MapDestination()
@@ -578,7 +583,7 @@ struct SeattleMap: UIViewRepresentable {
                 }
                 (style.layer(withIdentifier: "leader") as? MLNLineStyleLayer)?.lineColor = constant(g.calmer ? .calmer : .fastest)
                 #if DEBUG
-                // What the drawn line is styled as, read back from the layers: fastest is the palette's grey, calmer the green.
+                // What the drawn line is styled as, read back from the layers: fastest is the palette's grey, calmer the dusk blue.
                 let colour: (String) -> String = { id in ((style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineColor?.constantValue as? UIColor)?.hexString ?? "none" }
                 MapDebug.shared.lineStyle = "\(prefix) \(colour(prefix)) leader \(colour("leader"))"
                 #endif
@@ -736,7 +741,8 @@ struct SeattleMap: UIViewRepresentable {
                 if let fill = style.layer(withIdentifier: id) as? MLNFillStyleLayer { fill.fillColor = constant(color) }
                 if let line = style.layer(withIdentifier: id) as? MLNLineStyleLayer { line.lineColor = constant(color) }
             }
-            for (id, color) in [("fastest-casing", UIColor.systemBackground), ("fastest", .fastest), ("calmer-casing", .systemBackground), ("calmer", .calmer)] {
+            // Dots need no casing: the casing's layer stays for the shared shape handling, drawn clear.
+            for (id, color) in [("fastest-casing", UIColor.clear), ("fastest", .fastest), ("calmer-casing", .systemBackground), ("calmer", .calmer)] {
                 (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineColor = constant(color)
             }
             for (id, color) in [("passed-casing", UIColor.systemBackground), ("passed", .passedRoute)] {
@@ -745,8 +751,8 @@ struct SeattleMap: UIViewRepresentable {
             (style.layer(withIdentifier: "leader") as? MLNLineStyleLayer)?.lineColor = constant(latest?.guidance?.calmer == true ? .calmer : .fastest)
             // Annotation views are drawn once, so re-add them to pick up the new colours.
             let extras: [MLNPointAnnotation] = guidanceAnnotations + (puck.map { [$0] } ?? []) + (userDot.map { [$0] } ?? [])
-            map.removeAnnotations(labels + endpoints + pinAnnotations + extras)
-            map.addAnnotations(labels + endpoints + pinAnnotations + extras)
+            map.removeAnnotations(shownLabels + endpoints + pinAnnotations + extras)
+            map.addAnnotations(shownLabels + endpoints + pinAnnotations + extras)
         }
         private func constant(_ color: UIColor) -> NSExpression { NSExpression(forConstantValue: color.resolvedColor(with: traits)) }
 
@@ -757,6 +763,11 @@ struct SeattleMap: UIViewRepresentable {
             if spareX < 0 { p.left = max(16, p.left + spareX / 2); p.right = max(16, p.right + spareX / 2) }
             if spareY < 0 { p.top = max(16, p.top + spareY / 2); p.bottom = max(16, p.bottom + spareY / 2) }
             return p
+        }
+
+        /// Whether a route runs through a district name, roughly the size the name is drawn at the zoom that fits a route. It steps aside then.
+        private func crosses(_ label: MapLabel, routes: [Route]) -> Bool {
+            routes.contains { $0.coordinates.contains { abs($0.lat - label.coordinate.latitude) < 0.003 && abs($0.lon - label.coordinate.longitude) < 0.008 } }
         }
 
         private func shape(_ route: Route?) -> MLNPolyline? {
@@ -773,7 +784,7 @@ struct SeattleMap: UIViewRepresentable {
                 view = MLNAnnotationView(reuseIdentifier: nil)
                 view.frame = CGRect(x: 0, y: 0, width: 18, height: 18)
                 view.backgroundColor = background
-                view.layer.borderColor = UIColor.label.resolvedColor(with: traits).cgColor
+                view.layer.borderColor = UIColor.calmer.resolvedColor(with: traits).cgColor
                 view.layer.borderWidth = 4
                 view.layer.cornerRadius = 9
             case let dot as MapPuck:
@@ -801,9 +812,14 @@ struct SeattleMap: UIViewRepresentable {
                 return view
             case is MapLabel:
                 view = MLNAnnotationView(reuseIdentifier: nil)
-                let label = UILabel(); label.text = annotation.title ?? ""; label.textAlignment = .center; label.numberOfLines = 2
-                label.font = .systemFont(ofSize: 9, weight: .semibold)
-                label.textColor = UIColor.secondaryLabel.resolvedColor(with: traits)
+                let label = UILabel(); label.textAlignment = .center; label.numberOfLines = 2
+                // Districts in tracked capitals, water in italics: the title's case says which.
+                let title = (annotation.title ?? nil) ?? ""
+                let water = title != title.uppercased()
+                label.attributedText = NSAttributedString(string: title, attributes: [
+                    .font: water ? UIFont.italicSystemFont(ofSize: 11) : UIFont.systemFont(ofSize: 10, weight: .semibold),
+                    .kern: water ? 0 : 0.8, .foregroundColor: (water ? UIColor.mapWaterLabel : .mapLabel).resolvedColor(with: traits),
+                ])
                 label.frame = CGRect(x: 0, y: 0, width: 95, height: 32)
                 view.frame = label.bounds; view.addSubview(label)
             default:
@@ -834,7 +850,7 @@ private final class MapPin: MLNPointAnnotation {
 private final class MapOrigin: MLNPointAnnotation {}
 private final class MapPuck: MLNPointAnnotation {}
 
-/// The user's marker, always `systemBlue` with a white ring and a faint dark halo, so it reads on light and dark land and on the
+/// The user's marker, always `userLocation` blue with a white ring and a faint dark halo, so it reads on light and dark land and on the
 /// green or grey route line (the colour alone is not what separates them). The view turns with the map, so a layer's own rotation
 /// is the course from north and heading-up leaves it pointing at the top of the screen.
 ///
@@ -852,7 +868,7 @@ private final class PuckView: MLNAnnotationView {
         super.init(reuseIdentifier: nil)
         frame = CGRect(x: 0, y: 0, width: 72, height: 72)
         rotatesToMatchCamera = true
-        let blue = UIColor.systemBlue.resolvedColor(with: traits)
+        let blue = UIColor.userLocation.resolvedColor(with: traits)
         let centre = CGPoint(x: 36, y: 36)
         turning.frame = bounds
         let cone = UIBezierPath()

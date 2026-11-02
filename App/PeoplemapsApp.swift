@@ -28,7 +28,7 @@ struct PeoplemapsApp: App {
                 case let .failure(error): ContentUnavailableView("Seattle data unavailable", systemImage: "map", description: Text(error.localizedDescription))
                 }
             }
-            .tint(.calmer)
+            .tint(.primary)
         }
     }
 }
@@ -40,73 +40,102 @@ extension UIColor {
     private static func dynamic(light: UInt32, dark: UInt32) -> UIColor {
         UIColor { $0.userInterfaceStyle == .dark ? hex(dark) : hex(light) }
     }
-    /// The one accent: the calmer route.
-    static let calmer = dynamic(light: 0x248A3D, dark: 0x30D158)
-    /// The accent in small text, a shade darker in light mode to keep 4.5:1 contrast.
-    static let calmerText = dynamic(light: 0x1F7A3A, dark: 0x30D158)
-    static let fastest = hex(0x8E8E93)
-    /// The part of the followed route already driven: lighter than the route in light mode, dimmer in dark, with the line drawn thinner.
-    static let passedRoute = dynamic(light: 0x9CB3A3, dark: 0x56725F)
-    /// Directions button: a shade darker than the accent in light mode so white text keeps its contrast.
-    static let directionsFill = dynamic(light: 0x1F7A3A, dark: 0x30D158)
-    static let directionsText = dynamic(light: 0xFFFFFF, dark: 0x000000)
+    private static func dynamic(light: UInt32, lightAlpha: CGFloat, dark: UInt32, darkAlpha: CGFloat) -> UIColor {
+        UIColor { $0.userInterfaceStyle == .dark ? hex(dark).withAlphaComponent(darkAlpha) : hex(light).withAlphaComponent(lightAlpha) }
+    }
+    /// The calmer route's line, the selected place and the route's end: dusk blue, muted so it sits in the map. Never a control colour.
+    static let calmer = dynamic(light: 0x4A6F97, dark: 0x7FA3CC)
+    /// The fastest route's dotted line.
+    static let fastest = dynamic(light: 0x6B7872, dark: 0xAEBAB3)
+    /// The part of the followed route already driven: a muted blue-grey, drawn thinner.
+    static let passedRoute = dynamic(light: 0xA6B3C0, dark: 0x53616F)
+    /// The user's marker and the Current location badge.
+    static let userLocation = hex(0x4A8FD6)
+    /// Start, Directions and Done: glass made brighter, with dark text. Swap these two to change the primary action everywhere.
+    static let primaryActionFill = dynamic(light: 0xFFFFFF, lightAlpha: 0.72, dark: 0xFFFFFF, darkAlpha: 0.86)
+    static let primaryActionText = hex(0x20384F)
+    /// Laid over the glass of a panel, so text holds its contrast over a busy map. Neutral: glass is never tinted a hue.
+    static let glassVeil = dynamic(light: 0xFFFFFF, lightAlpha: 0.34, dark: 0x101412, darkAlpha: 0.42)
+    /// The heavier veil for a surface read at length, or at a glance while driving.
+    /// Over the sheet's glass, which lifts a dark map more than the controls' does.
+    static let glassSheetVeil = dynamic(light: 0xFFFFFF, lightAlpha: 0, dark: 0x101412, darkAlpha: 0.3)
+    static let glassVeilDense = dynamic(light: 0xFFFFFF, lightAlpha: 0.72, dark: 0x101412, darkAlpha: 0.72)
+    /// Hairlines between the rows of a panel, the track under a rating, the well behind the modes, and the chosen mode.
+    static let glassHairline = dynamic(light: 0x142D23, lightAlpha: 0.14, dark: 0xFFFFFF, darkAlpha: 0.14)
+    static let glassTrack = dynamic(light: 0x142D23, lightAlpha: 0.14, dark: 0xFFFFFF, darkAlpha: 0.20)
+    static let glassWell = dynamic(light: 0x142D23, lightAlpha: 0.07, dark: 0xFFFFFF, darkAlpha: 0.08)
+    static let glassChosen = dynamic(light: 0xFFFFFF, lightAlpha: 0.72, dark: 0xFFFFFF, darkAlpha: 0.20)
     /// System backgrounds at the elevated level, as in a sheet, so the panel lifts off a black map in dark mode.
     static let panel = elevated(.systemBackground)
     static let panelFill = elevated(.secondarySystemBackground)
     private static func elevated(_ color: UIColor) -> UIColor {
         UIColor { color.resolvedColor(with: UITraitCollection(traitsFrom: [$0, UITraitCollection(userInterfaceLevel: .elevated)])) }
     }
-    /// Category badge fills (Docs/DESIGN.md section 2). Only place badges use them, never text, glass or buttons.
+    /// Category badge fills (Docs/DESIGN.md section 2): muted, so markers sit in the map. Only place badges use them, never text, glass or buttons.
     static func categoryFill(_ group: PlaceCategory) -> UIColor {
         switch group {
-        case .food: dynamic(light: 0xC75300, dark: 0xFF9F0A)
-        case .coffee: dynamic(light: 0x8A5A2B, dark: 0xC8935A)
-        case .nightlife: dynamic(light: 0x8E3FC0, dark: 0xBF5AF2)
-        case .shops: dynamic(light: 0x4B49C8, dark: 0x7D7AFF)
-        case .parks: dynamic(light: 0x0B7A6B, dark: 0x3CC9B0)
-        case .sport: dynamic(light: 0x00728F, dark: 0x40C8E0)
-        case .transit: dynamic(light: 0x0064D2, dark: 0x409CFF)
-        case .sights: dynamic(light: 0xC2185B, dark: 0xFF6482)
-        case .health: dynamic(light: 0xD70015, dark: 0xFF6961)
-        case .services: dynamic(light: 0x6C6C70, dark: 0xAEAEB2)
+        case .food: dynamic(light: 0xBE6E46, dark: 0xE09A72)
+        case .coffee: dynamic(light: 0x927050, dark: 0xC8A583)
+        case .nightlife: dynamic(light: 0x8C64A0, dark: 0xBC97CF)
+        case .shops: dynamic(light: 0x646CB0, dark: 0x9BA2DB)
+        case .parks: dynamic(light: 0x48886C, dark: 0x7DBD9F)
+        case .sport: dynamic(light: 0x3F8A8F, dark: 0x74BCC1)
+        case .transit: dynamic(light: 0x428096, dark: 0x78B3C8)
+        case .sights: dynamic(light: 0xB0607C, dark: 0xDB93AD)
+        case .health: dynamic(light: 0xB85F60, dark: 0xE29A9A)
+        case .services: dynamic(light: 0x77797C, dark: 0xADAFB2)
         }
     }
-    /// Calm rating bands: blue through a warm grey to orange, which stays readable with colour blindness. Not green,
-    /// which means only the calmer route, and not a traffic light. Black text clears 4.5:1 on each; each clears 3:1 on `panelFill`.
-    static func calmBand(_ level: CalmLevel) -> UIColor {
+    /// A rating's bar: muted and distinct from each other. Not green to red, so it doesn't read as safe and unsafe.
+    static func calmFill(_ level: CalmLevel) -> UIColor {
         switch level {
-        case .breezy: hex(0x3590D0)
-        case .chill: hex(0x5393A5)
-        case .meh: hex(0x928A7B)
-        case .spicy: hex(0xC47632)
-        case .yikes: hex(0xD9605F)
+        case .breezy: hex(0x7FB2D6)
+        case .chill: hex(0x6FAFA8)
+        case .meh: hex(0xB8AE9A)
+        case .spicy: hex(0xD19A6B)
+        case .yikes: hex(0xCF8A88)
         }
     }
-    /// The glyph on a category fill: white in light mode, near-black in dark mode where the fills are brighter.
+    /// A rating's word: the same hue as its bar, dark or light enough for 4.5:1 on glass over any part of the map.
+    static func calmWord(_ level: CalmLevel) -> UIColor {
+        switch level {
+        case .breezy: dynamic(light: 0x285A7E, dark: 0xA3D0F0)
+        case .chill: dynamic(light: 0x1F5F5A, dark: 0x93D8D0)
+        case .meh: dynamic(light: 0x5F5646, dark: 0xD3CBB8)
+        case .spicy: dynamic(light: 0x84491A, dark: 0xF0BE8F)
+        case .yikes: dynamic(light: 0x8C3B39, dark: 0xF0AFAD)
+        }
+    }
+    /// The glyph on a category fill: white in light mode, near-black in dark mode where the fills are lighter.
     static let categoryGlyph = dynamic(light: 0xFFFFFF, dark: 0x1C1C1E)
-    static let mapLand = dynamic(light: 0xF2F2F2, dark: 0x1A1A1C)
-    static let mapStreet = dynamic(light: 0xFFFFFF, dark: 0x2C2C2E)
-    static let mapArterial = dynamic(light: 0xE3DDCF, dark: 0x46423A)
-    static let mapWater = dynamic(light: 0xD7E6EC, dark: 0x17303A)
-    static let mapPark = dynamic(light: 0xDCE8D6, dark: 0x1E2A21)
-    static let mapPath = dynamic(light: 0xC9D4C3, dark: 0x34403A)
+    static let mapLand = dynamic(light: 0xF1F2EC, dark: 0x1A2421)
+    static let mapStreet = dynamic(light: 0xFBFBF8, dark: 0x2C3A35)
+    static let mapArterial = dynamic(light: 0xEFE5C6, dark: 0x4A4631)
+    static let mapWater = dynamic(light: 0xB9D5DF, dark: 0x24454F)
+    static let mapPark = dynamic(light: 0xCCDFCF, dark: 0x27463A)
+    static let mapPath = dynamic(light: 0xC9D4C3, dark: 0x33423B)
+    static let mapLabel = dynamic(light: 0x4F6359, dark: 0xBDCBC3)
+    static let mapWaterLabel = dynamic(light: 0x3D6878, dark: 0xB4D3DE)
 }
 
 extension ShapeStyle where Self == Color {
     static var calmer: Color { Color(uiColor: .calmer) }
-    static var calmerText: Color { Color(uiColor: .calmerText) }
-    static var directionsFill: Color { Color(uiColor: .directionsFill) }
-    static var directionsText: Color { Color(uiColor: .directionsText) }
     static var fastest: Color { Color(uiColor: .fastest) }
+    static var primaryActionFill: Color { Color(uiColor: .primaryActionFill) }
+    static var primaryActionText: Color { Color(uiColor: .primaryActionText) }
     static var panel: Color { Color(uiColor: .panel) }
     static var panelFill: Color { Color(uiColor: .panelFill) }
+    static var glassHairline: Color { Color(uiColor: .glassHairline) }
+    static var glassTrack: Color { Color(uiColor: .glassTrack) }
+    static var glassWell: Color { Color(uiColor: .glassWell) }
+    static var glassChosen: Color { Color(uiColor: .glassChosen) }
 }
 
 extension Color {
     static func categoryFill(_ group: PlaceCategory) -> Color { Color(uiColor: .categoryFill(group)) }
     static var categoryGlyph: Color { Color(uiColor: .categoryGlyph) }
-    static func calmBand(_ level: CalmLevel) -> Color { Color(uiColor: .calmBand(level)) }
-    static let calmBandText = Color.black
+    static func calmFill(_ level: CalmLevel) -> Color { Color(uiColor: .calmFill(level)) }
+    static func calmWord(_ level: CalmLevel) -> Color { Color(uiColor: .calmWord(level)) }
 }
 
 /// One set of short, physical timings for every screen, like Apple Maps. Reduce Motion keeps crossfades and drops

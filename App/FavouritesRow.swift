@@ -1,59 +1,58 @@
 import SwiftUI
 import PeoplemapsCore
 
-/// Home's favourites, as in Apple Maps: round badges with short names, then Add. Long-press a badge to remove it.
+/// Home's favourites: one glass chip each over the map, with its badge and short name, then Add. On the raised sheet or the
+/// landscape card, where glass doesn't go on glass, the chips use a plain well instead. Long-press a chip to remove it.
 /// Only shown once there is a favourite.
 struct FavouritesRow: View {
     let favourites: [Place]
+    let floating: Bool
     let onOpen: (Place) -> Void
     let onRemove: (Place) -> Void
     let onAdd: () -> Void
-    let onEdit: () -> Void
-    @ScaledMetric(relativeTo: .caption) private var width: CGFloat = 76
+    @ScaledMetric(relativeTo: .subheadline) private var chipHeight: CGFloat = 44
+    @ScaledMetric(relativeTo: .subheadline) private var badgeSize: CGFloat = 30
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Favourites").font(.footnote.weight(.semibold)).foregroundStyle(GuidanceOverlay.onGlass)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer()
-                Button("Edit", action: onEdit).font(.footnote.weight(.semibold)).foregroundStyle(.primary)
-                    .accessibilityLabel("Edit favourites").accessibilityIdentifier("edit-favourites")
-            }
-            ScrollView(.horizontal) {
-                HStack(alignment: .top, spacing: 4) {
+        ScrollView(.horizontal) {
+            GlassEffectContainer(spacing: 2) {
+                HStack(spacing: 8) {
                     ForEach(favourites) { place in
-                        Button { onOpen(place) } label: { item(place.shortName) { CategoryBadge(badge: place.badge, raw: place.category, size: 56) } }
-                            .buttonStyle(.plain)
-                            .contextMenu {
-                                Button(role: .destructive) { onRemove(place) } label: { Label("Remove from Favourites", systemImage: "star.slash") }
+                        Button { onOpen(place) } label: {
+                            HStack(spacing: 8) {
+                                CategoryBadge(badge: place.badge, raw: place.category, size: 30)
+                                Text(place.shortName).font(.subheadline.weight(.semibold)).foregroundStyle(.primary).lineLimit(1)
                             }
-                            .accessibilityLabel("\(place.shortName), \(place.categoryLabel)")
-                            .accessibilityAction(named: "Remove from Favourites") { onRemove(place) }
-                            .accessibilityIdentifier("favourite-\(place.id)")
+                            .padding(.leading, (chipHeight - badgeSize) / 2).padding(.trailing, 14)
+                            .frame(minHeight: chipHeight).contentShape(Capsule())
+                            .chip(floating: floating, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button(role: .destructive) { onRemove(place) } label: { Label("Remove from Favourites", systemImage: "star.slash") }
+                        }
+                        .accessibilityLabel("\(place.shortName), \(place.categoryLabel)")
+                        .accessibilityAction(named: "Remove from Favourites") { onRemove(place) }
+                        .accessibilityIdentifier("favourite-\(place.id)")
                     }
                     Button(action: onAdd) {
-                        item("Add") {
-                            Image(systemName: "plus").font(.title2.weight(.semibold)).foregroundStyle(.primary)
-                                .frame(width: badge, height: badge).background(Color(uiColor: .systemGray5), in: Circle())
-                        }
+                        Image(systemName: "plus").font(.body.weight(.semibold)).foregroundStyle(.primary)
+                            .frame(width: chipHeight, height: chipHeight).contentShape(Circle())
+                            .chip(floating: floating, in: Circle())
                     }
                     .buttonStyle(.plain).accessibilityLabel("Add a favourite").accessibilityIdentifier("add-favourite")
                 }
             }
-            .scrollIndicators(.hidden).scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         }
+        .scrollIndicators(.hidden).scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        .scrollClipDisabled()
     }
+}
 
-    @ScaledMetric(relativeTo: .caption) private var badge: CGFloat = 56
-
-    private func item<Badge: View>(_ name: String, @ViewBuilder badge: () -> Badge) -> some View {
-        VStack(spacing: 4) {
-            badge()
-            Text(name).font(.caption).foregroundStyle(.primary).multilineTextAlignment(.center)
-                .lineLimit(2)
-        }
-        .frame(width: width).contentShape(Rectangle())
+extension View {
+    /// Its own glass while floating over the map; a plain well once it sits on a panel.
+    @ViewBuilder func chip<S: Shape>(floating: Bool, in shape: S) -> some View {
+        if floating { floatingSurface(in: shape, interactive: true) } else { background(.glassWell, in: shape) }
     }
 }
 
@@ -86,7 +85,7 @@ struct FavouritesEditor: View {
             .navigationTitle("Favourites").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { EditButton().accessibilityIdentifier("edit-favourites-list") }
-                ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() }.accessibilityIdentifier("close-favourites") }
+                ToolbarItem(placement: .confirmationAction) { Button(role: .close) { dismiss() }.accessibilityIdentifier("close-favourites") }
             }
         }
         .tint(.primary).presentationDetents([.medium, .large])
