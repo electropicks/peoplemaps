@@ -95,11 +95,67 @@ public final class SearchIndex: @unchecked Sendable {
         var tokens = Self.normalize(text).split(separator: " ").map(String.init)
         guard !tokens.isEmpty else { return [] }
         var results = run(tokens, unit: unit, near: near, limit: limit)
-        if results.isEmpty, let corrected = correct(tokens), corrected != tokens {
+        let byCategory = categoryMatches(tokens, near: near, limit: limit)
+        if results.isEmpty, byCategory.isEmpty, let corrected = correct(tokens), corrected != tokens {
             tokens = corrected
             results = run(tokens, unit: unit, near: near, limit: limit)
         }
-        return results
+        guard !byCategory.isEmpty else { return results }
+        // Category words ("gas station") list their places after the name matches, ahead of text found only in a
+        // category or address ("gas" in "gastroenterology").
+        let named = results.filter { place in
+            let words = Self.normalize(place.name).split(separator: " ")
+            return tokens.allSatisfy { token in words.contains { $0.hasPrefix(token) } }
+        }
+        let ids = Set(named.map(\.id)), rest = results.filter { !ids.contains($0.id) }
+        let categoryIDs = Set(byCategory.map(\.id))
+        return Array((named + byCategory.filter { !ids.contains($0.id) } + rest.filter { !categoryIDs.contains($0.id) }).prefix(limit))
+    }
+
+    /// Category words people type, as the index categories they mean. `glob` patterns match whole categories
+    /// ("*_restaurant" is every cuisine). Keys are `normalize`d; a plural is tried without its "s".
+    private static let categoryWords: [(words: [String], categories: [String], glob: [String])] = [
+        (["gas", "gas station", "gasoline", "petrol", "fuel"], ["fuel"], []),
+        (["coffee", "coffee shop", "coffeeshop", "cafe", "espresso"], ["cafe", "coffee"], []),
+        (["grocery", "groceries", "grocery store", "supermarket"], ["supermarket", "grocery", "greengrocer"], []),
+        (["convenience store", "corner store"], ["convenience"], []),
+        (["pharmacy", "drugstore", "drug store", "chemist"], ["pharmacy", "drugstore", "chemist"], []),
+        (["park", "playground"], ["park", "dog_park", "playground", "skate_park"], []),
+        (["restaurant", "food", "dinner", "lunch"], ["restaurant", "fast_food", "food_court", "diner"], ["*_restaurant"]),
+        (["bar", "pub", "brewery"], ["bar", "pub", "brewery", "tapas_bar"], []),
+        (["bakery"], ["bakery", "pastry"], []),
+        (["bank", "atm"], ["bank", "atm"], []),
+        (["hospital", "emergency room", "urgent care"], ["hospital", "emergency_department", "urgent_care_clinic", "emergency_or_urgent_care_facility"], []),
+        (["ev charging", "ev charger", "charging station", "charger"], ["charging_station", "ev_charging_station"], []),
+        (["bookstore", "book store", "books"], ["books", "bookstore", "used_bookstore"], []),
+        (["bike shop", "bicycle shop", "bike store"], ["bicycle", "bike_store"], []),
+        (["hardware", "hardware store"], ["hardware", "hardware_store", "doityourself", "hardware_home_and_garden_store"], []),
+        (["liquor store", "bottle shop"], ["liquor_store", "beer_wine_spirits_store", "alcohol"], []),
+        (["hotel", "lodging"], ["hotel", "motel", "guest_house"], []),
+        (["gym", "fitness"], ["fitness_centre", "sports_centre", "boxing_gym", "rock_climbing_gym"], []),
+        (["laundromat", "laundry"], ["laundry"], []),
+        (["post office"], ["post_office"], []),
+        (["library"], ["library"], []),
+        (["parking", "parking lot"], ["parking"], []),
+    ]
+
+    /// Places whose category the whole query names ("gas station" is `fuel`), best category weight first, then nearest.
+    private func categoryMatches(_ tokens: [String], near: Coordinate?, limit: Int) -> [Place] {
+        let phrase = tokens.joined(separator: " ")
+        let singular = phrase.hasSuffix("s") ? String(phrase.dropLast()) : phrase
+        let entries = Self.categoryWords.filter { $0.words.contains(phrase) || $0.words.contains(singular) }
+        guard !entries.isEmpty else { return [] }
+        let exact = entries.flatMap(\.categories), glob = entries.flatMap(\.glob), n = exact.count + glob.count
+        let terms = (exact.isEmpty ? [] : ["category IN (\(exact.map { _ in "?" }.joined(separator: ",")))"]) + glob.map { _ in "category GLOB ?" }
+        let k = near.map { pow(cos($0.lat * .pi / 180), 2) } ?? 0
+        let values: [Value] = (exact + glob).map { .text($0) } + [.double(near?.lat ?? 0), .double(near?.lon ?? 0), .double(k), .int(limit)]
+        var found: [Place] = []
+        Self.rows(db, """
+            SELECT \(columns) FROM entries WHERE kind = 'place' AND (\(terms.joined(separator: " OR ")))
+            ORDER BY weight DESC, (lat - ?\(n + 1)) * (lat - ?\(n + 1)) + (lon - ?\(n + 2)) * (lon - ?\(n + 2)) * ?\(n + 3), id
+            LIMIT ?\(n + 4)
+            """, values) { found.append(place($0)) }
+        return found
     }
 
     /// The indexed entry for an OSM ID ("relation/1047789"), which carries the newest address; nil when not indexed.
@@ -137,6 +193,31 @@ public final class SearchIndex: @unchecked Sendable {
             best = (distance, unit, found)
         }
         return best?.place
+    }
+
+    /// The indexed named place nearest to `c` within `meters`, or nil.
+    public func nearestPlace(to c: Coordinate, within meters: Double = 50) -> Place? {
+        lock.lock(); defer { lock.unlock() }
+        let dLat = meters / 111_000, dLon = meters / (111_000 * max(0.01, cos(c.lat * .pi / 180)))
+        var best: (distance: Double, place: Place)?
+        Self.rows(db, "SELECT \(columns) FROM entries WHERE kind = 'place' AND lat BETWEEN ?1 AND ?2 AND lon BETWEEN ?3 AND ?4 ORDER BY id",
+                  [.double(c.lat - dLat), .double(c.lat + dLat), .double(c.lon - dLon), .double(c.lon + dLon)]) { row in
+            let found = place(row), distance = c.distance(to: found.coordinate)
+            if distance <= meters, best == nil || distance < best!.distance { best = (distance, found) }
+        }
+        return best?.place
+    }
+
+    /// A long-press pin named for what is genuinely close: the nearest address or place within 50 m. Within 15 m
+    /// it takes that name; farther it reads "Near ...", since the pin is not the thing itself. Else it stays
+    /// "Dropped pin".
+    public func droppedPin(at c: Coordinate, within meters: Double = 50) -> Place {
+        let pin = Place.droppedPin(at: c)
+        let hit = [nearestAddress(to: c, within: meters), nearestPlace(to: c, within: meters)].compactMap { $0 }
+            .min { c.distance(to: $0.coordinate) < c.distance(to: $1.coordinate) }
+        guard let hit else { return pin }
+        let name = hit.kind == .address ? hit.name : hit.shortName
+        return Place(id: pin.id, name: c.distance(to: hit.coordinate) <= 15 ? name : "Near \(name)", lat: pin.lat, lon: pin.lon, category: Place.pinCategory)
     }
 
     private func run(_ tokens: [String], unit: String?, near: Coordinate?, limit: Int) -> [Place] {

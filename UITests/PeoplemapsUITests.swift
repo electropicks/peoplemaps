@@ -833,12 +833,12 @@ final class PeoplemapsUITests: XCTestCase {
     @MainActor func testLongPressDropsPinWithDirections() {
         let app = launchHome(location: Self.atKerryPark)
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.3)).press(forDuration: 1.2)
-        XCTAssertTrue(app.staticTexts["Dropped pin"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["place-subtitle"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS '° N'")).firstMatch.exists)
         capture("09-dropped-pin", app: app)
         app.buttons["directions"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
-        XCTAssertTrue(app.buttons["choose-destination"].label.contains("Dropped pin"))
+        XCTAssertTrue(app.buttons["choose-destination"].label.hasPrefix("Going to, "))
         // Far outside the routing bounds: the card says so instead of offering directions.
         app.buttons["close-preview"].tap()
         let map = app.otherElements["Seattle offline map"]
@@ -847,6 +847,20 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["outside-coverage"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["directions"].exists)
         capture("10-dropped-pin-outside", app: app)
+    }
+
+    /// Current location far outside the routing bounds: Directions says the start is outside and offers to pick another.
+    @MainActor func testStartOutsideCoverageSaysSoAndLetsYouPickAStart() {
+        let app = launchHome(location: "47.4000,-122.2000")
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["start-outside-coverage"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Your start is outside the area we cover"].exists)
+        XCTAssertFalse(app.buttons["route-fastest"].exists)
+        XCTAssertFalse(app.buttons["retry-route"].exists, "not a generic failure")
+        capture("10b-start-outside", app: app)
+        app.buttons["Choose start"].tap()
+        XCTAssertTrue(app.textFields["place-search"].waitForExistence(timeout: 5))
     }
 
     @MainActor func testFavouriteSurvivesRelaunchAndSwipesAway() {
@@ -965,7 +979,7 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(row.isHittable)
         capture("15-home-favourites-landscape", app: app)
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.5)).press(forDuration: 1.2)
-        XCTAssertTrue(app.staticTexts["Dropped pin"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["place-subtitle"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["directions"].isHittable)
         capture("16-dropped-pin-landscape", app: app)
     }
