@@ -66,6 +66,17 @@ extension UIColor {
         case .services: dynamic(light: 0x6C6C70, dark: 0xAEAEB2)
         }
     }
+    /// Calm rating bands: blue through a warm grey to orange, which stays readable with colour blindness. Not green,
+    /// which means only the calmer route, and not a traffic light. Black text clears 4.5:1 on each; each clears 3:1 on `panelFill`.
+    static func calmBand(_ level: CalmLevel) -> UIColor {
+        switch level {
+        case .breezy: hex(0x3590D0)
+        case .chill: hex(0x5393A5)
+        case .meh: hex(0x928A7B)
+        case .spicy: hex(0xC47632)
+        case .yikes: hex(0xD9605F)
+        }
+    }
     /// The glyph on a category fill: white in light mode, near-black in dark mode where the fills are brighter.
     static let categoryGlyph = dynamic(light: 0xFFFFFF, dark: 0x1C1C1E)
     static let mapLand = dynamic(light: 0xF2F2F2, dark: 0x1A1A1C)
@@ -89,6 +100,8 @@ extension ShapeStyle where Self == Color {
 extension Color {
     static func categoryFill(_ group: PlaceCategory) -> Color { Color(uiColor: .categoryFill(group)) }
     static var categoryGlyph: Color { Color(uiColor: .categoryGlyph) }
+    static func calmBand(_ level: CalmLevel) -> Color { Color(uiColor: .calmBand(level)) }
+    static let calmBandText = Color.black
 }
 
 /// One set of short, physical timings for every screen, like Apple Maps. Reduce Motion keeps crossfades and drops

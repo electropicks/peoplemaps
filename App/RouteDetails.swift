@@ -13,6 +13,14 @@ struct RouteDetails: View {
         NavigationStack {
             List {
                 Section {
+                    CalmBar(comparison: comparison)
+                    if comparison.calmer == nil { Text(comparison.noCalmer.title).font(.headline) }
+                } header: {
+                    Text("Calm estimate")
+                } footer: {
+                    Text("An estimate from 0 to 100, higher is calmer, from the things listed below per minute of the trip. It knows only what the map knows: no live traffic.")
+                }
+                Section {
                     ForEach(comparison.reasons, id: \.self) { reason in
                         let tradeoff = reason.hasPrefix("Tradeoff: ")
                         Label {
