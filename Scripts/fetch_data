@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""Download region data files from the GitHub release named in Data/regions.json into Data/region/ (gitignored).
+Each file's SHA-256 is pinned in the manifest. Files already present and matching are left alone, quietly.
+  Scripts/fetch_data [region ...]    all regions in the manifest when none are named
+PEOPLEMAPS_DATA_URL replaces the release URL (a directory URL; file:// works) for tests and mirrors.
+Asset name on the release: <region>--<path with / replaced by __>."""
+import hashlib, json, os, pathlib, shutil, sys, tempfile, urllib.request
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+MANIFEST = ROOT / 'Data/regions.json'
+DEST = ROOT / 'Data/region'
+
+def sha256(path):
+    h = hashlib.sha256()
+    with open(path, 'rb') as f:
+        for chunk in iter(lambda: f.read(1 << 20), b''):
+            h.update(chunk)
+    return h.hexdigest()
+
+def main(names):
+    m = json.loads(MANIFEST.read_text())
+    base = os.environ.get('PEOPLEMAPS_DATA_URL') or f"https://github.com/electropicks/peoplemaps/releases/download/{m['release']}"
+    base = base.rstrip('/')
+    regions = m['regions']
+    for n in names:
+        if n not in regions: sys.exit(f'no region "{n}" in {MANIFEST.relative_to(ROOT)}')
+    for name in names or sorted(regions):
+        for rel, pin in sorted(regions[name]['files'].items()):
+            target = DEST / name / rel
+            if target.is_file() and sha256(target) == pin['sha256']: continue
+            url = f"{base}/{name}--{rel.replace('/', '__')}"
+            print(f'fetching {name}/{rel} ({pin["bytes"] / 1e6:.1f} MB)', flush=True)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            fd, tmp = tempfile.mkstemp(dir=target.parent, suffix='.part'); os.close(fd)
+            try:
+                with urllib.request.urlopen(url) as r, open(tmp, 'wb') as f: shutil.copyfileobj(r, f)
+                got = sha256(tmp)
+                if got != pin['sha256']: sys.exit(f'{url}: SHA-256 {got} does not match the pin {pin["sha256"]}')
+                os.replace(tmp, target)
+            finally:
+                if os.path.exists(tmp): os.unlink(tmp)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

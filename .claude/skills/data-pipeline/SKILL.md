@@ -23,6 +23,10 @@ Scripts/verify.sh                  # "data reproduces byte for byte" must pass
 - Snapshots are archived in `Data/`. Fetch new ones only when asked; record the query, date and source in `Data/provenance.json`.
 - `PEOPLEMAPS_BBOX`, `PEOPLEMAPS_DATA` and `PEOPLEMAPS_OUT` (and `--out`) redirect an import for spikes. Never point them at the shipped files.
 
+## Region data
+
+Files in git are the Seattle test fixture. Bigger regions are release assets pinned in `Data/regions.json`: `Scripts/fetch_data`, then `Scripts/verify.sh --region`. See "Region data" in `Docs/ARCHITECTURE.md`. Never commit a big region.
+
 ## Licences (ask before adding any source)
 
 - OpenStreetMap: ODbL 1.0. Attribution "© OpenStreetMap" stays on the map.

@@ -48,6 +48,34 @@ conditional schedules, construction, seasonal closures, traffic, ferry routing,
 turn-protection phases, complex intersection rules, and many access subtleties
 are not modeled. Missing OSM restrictions can still produce infeasible routes.
 
+## Region data
+
+What is in git is a small test fixture: the Seattle box in `Data/` and `Core/Resources/`, reproduced byte for
+byte by `Scripts/verify.sh`. Larger regions are too big for git (GitHub rejects files over 100 MB, and this
+repo's history is permanent), so they live in assets on a GitHub release (Git LFS is not used). Map data comes
+from Geofabrik extracts. `Data/regions.json` is the committed manifest: the release tag, and per region its
+bounding box, every file's size and SHA-256, and which files are expected importer outputs. Nothing under
+`Data/region/` is committed. CI and `swift test` never need it.
+
+```bash
+Scripts/fetch_data [region]      # downloads into Data/region/<region>/, checks pins, silent when present
+Scripts/verify.sh --region       # also re-imports each fetched region and compares with its expected outputs
+```
+
+Without fetched data `--region` prints `SKIPPED` lines and passes; plain `Scripts/verify.sh` does not look at regions.
+
+Add or update a region file:
+
+1. Make the files: the importer's input snapshots at the region folder's root (names as in `Data/`), and the
+   outputs from importing them (`PEOPLEMAPS_DATA`, `PEOPLEMAPS_BBOX`, `PEOPLEMAPS_OUT`) under `expected/`.
+2. Upload each to a release as `<region>--<path with / replaced by __>`, for example
+   `king-county--expected__seattle-graph.bin`. Use a new tag for changed files rather than replacing assets.
+3. Put its size and `shasum -a 256` in `Data/regions.json` under `regions.<region>.files`, set `bbox`
+   (S,W,N,E), list the expected outputs under `outputs`, and set `release` to the tag.
+4. `Scripts/fetch_data <region>` then `Scripts/verify.sh --region`, and commit the manifest.
+
+`PEOPLEMAPS_DATA_URL` points the fetch at another directory URL (a local `file://` folder works) for testing.
+
 ## Routing and budget
 
 `NativeRouter` uses an incoming directed edge as its Dijkstra state. This keeps
