@@ -3,8 +3,8 @@ name: CI
 on:
   pull_request:
     # "labeled" exists only so adding the ui-tests label starts ui-tests; see the job conditions below.
+    # No paths-ignore here: main requires linux and ios-build, and a PR that starts no run could never merge.
     types: [opened, synchronize, reopened, labeled]
-    paths-ignore: ['Docs/**', '**/*.md', '.claude/**']
   push:
     branches: [main]
     paths-ignore: ['Docs/**', '**/*.md', '.claude/**']
