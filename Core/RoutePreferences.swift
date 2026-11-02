@@ -92,6 +92,7 @@ public struct RoutePreferences: Hashable, Sendable {
 
 /// Stored as `{"trafficLights": "avoid"}`, listing only options that aren't normal.
 /// Unknown options or levels, say from a newer version, are skipped rather than failing the whole value.
+/// A value that isn't an object at all (an array, a string, null) decodes as the defaults.
 extension RoutePreferences: Codable {
     private struct Key: CodingKey {
         let stringValue: String
@@ -101,7 +102,7 @@ extension RoutePreferences: Codable {
     }
 
     public init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: Key.self)
+        guard let c = try? decoder.container(keyedBy: Key.self) else { return }
         for key in c.allKeys {
             guard let option = Option(rawValue: key.stringValue), let raw = try? c.decode(String.self, forKey: key),
                   let level = Level(rawValue: raw) else { continue }

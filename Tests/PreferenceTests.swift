@@ -43,6 +43,31 @@ final class PreferenceTests: XCTestCase {
         XCTAssertEqual(RoutePreferences([.turns: .normal]), RoutePreferences(), "Normal is not stored")
     }
 
+    func testDecodingAnythingButAnObjectGivesDefaults() throws {
+        for json in ["[]", #"["avoid"]"#, #""avoid""#, "null", "3", "true"] {
+            XCTAssertEqual(try JSONDecoder().decode(RoutePreferences.self, from: Data(json.utf8)), RoutePreferences(), json)
+        }
+    }
+
+    func testPreferenceRouteWithMoreStressIsDescribedByWhatItAvoids() {
+        var f = RouteMetrics(), c = RouteMetrics()
+        f.seconds = 600; c.seconds = 660; f.meters = 3000; c.meters = 3100
+        f.breakdown.add(.signal, amount: 8, cost: 80); c.breakdown.add(.signal, amount: 2, cost: 20)
+        c.breakdown.add(.turn, amount: 6, cost: 120)
+        let place = Place(id: "a", name: "A", lat: 47.64, lon: -122.35, category: "test")
+        func comparison(_ p: RoutePreferences) -> RouteComparison {
+            RouteComparison(request: .init(origin: place, destination: place, mode: .drive, extraMinutes: 5, preferences: p),
+                            fastest: Route(edgeIDs: [1], coordinates: [], metrics: f, streetNames: []),
+                            calmer: Route(edgeIDs: [2], coordinates: [], metrics: c, streetNames: []), candidateCount: 2,
+                            originSnapMeters: 0, destinationSnapMeters: 0, snappedOrigin: place.coordinate, snappedDestination: place.coordinate)
+        }
+        let avoiding = comparison(.init([.trafficLights: .avoid]))
+        XCTAssertTrue(avoiding.tradesStress)
+        XCTAssertTrue(avoiding.calmSummary.hasPrefix("Avoids fewer signals as you chose"), avoiding.calmSummary)
+        XCTAssertFalse(avoiding.calmSummary.contains("→"))
+        XCTAssertFalse(comparison(.default(for: .drive)).tradesStress, "Default settings never change the wording")
+    }
+
     func testScaleAppliesToJunctionAndExposureCosts() {
         var approach = Fixture.northbound; approach.control = .stop
         let scale = FactorScale(.init([.stopSigns: .avoid, .turns: .dontMind]), mode: .bike)!

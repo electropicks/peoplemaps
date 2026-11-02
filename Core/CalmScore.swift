@@ -90,12 +90,20 @@ extension RouteComparison {
         return from.level == to.level ? "\(to.level.title), \(from.value) \(arrow) \(to.value)" : "\(from.level.title) \(arrow) \(to.level.title)"
     }
 
+    /// True when the person's Calmer means settings picked a route that avoids what they asked to avoid but has more model
+    /// stress overall than the fastest. The route is then described by what it avoids, never as calmer overall.
+    public var tradesStress: Bool {
+        guard let calmer, !request.preferences.isDefault(in: request.mode) else { return false }
+        return calmer.metrics.stress > fastest.metrics.stress
+    }
+
     /// What the calmer route mostly saves: "mostly fewer unsignalled lefts", or the two biggest when none is the majority.
     public var mainGain: String? {
         guard let calmer else { return nil }
         let f = fastest.metrics.breakdown, c = calmer.metrics.breakdown
+        let scale = FactorScale(request.preferences, mode: request.mode)
         let gains = Factor.allCases.filter { !$0.isUnknown && $0.isNoticeable(abs(f[$0].amount - c[$0].amount)) }
-            .map { (factor: $0, saved: f[$0].cost - c[$0].cost) }.filter { $0.saved > 0 }.sorted { $0.saved > $1.saved }
+            .map { (factor: $0, saved: (f[$0].cost - c[$0].cost) * (scale?[$0] ?? 1)) }.filter { $0.saved > 0 }.sorted { $0.saved > $1.saved }
         guard let top = gains.first else { return "fewer small hassles" }
         let total = gains.reduce(0) { $0 + $1.saved }
         if top.saved >= total * 0.5 || gains.count == 1 { return "mostly \(top.factor.gain)" }
@@ -107,6 +115,7 @@ extension RouteComparison {
     /// As `calmSummary`, for VoiceOver.
     public var spokenCalmSummary: String { summary(spokenCalmChange) }
     private func summary(_ change: String) -> String {
+        if tradesStress, let mainGain { return "Avoids \(mainGain.replacingOccurrences(of: "mostly ", with: "")) as you chose, not calmer overall by our estimates" }
         if let mainGain { return "\(change), \(mainGain)" }
         return "\(change), \(noCalmer.title.prefix(1).lowercased())\(noCalmer.title.dropFirst())"
     }
