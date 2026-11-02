@@ -111,6 +111,11 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["route-calmer"].tap()
         waitForTop("calmer")
     }
+    @MainActor func testBaseMapDrawsFromBundledTiles() {
+        let app = launchHome()
+        let drawn = NSPredicate { _, _ in (Int(self.probe(app, "debug-map-features")) ?? 0) > 0 }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: drawn, object: nil)], timeout: 10), .completed, "the bundled tiles drew no water or roads")
+    }
     // MARK: Real location (Simulator location injection and the system permission alert)
 
     private static let kerryPark = CLLocationCoordinate2D(latitude: 47.6295, longitude: -122.3599)

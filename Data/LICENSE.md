@@ -5,8 +5,8 @@
 See [OSM copyright and attribution](https://www.openstreetmap.org/copyright).
 
 The original snapshots in `Data/*.json.gz` and the derived databases in
-`Core/Resources/seattle-graph.bin` (binary graph), `Core/Resources/seattle-map.geojson`
-and `Core/Resources/seattle-search.sqlite.gz` (gzipped SQLite search index)
+`Core/Resources/seattle-graph.bin` (binary graph), `Core/Resources/seattle-map.pmtiles`
+(vector map tiles) and `Core/Resources/seattle-search.sqlite.gz` (gzipped SQLite search index)
 are distributed under ODbL 1.0, separately from the source-code MIT license.
 This repository supplies the underlying data and deterministic transformation
 script. Retain attribution and comply with ODbL when redistributing or adapting
@@ -17,6 +17,11 @@ The raw response timestamps and SHA-256 hashes appear in `provenance.json`.
 Timestamps are recorded exactly as reported by the upstream service. They are
 not a guarantee of present-day road conditions.
 
+A bounded `natural=coastline` extract, `Data/seattle-coast.json.gz` (query
+`Data/seattle-coast.overpassql`, 47.38–47.85 N, 122.55–122.13 W), was fetched on
+2026-11-01 (Pacific; OSM base timestamp 2026-11-02T01:23:48Z). `Scripts/build_tiles.py`
+assembles it into the water polygons of the map tiles, the same ODbL data as the rest.
+
 A third bounded extract for search, `Data/seattle-search.json.gz` (query
 `Data/seattle-search.overpassql`: named shops, amenities, parks, landmarks and
 buildings, and every object with `addr:housenumber`, as centre points), was
@@ -25,7 +30,8 @@ newer than the routing extracts; the app shows it as "OpenStreetMap, Oct 2026".
 
 Coverage: 47.615°–47.678° N, 122.390°–122.300° W. Relations may reference source
 geometry outside this box; routing edges are kept only when all their geometry
-lies inside it. Water and park polygons are clipped. No public map tiles were
+lies inside it. Park polygons are clipped to it, and water polygons to a box 0.1° wider on every
+side, so water carries on past the roads. No public map tiles were
 downloaded. Search covers named places, Overture Maps businesses (below) and OSM street addresses inside the box.
 
 ## Street addresses: OpenStreetMap only
