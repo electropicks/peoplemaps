@@ -5,7 +5,8 @@ import Foundation
 /// `ReportCell`, five-decimal points) but has no category, no ID minting and no server. The phone keeps the exact
 /// fields; `fileData()` leaves them out unless `includeExact` is on.
 public struct ProblemReport: Codable, Equatable, Sendable, Identifiable {
-    public static let schemaVersion = 2
+    /// 3 added `events`.
+    public static let schemaVersion = 3
     public static let limit = 50
 
     public struct Point: Codable, Equatable, Sendable {
@@ -69,15 +70,39 @@ public struct ProblemReport: Codable, Equatable, Sendable, Identifiable {
     public var app: Report.App
     public var dataVersion: String
     public var device: Report.Device
+    /// What the app did in the last few minutes (`Core/AppEvents.swift`), copied when the report was created. Empty in
+    /// reports saved before schema 3.
+    public var events: [AppEvent]
 
     public init(id: String = UUID().uuidString, createdAt: Date = Date(), note: String = "", includeExact: Bool = false, screen: String,
                 mode: TravelMode, extraMinutes: Int, origin: Place? = nil, destination: Place? = nil, routes: [RouteInfo] = [],
                 chosen: Report.Chosen? = nil, moment: Moment? = nil, spoken: [Report.Spoken] = [], rerouteCount: Int? = nil,
-                app: Report.App, dataVersion: String, device: Report.Device) {
+                app: Report.App, dataVersion: String, device: Report.Device, events: [AppEvent] = []) {
         self.id = id; self.createdAt = createdAt; self.note = note; self.includeExact = includeExact; self.screen = screen
         self.mode = mode; self.extraMinutes = extraMinutes; self.origin = origin; self.destination = destination; self.routes = routes
         self.chosen = chosen; self.moment = moment; self.spoken = spoken; self.rerouteCount = rerouteCount
-        self.app = app; self.dataVersion = dataVersion; self.device = device
+        self.app = app; self.dataVersion = dataVersion; self.device = device; self.events = events
+    }
+
+    /// Reports saved before `events` existed have no such key.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id); createdAt = try c.decode(Date.self, forKey: .createdAt)
+        note = try c.decode(String.self, forKey: .note); includeExact = try c.decode(Bool.self, forKey: .includeExact)
+        screen = try c.decode(String.self, forKey: .screen); mode = try c.decode(TravelMode.self, forKey: .mode)
+        extraMinutes = try c.decode(Int.self, forKey: .extraMinutes)
+        origin = try c.decodeIfPresent(Place.self, forKey: .origin); destination = try c.decodeIfPresent(Place.self, forKey: .destination)
+        routes = try c.decode([RouteInfo].self, forKey: .routes); chosen = try c.decodeIfPresent(Report.Chosen.self, forKey: .chosen)
+        moment = try c.decodeIfPresent(Moment.self, forKey: .moment); spoken = try c.decode([Report.Spoken].self, forKey: .spoken)
+        rerouteCount = try c.decodeIfPresent(Int.self, forKey: .rerouteCount)
+        app = try c.decode(Report.App.self, forKey: .app); dataVersion = try c.decode(String.self, forKey: .dataVersion)
+        device = try c.decode(Report.Device.self, forKey: .device)
+        events = try c.decodeIfPresent([AppEvent].self, forKey: .events) ?? []
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, createdAt, note, includeExact, screen, mode, extraMinutes, origin, destination, routes, chosen, moment, spoken
+        case rerouteCount, app, dataVersion, device, events
     }
 
     /// Whether the user has written anything.
@@ -147,10 +172,16 @@ public struct ProblemReports: Codable, Equatable, Sendable {
     public subscript(id: String) -> ProblemReport? { reports.first { $0.id == id } }
 
     public static func load(from url: URL) -> ProblemReports {
-        guard let data = try? Data(contentsOf: url) else { return ProblemReports() }
+        guard let data = try? Data(contentsOf: url) else {
+            if FileManager.default.fileExists(atPath: url.path) { AppEvents.shared.log(.error, "problem reports file unreadable") }
+            return ProblemReports()
+        }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return (try? decoder.decode(ProblemReports.self, from: data)) ?? ProblemReports()
+        do { return try decoder.decode(ProblemReports.self, from: data) } catch {
+            AppEvents.shared.log(.error, "problem reports file did not decode", error: error)
+            return ProblemReports()
+        }
     }
     public func save(to url: URL) throws {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)

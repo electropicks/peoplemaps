@@ -694,3 +694,21 @@ of the start and destination and a 550 m cell for a marked moment, as in 2.2. "W
   route was offered, reroute count, each point the user left the route (rounded to about 100 m unless "Exact places in the
   log" is on) and whether the trip arrived or ended early. The last 500 trips are kept. It is shared or cleared from About
   and has no network code. A trip the app is killed during is not logged.
+- **Recent app events** (`Core/AppEvents.swift`, schema 3): a short list under `events` in the report file, so a report says
+  what the app was doing and not only where the phone was. The buffer lives in memory, keeps the last 200 events or the
+  last 10 minutes, whichever is fewer, and is never written to disk. A report copies it when it is created or a moment
+  is marked; the copy is saved with the report and shown in "What's included". Reports saved before schema 3 have no
+  `events` and still open. A crash, a quit or the system ending the app loses the buffer, and the app collects no crash
+  data, so a report made after a crash cannot say what led to it.
+  - Each event is a time (to the millisecond), a category (`route`, `navigation`, `map`, `search`, `data`, `error`), a short
+    fixed message, an optional `detail` (an error's type name, a travel mode or a state name) and numbers under a fixed set
+    of names: `ms`, `count`, `candidates`, `results`, `zoom`, `animated`, `reroutes`, `steps`, `level`, rounded to one decimal.
+  - **Never in an event**: coordinates, street or place names, search text, notes, error messages. The message must be a
+    string literal (the type is `StaticString`), so text a person typed cannot be passed in, and any other number name is
+    dropped. `Tests/AppEventsTests.swift` checks this.
+  - Logged: route comparison start, finish (milliseconds and candidate routes), cancel and failure; guidance start, reroute,
+    arrival and stop; launch steps (graph header, search index and router load times); map style loaded, map idle, and each
+    programmatic camera move with its duration and whether it animated; memory warnings; each search with its time and result
+    count; and a report file that cannot be read. Events come only from the app's own code, never from the system log,
+    MapLibre or Ferrostar, whose logs may contain coordinates. Repeats of the same event within two seconds (camera
+    moves while following, redraws) share one line with a `count`, so a long drive does not push out the rest.

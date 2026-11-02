@@ -146,6 +146,20 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: dot, object: nil)], timeout: 10), .completed, probe(app, "debug-marker"))
     }
 
+    /// With a heading (the compass; here injected with `--fake-heading`) the dot gains a beam and a rim tip, and loses them again
+    /// when guidance starts. Captured in light and dark.
+    @MainActor func testMarkerShowsHeadingFromTheCompass() {
+        let app = launchHome(location: Self.atKerryPark, extra: ["--fake-heading", "70"])
+        let beam = NSPredicate { _, _ in self.probe(app, "debug-marker") == "dot 70" }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: beam, object: nil)], timeout: 10), .completed, probe(app, "debug-marker"))
+        capture("42-heading-beam-light", app: app)
+        XCUIDevice.shared.appearance = .dark
+        Thread.sleep(forTimeInterval: 1)
+        XCTAssertEqual(probe(app, "debug-marker"), "dot 70")
+        capture("43-heading-beam-dark", app: app)
+        XCUIDevice.shared.appearance = .light
+    }
+
     /// While guiding, the marker is a dot until a course is known, then an arrow; the line splits at progress, the part behind
     /// in the passed colour, and is never emptied or rebuilt on the way.
     @MainActor func testGuidanceShowsArrowAndSplitsTheRouteAtProgress() {

@@ -69,6 +69,35 @@ final class LocationPermission: NSObject, CLLocationManagerDelegate {
         Task { @MainActor in self.finishLocating(coordinate) }
     }
 
+    // MARK: Compass
+
+    /// Called with the device's heading in degrees from north, or nil when it is unknown or the compass is stopped.
+    var onHeading: ((Double?) -> Void)?
+
+    /// Starts or stops compass updates. The map asks for them only while location is allowed, the map is on screen and not
+    /// guiding (guidance has its own course), and the app is in the foreground. Invalid readings (negative accuracy) give nil.
+    func compass(on: Bool) {
+        #if DEBUG
+        if Self.fake != nil {
+            let arguments = ProcessInfo.processInfo.arguments
+            if on, let i = arguments.firstIndex(of: "--fake-heading"), i + 1 < arguments.count, let degrees = Double(arguments[i + 1]) { onHeading?(degrees) } else { onHeading?(nil) }
+            return
+        }
+        #endif
+        guard on, access == .granted, CLLocationManager.headingAvailable() else {
+            manager.stopUpdatingHeading(); onHeading?(nil); return
+        }
+        manager.delegate = self
+        manager.headingFilter = 3
+        manager.startUpdatingHeading()
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateHeading heading: CLHeading) {
+        guard heading.headingAccuracy >= 0 else { Task { @MainActor in self.onHeading?(nil) }; return }
+        let degrees = heading.trueHeading >= 0 ? heading.trueHeading : heading.magneticHeading
+        Task { @MainActor in self.onHeading?(degrees) }
+    }
+
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         Task { @MainActor in self.finishLocating(nil) }
     }

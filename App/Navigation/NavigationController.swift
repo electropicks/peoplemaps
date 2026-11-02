@@ -170,6 +170,7 @@ final class NavigationController {
         arrivalHandled = false; paused = false; lastSpoken = ""; spokenLog = []; tripID = UUID()
         tripDraft = UsageLogger.Draft(comparison: comparison, started: usingCalmer ? .calmer : .fastest)
         keepAwake(true)
+        AppEvents.shared.log(.navigation, "guidance started", mode: request.mode, state: usingCalmer ? "calmer" : "fastest", ["steps": Double(adapted.plan.steps.count)])
         subscription = core.$state.receive(on: DispatchQueue.main).sink { [weak self] state in
             MainActor.assumeIsolated { self?.apply(state) }
         }
@@ -213,6 +214,7 @@ final class NavigationController {
     private func arrive() {
         guard !arrivalHandled else { return }
         arrivalHandled = true
+        AppEvents.shared.log(.navigation, "arrived", ["reroutes": Double(rerouteCount)])
         finishTrip(.arrived)
         location?.stopUpdating()
         keepAwake(false)
@@ -239,6 +241,7 @@ final class NavigationController {
     }
 
     func stop() {
+        if isActive { AppEvents.shared.log(.navigation, "guidance stopped", state: hasArrived ? "arrived" : "ended early") }
         if !hasArrived { finishTrip(.endedEarly) }
         subscription = nil
         core?.stopNavigation()
@@ -275,7 +278,7 @@ final class NavigationController {
 
     private func install(_ adapted: AdaptedRoute) {
         remember(adapted)
-        if active != nil { rerouteCount += 1 }
+        if active != nil { rerouteCount += 1; AppEvents.shared.log(.navigation, "reroute", ["reroutes": Double(rerouteCount)]) }
         active = adapted
         gate.routeInstalled(at: Date())
         hasReachedRoute = false

@@ -35,6 +35,12 @@ one is wrong and gets fixed.
   route (rounded to about 100 m unless you choose exact places). It stays on the phone unless you share the file, and
   **Clear** deletes it.
 
+- Recent app events, in memory only. The last 200 things the app did, or the last 10 minutes, whichever is fewer:
+  that a route comparison started and how long it took, that guidance started or rerouted, that the map finished
+  loading or moved the camera, how long a search took and how many results it found, and errors by type. Never a
+  place, street, search text, note or position. It is never written to disk and is gone when the app quits or crashes.
+  A report copies the list when you start it or mark a moment, so the file shows what the app was doing; you see it in
+  "What's included" before you share. The app has no crash reports, so after a crash there is nothing to look at.
 - Recent destinations and favourites.
 - Your voice setting (muted or not).
 - Flagged moments: snapshots you make during guidance by tapping **Flag this

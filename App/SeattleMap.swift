@@ -143,13 +143,15 @@ struct SeattleMap: UIViewRepresentable {
             ("water", .mapWater), ("parks", .mapPark), ("roads", .mapStreet), ("arterials", .mapArterial), ("paths", .mapPath),
         ]
 
-        #if DEBUG
         func mapViewDidBecomeIdle(_ map: MLNMapView) {
+            AppEvents.shared.log(.map, "map idle", coalesce: true, ["zoom": map.zoomLevel])
+            #if DEBUG
             MapDebug.shared.baseFeatures = map.visibleFeatures(in: map.bounds, styleLayerIdentifiers: ["water", "roads", "arterials"]).count
+            #endif
         }
-        #endif
 
         func mapView(_ map: MLNMapView, didFinishLoading style: MLNStyle) {
+            AppEvents.shared.log(.map, "map style loaded")
             guard let url = StreetGraph.mapURL, let tiles = URL(string: "pmtiles://" + url.absoluteString) else { return }
             let source = MLNVectorTileSource(identifier: "seattle", configurationURL: tiles)
             style.addSource(source)
@@ -335,6 +337,7 @@ struct SeattleMap: UIViewRepresentable {
                           padding: UIEdgeInsets? = nil, mayFly: Bool = true) {
             let pad = padding ?? .zero
             let far = mayFly && duration > 0 && crossesALot(map, to: camera)
+            AppEvents.shared.log(.map, "camera move", coalesce: true, ["ms": (Motion.off ? 0 : duration) * 1000, "animated": duration > 0 && !Motion.off ? 1 : 0, "zoom": map.zoomLevel])
             #if DEBUG
             let kind = far ? (reduce ? "fade" : "fly") : duration > 0 ? "glide" : "cut"; if mayFly || kind != "cut" { MapDebug.shared.moves = Array((MapDebug.shared.moves + [kind]).suffix(12)) }
             #endif
@@ -724,7 +727,7 @@ private final class PuckView: MLNAnnotationView {
         turning.addSublayer(beam)
         // A small triangle on the dot's rim, pointing out: the heading cue that survives when the beam is faint.
         let nub = UIBezierPath()
-        nub.move(to: CGPoint(x: 36, y: 10)); nub.addLine(to: CGPoint(x: 43, y: 22)); nub.addLine(to: CGPoint(x: 29, y: 22)); nub.close()
+        nub.move(to: CGPoint(x: 36, y: 11)); nub.addLine(to: CGPoint(x: 43, y: 25)); nub.addLine(to: CGPoint(x: 29, y: 25)); nub.close()
         tip.path = nub.cgPath; tip.fillColor = blue.cgColor
         tip.strokeColor = UIColor.white.cgColor; tip.lineWidth = 2.5; tip.lineJoin = .round
         turning.addSublayer(tip)
