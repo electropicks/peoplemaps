@@ -21,7 +21,7 @@ private final class Slots<T: Sendable>: @unchecked Sendable {
 }
 
 /// `body(0..<count)` with at most `limit` running at once; each thread takes the next index when it finishes one.
-func parallelFor(_ count: Int, limit: Int, _ body: (Int) -> Void) {
+func parallelFor(_ count: Int, limit: Int, _ body: @Sendable (Int) -> Void) {
     let next = Ticket()
     DispatchQueue.concurrentPerform(iterations: max(1, min(count, limit))) { _ in
         while let i = next.take(below: count) { body(i) }
