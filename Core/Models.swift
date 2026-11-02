@@ -182,7 +182,7 @@ public struct StreetGraph: Sendable {
         try graph.validate()
         return graph
     }
-    public static var mapURL: URL? { Bundle.module.url(forResource: "seattle-map", withExtension: "geojson") }
+    public static var mapURL: URL? { Bundle.dataFile("seattle-map", "geojson") }
 
     public func validate() throws {
         guard bounds.count == 4, !nodes.isEmpty,
@@ -234,5 +234,14 @@ public enum RoutingError: Error, LocalizedError, Equatable, Sendable {
         case .noConnection: "No connected route was found in this extract. Try another nearby place or travel mode."
         case .invalidBudget: "Choose an extra-time budget from 0 to 20 minutes."
         }
+    }
+}
+
+extension Bundle {
+    /// A bundled data file (graph, map layer, search index). A copy in the app's own bundle wins: the app's "Bundle fetched region"
+    /// build phase puts a fetched region's files there (`Data/region/<name>/expected/`). Without one, and always under `swift test`,
+    /// the Seattle test fixture in this package's resources is used.
+    static func dataFile(_ name: String, _ ext: String) -> URL? {
+        Bundle.main.url(forResource: name, withExtension: ext) ?? Bundle.module.url(forResource: name, withExtension: ext)
     }
 }
