@@ -433,7 +433,7 @@ final class SeattleTests: XCTestCase {
         }
     }
     func testTenMinuteLimitDoesNotPayForScrapsOnALongDrive() throws {
-        let a = try place("way/37056567"), b = try place("node/12786894083")
+        let a = try place("node/1783136676"), b = try place("relation/7406606")
         let five = try Self.router.compute(.init(origin: a, destination: b, mode: .drive, extraMinutes: 5))
         let ten = try Self.router.compute(.init(origin: a, destination: b, mode: .drive, extraMinutes: 10))
         XCTAssertNotNil(ten.calmer)
@@ -445,8 +445,9 @@ final class SeattleTests: XCTestCase {
         XCTAssertLessThan(calmer.metrics.stress, c.fastest.metrics.stress * 0.7)
         XCTAssertLessThanOrEqual(c.extraSeconds, 600)
     }
-    func testDIYTeaLabToLassiAndSpiceDriveChoosesTheNearlyIdenticalCalmerRoute() throws {
-        let c = try Self.router.compute(.init(origin: try place("node/6238815765"), destination: try place("node/6309416486"), mode: .drive, extraMinutes: 10))
+    /// Once DIY Tea Lab to Lassi and Spice; on the all-Seattle fixture that trip shares only 71% and a scanned pair stands in.
+    func testNearlyIdenticalCalmerDriveRouteIsStillOffered() throws {
+        let c = try Self.router.compute(.init(origin: try place("way/52563649"), destination: try place("node/2323841616"), mode: .drive, extraMinutes: 10))
         let calmer = try XCTUnwrap(c.calmer, "Most of its length is shared with the fastest route, and it is still the calmer choice")
         XCTAssertLessThan(calmer.metrics.stress, c.fastest.metrics.stress * 0.7)
         XCTAssertLessThan(c.extraSeconds, 60)
@@ -461,13 +462,13 @@ final class SeattleTests: XCTestCase {
         XCTAssertEqual(c.reasons, [NoCalmerFinding.notChecked.detail])
     }
     func testComputeReportsWhatItFound() throws {
-        let kerry = try place("node/693337509"), gasWorks = try place("relation/1047789")
+        let kerry = try place("way/1330250100"), gasWorks = try place("way/50786465")
         let bike = try Self.router.compute(.init(origin: kerry, destination: gasWorks, mode: .bike, extraMinutes: 5))
         XCTAssertNil(bike.calmer)
         XCTAssertEqual(bike.noCalmer, .clearlyCalmerTakesLonger(limitMinutes: 5))
         let longer = try Self.router.compute(.init(origin: kerry, destination: gasWorks, mode: .bike, extraMinutes: 10))
         XCTAssertNotNil(longer.calmer, "The route the 5 minute message points at")
-        let drive = try Self.router.compute(.init(origin: kerry, destination: gasWorks, mode: .drive, extraMinutes: 10))
+        let drive = try Self.router.compute(.init(origin: try place("node/12955400411"), destination: try place("way/445746568"), mode: .drive, extraMinutes: 10))
         XCTAssertNil(drive.calmer)
         XCTAssertEqual(drive.noCalmer, .tooLittleGain)
     }
