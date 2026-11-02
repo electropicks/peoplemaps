@@ -76,6 +76,21 @@ Add or update a region file:
 
 `PEOPLEMAPS_DATA_URL` points the fetch at another directory URL (a local `file://` folder works) for testing.
 
+### seattle-all
+
+All of Seattle (47.49, -122.44, 47.74, -122.24), release `data-seattle-all-2026-11`. The app bundle ships it when it is
+fetched and the fixture otherwise: a "Bundle fetched region" build phase (from `Scripts/generate_project.py`) copies
+`Data/region/seattle-all/expected/{seattle-graph.bin,seattle-map.geojson,seattle-search.sqlite.gz}` into the app,
+and `Bundle.dataFile` in Core prefers the app bundle's copy over the package's fixture. `swift test` and CI never see it.
+Run `Scripts/fetch_data seattle-all` and rebuild the app to switch.
+
+Its inputs are made, not downloaded as Overpass JSON: `Scripts/pbf_to_snapshot.py` turns one dated Geofabrik Washington
+extract into `seattle-osm`, `seattle-parks`, `seattle-search` (and `seattle-coast`) snapshots in the importer's format, in about
+15 seconds with the standard library. The extract's URL, SHA-256 and date go into each snapshot and from there into
+`provenance.json`. The extract itself is the unpinned release asset `seattle-all--source__washington-261031.osm.pbf`.
+Elevation comes from `Scripts/fetch_dem_tiles.py 47.45 -122.45 47.75 -122.20 ...` (a 0.05 degree margin, so no 0 m fringe).
+The full import takes about 11 minutes and 3 GB.
+
 ## Routing and budget
 
 `NativeRouter` uses an incoming directed edge as its Dijkstra state. This keeps
