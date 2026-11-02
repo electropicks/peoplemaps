@@ -1,6 +1,6 @@
-import collections, gzip, json, pathlib, sqlite3, struct, tempfile, unittest
+import array, collections, gzip, json, pathlib, sqlite3, struct, tempfile, unittest
 import build_search, build_tiles
-from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks
+from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,load_dem,compile_restrictions
 
 class ImportPolicyTests(unittest.TestCase):
     def test_private_road_excluded(self):
@@ -9,6 +9,11 @@ class ImportPolicyTests(unittest.TestCase):
         self.assertTrue(access({'highway':'path','access':'no','bicycle':'designated'},'bike'))
     def test_footpath_without_bike_permission_excluded(self):
         self.assertFalse(access({'highway':'footway'},'bike'))
+    def test_hov_only_way_is_not_drivable_solo(self):
+        self.assertFalse(access({'highway':'motorway','hov':'designated'},'drive'))
+        self.assertTrue(access({'highway':'motorway','hov':'lane'},'drive'))  # one lane of several: still the road
+        self.assertTrue(access({'highway':'motorway','hov:lanes':'|designated'},'drive'))
+        self.assertTrue(access({'highway':'cycleway','hov':'designated'},'bike'))  # only drivers are affected
     def test_cycleway_is_not_drivable(self):
         self.assertFalse(access({'highway':'cycleway'},'drive'))
     def test_conditional_access_excluded(self):
@@ -459,5 +464,70 @@ class SearchIndexTests(unittest.TestCase):
             self.assertEqual(summary['overture']['shipped'], 1)
             self.assertEqual(summary['overture']['shippedBySource'], {'Overture · Foursquare': 1})
             db.close()
+
+def tiled_dem(blocks, tile=2, across=2, down=2):
+    """A gzipped uncompressed float32 tiled GeoTIFF; a block given as None is sparse (byte count 0)."""
+    w, h = tile * across, tile * down; n = len(blocks); data = b''; offsets = []; counts = []
+    ifd_len = 2 + 12 * 14 + 4; arrays_at = 8 + ifd_len; scale_at = arrays_at + 8 * n; tie_at = scale_at + 24; data_at = tie_at + 48
+    for b in blocks:
+        offsets.append(data_at + len(data)); counts.append(0 if b is None else 4 * tile * tile)
+        data += b'' if b is None else array.array('f', b).tobytes()
+    entries = [(256,3,1,w),(257,3,1,h),(258,3,1,32),(259,3,1,1),(262,3,1,1),(277,3,1,1),(284,3,1,1),(322,3,1,tile),(323,3,1,tile),
+               (324,4,n,8+ifd_len),(325,4,n,8+ifd_len+4*n),(339,3,1,3),(33550,12,3,scale_at),(33922,12,6,tie_at)]
+    ifd = struct.pack('<H', len(entries)) + b''.join(struct.pack('<HHII', *e) for e in entries) + struct.pack('<I', 0)
+    blob = b'II*\x00' + struct.pack('<I', 8) + ifd + struct.pack(f'<{n}I', *offsets) + struct.pack(f'<{n}I', *counts) \
+        + struct.pack('<3d', 1, 1, 0) + struct.pack('<6d', 0, 0, 0, 0, down * tile, 0) + data
+    return gzip.compress(blob, mtime=0)
+
+def restriction(id_, kind, members, **tags):
+    return {'type': 'relation', 'id': id_, 'tags': {'type': 'restriction', 'restriction': kind, **tags},
+            'members': [{'type': t, 'ref': r, 'role': role} for role, t, r in members]}
+
+class RestrictionTests(unittest.TestCase):
+    # F (1,2,3) meets V (3,4) at 3; V meets T (4,5,6) at 4.
+    WAYS = {1: {'nodes': [1, 2, 3]}, 2: {'nodes': [3, 4]}, 3: {'nodes': [4, 5, 6]}}
+    def compile(self, *relations): return compile_restrictions(list(relations), self.WAYS)
+    def test_via_node_is_kept(self):
+        r, c = self.compile(restriction(10, 'no_left_turn', [('from', 'way', 1), ('via', 'node', 3), ('to', 'way', 2)]))
+        self.assertEqual([(x['viaOSM'], x['fromWay'], x['toWay']) for x in r], [(3, 1, 2), (3, 1, 2)])  # drive and bike
+        self.assertEqual(c['viaNode'], 2)
+    def test_via_way_no_bans_only_the_final_transition(self):
+        r, c = self.compile(restriction(11, 'no_right_turn', [('from', 'way', 1), ('via', 'way', 2), ('to', 'way', 3)]))
+        self.assertEqual({(x['viaOSM'], x['fromWay'], x['toWay'], x['mode']) for x in r}, {(4, 2, 3, 'drive'), (4, 2, 3, 'bike')})
+        self.assertEqual(c['viaWayFinalTransitionBanned'], 2)
+    def test_via_way_only_and_u_turn_are_ignored_and_counted(self):
+        r, c = self.compile(restriction(12, 'only_straight_on', [('from', 'way', 1), ('via', 'way', 2), ('to', 'way', 3)]),
+                            restriction(13, 'no_u_turn', [('from', 'way', 1), ('via', 'way', 2), ('to', 'way', 3)]))
+        self.assertEqual(r, [])
+        self.assertEqual((c['viaWayOnlyIgnored'], c['viaWayNoUTurnIgnored']), (2, 2))
+    def test_conditional_and_malformed_are_ignored_and_counted(self):
+        r, c = self.compile(restriction(14, 'no_left_turn', [('from', 'way', 1), ('via', 'node', 3), ('to', 'way', 2)], **{'restriction:conditional': 'no_left_turn @ (Mo-Fr)'}),
+                            restriction(15, 'no_left_turn', [('from', 'way', 1), ('to', 'way', 2)]))
+        self.assertEqual(r, [])
+        self.assertEqual((c['conditionalIgnored'], c['malformedIgnored']), (2, 2))
+
+class BarrierTests(unittest.TestCase):
+    def test_lift_gate_blocks_except_on_a_bridge_or_with_access_yes(self):
+        gate = {'barrier': 'lift_gate'}
+        self.assertTrue(node_blocks(gate, 'drive')); self.assertTrue(node_blocks(gate, 'bike'))
+        self.assertFalse(node_blocks(gate, 'drive', bridge_node=True)); self.assertFalse(node_blocks(gate, 'bike', bridge_node=True))
+        self.assertFalse(node_blocks({**gate, 'access': 'yes'}, 'drive'))
+        self.assertTrue(node_blocks({**gate, 'access': 'no'}, 'drive', bridge_node=True))  # an explicit ban still wins
+        self.assertTrue(node_blocks({'barrier': 'gate'}, 'drive', bridge_node=True))  # only lift gates are special
+
+class ElevationTests(unittest.TestCase):
+    def sample(self, blocks):
+        with tempfile.TemporaryDirectory() as d:
+            path = pathlib.Path(d) / 'dem.tif.gz'; path.write_bytes(tiled_dem(blocks))
+            z, _ = load_dem(path)
+        return lambda x, y: z(4 - (y + 0.5), x + 0.5)  # pixel centres; north is the top row
+    def test_blocks_land_where_they_belong(self):
+        at = self.sample([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+        self.assertEqual([at(0, 0), at(1, 0), at(2, 0), at(3, 0), at(0, 1), at(3, 3)], [1, 2, 5, 6, 3, 16])
+    def test_sparse_block_does_not_shear_the_blocks_after_it(self):
+        # Water tiles have blocks whose byte count is 0. Assigning their empty slice used to shrink the grid.
+        at = self.sample([[1, 2, 3, 4], None, [9, 10, 11, 12], [13, 14, 15, 16]])
+        self.assertEqual([at(0, 0), at(1, 1), at(2, 0), at(3, 0), at(3, 1)], [1, 4, 0, 0, 0])  # the gap reads as 0 m
+        self.assertEqual([at(0, 2), at(1, 3), at(2, 2), at(3, 3)], [9, 12, 13, 16])
 
 if __name__=='__main__':unittest.main()

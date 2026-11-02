@@ -8,7 +8,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = pathlib.Path(os.environ.get('PEOPLEMAPS_OUT', ROOT / 'Core/Resources'))
 DATA = pathlib.Path(os.environ.get('PEOPLEMAPS_DATA', ROOT / 'Data'))
 def shown(path):
-    return str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else path.name
+    # A fetched region's files are named alone, so provenance doesn't depend on where the checkout is or how the import was started.
+    return str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) and not path.is_relative_to(ROOT / 'Data/region') else path.name
 REPORT = DATA  # provenance.json; --out redirects it with the outputs
 BBOX = [float(x) for x in os.environ['PEOPLEMAPS_BBOX'].split(',')] if os.environ.get('PEOPLEMAPS_BBOX') else [47.615, -122.390, 47.678, -122.300]  # S,W,N,E
 WATER_MARGIN = 0.1  # degrees: water is drawn this far past BBOX, so it doesn't stop in a straight line at the routing edge
@@ -36,6 +37,7 @@ def access(tags, mode):
         return False
     h = tags.get('highway','')
     if mode == 'drive':
+        if tags.get('hov') == 'designated': return False  # the whole way is HOV-only; lane-level hov:lanes stays routable
         return h in ROAD and tags.get('service') not in {'driveway','parking_aisle','emergency_access'}
     if h in HIGHWAY:
         return False
@@ -155,12 +157,14 @@ def load_dem(path):
     w, h, tw, th = tags[256][0], tags[257][0], tags[322][0], tags[323][0]
     grid = array.array('f', bytes(4*w*h)); across = (w+tw-1)//tw
     for k, (o, c) in enumerate(zip(tags[324], tags[325])):
+        if c == 0: continue  # sparse block (water): no data, stays 0. Assigning its empty slice would shrink the array and shear every block after it.
         tile = array.array('f', b[o:o+c]); ty, tx = divmod(k, across)
         for r in range(th):
             y = ty*th + r
             if y >= h: break
             x0 = tx*tw; n = min(tw, w-x0)
             grid[y*w+x0:y*w+x0+n] = tile[r*tw:r*tw+n]
+    assert len(grid) == w*h, 'DEM grid changed size while reading blocks'
     sx, sy = tags[33550][:2]; lon0, lat0 = tags[33922][3:5]
     def z(lat, lon):
         fx = (lon-lon0)/sx - 0.5; fy = (lat0-lat)/sy - 0.5
@@ -260,13 +264,16 @@ def point_in_ring(p, ring):
         if (a[1]>p[1]) != (b[1]>p[1]) and p[0] < (b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0]: hit=not hit
     return hit
 
-def node_blocks(nt, mode):
-    """Whether a tagged OSM node (barrier, access) blocks a mode under this compiler's policy."""
+def node_blocks(nt, mode, bridge_node=False):
+    """Whether a tagged OSM node (barrier, access) blocks a mode under this compiler's policy.
+    `bridge_node`: the node is on a bridge or a primary-or-bigger road. A lift gate there is a movable bridge's traffic gate
+    (Montlake, 1st Ave S), open between openings; elsewhere a lift gate is a real barrier."""
     own = {'drive': ['motorcar','motor_vehicle'], 'bike': ['bicycle'], 'walk': ['foot']}[mode]
     if any(nt.get(k) in DENY for k in own): return True
     allowed = any(nt.get(k) in YES for k in own)
     if nt.get('access') in DENY and not allowed: return True
     barrier = nt.get('barrier')
+    if barrier == 'lift_gate' and (nt.get('access') in YES or bridge_node): return False
     if not barrier or barrier in {'no','entrance','cattle_grid'} or allowed: return False
     if mode == 'drive': return True
     if mode == 'bike': return barrier not in {'bollard','cycle_barrier','kerb'}
@@ -291,8 +298,12 @@ def read_snapshot(basename):
     p = json.loads(data)
     if p.get('remark'): raise ValueError(p['remark'])
     if raw.exists(): archive.write_bytes(gzip.compress(data,mtime=0))  # archive a fresh download
-    return p, {'file':shown(archive),'sha256':hashlib.sha256(data).hexdigest(),
-               'osmBaseTimestamp':p['osm3s']['timestamp_osm_base']}
+    source = {'file':shown(archive),'sha256':hashlib.sha256(data).hexdigest(),
+              'osmBaseTimestamp':p['osm3s']['timestamp_osm_base']}
+    # A snapshot made by pbf_to_snapshot.py names the Geofabrik extract it came from.
+    for key,name in [('source_url','sourceUrl'),('source_file','sourceFile'),('source_sha256','sourceSha256')]:
+        if key in p['osm3s']: source[name]=p['osm3s'][key]
+    return p, source
 
 def read_sources():
     elements = {}; sources = []
@@ -301,24 +312,41 @@ def read_sources():
         for e in p['elements']: elements[(e['type'],e['id'])] = e
     return elements, sources
 
-def compile_restrictions(relations):
-    restrictions=[]; excluded=collections.defaultdict(set); unsupported=[]
+def compile_restrictions(relations, ways):
+    """Turn restrictions as node restrictions (via node, from way, to way, kind). Never removes a way.
+    Counted by class in the report: a restriction with a single via node is kept as is; one with via ways keeps only a ban
+    of the final transition from the last via way into the to way (node restrictions carry no history, so this may forbid a
+    legal turn but never allows a banned one); the rest can't be represented and are ignored."""
+    restrictions = []; counts = collections.Counter()
     for r in relations:
-        t=r.get('tags',{})
-        if t.get('type')!='restriction':continue
-        m=r['members']; via=[x for x in m if x['role']=='via']; fr=[x['ref'] for x in m if x['role']=='from']; to=[x['ref'] for x in m if x['role']=='to']
-        for mode,keys,exception in [('drive',['restriction:motorcar','restriction:motor_vehicle','restriction'],'motorcar'),('bike',['restriction:bicycle','restriction'],'bicycle')]:
-            if exception in t.get('except','').split(';') or (mode=='drive' and 'motor_vehicle' in t.get('except','').split(';')): continue
-            val=next((t[k] for k in keys if k in t),None)
-            conditional=any(k+':conditional' in t for k in keys)
-            if not val and not conditional:continue
-            supported = len(via)==1 and via[0]['type']=='node' and len(fr)==1 and len(to)==1 and not conditional and val and (val.startswith('no_') or val.startswith('only_'))
-            if supported:
-                restrictions.append({'viaOSM':via[0]['ref'],'fromWay':fr[0],'toWay':to[0],'kind':val,'mode':mode,'osmID':r['id']})
-            else:
-                excluded[mode].update(fr+to+[x['ref'] for x in via if x['type']=='way'])
-                unsupported.append({'osmID':r['id'],'mode':mode})
-    return restrictions, excluded, unsupported
+        t = r.get('tags', {})
+        if t.get('type') != 'restriction': continue
+        m = r['members']; via = [x for x in m if x['role'] == 'via']; fr = [x['ref'] for x in m if x['role'] == 'from']; to = [x['ref'] for x in m if x['role'] == 'to']
+        for mode, keys, exception in [('drive', ['restriction:motorcar','restriction:motor_vehicle','restriction'], 'motorcar'), ('bike', ['restriction:bicycle','restriction'], 'bicycle')]:
+            if exception in t.get('except', '').split(';') or (mode == 'drive' and 'motor_vehicle' in t.get('except', '').split(';')): continue
+            val = next((t[k] for k in keys if k in t), None)
+            conditional = any(k + ':conditional' in t for k in keys)
+            if not val and not conditional: continue
+            if conditional: counts['conditionalIgnored'] += 1; continue
+            known = val.startswith('no_') or val.startswith('only_')
+            via_ways = [x['ref'] for x in via if x['type'] == 'way']
+            if via and len(via_ways) == len(via) and len(fr) == 1 and len(to) == 1 and known:
+                if val.startswith('only_'): counts['viaWayOnlyIgnored'] += 1
+                elif val == 'no_u_turn': counts['viaWayNoUTurnIgnored'] += 1
+                else:
+                    last = via_ways[-1]; before = via_ways[-2] if len(via_ways) > 1 else fr[0]
+                    vw, tw, bw = ways.get(last), ways.get(to[0]), ways.get(before)
+                    if not vw or not tw: counts['malformedIgnored'] += 1; continue
+                    ends = {vw['nodes'][0], vw['nodes'][-1]} & set(tw['nodes'])
+                    if bw and ends - set(bw['nodes']): ends -= set(bw['nodes'])
+                    if not ends: counts['malformedIgnored'] += 1; continue
+                    for n in sorted(ends): restrictions.append({'viaOSM': n, 'fromWay': last, 'toWay': to[0], 'kind': val, 'mode': mode, 'osmID': r['id']})
+                    counts['viaWayFinalTransitionBanned'] += 1
+            elif len(via) == 1 and via[0]['type'] == 'node' and len(fr) == 1 and len(to) == 1 and known:
+                restrictions.append({'viaOSM': via[0]['ref'], 'fromWay': fr[0], 'toWay': to[0], 'kind': val, 'mode': mode, 'osmID': r['id']})
+                counts['viaNode'] += 1
+            else: counts['malformedIgnored'] += 1
+    return restrictions, counts
 
 # Binary graph, schema v3 (little-endian, every section padded to 8 bytes). Read by Core/GraphBinary.swift.
 #   header 64 B: magic 'PMGB', u32 version, 4 x f64 bounds (S,W,N,E), u32 counts: strings, nodes, segments, points, json bytes
@@ -451,7 +479,7 @@ def main():
     allnodes={i:e for (typ,i),e in elements.items() if typ=='node'}
     allways={i:e for (typ,i),e in elements.items() if typ=='way'}
     relations=[e for (typ,i),e in elements.items() if typ=='relation']
-    restrictions, excluded, unsupported = compile_restrictions(relations)
+    restrictions, restriction_classes = compile_restrictions(relations, allways)
 
     ways=[]
     for w in allways.values():
@@ -460,6 +488,9 @@ def main():
         if not any(inside(allnodes[n]) for n in w['nodes'] if n in allnodes):continue
         if any(access(t,mode) for mode in MODES): ways.append(w)
     ways.sort(key=lambda w:w['id'])
+    # Nodes of bridges and of primary-or-bigger roads: a lift gate there is a movable bridge's gate (see node_blocks).
+    BIG={'motorway','motorway_link','trunk','trunk_link','primary','primary_link'}
+    bridge_nodes={n for w in ways if w['tags'].get('bridge') not in {None,'no'} or 'bridge:movable' in w['tags'] or w['tags']['highway'] in BIG for n in w['nodes']}
     counts=collections.Counter(n for w in ways for n in set(w['nodes']))
     junctions={n for n,c in counts.items() if c>1}
     junctions.update(n for n,e in allnodes.items() if e.get('tags',{}).get('highway') in {'traffic_signals','stop','give_way','crossing'} or 'barrier' in e.get('tags',{}))
@@ -474,7 +505,7 @@ def main():
         for n in w['nodes']:
             if RANK[cls]>RANK[crossed_class.get(n)]: crossed_class[n]=cls
 
-    nodes=[]; nodeindex={}; segments=[]; names={}; geometry=[]
+    nodes=[]; nodeindex={}; segments=[]; names={}; geometry=[]; short_kept=0
     def index(n):
         if n not in nodeindex:
             nodeindex[n]=len(nodes); v=allnodes[n]
@@ -491,13 +522,16 @@ def main():
             if any(n not in allnodes or not inside(allnodes[n]) for n in segment):continue
             pts=[allnodes[n] for n in segment]
             length=sum(distance(a,b) for a,b in zip(pts,pts[1:]))
-            if length<0.5:continue
+            if length<0.5:
+                # Two nodes under half a metre apart still connect their roads (Montlake Bridge's deck meets its approach this way).
+                if segment[0]==segment[-1]:continue
+                short_kept+=1; length=0.5
             per_dir={}
             for direction in [1,-1]:
                 modes=[]
                 for mode in MODES:
-                    if w['id'] in excluded[mode] or not access(t,mode) or direction not in directions(t,mode):continue
-                    if any(node_blocks(allnodes[n].get('tags',{}),mode) for n in segment):continue
+                    if not access(t,mode) or direction not in directions(t,mode):continue
+                    if any(node_blocks(allnodes[n].get('tags',{}),mode,n in bridge_nodes) for n in segment):continue
                     modes.append(mode)
                 end_node=segment[-1] if direction==1 else segment[0]
                 per_dir[direction]={'modes':modes,'facility':facility(t,direction),
@@ -578,7 +612,7 @@ def main():
     (OUT/'seattle-map.pmtiles').write_bytes(map_data)
     directed={mode:sum(mode in s.get(k,{}).get('modes',[]) for s in segments for k in 'fr') for mode in MODES}
     report={'sources':sources,'bounds':BBOX,'nodes':len(nodes),'segments':len(segments),'directedEdgesByMode':directed,
-            'places':len(places),'supportedRestrictions':len(mapped),'unsupportedRestrictionsConservativelyExcluded':unsupported,
+            'places':len(places),'supportedRestrictions':len(mapped),'restrictionClasses':dict(sorted(restriction_classes.items())),'shortSegmentsKept':short_kept,
             'surfaceTaggedSegments':sum('surface' in s for s in segments),
             'sidewalkTaggedRoadSegments':sum('sidewalk' in s for s in segments),
             'sidewalksBesideRoad':collections.Counter(s.get('besideRoad','none') for s in segments if s.get('footway')=='sidewalk'),
@@ -587,8 +621,7 @@ def main():
             'signalNodes':sum('signal' in n for n in nodes),
             'structureNodesInterpolated':len(lifted),'search':search,'map':map_summary}
     (REPORT/'provenance.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
-    print(json.dumps({k:v for k,v in report.items() if k!='unsupportedRestrictionsConservativelyExcluded'},indent=2,sort_keys=True))
-    print('Conservative restriction exclusions:',len(unsupported))
+    print(json.dumps(report,indent=2,sort_keys=True))
 
 def speed_mph(maxspeed):
     try: value=float((maxspeed or '').split(' ')[0])

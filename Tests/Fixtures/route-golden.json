@@ -2,11 +2,11 @@
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 180,
-      "edges" : "3f7c80bed61e234e",
-      "meters" : 2278.84,
-      "seconds" : 2158.992857,
-      "stress" : 528.5398
+      "count" : 178,
+      "edges" : "dd2fb166fd5a8eb6",
+      "meters" : 2273.85,
+      "seconds" : 2155.678571,
+      "stress" : 528.6828
     },
     "key" : "node\/10115680036>node\/2061048094 walk 0 default",
     "reasons" : [
@@ -15,31 +15,33 @@
   },
   {
     "calmer" : {
-      "count" : 180,
-      "edges" : "ac68408b5f35a042",
-      "meters" : 2276.3,
-      "seconds" : 2206.928571,
-      "stress" : 490.0238
+      "count" : 177,
+      "edges" : "ec4329ed52bebf71",
+      "meters" : 2270.12,
+      "seconds" : 2257.764286,
+      "stress" : 365.431
     },
     "candidates" : 6,
     "fastest" : {
-      "count" : 180,
-      "edges" : "3f7c80bed61e234e",
-      "meters" : 2278.84,
-      "seconds" : 2158.992857,
-      "stress" : 528.5398
+      "count" : 178,
+      "edges" : "dd2fb166fd5a8eb6",
+      "meters" : 2273.85,
+      "seconds" : 2155.678571,
+      "stress" : 528.6828
     },
     "key" : "node\/10115680036>node\/2061048094 walk 5 default",
     "reasons" : [
-      "1 fewer marked crossing without a signal",
-      "Tradeoff: 1 more signalled crossing"
+      "1 fewer unmarked crossing of a busy street",
+      "2 fewer marked crossings without a signal",
+      "1 fewer side-street crossing",
+      "Tradeoff: 2 more signalled crossings"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
       "count" : 122,
-      "edges" : "d23ee15586e3146a",
+      "edges" : "309bf884f39634c7",
       "meters" : 2349.45,
       "seconds" : 727.654,
       "stress" : 1472.88595
@@ -52,7 +54,7 @@
   {
     "calmer" : {
       "count" : 122,
-      "edges" : "27c42bd250b1fd4c",
+      "edges" : "9942a746a2af03b1",
       "meters" : 2349.99,
       "seconds" : 733.162,
       "stress" : 1340.17675
@@ -60,7 +62,7 @@
     "candidates" : 3,
     "fastest" : {
       "count" : 122,
-      "edges" : "d23ee15586e3146a",
+      "edges" : "309bf884f39634c7",
       "meters" : 2349.45,
       "seconds" : 727.654,
       "stress" : 1472.88595
@@ -78,7 +80,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 121,
-      "edges" : "8949b39527d9fd2f",
+      "edges" : "56aa1448b5e89892",
       "meters" : 2358.65,
       "seconds" : 490.53594,
       "stress" : 578.9954
@@ -92,7 +94,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 121,
-      "edges" : "8949b39527d9fd2f",
+      "edges" : "56aa1448b5e89892",
       "meters" : 2358.65,
       "seconds" : 490.53594,
       "stress" : 578.9954
@@ -106,7 +108,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 102,
-      "edges" : "d74337f0a8e731a6",
+      "edges" : "81a714405886a55f",
       "meters" : 2127.05,
       "seconds" : 1926.821429,
       "stress" : 669.4364
@@ -119,7 +121,7 @@
   {
     "calmer" : {
       "count" : 105,
-      "edges" : "7a3e6426c1c9523c",
+      "edges" : "fe7134eebfa3ae18",
       "meters" : 2162.12,
       "seconds" : 2032.121429,
       "stress" : 442.3672
@@ -127,7 +129,7 @@
     "candidates" : 5,
     "fastest" : {
       "count" : 102,
-      "edges" : "d74337f0a8e731a6",
+      "edges" : "81a714405886a55f",
       "meters" : 2127.05,
       "seconds" : 1926.821429,
       "stress" : 669.4364
@@ -144,7 +146,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 76,
-      "edges" : "f9d350b36d34eb68",
+      "edges" : "ecd39f594501ade0",
       "meters" : 2290.86,
       "seconds" : 873.082982,
       "stress" : 1439.16205
@@ -157,7 +159,7 @@
   {
     "calmer" : {
       "count" : 84,
-      "edges" : "ce147b3f741e3770",
+      "edges" : "dfd841a13bf48b64",
       "meters" : 2892.41,
       "seconds" : 963.567429,
       "stress" : 964.6482
@@ -165,7 +167,7 @@
     "candidates" : 5,
     "fastest" : {
       "count" : 76,
-      "edges" : "f9d350b36d34eb68",
+      "edges" : "ecd39f594501ade0",
       "meters" : 2290.86,
       "seconds" : 873.082982,
       "stress" : 1439.16205
@@ -183,7 +185,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 57,
-      "edges" : "f79ee707f00877c2",
+      "edges" : "bc681b01b6e3db6a",
       "meters" : 2515.07,
       "seconds" : 328.16947,
       "stress" : 514.968
@@ -196,7 +198,7 @@
   {
     "calmer" : {
       "count" : 78,
-      "edges" : "aebf4d594a388954",
+      "edges" : "c953251c5a57aba8",
       "meters" : 2326.85,
       "seconds" : 361.361086,
       "stress" : 361.7845
@@ -204,7 +206,7 @@
     "candidates" : 3,
     "fastest" : {
       "count" : 57,
-      "edges" : "f79ee707f00877c2",
+      "edges" : "bc681b01b6e3db6a",
       "meters" : 2515.07,
       "seconds" : 328.16947,
       "stress" : 514.968
@@ -222,7 +224,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 167,
-      "edges" : "d705bfd3d7a98411",
+      "edges" : "1812812a5ef88c6a",
       "meters" : 2691.83,
       "seconds" : 2066.235714,
       "stress" : 799.7194
@@ -235,15 +237,15 @@
   {
     "calmer" : {
       "count" : 156,
-      "edges" : "6e4ac38e7f7806fa",
+      "edges" : "3c609c16b18fe5bc",
       "meters" : 2761.28,
       "seconds" : 2271.092857,
-      "stress" : 247.3188
+      "stress" : 251.8506
     },
     "candidates" : 7,
     "fastest" : {
       "count" : 167,
-      "edges" : "d705bfd3d7a98411",
+      "edges" : "1812812a5ef88c6a",
       "meters" : 2691.83,
       "seconds" : 2066.235714,
       "stress" : 799.7194
@@ -252,19 +254,19 @@
     "reasons" : [
       "4 fewer unmarked crossings of busy streets",
       "1 fewer marked crossing without a signal",
-      "7 fewer side-street crossings",
+      "5 fewer side-street crossings",
       "Tradeoff: 3 more signalled crossings",
-      "Tradeoff: 0.2 mi more walking beside arterial traffic"
+      "Tradeoff: 1000 ft more walking beside arterial traffic"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 114,
-      "edges" : "421ae96ce094b05",
-      "meters" : 2734.21,
-      "seconds" : 668.692,
-      "stress" : 1046.18455
+      "count" : 102,
+      "edges" : "ddfe6983c8770dd1",
+      "meters" : 2714.6,
+      "seconds" : 654.62,
+      "stress" : 859.51955
     },
     "key" : "way\/50321784>way\/32526883 bike 0 default",
     "reasons" : [
@@ -273,34 +275,34 @@
   },
   {
     "calmer" : {
-      "count" : 122,
-      "edges" : "a45597df86d7ab12",
-      "meters" : 3287.85,
-      "seconds" : 837.621818,
-      "stress" : 564.55565
+      "count" : 134,
+      "edges" : "8f883318baff98be",
+      "meters" : 3254.45,
+      "seconds" : 803.34,
+      "stress" : 570.83775
     },
-    "candidates" : 6,
+    "candidates" : 5,
     "fastest" : {
-      "count" : 114,
-      "edges" : "421ae96ce094b05",
-      "meters" : 2734.21,
-      "seconds" : 668.692,
-      "stress" : 1046.18455
+      "count" : 102,
+      "edges" : "ddfe6983c8770dd1",
+      "meters" : 2714.6,
+      "seconds" : 654.62,
+      "stress" : 859.51955
     },
     "key" : "way\/50321784>way\/32526883 bike 5 default",
     "reasons" : [
-      "2 fewer left turns across traffic without a signal",
-      "0.4 mi less riding on arterials",
       "2 fewer crossings of busy streets without a signal",
-      "Tradeoff: 14 more turns",
-      "Tradeoff: 0.2 mi more on rough surfaces"
+      "0.2 mi less riding on arterials",
+      "1 fewer left turn across traffic without a signal",
+      "Tradeoff: 9 more turns",
+      "Tradeoff: 2 more traffic signals"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
       "count" : 110,
-      "edges" : "b042b98096b03c61",
+      "edges" : "c90980dc89976a95",
       "meters" : 2970.81,
       "seconds" : 368.370795,
       "stress" : 414.304
@@ -313,7 +315,7 @@
   {
     "calmer" : {
       "count" : 155,
-      "edges" : "a2ccb73f9f104e70",
+      "edges" : "7ab741eb30ae74ba",
       "meters" : 3952.85,
       "seconds" : 484.452532,
       "stress" : 188.3625
@@ -321,7 +323,7 @@
     "candidates" : 4,
     "fastest" : {
       "count" : 110,
-      "edges" : "b042b98096b03c61",
+      "edges" : "c90980dc89976a95",
       "meters" : 2970.81,
       "seconds" : 368.370795,
       "stress" : 414.304
@@ -339,7 +341,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 103,
-      "edges" : "ed9db7ce47e3c576",
+      "edges" : "675086047981d320",
       "meters" : 2922.79,
       "seconds" : 2121.707143,
       "stress" : 132.3017
@@ -352,7 +354,7 @@
   {
     "calmer" : {
       "count" : 98,
-      "edges" : "8f0f581a5d45f2ca",
+      "edges" : "2ad68b38db43996d",
       "meters" : 2919.52,
       "seconds" : 2129.121429,
       "stress" : 101.0295
@@ -360,7 +362,7 @@
     "candidates" : 4,
     "fastest" : {
       "count" : 103,
-      "edges" : "ed9db7ce47e3c576",
+      "edges" : "675086047981d320",
       "meters" : 2922.79,
       "seconds" : 2121.707143,
       "stress" : 132.3017
@@ -376,7 +378,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 103,
-      "edges" : "7d1add2f04715b6b",
+      "edges" : "f2f3e50b29ceba31",
       "meters" : 2941.22,
       "seconds" : 656.033429,
       "stress" : 757.663
@@ -389,7 +391,7 @@
   {
     "calmer" : {
       "count" : 104,
-      "edges" : "6c5e4fb812a08fd3",
+      "edges" : "956c3c9fd2e7af93",
       "meters" : 3108.41,
       "seconds" : 748.591714,
       "stress" : 487.33775
@@ -397,7 +399,7 @@
     "candidates" : 4,
     "fastest" : {
       "count" : 103,
-      "edges" : "7d1add2f04715b6b",
+      "edges" : "f2f3e50b29ceba31",
       "meters" : 2941.22,
       "seconds" : 656.033429,
       "stress" : 757.663
@@ -414,7 +416,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 111,
-      "edges" : "7ebc6e8a653dedf2",
+      "edges" : "bbdf44bd599cc69e",
       "meters" : 3348.28,
       "seconds" : 505.295365,
       "stress" : 495.4766
@@ -427,7 +429,7 @@
   {
     "calmer" : {
       "count" : 124,
-      "edges" : "c2b6d6ac1bed8c45",
+      "edges" : "a334ca8c59afb9e3",
       "meters" : 3382.02,
       "seconds" : 549.408778,
       "stress" : 337.3723
@@ -435,7 +437,7 @@
     "candidates" : 3,
     "fastest" : {
       "count" : 111,
-      "edges" : "7ebc6e8a653dedf2",
+      "edges" : "bbdf44bd599cc69e",
       "meters" : 3348.28,
       "seconds" : 505.295365,
       "stress" : 495.4766
@@ -453,7 +455,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 106,
-      "edges" : "2d69aa50e2063521",
+      "edges" : "28799b15578ca3d8",
       "meters" : 2746.41,
       "seconds" : 2203.971429,
       "stress" : 551.3932
@@ -466,7 +468,7 @@
   {
     "calmer" : {
       "count" : 110,
-      "edges" : "4284d198987143c8",
+      "edges" : "6cc96730c8a8c5c3",
       "meters" : 2735.07,
       "seconds" : 2237.621429,
       "stress" : 457.84
@@ -474,7 +476,7 @@
     "candidates" : 5,
     "fastest" : {
       "count" : 106,
-      "edges" : "2d69aa50e2063521",
+      "edges" : "28799b15578ca3d8",
       "meters" : 2746.41,
       "seconds" : 2203.971429,
       "stress" : 551.3932
@@ -490,7 +492,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 94,
-      "edges" : "4763cfc45f1c349e",
+      "edges" : "618f291217ad542d",
       "meters" : 2860.41,
       "seconds" : 803.573446,
       "stress" : 1640.943
@@ -503,7 +505,7 @@
   {
     "calmer" : {
       "count" : 119,
-      "edges" : "124db65eafbddf38",
+      "edges" : "fc81ca0a3cac982e",
       "meters" : 3443.4,
       "seconds" : 1016.565946,
       "stress" : 1128.1401
@@ -511,7 +513,7 @@
     "candidates" : 4,
     "fastest" : {
       "count" : 94,
-      "edges" : "4763cfc45f1c349e",
+      "edges" : "618f291217ad542d",
       "meters" : 2860.41,
       "seconds" : 803.573446,
       "stress" : 1640.943
@@ -529,7 +531,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 98,
-      "edges" : "8df648e9498a3a8c",
+      "edges" : "9797a4833c650930",
       "meters" : 2907.18,
       "seconds" : 375.668456,
       "stress" : 416.4968
@@ -542,7 +544,7 @@
   {
     "calmer" : {
       "count" : 116,
-      "edges" : "ac4b07d2a4eb7c5d",
+      "edges" : "b86c9de71670958e",
       "meters" : 3237.87,
       "seconds" : 402.787312,
       "stress" : 160.8942
@@ -550,7 +552,7 @@
     "candidates" : 2,
     "fastest" : {
       "count" : 98,
-      "edges" : "8df648e9498a3a8c",
+      "edges" : "9797a4833c650930",
       "meters" : 2907.18,
       "seconds" : 375.668456,
       "stress" : 416.4968
@@ -568,10 +570,10 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 109,
-      "edges" : "f0baaceb97b77859",
-      "meters" : 2107.54,
-      "seconds" : 1690.109524,
-      "stress" : 989.5485
+      "edges" : "46abacf244b69240",
+      "meters" : 2102.35,
+      "seconds" : 1687.902381,
+      "stress" : 1035.7257
     },
     "key" : "node\/2138396795>way\/352673556 walk 0 default",
     "reasons" : [
@@ -580,32 +582,33 @@
   },
   {
     "calmer" : {
-      "count" : 106,
-      "edges" : "80bd00b83a950834",
-      "meters" : 2203.16,
-      "seconds" : 1890.659524,
-      "stress" : 579.6457
+      "count" : 110,
+      "edges" : "41b99cdc6b6c7c3a",
+      "meters" : 2137.58,
+      "seconds" : 1944.614286,
+      "stress" : 568.1751
     },
-    "candidates" : 6,
+    "candidates" : 5,
     "fastest" : {
       "count" : 109,
-      "edges" : "f0baaceb97b77859",
-      "meters" : 2107.54,
-      "seconds" : 1690.109524,
-      "stress" : 989.5485
+      "edges" : "46abacf244b69240",
+      "meters" : 2102.35,
+      "seconds" : 1687.902381,
+      "stress" : 1035.7257
     },
     "key" : "node\/2138396795>way\/352673556 walk 5 default",
     "reasons" : [
       "4 fewer unmarked crossings of busy streets",
-      "Tradeoff: 3 more signalled crossings",
-      "Tradeoff: 1 more side-street crossing"
+      "2 fewer marked crossings without a signal",
+      "Tradeoff: 5 more signalled crossings",
+      "Tradeoff: 17 more steps"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
       "count" : 83,
-      "edges" : "3663c50640c3ee35",
+      "edges" : "66e521c3d9223569",
       "meters" : 2172.65,
       "seconds" : 692.617818,
       "stress" : 1199.4125
@@ -618,7 +621,7 @@
   {
     "calmer" : {
       "count" : 88,
-      "edges" : "cfe091a4b9fb2878",
+      "edges" : "53b2638530641f8",
       "meters" : 2300.66,
       "seconds" : 769.32639,
       "stress" : 955.7412
@@ -626,7 +629,7 @@
     "candidates" : 5,
     "fastest" : {
       "count" : 83,
-      "edges" : "3663c50640c3ee35",
+      "edges" : "66e521c3d9223569",
       "meters" : 2172.65,
       "seconds" : 692.617818,
       "stress" : 1199.4125
@@ -643,11 +646,11 @@
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 86,
-      "edges" : "843b95c9c0b7b190",
-      "meters" : 2412.04,
-      "seconds" : 378.040265,
-      "stress" : 683.0668
+      "count" : 92,
+      "edges" : "6ae4aa0de5f91616",
+      "meters" : 2415.83,
+      "seconds" : 367.720159,
+      "stress" : 751.8187
     },
     "key" : "node\/2138396795>way\/352673556 drive 0 default",
     "reasons" : [
@@ -656,37 +659,37 @@
   },
   {
     "calmer" : {
-      "count" : 100,
-      "edges" : "b5bf958a5d387f77",
-      "meters" : 2723.36,
-      "seconds" : 445.600617,
-      "stress" : 247.0113
+      "count" : 81,
+      "edges" : "8577c5fbe56f9ca8",
+      "meters" : 2335.55,
+      "seconds" : 414.207006,
+      "stress" : 249.0113
     },
-    "candidates" : 2,
+    "candidates" : 3,
     "fastest" : {
-      "count" : 86,
-      "edges" : "843b95c9c0b7b190",
-      "meters" : 2412.04,
-      "seconds" : 378.040265,
-      "stress" : 683.0668
+      "count" : 92,
+      "edges" : "6ae4aa0de5f91616",
+      "meters" : 2415.83,
+      "seconds" : 367.720159,
+      "stress" : 751.8187
     },
     "key" : "node\/2138396795>way\/352673556 drive 5 default",
     "reasons" : [
       "3 fewer left turns across traffic without a signal",
+      "1 fewer crossing of a busy street without a signal",
       "1 fewer intersection of five or more streets",
-      "3 fewer turns",
-      "Tradeoff: 5 more traffic signals",
+      "Tradeoff: 6 more traffic signals",
       "Tradeoff: 1 more left turn at a signal"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 128,
-      "edges" : "4042e7d26fcdf9e8",
-      "meters" : 2657.06,
-      "seconds" : 2125.9,
-      "stress" : 509.9874
+      "count" : 164,
+      "edges" : "562fdd2ff6f9326a",
+      "meters" : 2555.44,
+      "seconds" : 2111.109524,
+      "stress" : 867.076
     },
     "key" : "way\/462865832>node\/2134343249 walk 0 default",
     "reasons" : [
@@ -695,33 +698,33 @@
   },
   {
     "calmer" : {
-      "count" : 140,
-      "edges" : "e2d3ab0f777bf49c",
-      "meters" : 2663.62,
-      "seconds" : 2362.835714,
-      "stress" : 307.4104
+      "count" : 138,
+      "edges" : "b149515de8f5446c",
+      "meters" : 2662.43,
+      "seconds" : 2362.235714,
+      "stress" : 307.6104
     },
     "candidates" : 5,
     "fastest" : {
-      "count" : 128,
-      "edges" : "4042e7d26fcdf9e8",
-      "meters" : 2657.06,
-      "seconds" : 2125.9,
-      "stress" : 509.9874
+      "count" : 164,
+      "edges" : "562fdd2ff6f9326a",
+      "meters" : 2555.44,
+      "seconds" : 2111.109524,
+      "stress" : 867.076
     },
     "key" : "way\/462865832>node\/2134343249 walk 5 default",
     "reasons" : [
-      "2 fewer unmarked crossings of busy streets",
-      "1 fewer marked crossing without a signal",
-      "23 ft less climbing",
-      "Tradeoff: 5 more signalled crossings"
+      "3 fewer unmarked crossings of busy streets",
+      "3 fewer marked crossings without a signal",
+      "68 fewer steps",
+      "Tradeoff: 4 more signalled crossings"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
       "count" : 91,
-      "edges" : "b6d30e57193af323",
+      "edges" : "6ae5ddcc3329e848",
       "meters" : 2631.01,
       "seconds" : 809.902,
       "stress" : 1037.5365
@@ -733,16 +736,16 @@
   },
   {
     "calmer" : {
-      "count" : 100,
-      "edges" : "fa9c83cf08c904b2",
-      "meters" : 2702.1,
-      "seconds" : 837.37,
-      "stress" : 708.1535
+      "count" : 104,
+      "edges" : "62d651dd127cbb77",
+      "meters" : 2850.27,
+      "seconds" : 852.054,
+      "stress" : 552.51225
     },
-    "candidates" : 3,
+    "candidates" : 2,
     "fastest" : {
       "count" : 91,
-      "edges" : "b6d30e57193af323",
+      "edges" : "6ae5ddcc3329e848",
       "meters" : 2631.01,
       "seconds" : 809.902,
       "stress" : 1037.5365
@@ -750,17 +753,17 @@
     "key" : "way\/462865832>node\/2134343249 bike 5 default",
     "reasons" : [
       "3 fewer left turns across traffic without a signal",
-      "0.2 mi less riding on arterials",
-      "1 fewer stop sign",
-      "Tradeoff: 3 more traffic signals",
-      "Tradeoff: 1 more left turn at a signal"
+      "0.6 mi less riding on arterials",
+      "3 fewer traffic signals",
+      "Tradeoff: 1 more crossing of a busy street without a signal",
+      "Tradeoff: 10 more turns"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
       "count" : 91,
-      "edges" : "f36b697ed06aa210",
+      "edges" : "94c2f30a1d757ba1",
       "meters" : 2688.84,
       "seconds" : 345.784986,
       "stress" : 367
@@ -773,7 +776,7 @@
   {
     "calmer" : {
       "count" : 79,
-      "edges" : "7ccdbf86db5e22a8",
+      "edges" : "1aa2a6a7e003e39e",
       "meters" : 2819.56,
       "seconds" : 378.592072,
       "stress" : 142
@@ -781,7 +784,7 @@
     "candidates" : 3,
     "fastest" : {
       "count" : 91,
-      "edges" : "f36b697ed06aa210",
+      "edges" : "94c2f30a1d757ba1",
       "meters" : 2688.84,
       "seconds" : 345.784986,
       "stress" : 367
@@ -798,11 +801,11 @@
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 77,
-      "edges" : "350671cc3e48636b",
-      "meters" : 1494.93,
-      "seconds" : 1283.807143,
-      "stress" : 636.524
+      "count" : 78,
+      "edges" : "358010b1c5fd7412",
+      "meters" : 1475.55,
+      "seconds" : 1269.464286,
+      "stress" : 633.8848
     },
     "key" : "node\/2167340902>node\/1308152010 walk 0 default",
     "reasons" : [
@@ -811,19 +814,19 @@
   },
   {
     "calmer" : {
-      "count" : 73,
-      "edges" : "99a958a31543d26a",
-      "meters" : 1513.2,
-      "seconds" : 1435.357143,
-      "stress" : 310.4428
+      "count" : 69,
+      "edges" : "eee06f7eb4256944",
+      "meters" : 1513.93,
+      "seconds" : 1435.378571,
+      "stress" : 307.0428
     },
     "candidates" : 5,
     "fastest" : {
-      "count" : 77,
-      "edges" : "350671cc3e48636b",
-      "meters" : 1494.93,
-      "seconds" : 1283.807143,
-      "stress" : 636.524
+      "count" : 78,
+      "edges" : "358010b1c5fd7412",
+      "meters" : 1475.55,
+      "seconds" : 1269.464286,
+      "stress" : 633.8848
     },
     "key" : "node\/2167340902>node\/1308152010 walk 5 default",
     "reasons" : [
@@ -837,7 +840,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 49,
-      "edges" : "445cff6918787541",
+      "edges" : "177f8707985102a",
       "meters" : 1456.5,
       "seconds" : 580.35,
       "stress" : 787.23845
@@ -850,7 +853,7 @@
   {
     "calmer" : {
       "count" : 66,
-      "edges" : "66d84eda423a63cb",
+      "edges" : "69c37367c41514d4",
       "meters" : 2654.59,
       "seconds" : 813.62725,
       "stress" : 484.3685
@@ -858,7 +861,7 @@
     "candidates" : 3,
     "fastest" : {
       "count" : 49,
-      "edges" : "445cff6918787541",
+      "edges" : "177f8707985102a",
       "meters" : 1456.5,
       "seconds" : 580.35,
       "stress" : 787.23845
@@ -876,7 +879,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 50,
-      "edges" : "f2c1420ca163f694",
+      "edges" : "8cf98032c8603ff1",
       "meters" : 1557.06,
       "seconds" : 239.321761,
       "stress" : 244
@@ -889,7 +892,7 @@
   {
     "calmer" : {
       "count" : 65,
-      "edges" : "56144ac074e15fce",
+      "edges" : "fa996709599050c4",
       "meters" : 2226.06,
       "seconds" : 319.182176,
       "stress" : 164
@@ -897,7 +900,7 @@
     "candidates" : 2,
     "fastest" : {
       "count" : 50,
-      "edges" : "f2c1420ca163f694",
+      "edges" : "8cf98032c8603ff1",
       "meters" : 1557.06,
       "seconds" : 239.321761,
       "stress" : 244
@@ -913,11 +916,11 @@
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 111,
-      "edges" : "20c927107915f692",
-      "meters" : 1901.33,
-      "seconds" : 1734.709524,
-      "stress" : 903.2044
+      "count" : 109,
+      "edges" : "c1aa07f10fc0cfbc",
+      "meters" : 1901.76,
+      "seconds" : 1733.266667,
+      "stress" : 901.8044
     },
     "key" : "node\/1297521123>node\/10794143073 walk 0 default",
     "reasons" : [
@@ -926,19 +929,19 @@
   },
   {
     "calmer" : {
-      "count" : 111,
-      "edges" : "2c9148f3a7c898d2",
-      "meters" : 1978.77,
-      "seconds" : 1839.57619,
-      "stress" : 671.412
+      "count" : 109,
+      "edges" : "b631f09d7b29527",
+      "meters" : 1979.2,
+      "seconds" : 1838.133333,
+      "stress" : 670.012
     },
     "candidates" : 6,
     "fastest" : {
-      "count" : 111,
-      "edges" : "20c927107915f692",
-      "meters" : 1901.33,
-      "seconds" : 1734.709524,
-      "stress" : 903.2044
+      "count" : 109,
+      "edges" : "c1aa07f10fc0cfbc",
+      "meters" : 1901.76,
+      "seconds" : 1733.266667,
+      "stress" : 901.8044
     },
     "key" : "node\/1297521123>node\/10794143073 walk 5 default",
     "reasons" : [
@@ -952,7 +955,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 91,
-      "edges" : "b0c9cbcf4e4afcf0",
+      "edges" : "5770e0b9124944d1",
       "meters" : 3297.45,
       "seconds" : 1049.84,
       "stress" : 1405.9264
@@ -965,7 +968,7 @@
   {
     "calmer" : {
       "count" : 95,
-      "edges" : "834692444982efa7",
+      "edges" : "cc99050852d24c8d",
       "meters" : 3957.35,
       "seconds" : 1216.42,
       "stress" : 784.191
@@ -973,7 +976,7 @@
     "candidates" : 4,
     "fastest" : {
       "count" : 91,
-      "edges" : "b0c9cbcf4e4afcf0",
+      "edges" : "5770e0b9124944d1",
       "meters" : 3297.45,
       "seconds" : 1049.84,
       "stress" : 1405.9264
@@ -991,7 +994,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 90,
-      "edges" : "a86a2a81a73b72ff",
+      "edges" : "2b80bd204d6cc52d",
       "meters" : 3264.51,
       "seconds" : 373.375805,
       "stress" : 457.3932
@@ -1004,7 +1007,7 @@
   {
     "calmer" : {
       "count" : 127,
-      "edges" : "b7df6cbf1be9a567",
+      "edges" : "c3143848abda607",
       "meters" : 4580.26,
       "seconds" : 535.561471,
       "stress" : 196.0978
@@ -1012,7 +1015,7 @@
     "candidates" : 3,
     "fastest" : {
       "count" : 90,
-      "edges" : "a86a2a81a73b72ff",
+      "edges" : "2b80bd204d6cc52d",
       "meters" : 3264.51,
       "seconds" : 373.375805,
       "stress" : 457.3932
@@ -1030,7 +1033,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 109,
-      "edges" : "872512e47d9347cc",
+      "edges" : "66faa0de4e109383",
       "meters" : 2106.38,
       "seconds" : 1515.807143,
       "stress" : 531.7054
@@ -1043,7 +1046,7 @@
   {
     "calmer" : {
       "count" : 93,
-      "edges" : "745169907411c9d8",
+      "edges" : "f985d9f401cf045e",
       "meters" : 2192.99,
       "seconds" : 1698.552381,
       "stress" : 205.0631
@@ -1051,7 +1054,7 @@
     "candidates" : 6,
     "fastest" : {
       "count" : 109,
-      "edges" : "872512e47d9347cc",
+      "edges" : "66faa0de4e109383",
       "meters" : 2106.38,
       "seconds" : 1515.807143,
       "stress" : 531.7054
@@ -1069,7 +1072,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 71,
-      "edges" : "7a04fbdd9b6ceab9",
+      "edges" : "2d6711318c75c038",
       "meters" : 2011.35,
       "seconds" : 384.77,
       "stress" : 640.373
@@ -1082,7 +1085,7 @@
   {
     "calmer" : {
       "count" : 84,
-      "edges" : "1b05ec7d26d703cb",
+      "edges" : "cec0d96ea45405a8",
       "meters" : 2253.91,
       "seconds" : 476.243143,
       "stress" : 416.82795
@@ -1090,7 +1093,7 @@
     "candidates" : 3,
     "fastest" : {
       "count" : 71,
-      "edges" : "7a04fbdd9b6ceab9",
+      "edges" : "2d6711318c75c038",
       "meters" : 2011.35,
       "seconds" : 384.77,
       "stress" : 640.373
@@ -1108,7 +1111,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 71,
-      "edges" : "4eeb94c73494b8cf",
+      "edges" : "945b507965b470de",
       "meters" : 1888.84,
       "seconds" : 293.68401,
       "stress" : 450.1659
@@ -1121,7 +1124,7 @@
   {
     "calmer" : {
       "count" : 73,
-      "edges" : "892be41d32296fe",
+      "edges" : "2591d1fbbc076cfc",
       "meters" : 2292.54,
       "seconds" : 328.146609,
       "stress" : 393.8703
@@ -1129,7 +1132,7 @@
     "candidates" : 4,
     "fastest" : {
       "count" : 71,
-      "edges" : "4eeb94c73494b8cf",
+      "edges" : "945b507965b470de",
       "meters" : 1888.84,
       "seconds" : 293.68401,
       "stress" : 450.1659
@@ -1147,10 +1150,10 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 123,
-      "edges" : "eeff829bff8b8e84",
+      "edges" : "1eeee6b3fc381",
       "meters" : 2084.45,
       "seconds" : 1906.392857,
-      "stress" : 550.2776
+      "stress" : 572.614
     },
     "key" : "relation\/907023>node\/4243744790 walk 0 default",
     "reasons" : [
@@ -1159,36 +1162,36 @@
   },
   {
     "calmer" : {
-      "count" : 135,
-      "edges" : "e114f0fab0beb4e0",
-      "meters" : 2149.97,
-      "seconds" : 2100.692857,
-      "stress" : 242.8558
+      "count" : 129,
+      "edges" : "a9ac5eea5f170d3b",
+      "meters" : 2139.23,
+      "seconds" : 2143.771429,
+      "stress" : 286.1548
     },
-    "candidates" : 5,
+    "candidates" : 6,
     "fastest" : {
       "count" : 123,
-      "edges" : "eeff829bff8b8e84",
+      "edges" : "1eeee6b3fc381",
       "meters" : 2084.45,
       "seconds" : 1906.392857,
-      "stress" : 550.2776
+      "stress" : 572.614
     },
     "key" : "relation\/907023>node\/4243744790 walk 5 default",
     "reasons" : [
       "2 fewer unmarked crossings of busy streets",
       "3 fewer marked crossings without a signal",
-      "1000 ft less walking beside arterial traffic",
-      "Tradeoff: 3 more signalled crossings"
+      "500 ft less walking beside arterial traffic",
+      "Tradeoff: 4 more signalled crossings"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 103,
-      "edges" : "5c8cf79359aa7bea",
-      "meters" : 2533.45,
-      "seconds" : 812.271714,
-      "stress" : 924.955
+      "count" : 83,
+      "edges" : "5dba55547e187707",
+      "meters" : 2127.5,
+      "seconds" : 724.281714,
+      "stress" : 989.9528
     },
     "key" : "relation\/907023>node\/4243744790 bike 0 default",
     "reasons" : [
@@ -1198,36 +1201,36 @@
   {
     "calmer" : {
       "count" : 95,
-      "edges" : "eb415582a33c378f",
+      "edges" : "8134beda9deb822c",
       "meters" : 3408.97,
       "seconds" : 1024.125714,
       "stress" : 791.4741
     },
-    "candidates" : 4,
+    "candidates" : 5,
     "fastest" : {
-      "count" : 103,
-      "edges" : "5c8cf79359aa7bea",
-      "meters" : 2533.45,
-      "seconds" : 812.271714,
-      "stress" : 924.955
+      "count" : 83,
+      "edges" : "5dba55547e187707",
+      "meters" : 2127.5,
+      "seconds" : 724.281714,
+      "stress" : 989.9528
     },
     "key" : "relation\/907023>node\/4243744790 bike 5 default",
     "reasons" : [
-      "0.3 mi less riding in traffic on busy arterials",
-      "2 fewer traffic signals",
-      "1 fewer left turn at a signal",
-      "Tradeoff: 0.8 mi more on quiet streets",
-      "Tradeoff: 54 ft more climbing"
+      "1000 ft less riding in traffic on busy arterials",
+      "1 fewer left turn across traffic without a signal",
+      "1 fewer crossing of a busy street without a signal",
+      "Tradeoff: 73 ft more climbing",
+      "Tradeoff: 0.6 mi more on quiet streets"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 97,
-      "edges" : "265421bca79835b9",
-      "meters" : 2555.52,
-      "seconds" : 424.559324,
-      "stress" : 357.4752
+      "count" : 90,
+      "edges" : "e558bad3e72954fd",
+      "meters" : 2325.07,
+      "seconds" : 412.63265,
+      "stress" : 409.1352
     },
     "key" : "relation\/907023>node\/4243744790 drive 0 default",
     "reasons" : [
@@ -1235,24 +1238,35 @@
     ]
   },
   {
-    "candidates" : 2,
+    "calmer" : {
+      "count" : 73,
+      "edges" : "1a3241207358231c",
+      "meters" : 2157.86,
+      "seconds" : 415.671126,
+      "stress" : 329
+    },
+    "candidates" : 3,
     "fastest" : {
-      "count" : 97,
-      "edges" : "265421bca79835b9",
-      "meters" : 2555.52,
-      "seconds" : 424.559324,
-      "stress" : 357.4752
+      "count" : 90,
+      "edges" : "e558bad3e72954fd",
+      "meters" : 2325.07,
+      "seconds" : 412.63265,
+      "stress" : 409.1352
     },
     "key" : "relation\/907023>node\/4243744790 drive 5 default",
     "reasons" : [
-      "Calmest of 2 routes compared, by our estimates."
+      "2 fewer intersections of five or more streets",
+      "4 fewer turns",
+      "2 fewer left turns at signals",
+      "Tradeoff: 4 more stop-and-go stops",
+      "Tradeoff: 2 more traffic signals"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
       "count" : 116,
-      "edges" : "f3d8e24eb79d24fa",
+      "edges" : "85791bd28c35479b",
       "meters" : 2647.28,
       "seconds" : 1979.414286,
       "stress" : 481.0008
@@ -1265,7 +1279,7 @@
   {
     "calmer" : {
       "count" : 104,
-      "edges" : "ab38e56f97ded7ea",
+      "edges" : "62c7ccb59adff7fd",
       "meters" : 2591.85,
       "seconds" : 2191.821429,
       "stress" : 198.795
@@ -1273,7 +1287,7 @@
     "candidates" : 4,
     "fastest" : {
       "count" : 116,
-      "edges" : "f3d8e24eb79d24fa",
+      "edges" : "85791bd28c35479b",
       "meters" : 2647.28,
       "seconds" : 1979.414286,
       "stress" : 481.0008
@@ -1289,11 +1303,11 @@
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 77,
-      "edges" : "7d006773063f43dc",
-      "meters" : 2041.38,
-      "seconds" : 484.830623,
-      "stress" : 602.43605
+      "count" : 108,
+      "edges" : "f61de831cf091e65",
+      "meters" : 2720.08,
+      "seconds" : 675.725179,
+      "stress" : 1253.3732
     },
     "key" : "node\/1158397939>way\/40833028 bike 0 default",
     "reasons" : [
@@ -1301,27 +1315,38 @@
     ]
   },
   {
-    "candidates" : 1,
+    "calmer" : {
+      "count" : 120,
+      "edges" : "f6a16528cc2756e4",
+      "meters" : 2900.16,
+      "seconds" : 701.999321,
+      "stress" : 827.5932
+    },
+    "candidates" : 3,
     "fastest" : {
-      "count" : 77,
-      "edges" : "7d006773063f43dc",
-      "meters" : 2041.38,
-      "seconds" : 484.830623,
-      "stress" : 602.43605
+      "count" : 108,
+      "edges" : "f61de831cf091e65",
+      "meters" : 2720.08,
+      "seconds" : 675.725179,
+      "stress" : 1253.3732
     },
     "key" : "node\/1158397939>way\/40833028 bike 5 default",
     "reasons" : [
-      "By our estimates, every search found this route."
+      "0.4 mi less riding in traffic on busy arterials",
+      "5 fewer traffic signals",
+      "800 ft less riding on arterials",
+      "Tradeoff: 7 more turns",
+      "Tradeoff: 20 ft more climbing"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 78,
-      "edges" : "9897283ee91dce11",
-      "meters" : 1934.79,
-      "seconds" : 366.616902,
-      "stress" : 275.546
+      "count" : 104,
+      "edges" : "7eab069cb6996a66",
+      "meters" : 2691.31,
+      "seconds" : 484.31244,
+      "stress" : 387.9573
     },
     "key" : "node\/1158397939>way\/40833028 drive 0 default",
     "reasons" : [
@@ -1329,27 +1354,27 @@
     ]
   },
   {
-    "candidates" : 2,
+    "candidates" : 1,
     "fastest" : {
-      "count" : 78,
-      "edges" : "9897283ee91dce11",
-      "meters" : 1934.79,
-      "seconds" : 366.616902,
-      "stress" : 275.546
+      "count" : 104,
+      "edges" : "7eab069cb6996a66",
+      "meters" : 2691.31,
+      "seconds" : 484.31244,
+      "stress" : 387.9573
     },
     "key" : "node\/1158397939>way\/40833028 drive 5 default",
     "reasons" : [
-      "Calmest of 2 routes compared, by our estimates."
+      "By our estimates, every search found this route."
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 131,
-      "edges" : "5140e3344fdb8bb0",
-      "meters" : 2222.67,
-      "seconds" : 1756.619048,
-      "stress" : 693.115
+      "count" : 118,
+      "edges" : "ade5fcd3885754a4",
+      "meters" : 2199.26,
+      "seconds" : 1738.897619,
+      "stress" : 557.4728
     },
     "key" : "way\/295867977>way\/306759590 walk 0 default",
     "reasons" : [
@@ -1358,24 +1383,24 @@
   },
   {
     "calmer" : {
-      "count" : 91,
-      "edges" : "a70f93a1d12646ad",
-      "meters" : 2470.07,
-      "seconds" : 1950.7,
-      "stress" : 273.9727
+      "count" : 106,
+      "edges" : "cede1feed5210830",
+      "meters" : 2260.11,
+      "seconds" : 1800.728571,
+      "stress" : 243.2527
     },
-    "candidates" : 5,
+    "candidates" : 4,
     "fastest" : {
-      "count" : 131,
-      "edges" : "5140e3344fdb8bb0",
-      "meters" : 2222.67,
-      "seconds" : 1756.619048,
-      "stress" : 693.115
+      "count" : 118,
+      "edges" : "ade5fcd3885754a4",
+      "meters" : 2199.26,
+      "seconds" : 1738.897619,
+      "stress" : 557.4728
     },
     "key" : "way\/295867977>way\/306759590 walk 5 default",
     "reasons" : [
-      "2 fewer unmarked crossings of busy streets",
       "162 fewer steps",
+      "1 fewer unmarked crossing of a busy street",
       "1 fewer marked crossing without a signal",
       "Tradeoff: 1 more signalled crossing",
       "Tradeoff: 600 ft more without a sidewalk"
@@ -1384,11 +1409,11 @@
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 80,
-      "edges" : "2a10ac236bef81bd",
-      "meters" : 2703.9,
-      "seconds" : 634.73,
-      "stress" : 1048.39485
+      "count" : 73,
+      "edges" : "9f843c974a1a1455",
+      "meters" : 2644.74,
+      "seconds" : 606.348,
+      "stress" : 973.1047
     },
     "key" : "way\/295867977>way\/306759590 bike 0 default",
     "reasons" : [
@@ -1397,37 +1422,37 @@
   },
   {
     "calmer" : {
-      "count" : 75,
-      "edges" : "8384e27434ea6e3d",
-      "meters" : 3749.61,
-      "seconds" : 823.140625,
-      "stress" : 727.91115
+      "count" : 83,
+      "edges" : "bc0b8d88f51d6df3",
+      "meters" : 3716.89,
+      "seconds" : 816.646625,
+      "stress" : 674.7973
     },
     "candidates" : 4,
     "fastest" : {
-      "count" : 80,
-      "edges" : "2a10ac236bef81bd",
-      "meters" : 2703.9,
-      "seconds" : 634.73,
-      "stress" : 1048.39485
+      "count" : 73,
+      "edges" : "9f843c974a1a1455",
+      "meters" : 2644.74,
+      "seconds" : 606.348,
+      "stress" : 973.1047
     },
     "key" : "way\/295867977>way\/306759590 bike 5 default",
     "reasons" : [
-      "800 ft less riding in traffic on busy arterials",
-      "0.3 mi less riding on arterials",
+      "0.6 mi less riding on arterials",
+      "1 fewer left turn across traffic without a signal",
       "0.2 mi less of steep downhill in traffic",
-      "Tradeoff: 0.6 mi more on quiet streets",
-      "Tradeoff: 1 more traffic signal"
+      "Tradeoff: 0.9 mi more on quiet streets",
+      "Tradeoff: 1 more crossing of a busy street without a signal"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 78,
-      "edges" : "8c16556b22d8a69b",
-      "meters" : 2602.5,
-      "seconds" : 353.161194,
-      "stress" : 500.4473
+      "count" : 71,
+      "edges" : "513b79b320796f08",
+      "meters" : 2543.34,
+      "seconds" : 339.889495,
+      "stress" : 655.841
     },
     "key" : "way\/295867977>way\/306759590 drive 0 default",
     "reasons" : [
@@ -1437,35 +1462,36 @@
   {
     "calmer" : {
       "count" : 83,
-      "edges" : "df5cb3a6f00e438e",
+      "edges" : "5820b23f6d646336",
       "meters" : 2821.07,
       "seconds" : 372.449311,
       "stress" : 139.6414
     },
     "candidates" : 3,
     "fastest" : {
-      "count" : 78,
-      "edges" : "8c16556b22d8a69b",
-      "meters" : 2602.5,
-      "seconds" : 353.161194,
-      "stress" : 500.4473
+      "count" : 71,
+      "edges" : "513b79b320796f08",
+      "meters" : 2543.34,
+      "seconds" : 339.889495,
+      "stress" : 655.841
     },
     "key" : "way\/295867977>way\/306759590 drive 5 default",
     "reasons" : [
-      "2 fewer left turns across traffic without a signal",
+      "3 fewer left turns across traffic without a signal",
       "6 fewer turns",
       "1 fewer intersection of five or more streets",
-      "Tradeoff: 3 more traffic signals"
+      "Tradeoff: 4 more traffic signals",
+      "Tradeoff: 1 more left turn at a signal"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
       "count" : 139,
-      "edges" : "d46a9025f625ab2",
+      "edges" : "cbd3849d74406870",
       "meters" : 2286.33,
       "seconds" : 1913.842857,
-      "stress" : 495.464
+      "stress" : 515.2918
     },
     "key" : "node\/1630958088>node\/10861762926 walk 0 default",
     "reasons" : [
@@ -1475,35 +1501,35 @@
   {
     "calmer" : {
       "count" : 136,
-      "edges" : "5c09c8f981fb8ad6",
+      "edges" : "9672ffb674062683",
       "meters" : 2232.98,
       "seconds" : 2024.985714,
-      "stress" : 244.745
+      "stress" : 267.2464
     },
     "candidates" : 4,
     "fastest" : {
       "count" : 139,
-      "edges" : "d46a9025f625ab2",
+      "edges" : "cbd3849d74406870",
       "meters" : 2286.33,
       "seconds" : 1913.842857,
-      "stress" : 495.464
+      "stress" : 515.2918
     },
     "key" : "node\/1630958088>node\/10861762926 walk 5 default",
     "reasons" : [
       "2 fewer unmarked crossings of busy streets",
       "1 fewer marked crossing without a signal",
-      "2 fewer side-street crossings",
+      "1 fewer side-street crossing",
       "Tradeoff: 3 more signalled crossings"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 84,
-      "edges" : "36490ab500a2e25c",
-      "meters" : 2331.84,
-      "seconds" : 583.718,
-      "stress" : 611.46735
+      "count" : 89,
+      "edges" : "3807905cd37965fe",
+      "meters" : 2121.06,
+      "seconds" : 525.212,
+      "stress" : 569.85275
     },
     "key" : "node\/1630958088>node\/10861762926 bike 0 default",
     "reasons" : [
@@ -1512,33 +1538,33 @@
   },
   {
     "calmer" : {
-      "count" : 82,
-      "edges" : "a7b750e96e727dd8",
-      "meters" : 2332.01,
-      "seconds" : 601.752,
-      "stress" : 396.7892
+      "count" : 94,
+      "edges" : "c295139feeb838f4",
+      "meters" : 2138.71,
+      "seconds" : 541.242,
+      "stress" : 361.87485
     },
-    "candidates" : 2,
+    "candidates" : 3,
     "fastest" : {
-      "count" : 84,
-      "edges" : "36490ab500a2e25c",
-      "meters" : 2331.84,
-      "seconds" : 583.718,
-      "stress" : 611.46735
+      "count" : 89,
+      "edges" : "3807905cd37965fe",
+      "meters" : 2121.06,
+      "seconds" : 525.212,
+      "stress" : 569.85275
     },
     "key" : "node\/1630958088>node\/10861762926 bike 5 default",
     "reasons" : [
-      "2 fewer crossings of busy streets without a signal",
       "1 fewer left turn across traffic without a signal",
-      "Tradeoff: 2 more traffic signals",
-      "Tradeoff: 1 more place where the bike route drops you into traffic"
+      "1 fewer crossing of a busy street without a signal",
+      "700 ft less riding on arterials",
+      "Tradeoff: 7 more turns"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
       "count" : 69,
-      "edges" : "db7c75919d6173e3",
+      "edges" : "cfb912be62d7eff7",
       "meters" : 2204.54,
       "seconds" : 301.765099,
       "stress" : 454.6211
@@ -1550,16 +1576,16 @@
   },
   {
     "calmer" : {
-      "count" : 90,
-      "edges" : "22226df566a4db20",
-      "meters" : 4282.7,
-      "seconds" : 429.602086,
-      "stress" : 250
+      "count" : 88,
+      "edges" : "af20220367d23994",
+      "meters" : 2120.01,
+      "seconds" : 348.867215,
+      "stress" : 208
     },
     "candidates" : 3,
     "fastest" : {
       "count" : 69,
-      "edges" : "db7c75919d6173e3",
+      "edges" : "cfb912be62d7eff7",
       "meters" : 2204.54,
       "seconds" : 301.765099,
       "stress" : 454.6211
@@ -1568,17 +1594,19 @@
     "reasons" : [
       "1 fewer left turn across traffic without a signal",
       "1 fewer short freeway hop with quick lane changes",
-      "Tradeoff: 1 more turn"
+      "1 fewer intersection of five or more streets",
+      "Tradeoff: 3 more traffic signals",
+      "Tradeoff: 2 more stop-and-go stops"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 203,
-      "edges" : "a3eb36bbd717d68d",
-      "meters" : 5487.44,
-      "seconds" : 4056.580952,
-      "stress" : 465.4519
+      "count" : 197,
+      "edges" : "7198b03568b9a4b7",
+      "meters" : 5462.94,
+      "seconds" : 4041.080952,
+      "stress" : 463.1165
     },
     "key" : "relation\/1047789>node\/2140460393 walk 0 default",
     "reasons" : [
@@ -1587,32 +1615,32 @@
   },
   {
     "calmer" : {
-      "count" : 230,
-      "edges" : "fade5027ef1c35d",
-      "meters" : 5622.29,
-      "seconds" : 4355.402381,
-      "stress" : 308.8179
+      "count" : 196,
+      "edges" : "f6dca1f049de906",
+      "meters" : 5460.85,
+      "seconds" : 4089.588095,
+      "stress" : 379.7905
     },
     "candidates" : 4,
     "fastest" : {
-      "count" : 203,
-      "edges" : "a3eb36bbd717d68d",
-      "meters" : 5487.44,
-      "seconds" : 4056.580952,
-      "stress" : 465.4519
+      "count" : 197,
+      "edges" : "7198b03568b9a4b7",
+      "meters" : 5462.94,
+      "seconds" : 4041.080952,
+      "stress" : 463.1165
     },
     "key" : "relation\/1047789>node\/2140460393 walk 5 default",
     "reasons" : [
-      "2 fewer unmarked crossings of busy streets",
-      "1000 ft less walking beside arterial traffic",
-      "Tradeoff: 4 more signalled crossings"
+      "1 fewer unmarked crossing of a busy street",
+      "1 fewer side-street crossing",
+      "Tradeoff: 1 more signalled crossing"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
       "count" : 165,
-      "edges" : "b89caea81ae6c4cd",
+      "edges" : "5cf2d52405230194",
       "meters" : 5514.4,
       "seconds" : 1242.675429,
       "stress" : 796.4108
@@ -1625,7 +1653,7 @@
   {
     "calmer" : {
       "count" : 163,
-      "edges" : "46d15cf576bd1a1f",
+      "edges" : "e8f23a188447c573",
       "meters" : 5577.58,
       "seconds" : 1256.711429,
       "stress" : 693.5012
@@ -1633,7 +1661,7 @@
     "candidates" : 2,
     "fastest" : {
       "count" : 165,
-      "edges" : "b89caea81ae6c4cd",
+      "edges" : "5cf2d52405230194",
       "meters" : 5514.4,
       "seconds" : 1242.675429,
       "stress" : 796.4108
@@ -1648,7 +1676,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 193,
-      "edges" : "616a8bf99550d75f",
+      "edges" : "8633c0fea20079fd",
       "meters" : 5447.32,
       "seconds" : 690.995079,
       "stress" : 628.4638
@@ -1661,7 +1689,7 @@
   {
     "calmer" : {
       "count" : 260,
-      "edges" : "10fbc1bbe7af1f54",
+      "edges" : "63c730c41c6625bf",
       "meters" : 7915.37,
       "seconds" : 830.047468,
       "stress" : 293.5361
@@ -1669,7 +1697,7 @@
     "candidates" : 6,
     "fastest" : {
       "count" : 193,
-      "edges" : "616a8bf99550d75f",
+      "edges" : "8633c0fea20079fd",
       "meters" : 5447.32,
       "seconds" : 690.995079,
       "stress" : 628.4638
@@ -1686,11 +1714,11 @@
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 295,
-      "edges" : "1bafc2735e8faa24",
-      "meters" : 6446.64,
-      "seconds" : 5037.485714,
-      "stress" : 1849.2448
+      "count" : 308,
+      "edges" : "a20c6258a3e2058b",
+      "meters" : 6381.5,
+      "seconds" : 4960.957143,
+      "stress" : 1860.458
     },
     "key" : "way\/234054122>node\/1995793592 walk 0 default",
     "reasons" : [
@@ -1699,37 +1727,37 @@
   },
   {
     "calmer" : {
-      "count" : 303,
-      "edges" : "58f464270996264",
-      "meters" : 6658.09,
-      "seconds" : 5175.857143,
-      "stress" : 901.5942
+      "count" : 307,
+      "edges" : "c43bbb98530b667a",
+      "meters" : 6512.56,
+      "seconds" : 5152.907143,
+      "stress" : 869.404
     },
     "candidates" : 7,
     "fastest" : {
-      "count" : 295,
-      "edges" : "1bafc2735e8faa24",
-      "meters" : 6446.64,
-      "seconds" : 5037.485714,
-      "stress" : 1849.2448
+      "count" : 308,
+      "edges" : "a20c6258a3e2058b",
+      "meters" : 6381.5,
+      "seconds" : 4960.957143,
+      "stress" : 1860.458
     },
     "key" : "way\/234054122>node\/1995793592 walk 5 default",
     "reasons" : [
       "11 fewer unmarked crossings of busy streets",
-      "0.3 mi less walking beside arterial traffic",
+      "0.5 mi less walking beside arterial traffic",
       "21 fewer steps",
-      "Tradeoff: 4 more marked crossings without a signal",
-      "Tradeoff: 6 more side-street crossings"
+      "Tradeoff: 3 more marked crossings without a signal",
+      "Tradeoff: 2 more signalled crossings"
     ]
   },
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 218,
-      "edges" : "6b32578dcd5d9fc0",
-      "meters" : 6730.13,
-      "seconds" : 1839.052455,
-      "stress" : 2378.8137
+      "count" : 210,
+      "edges" : "7b1b1fc44c5be3b6",
+      "meters" : 6692.32,
+      "seconds" : 1823.290455,
+      "stress" : 2364.58305
     },
     "key" : "way\/234054122>node\/1995793592 bike 0 default",
     "reasons" : [
@@ -1738,25 +1766,25 @@
   },
   {
     "calmer" : {
-      "count" : 258,
-      "edges" : "87b2a66e861c8e7a",
-      "meters" : 8261.3,
-      "seconds" : 2056.156857,
-      "stress" : 1530.9626
+      "count" : 261,
+      "edges" : "96d45e75ef9c4d41",
+      "meters" : 8239.79,
+      "seconds" : 2054.854857,
+      "stress" : 1316.2368
     },
-    "candidates" : 5,
+    "candidates" : 4,
     "fastest" : {
-      "count" : 218,
-      "edges" : "6b32578dcd5d9fc0",
-      "meters" : 6730.13,
-      "seconds" : 1839.052455,
-      "stress" : 2378.8137
+      "count" : 210,
+      "edges" : "7b1b1fc44c5be3b6",
+      "meters" : 6692.32,
+      "seconds" : 1823.290455,
+      "stress" : 2364.58305
     },
     "key" : "way\/234054122>node\/1995793592 bike 5 default",
     "reasons" : [
-      "0.6 mi less riding on arterials",
-      "2 fewer left turns across traffic without a signal",
-      "141 ft less climbing",
+      "0.9 mi less riding on arterials",
+      "3 fewer left turns across traffic without a signal",
+      "137 ft less climbing",
       "Tradeoff: 5 more traffic signals",
       "Tradeoff: 4 more stop-and-go stops"
     ]
@@ -1765,7 +1793,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 222,
-      "edges" : "f6fe688b6ea80ad5",
+      "edges" : "bf2342280a108b0a",
       "meters" : 7606.51,
       "seconds" : 790.939111,
       "stress" : 665.4229
@@ -1777,56 +1805,55 @@
   },
   {
     "calmer" : {
-      "count" : 276,
-      "edges" : "e08c915c421f6284",
-      "meters" : 8896.5,
-      "seconds" : 955.411641,
-      "stress" : 399.3003
+      "count" : 227,
+      "edges" : "abfddbea09cea385",
+      "meters" : 7695.1,
+      "seconds" : 811.675599,
+      "stress" : 441.5555
     },
     "candidates" : 3,
     "fastest" : {
       "count" : 222,
-      "edges" : "f6fe688b6ea80ad5",
+      "edges" : "bf2342280a108b0a",
       "meters" : 7606.51,
       "seconds" : 790.939111,
       "stress" : 665.4229
     },
     "key" : "way\/234054122>node\/1995793592 drive 5 default",
     "reasons" : [
-      "3 fewer left turns across traffic without a signal",
-      "Tradeoff: 3 more stop signs",
-      "Tradeoff: 0.5 mi more on residential streets"
+      "2 fewer left turns across traffic without a signal",
+      "1 fewer turn",
+      "Tradeoff: 1 more stop sign",
+      "Tradeoff: 1000 ft more on residential streets"
     ]
   },
   {
     "calmer" : {
-      "count" : 180,
-      "edges" : "82d06e2192b8de1e",
-      "meters" : 2811.85,
-      "seconds" : 2294.714286,
-      "stress" : 493.1116
+      "count" : 175,
+      "edges" : "cebcec0e65ae4ff5",
+      "meters" : 2280.29,
+      "seconds" : 2262.278571,
+      "stress" : 364.8996
     },
-    "candidates" : 5,
+    "candidates" : 6,
     "fastest" : {
-      "count" : 180,
-      "edges" : "3f7c80bed61e234e",
-      "meters" : 2278.84,
-      "seconds" : 2158.992857,
-      "stress" : 528.5398
+      "count" : 178,
+      "edges" : "dd2fb166fd5a8eb6",
+      "meters" : 2273.85,
+      "seconds" : 2155.678571,
+      "stress" : 528.6828
     },
     "key" : "node\/10115680036>node\/2061048094 walk 5 hills+lights avoid",
     "reasons" : [
-      "6 fewer signalled crossings",
       "1 fewer unmarked crossing of a busy street",
-      "0.4 mi less walking beside arterial traffic",
-      "Tradeoff: 72 ft more climbing",
-      "Tradeoff: 2 more marked crossings without a signal"
+      "2 fewer marked crossings without a signal",
+      "Tradeoff: 2 more signalled crossings"
     ]
   },
   {
     "calmer" : {
       "count" : 137,
-      "edges" : "ae18e66cda44e21",
+      "edges" : "11af6bcd5d70e95c",
       "meters" : 3111.35,
       "seconds" : 912.284,
       "stress" : 1209.47745
@@ -1834,7 +1861,7 @@
     "candidates" : 5,
     "fastest" : {
       "count" : 122,
-      "edges" : "d23ee15586e3146a",
+      "edges" : "309bf884f39634c7",
       "meters" : 2349.45,
       "seconds" : 727.654,
       "stress" : 1472.88595
@@ -1852,7 +1879,7 @@
     "candidates" : 1,
     "fastest" : {
       "count" : 121,
-      "edges" : "8949b39527d9fd2f",
+      "edges" : "56aa1448b5e89892",
       "meters" : 2358.65,
       "seconds" : 490.53594,
       "stress" : 578.9954
@@ -1865,15 +1892,15 @@
   {
     "calmer" : {
       "count" : 111,
-      "edges" : "351d5bb073df3b50",
+      "edges" : "55e1c25043b28b8f",
       "meters" : 2152.2,
       "seconds" : 2028.035714,
       "stress" : 451.849
     },
-    "candidates" : 5,
+    "candidates" : 6,
     "fastest" : {
       "count" : 102,
-      "edges" : "d74337f0a8e731a6",
+      "edges" : "81a714405886a55f",
       "meters" : 2127.05,
       "seconds" : 1926.821429,
       "stress" : 669.4364
@@ -1889,7 +1916,7 @@
   {
     "calmer" : {
       "count" : 83,
-      "edges" : "91dae644f7f82632",
+      "edges" : "5c6c4c8ae69cd19c",
       "meters" : 2797.47,
       "seconds" : 960.707519,
       "stress" : 1004.23825
@@ -1897,7 +1924,7 @@
     "candidates" : 5,
     "fastest" : {
       "count" : 76,
-      "edges" : "f9d350b36d34eb68",
+      "edges" : "ecd39f594501ade0",
       "meters" : 2290.86,
       "seconds" : 873.082982,
       "stress" : 1439.16205
@@ -1914,7 +1941,7 @@
   {
     "calmer" : {
       "count" : 69,
-      "edges" : "5a3106e8e009cffb",
+      "edges" : "1ebe2d219170bf30",
       "meters" : 3016.77,
       "seconds" : 380.283017,
       "stress" : 428.1397
@@ -1922,7 +1949,7 @@
     "candidates" : 4,
     "fastest" : {
       "count" : 57,
-      "edges" : "f79ee707f00877c2",
+      "edges" : "bc681b01b6e3db6a",
       "meters" : 2515.07,
       "seconds" : 328.16947,
       "stress" : 514.968
@@ -1939,15 +1966,15 @@
   {
     "calmer" : {
       "count" : 167,
-      "edges" : "47a6e1fc06454b9b",
+      "edges" : "e968861d37dcd40b",
       "meters" : 2857.44,
       "seconds" : 2345.278571,
-      "stress" : 232.2606
+      "stress" : 236.7924
     },
     "candidates" : 7,
     "fastest" : {
       "count" : 167,
-      "edges" : "d705bfd3d7a98411",
+      "edges" : "1812812a5ef88c6a",
       "meters" : 2691.83,
       "seconds" : 2066.235714,
       "stress" : 799.7194
@@ -1956,39 +1983,39 @@
     "reasons" : [
       "4 fewer unmarked crossings of busy streets",
       "1 fewer marked crossing without a signal",
-      "700 ft less walking beside arterial traffic",
+      "800 ft less walking beside arterial traffic",
       "Tradeoff: 3 more signalled crossings"
     ]
   },
   {
     "calmer" : {
       "count" : 122,
-      "edges" : "a45597df86d7ab12",
+      "edges" : "2fdab9c0cbb2bddc",
       "meters" : 3287.85,
       "seconds" : 837.621818,
       "stress" : 564.55565
     },
-    "candidates" : 6,
+    "candidates" : 5,
     "fastest" : {
-      "count" : 114,
-      "edges" : "421ae96ce094b05",
-      "meters" : 2734.21,
-      "seconds" : 668.692,
-      "stress" : 1046.18455
+      "count" : 102,
+      "edges" : "ddfe6983c8770dd1",
+      "meters" : 2714.6,
+      "seconds" : 654.62,
+      "stress" : 859.51955
     },
     "key" : "way\/50321784>way\/32526883 bike 5 hills+lights avoid",
     "reasons" : [
-      "2 fewer left turns across traffic without a signal",
-      "0.4 mi less riding on arterials",
-      "2 fewer crossings of busy streets without a signal",
+      "3 fewer crossings of busy streets without a signal",
+      "1 fewer left turn across traffic without a signal",
+      "3 fewer stop signs",
       "Tradeoff: 14 more turns",
-      "Tradeoff: 0.2 mi more on rough surfaces"
+      "Tradeoff: 1 more traffic signal"
     ]
   },
   {
     "calmer" : {
       "count" : 151,
-      "edges" : "bf439931e1f580ce",
+      "edges" : "b5a21018462fc0c9",
       "meters" : 3948.09,
       "seconds" : 531.355002,
       "stress" : 220.8029
@@ -1996,7 +2023,7 @@
     "candidates" : 4,
     "fastest" : {
       "count" : 110,
-      "edges" : "b042b98096b03c61",
+      "edges" : "c90980dc89976a95",
       "meters" : 2970.81,
       "seconds" : 368.370795,
       "stress" : 414.304
@@ -2014,7 +2041,7 @@
     "candidates" : 5,
     "fastest" : {
       "count" : 103,
-      "edges" : "ed9db7ce47e3c576",
+      "edges" : "675086047981d320",
       "meters" : 2922.79,
       "seconds" : 2121.707143,
       "stress" : 132.3017
@@ -2027,7 +2054,7 @@
   {
     "calmer" : {
       "count" : 104,
-      "edges" : "6c5e4fb812a08fd3",
+      "edges" : "956c3c9fd2e7af93",
       "meters" : 3108.41,
       "seconds" : 748.591714,
       "stress" : 487.33775
@@ -2035,7 +2062,7 @@
     "candidates" : 4,
     "fastest" : {
       "count" : 103,
-      "edges" : "7d1add2f04715b6b",
+      "edges" : "f2f3e50b29ceba31",
       "meters" : 2941.22,
       "seconds" : 656.033429,
       "stress" : 757.663
@@ -2051,7 +2078,7 @@
   {
     "calmer" : {
       "count" : 131,
-      "edges" : "36d5f4819c9426bf",
+      "edges" : "8428d606b15e4c15",
       "meters" : 3463.49,
       "seconds" : 576.698506,
       "stress" : 331.3723
@@ -2059,7 +2086,7 @@
     "candidates" : 4,
     "fastest" : {
       "count" : 111,
-      "edges" : "7ebc6e8a653dedf2",
+      "edges" : "bbdf44bd599cc69e",
       "meters" : 3348.28,
       "seconds" : 505.295365,
       "stress" : 495.4766
@@ -2075,32 +2102,33 @@
   },
   {
     "calmer" : {
-      "count" : 201,
-      "edges" : "4f6d7399c5f44712",
-      "meters" : 5548.52,
-      "seconds" : 4148.228571,
-      "stress" : 411.9416
+      "count" : 207,
+      "edges" : "c2dcca7592748f0",
+      "meters" : 5542.39,
+      "seconds" : 4151.6,
+      "stress" : 365.8868
     },
-    "candidates" : 4,
+    "candidates" : 5,
     "fastest" : {
-      "count" : 203,
-      "edges" : "a3eb36bbd717d68d",
-      "meters" : 5487.44,
-      "seconds" : 4056.580952,
-      "stress" : 465.4519
+      "count" : 197,
+      "edges" : "7198b03568b9a4b7",
+      "meters" : 5462.94,
+      "seconds" : 4041.080952,
+      "stress" : 463.1165
     },
     "key" : "relation\/1047789>node\/2140460393 walk 5 stops+turns dontMind",
     "reasons" : [
+      "1 fewer unmarked crossing of a busy street",
       "1000 ft less walking beside arterial traffic",
       "10 fewer steps",
-      "1 fewer side-street crossing",
+      "Tradeoff: 1 more marked crossing without a signal",
       "Tradeoff: 1 more signalled crossing"
     ]
   },
   {
     "calmer" : {
       "count" : 207,
-      "edges" : "f9aa62d84e1a6e51",
+      "edges" : "653e638608863a63",
       "meters" : 6217.34,
       "seconds" : 1450.963429,
       "stress" : 739.19625
@@ -2108,7 +2136,7 @@
     "candidates" : 5,
     "fastest" : {
       "count" : 165,
-      "edges" : "b89caea81ae6c4cd",
+      "edges" : "5cf2d52405230194",
       "meters" : 5514.4,
       "seconds" : 1242.675429,
       "stress" : 796.4108
@@ -2125,7 +2153,7 @@
   {
     "calmer" : {
       "count" : 260,
-      "edges" : "10fbc1bbe7af1f54",
+      "edges" : "63c730c41c6625bf",
       "meters" : 7915.37,
       "seconds" : 830.047468,
       "stress" : 293.5361
@@ -2133,7 +2161,7 @@
     "candidates" : 4,
     "fastest" : {
       "count" : 193,
-      "edges" : "616a8bf99550d75f",
+      "edges" : "8633c0fea20079fd",
       "meters" : 5447.32,
       "seconds" : 690.995079,
       "stress" : 628.4638

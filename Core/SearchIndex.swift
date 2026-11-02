@@ -29,7 +29,7 @@ public final class SearchIndex: @unchecked Sendable {
 
     /// The bundled index, opened without the decoded graph (`graphNodes` is the header's node count), inflated once into `directory` (Caches by default) and reused on later launches.
     public static func bundled(graphNodes: Int? = nil, directory: URL? = nil) throws -> SearchIndex {
-        guard let url = Bundle.module.url(forResource: "seattle-search.sqlite", withExtension: "gz") else { throw RoutingError.missingData }
+        guard let url = Bundle.dataFile("seattle-search.sqlite", "gz") else { throw RoutingError.missingData }
         let folder = try directory ?? FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
         return try SearchIndex(gzipped: try Data(contentsOf: url), graphNodeCount: graphNodes, directory: folder)
     }

@@ -17,6 +17,13 @@ The raw response timestamps and SHA-256 hashes appear in `provenance.json`.
 Timestamps are recorded exactly as reported by the upstream service. They are
 not a guarantee of present-day road conditions.
 
+The all-Seattle region (`seattle-all`, a release asset, not in git) is built from one
+Geofabrik Washington extract (`washington-261031.osm.pbf`, OSM base timestamp 2026-10-31T21:23:06Z,
+https://download.geofabrik.de/north-america/us/washington-261031.osm.pbf) by `Scripts/pbf_to_snapshot.py`.
+It is OpenStreetMap data under the same ODbL 1.0 and attribution as above; its derived graph, map tiles and
+search index are distributed under ODbL 1.0 too. Elevation is USGS 3DEP (public domain) and places include Overture
+Maps Places under the licences in `Data/licenses/`.
+
 A bounded `natural=coastline` extract, `Data/seattle-coast.json.gz` (query
 `Data/seattle-coast.overpassql`, 47.38–47.85 N, 122.55–122.13 W), was fetched on
 2026-11-01 (Pacific; OSM base timestamp 2026-11-02T01:23:48Z). `Scripts/build_tiles.py`

@@ -44,7 +44,7 @@ for name,sources,resources in [('app',app_sources,app_resources),('test',test_so
     for config in ['Debug','Release']:
         settings={'SDKROOT':'iphoneos','IPHONEOS_DEPLOYMENT_TARGET':'27.0','SWIFT_VERSION':'6.0','TARGETED_DEVICE_FAMILY':'1',
                   'GENERATE_INFOPLIST_FILE':'YES','CODE_SIGN_STYLE':'Automatic','DEVELOPMENT_TEAM':'""','PRODUCT_NAME':'"$(TARGET_NAME)"',
-                  'ONLY_ACTIVE_ARCH':'YES' if config=='Debug' else 'NO',
+                  'ENABLE_USER_SCRIPT_SANDBOXING':'NO','ONLY_ACTIVE_ARCH':'YES' if config=='Debug' else 'NO',
                   'SWIFT_OPTIMIZATION_LEVEL':'"-Onone"' if config=='Debug' else '"-O"',
                   'SWIFT_ACTIVE_COMPILATION_CONDITIONS':'"DEBUG $(inherited)"' if config=='Debug' else '"$(inherited)"',
                   'PRODUCT_BUNDLE_IDENTIFIER':'electrocorp.peoplemaps' if name=='app' else 'electrocorp.peoplemaps.uitests',
@@ -53,10 +53,19 @@ for name,sources,resources in [('app',app_sources,app_resources),('test',test_so
         else:settings['TEST_TARGET_NAME']='Peoplemaps'
         obj(name+'-'+config,f'isa = XCBuildConfiguration; name = {config}; buildSettings = {{'+''.join(f'{k} = {v};' for k,v in settings.items())+'};')
     obj(name+'-config',f'isa = XCConfigurationList; buildConfigurations = ({ref(name+"-Debug")},{ref(name+"-Release")}); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')
+# A fetched region (Scripts/fetch_data seattle-all) is copied into the app bundle root, where Core's Bundle.dataFile finds it before the fixture, which stays unused in the package's resource bundle. With none fetched the fixture is used.
+REGION_SCRIPT=r'''region="$SRCROOT/Data/region/seattle-all/expected"
+dest="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH"
+files="seattle-graph.bin seattle-map.pmtiles seattle-search.sqlite.gz"
+ok=1; for f in $files; do [ -f "$region/$f" ] || ok=0; done
+if [ $ok = 1 ]; then for f in $files; do cp "$region/$f" "$dest/$f"; chmod 644 "$dest/$f"; done; echo "Bundled the fetched seattle-all region"
+else echo "seattle-all not fetched (Scripts/fetch_data seattle-all): bundling the Seattle fixture"; fi
+'''
+obj('app-region','isa = PBXShellScriptBuildPhase; buildActionMask = 2147483647; files = (); inputPaths = (); name = "Bundle fetched region"; outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "'+REGION_SCRIPT.replace('\\','\\\\').replace('"','\\"').replace('\n','\\n')+'"; alwaysOutOfDate = 1;')
 obj('proxy',f'isa = PBXContainerItemProxy; containerPortal = {ref("project")}; proxyType = 1; remoteGlobalIDString = {ref("app-target")}; remoteInfo = Peoplemaps;')
 obj('test-dependency',f'isa = PBXTargetDependency; target = {ref("app-target")}; targetProxy = {ref("proxy")};')
 for name,title,product,type_ in [('app','Peoplemaps',app_product,'com.apple.product-type.application'),('test','PeoplemapsUITests',test_product,'com.apple.product-type.bundle.ui-testing')]:
-    obj(name+'-target',f'isa = PBXNativeTarget; buildConfigurationList = {ref(name+"-config")}; buildPhases = ({ref(name+"-sources")},{ref(name+"-frameworks")},{ref(name+"-resources")}); buildRules = (); dependencies = ({ref("test-dependency") if name=="test" else ""}); name = {title}; productName = {title}; productReference = {product}; productType = "{type_}"; packageProductDependencies = ({",".join([ref("core-product"),ref("map-product"),ref("ferrostar-product")]) if name=="app" else ""});')
+    obj(name+'-target',f'isa = PBXNativeTarget; buildConfigurationList = {ref(name+"-config")}; buildPhases = ({ref(name+"-sources")},{ref(name+"-frameworks")},{ref(name+"-resources")}{","+ref("app-region") if name=="app" else ""}); buildRules = (); dependencies = ({ref("test-dependency") if name=="test" else ""}); name = {title}; productName = {title}; productReference = {product}; productType = "{type_}"; packageProductDependencies = ({",".join([ref("core-product"),ref("map-product"),ref("ferrostar-product")]) if name=="app" else ""});')
 for config in ['Debug','Release']:
     obj('project-'+config,f'isa = XCBuildConfiguration; name = {config}; buildSettings = {{CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; ALWAYS_SEARCH_USER_PATHS = NO;}};')
 obj('project-config',f'isa = XCConfigurationList; buildConfigurations = ({ref("project-Debug")},{ref("project-Release")}); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')

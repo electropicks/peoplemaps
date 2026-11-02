@@ -1,4 +1,61 @@
 {
-  "release": "data-none-yet",
-  "regions": {}
+  "release": "data-seattle-all-2026-11c",
+  "regions": {
+    "seattle-all": {
+      "bbox": [
+        47.49,
+        -122.44,
+        47.74,
+        -122.24
+      ],
+      "files": {
+        "expected/provenance.json": {
+          "bytes": 4430,
+          "sha256": "0185dc6564619070e257741cd7788371178ab8eadf3083323d5f4ef2b0a915a1"
+        },
+        "expected/seattle-graph.bin": {
+          "bytes": 61694008,
+          "sha256": "dfc29a68052488e80d6317848084913b9d5492aa365d6873d811cbce7733e16b"
+        },
+        "expected/seattle-map.pmtiles": {
+          "bytes": 3159741,
+          "sha256": "268851fc094f2f655da97b324a5025c1375de6a33cff5845657aad64d86c399e"
+        },
+        "expected/seattle-search.sqlite.gz": {
+          "bytes": 16407568,
+          "sha256": "b5f7cbe22b58a3a4a9d610d794a5e8ca94d976b972987506fd2969dc5c3291ef"
+        },
+        "seattle-coast.json.gz": {
+          "bytes": 213646,
+          "sha256": "a18d6f95a407a55da7afd9de2909d0c9f3f4da77f0b9ac34b94f54e045a45849"
+        },
+        "seattle-dem.tif.gz": {
+          "bytes": 35853467,
+          "sha256": "c0fcab49307c9f4b3d95b481a12500b522682eaf9e7e42f1cda5a6cb5997e211"
+        },
+        "seattle-osm.json.gz": {
+          "bytes": 12006231,
+          "sha256": "56c61dd9d5db8511fe1352f9dfccdc736dc8e4349083723a98643171673c0ca0"
+        },
+        "seattle-overture-places.json.gz": {
+          "bytes": 7115857,
+          "sha256": "cbe0b55de4029b1507a9ce460e2cfe7e96fdf8cbd7686deedd7bc95bf921f749"
+        },
+        "seattle-parks.json.gz": {
+          "bytes": 112072,
+          "sha256": "fd90c3715d9921b600356b9b1bd1d6ea3053006da06568191f8c29d8085b2b07"
+        },
+        "seattle-search.json.gz": {
+          "bytes": 5540324,
+          "sha256": "60dad06e2b64c5b9d1bab6a7eb08cd9e36808c1dbcf99167bdc9f33db80660e2"
+        }
+      },
+      "outputs": [
+        "seattle-graph.bin",
+        "seattle-map.pmtiles",
+        "seattle-search.sqlite.gz",
+        "provenance.json"
+      ]
+    }
+  }
 }

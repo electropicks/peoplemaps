@@ -24,7 +24,7 @@ extension StreetGraph {
     static var bundledURL: URL? {
         // Coverage spike: PEOPLEMAPS_GRAPH points the benchmark at an alternative graph file.
         ProcessInfo.processInfo.environment["PEOPLEMAPS_GRAPH"].map { URL(fileURLWithPath: $0) }
-            ?? Bundle.module.url(forResource: "seattle-graph", withExtension: "bin")
+            ?? Bundle.dataFile("seattle-graph", "bin")
     }
 
     public static func bundledHeader() throws -> Header {

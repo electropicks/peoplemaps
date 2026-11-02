@@ -164,13 +164,17 @@ final class SeattlePreferenceTests: XCTestCase {
 
     /// Trips in the bundled data where each option, set to Avoid, changes the route and cuts that option's factors.
     private static let avoidTrips: [(trip: (String, String), mode: TravelMode, options: [RoutePreferences.Option])] = [
-        (("node/2544213221", "node/4318969638"), .bike, RoutePreferences.Option.allCases.filter { $0 != .turns }),
+        (("node/2544213221", "node/4318969638"), .bike, RoutePreferences.Option.allCases.filter { $0 != .turns && $0 != .hills }),
+        (("node/12955400411", "way/445746568"), .bike, [.hills]),
         (("way/58740248", "way/54029687"), .bike, [.turns]),
-        (("node/6737717414", "way/293941621"), .drive, [.trafficLights, .unprotectedLefts, .turns]),
-        (("way/40819484", "node/5195109521"), .drive, [.stopSigns]),
-        (("node/1582021320", "node/2400948704"), .drive, [.busyCrossings]),
-        (("node/2158768959", "node/2327652050"), .drive, [.hills]),
-        (("way/253553517", "way/222420235"), .walk, [.trafficLights, .busyStreets, .busyCrossings, .hills]),
+        (("node/6737717414", "way/293941621"), .drive, [.trafficLights, .unprotectedLefts]),
+        (("node/1783136676", "relation/7406606"), .drive, [.turns]),
+        (("way/50329131", "node/3407701999"), .drive, [.stopSigns]),
+        (("way/222420235", "way/333892011"), .drive, [.busyCrossings]),
+        (("relation/7174146", "node/2158750305"), .drive, [.hills]),
+        (("way/253553517", "way/222420235"), .walk, [.busyStreets, .hills]),
+        (("node/1793521066", "node/2400859468"), .walk, [.trafficLights]),
+        (("relation/7174146", "node/2158750305"), .walk, [.busyCrossings]),
     ]
 
     func testEachOptionSetToAvoidChangesARealTripAndNeverAddsItsFactors() throws {
@@ -197,8 +201,10 @@ final class SeattlePreferenceTests: XCTestCase {
 
     /// Cyclists and drivers who don't mind stop signs get a quicker route through them; walkers who don't mind busy crossings likewise.
     func testDontMindTradesThatFactorForTime() throws {
-        let trip = ("node/6737717414", "way/293941621")
-        for (mode, option) in [(TravelMode.bike, RoutePreferences.Option.stopSigns), (.drive, .stopSigns), (.walk, .busyCrossings)] {
+        let cases: [(TravelMode, RoutePreferences.Option, (String, String))] = [
+            (.bike, .stopSigns, ("node/6737717414", "way/293941621")), (.drive, .stopSigns, ("relation/7174146", "node/2158750305")),
+            (.walk, .busyCrossings, ("relation/7174146", "node/2158750305"))]
+        for (mode, option, trip) in cases {
             let plain = try compare(trip.0, trip.1, mode), relaxed = try compare(trip.0, trip.1, mode, 5, .init([option: .dontMind]))
             let label = "\(mode) \(option)"
             XCTAssertNotEqual(shown(relaxed).edgeIDs, shown(plain).edgeIDs, label)

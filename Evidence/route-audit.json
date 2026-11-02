@@ -9,7 +9,7 @@
     "caveats" : [
       "Fastest route: 0.4 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.0083820819854736328,
+    "computeSeconds" : 0.0049760341644287109,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 0,
@@ -69,13 +69,13 @@
     "budgetMinutes" : 2,
     "calmerFactors" : [
       [
-        "markedCrossing",
-        2,
+        "unmarkedCrossing",
+        1,
         90
       ],
       [
-        "unmarkedCrossing",
-        1,
+        "markedCrossing",
+        2,
         90
       ],
       [
@@ -104,25 +104,25 @@
         11
       ],
       [
-        "signalCrossing",
-        1,
+        "stairs",
+        10,
         10
       ],
       [
-        "stairs",
-        10,
+        "signalCrossing",
+        1,
         10
       ]
     ],
     "calmerMeters" : 5127.4300000000003,
     "calmerSeconds" : 3753.9309523809507,
     "calmerStress" : 351.34949999999998,
-    "candidates" : 5,
+    "candidates" : 6,
     "caveats" : [
       "Fastest route: 0.4 mi where sidewalks aren't mapped.",
       "Calmer route: 0.3 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.21479499340057373,
+    "computeSeconds" : 0.022076964378356934,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 45.871428571427714,
@@ -170,7 +170,7 @@
     ],
     "fastestMeters" : 5127.6100000000006,
     "fastestSeconds" : 3708.0595238095229,
-    "fastestStress" : 649.99629999999991,
+    "fastestStress" : 649.99630000000002,
     "mode" : "walk",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
@@ -227,12 +227,12 @@
     "calmerMeters" : 5267.0000000000018,
     "calmerSeconds" : 3984.6238095238082,
     "calmerStress" : 232.02509999999998,
-    "candidates" : 5,
+    "candidates" : 6,
     "caveats" : [
       "Fastest route: 0.4 mi where sidewalks aren't mapped.",
       "Calmer route: 0.4 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.21450901031494141,
+    "computeSeconds" : 0.025008082389831543,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 276.56428571428523,
@@ -339,12 +339,12 @@
     "calmerMeters" : 5267.0000000000018,
     "calmerSeconds" : 3984.6238095238082,
     "calmerStress" : 232.02509999999998,
-    "candidates" : 5,
+    "candidates" : 6,
     "caveats" : [
       "Fastest route: 0.4 mi where sidewalks aren't mapped.",
       "Calmer route: 0.4 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.21237504482269287,
+    "computeSeconds" : 0.027280926704406738,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 276.56428571428523,
@@ -414,7 +414,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.0065790414810180664,
+    "computeSeconds" : 0.0036230087280273438,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 0,
@@ -485,23 +485,23 @@
     "calmerFactors" : [
       [
         "arterialRiding",
-        762.29999999999995,
-        183
+        687.79999999999995,
+        165
       ],
       [
         "quietStreet",
-        1432.0999999999999,
-        86
+        1506.9000000000001,
+        90
       ],
       [
         "climb",
-        18.199999999999999,
-        73
+        17.600000000000001,
+        70
       ],
       [
         "turn",
-        16,
-        64
+        17,
+        68
       ],
       [
         "unsignalledCrossing",
@@ -510,8 +510,8 @@
       ],
       [
         "stopSign",
-        5,
-        50
+        4,
+        40
       ],
       [
         "signal",
@@ -525,8 +525,8 @@
       ],
       [
         "stopAndGo",
-        3,
-        15
+        1,
+        5
       ],
       [
         "yield",
@@ -534,17 +534,17 @@
         4
       ]
     ],
-    "calmerMeters" : 5437.5100000000011,
-    "calmerSeconds" : 1198.8974285714285,
-    "calmerStress" : 582.6887999999999,
+    "calmerMeters" : 5437.8400000000001,
+    "calmerSeconds" : 1196.4634285714285,
+    "calmerStress" : 550.89859999999987,
     "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.1467510461807251,
+    "computeSeconds" : 0.017994046211242676,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
-    "extraSeconds" : 66.001999999999953,
+    "extraSeconds" : 63.567999999999984,
     "fastestFactors" : [
       [
         "arterialRiding",
@@ -604,11 +604,11 @@
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
     "reasons" : [
-      "1 fewer left turn across traffic without a signal",
       "0.2 mi less riding on arterials",
-      "1 fewer all-way stop",
-      "Tradeoff: 0.3 mi more on quiet streets",
-      "Tradeoff: 2 more stop signs"
+      "1 fewer left turn across traffic without a signal",
+      "3 fewer stop-and-go stops",
+      "Tradeoff: 0.4 mi more on quiet streets",
+      "Tradeoff: 1 more place where the bike route drops you into traffic"
     ]
   },
   {
@@ -616,23 +616,23 @@
     "calmerFactors" : [
       [
         "arterialRiding",
-        762.29999999999995,
-        183
+        687.79999999999995,
+        165
       ],
       [
         "quietStreet",
-        1432.0999999999999,
-        86
+        1506.9000000000001,
+        90
       ],
       [
         "climb",
-        18.199999999999999,
-        73
+        17.600000000000001,
+        70
       ],
       [
         "turn",
-        16,
-        64
+        17,
+        68
       ],
       [
         "unsignalledCrossing",
@@ -641,8 +641,8 @@
       ],
       [
         "stopSign",
-        5,
-        50
+        4,
+        40
       ],
       [
         "signal",
@@ -656,8 +656,8 @@
       ],
       [
         "stopAndGo",
-        3,
-        15
+        1,
+        5
       ],
       [
         "yield",
@@ -665,17 +665,17 @@
         4
       ]
     ],
-    "calmerMeters" : 5437.5100000000011,
-    "calmerSeconds" : 1198.8974285714285,
-    "calmerStress" : 582.6887999999999,
+    "calmerMeters" : 5437.8400000000001,
+    "calmerSeconds" : 1196.4634285714285,
+    "calmerStress" : 550.89859999999987,
     "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.14994800090789795,
+    "computeSeconds" : 0.018174052238464355,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
-    "extraSeconds" : 66.001999999999953,
+    "extraSeconds" : 63.567999999999984,
     "fastestFactors" : [
       [
         "arterialRiding",
@@ -735,11 +735,11 @@
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
     "reasons" : [
-      "1 fewer left turn across traffic without a signal",
       "0.2 mi less riding on arterials",
-      "1 fewer all-way stop",
-      "Tradeoff: 0.3 mi more on quiet streets",
-      "Tradeoff: 2 more stop signs"
+      "1 fewer left turn across traffic without a signal",
+      "3 fewer stop-and-go stops",
+      "Tradeoff: 0.4 mi more on quiet streets",
+      "Tradeoff: 1 more place where the bike route drops you into traffic"
     ]
   },
   {
@@ -747,23 +747,23 @@
     "calmerFactors" : [
       [
         "arterialRiding",
-        762.29999999999995,
-        183
+        687.79999999999995,
+        165
       ],
       [
         "quietStreet",
-        1432.0999999999999,
-        86
+        1506.9000000000001,
+        90
       ],
       [
         "climb",
-        18.199999999999999,
-        73
+        17.600000000000001,
+        70
       ],
       [
         "turn",
-        16,
-        64
+        17,
+        68
       ],
       [
         "unsignalledCrossing",
@@ -772,8 +772,8 @@
       ],
       [
         "stopSign",
-        5,
-        50
+        4,
+        40
       ],
       [
         "signal",
@@ -787,8 +787,8 @@
       ],
       [
         "stopAndGo",
-        3,
-        15
+        1,
+        5
       ],
       [
         "yield",
@@ -796,17 +796,17 @@
         4
       ]
     ],
-    "calmerMeters" : 5437.5100000000011,
-    "calmerSeconds" : 1198.8974285714285,
-    "calmerStress" : 582.6887999999999,
+    "calmerMeters" : 5437.8400000000001,
+    "calmerSeconds" : 1196.4634285714285,
+    "calmerStress" : 550.89859999999987,
     "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.15869009494781494,
+    "computeSeconds" : 0.018154025077819824,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
-    "extraSeconds" : 66.001999999999953,
+    "extraSeconds" : 63.567999999999984,
     "fastestFactors" : [
       [
         "arterialRiding",
@@ -866,11 +866,11 @@
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
     "reasons" : [
-      "1 fewer left turn across traffic without a signal",
       "0.2 mi less riding on arterials",
-      "1 fewer all-way stop",
-      "Tradeoff: 0.3 mi more on quiet streets",
-      "Tradeoff: 2 more stop signs"
+      "1 fewer left turn across traffic without a signal",
+      "3 fewer stop-and-go stops",
+      "Tradeoff: 0.4 mi more on quiet streets",
+      "Tradeoff: 1 more place where the bike route drops you into traffic"
     ]
   },
   {
@@ -883,7 +883,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.012930035591125488,
+    "computeSeconds" : 0.0077899694442749023,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 0,
@@ -948,8 +948,8 @@
         120
       ],
       [
-        "turn",
-        5,
+        "stopAndGo",
+        4,
         40
       ],
       [
@@ -958,8 +958,8 @@
         40
       ],
       [
-        "stopAndGo",
-        4,
+        "turn",
+        5,
         40
       ],
       [
@@ -985,7 +985,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.19473505020141602,
+    "computeSeconds" : 0.022970080375671387,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 27.203650680028431,
@@ -1054,8 +1054,8 @@
         120
       ],
       [
-        "turn",
-        5,
+        "stopAndGo",
+        4,
         40
       ],
       [
@@ -1064,8 +1064,8 @@
         40
       ],
       [
-        "stopAndGo",
-        4,
+        "turn",
+        5,
         40
       ],
       [
@@ -1091,7 +1091,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.19620203971862793,
+    "computeSeconds" : 0.022980928421020508,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 27.203650680028431,
@@ -1160,8 +1160,8 @@
         120
       ],
       [
-        "turn",
-        5,
+        "stopAndGo",
+        4,
         40
       ],
       [
@@ -1170,8 +1170,8 @@
         40
       ],
       [
-        "stopAndGo",
-        4,
+        "turn",
+        5,
         40
       ],
       [
@@ -1197,7 +1197,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.19956803321838379,
+    "computeSeconds" : 0.020947933197021484,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 27.203650680028431,
@@ -1267,7 +1267,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.0099660158157348633,
+    "computeSeconds" : 0.0066429376602172852,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 14.770704209858819,
     "extraSeconds" : 0,
@@ -1278,24 +1278,24 @@
         225
       ],
       [
-        "unmarkedCrossing",
-        2,
-        180
-      ],
-      [
         "climb",
-        87.400000000000006,
-        175
+        81.799999999999997,
+        164
       ],
       [
         "besideTraffic",
-        1381.9000000000001,
-        83
+        1856.2,
+        111
+      ],
+      [
+        "unmarkedCrossing",
+        1,
+        90
       ],
       [
         "sideStreetCrossing",
-        15,
-        45
+        13,
+        39
       ],
       [
         "signalCrossing",
@@ -1313,9 +1313,9 @@
         0
       ]
     ],
-    "fastestMeters" : 3687.3200000000002,
-    "fastestSeconds" : 2959.6619047619038,
-    "fastestStress" : 745.87800000000016,
+    "fastestMeters" : 3662.2400000000011,
+    "fastestSeconds" : 2927.7476190476177,
+    "fastestStress" : 667.13540000000012,
     "mode" : "walk",
     "origin" : "Fremont Library",
     "originSnapMeters" : 14.006930237699915,
@@ -1328,76 +1328,23 @@
     "calmerFactors" : [
       [
         "markedCrossing",
-        3,
+        4,
         180
       ],
       [
         "climb",
-        78.200000000000003,
-        156
+        82.599999999999994,
+        165
       ],
       [
         "besideTraffic",
-        1946.5999999999999,
-        117
+        1667.5,
+        100
       ],
       [
         "sideStreetCrossing",
-        10,
-        30
-      ],
-      [
-        "stairs",
-        18,
-        18
-      ],
-      [
-        "signalCrossing",
-        1,
-        10
-      ],
-      [
-        "unknownSidewalk",
-        8.0999999999999996,
-        0
-      ]
-    ],
-    "calmerMeters" : 3906.6999999999998,
-    "calmerSeconds" : 3043.3619047619054,
-    "calmerStress" : 511.35820000000001,
-    "candidates" : 7,
-    "caveats" : [
-
-    ],
-    "computeSeconds" : 0.34567499160766602,
-    "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 14.770704209858819,
-    "extraSeconds" : 83.700000000001637,
-    "fastestFactors" : [
-      [
-        "markedCrossing",
-        5,
-        225
-      ],
-      [
-        "unmarkedCrossing",
-        2,
-        180
-      ],
-      [
-        "climb",
-        87.400000000000006,
-        175
-      ],
-      [
-        "besideTraffic",
-        1381.9000000000001,
-        83
-      ],
-      [
-        "sideStreetCrossing",
-        15,
-        45
+        12,
+        36
       ],
       [
         "signalCrossing",
@@ -1415,36 +1362,93 @@
         0
       ]
     ],
-    "fastestMeters" : 3687.3200000000002,
-    "fastestSeconds" : 2959.6619047619038,
-    "fastestStress" : 745.87800000000016,
+    "calmerMeters" : 3731.9300000000007,
+    "calmerSeconds" : 2979.526190476191,
+    "calmerStress" : 519.40980000000002,
+    "candidates" : 6,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.03805696964263916,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 14.770704209858819,
+    "extraSeconds" : 51.778571428573287,
+    "fastestFactors" : [
+      [
+        "markedCrossing",
+        5,
+        225
+      ],
+      [
+        "climb",
+        81.799999999999997,
+        164
+      ],
+      [
+        "besideTraffic",
+        1856.2,
+        111
+      ],
+      [
+        "unmarkedCrossing",
+        1,
+        90
+      ],
+      [
+        "sideStreetCrossing",
+        13,
+        39
+      ],
+      [
+        "signalCrossing",
+        2,
+        20
+      ],
+      [
+        "stairs",
+        18,
+        18
+      ],
+      [
+        "unknownSidewalk",
+        8.0999999999999996,
+        0
+      ]
+    ],
+    "fastestMeters" : 3662.2400000000011,
+    "fastestSeconds" : 2927.7476190476177,
+    "fastestStress" : 667.13540000000012,
     "mode" : "walk",
     "origin" : "Fremont Library",
     "originSnapMeters" : 14.006930237699915,
     "reasons" : [
-      "2 fewer unmarked crossings of busy streets",
-      "2 fewer marked crossings without a signal",
-      "30 ft less climbing",
-      "Tradeoff: 0.4 mi more walking beside arterial traffic"
+      "1 fewer unmarked crossing of a busy street",
+      "1 fewer marked crossing without a signal",
+      "600 ft less walking beside arterial traffic"
     ]
   },
   {
     "budgetMinutes" : 5,
     "calmerFactors" : [
       [
+        "markedCrossing",
+        4,
+        180
+      ],
+      [
         "climb",
-        78.299999999999997,
-        157
+        82.599999999999994,
+        165
       ],
       [
         "besideTraffic",
-        1749,
-        105
+        1667.5,
+        100
       ],
       [
         "sideStreetCrossing",
-        8,
-        24
+        12,
+        36
       ],
       [
         "signalCrossing",
@@ -1462,17 +1466,17 @@
         0
       ]
     ],
-    "calmerMeters" : 4136.2100000000009,
-    "calmerSeconds" : 3257.5476190476193,
-    "calmerStress" : 323.70040000000006,
-    "candidates" : 7,
+    "calmerMeters" : 3731.9300000000007,
+    "calmerSeconds" : 2979.526190476191,
+    "calmerStress" : 519.40980000000002,
+    "candidates" : 6,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.35322999954223633,
+    "computeSeconds" : 0.037631988525390625,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 14.770704209858819,
-    "extraSeconds" : 297.88571428571549,
+    "extraSeconds" : 51.778571428573287,
     "fastestFactors" : [
       [
         "markedCrossing",
@@ -1480,24 +1484,24 @@
         225
       ],
       [
-        "unmarkedCrossing",
-        2,
-        180
-      ],
-      [
         "climb",
-        87.400000000000006,
-        175
+        81.799999999999997,
+        164
       ],
       [
         "besideTraffic",
-        1381.9000000000001,
-        83
+        1856.2,
+        111
+      ],
+      [
+        "unmarkedCrossing",
+        1,
+        90
       ],
       [
         "sideStreetCrossing",
-        15,
-        45
+        13,
+        39
       ],
       [
         "signalCrossing",
@@ -1515,111 +1519,110 @@
         0
       ]
     ],
-    "fastestMeters" : 3687.3200000000002,
-    "fastestSeconds" : 2959.6619047619038,
-    "fastestStress" : 745.87800000000016,
+    "fastestMeters" : 3662.2400000000011,
+    "fastestSeconds" : 2927.7476190476177,
+    "fastestStress" : 667.13540000000012,
+    "mode" : "walk",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 14.006930237699915,
+    "reasons" : [
+      "1 fewer unmarked crossing of a busy street",
+      "1 fewer marked crossing without a signal",
+      "600 ft less walking beside arterial traffic"
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerFactors" : [
+      [
+        "climb",
+        71.700000000000003,
+        143
+      ],
+      [
+        "besideTraffic",
+        817.39999999999998,
+        49
+      ],
+      [
+        "signalCrossing",
+        2,
+        20
+      ],
+      [
+        "sideStreetCrossing",
+        2,
+        6
+      ],
+      [
+        "unknownSidewalk",
+        8.0999999999999996,
+        0
+      ]
+    ],
+    "calmerMeters" : 4353.6200000000008,
+    "calmerSeconds" : 3388.9785714285713,
+    "calmerStress" : 218.6086,
+    "candidates" : 6,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.038195013999938965,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 14.770704209858819,
+    "extraSeconds" : 461.23095238095357,
+    "fastestFactors" : [
+      [
+        "markedCrossing",
+        5,
+        225
+      ],
+      [
+        "climb",
+        81.799999999999997,
+        164
+      ],
+      [
+        "besideTraffic",
+        1856.2,
+        111
+      ],
+      [
+        "unmarkedCrossing",
+        1,
+        90
+      ],
+      [
+        "sideStreetCrossing",
+        13,
+        39
+      ],
+      [
+        "signalCrossing",
+        2,
+        20
+      ],
+      [
+        "stairs",
+        18,
+        18
+      ],
+      [
+        "unknownSidewalk",
+        8.0999999999999996,
+        0
+      ]
+    ],
+    "fastestMeters" : 3662.2400000000011,
+    "fastestSeconds" : 2927.7476190476177,
+    "fastestStress" : 667.13540000000012,
     "mode" : "walk",
     "origin" : "Fremont Library",
     "originSnapMeters" : 14.006930237699915,
     "reasons" : [
       "5 fewer marked crossings without a signal",
-      "2 fewer unmarked crossings of busy streets",
-      "7 fewer side-street crossings",
-      "Tradeoff: 0.2 mi more walking beside arterial traffic"
-    ]
-  },
-  {
-    "budgetMinutes" : 10,
-    "calmerFactors" : [
-      [
-        "climb",
-        81.5,
-        163
-      ],
-      [
-        "besideTraffic",
-        1014.9,
-        61
-      ],
-      [
-        "signalCrossing",
-        2,
-        20
-      ],
-      [
-        "sideStreetCrossing",
-        5,
-        15
-      ],
-      [
-        "unknownSidewalk",
-        8.0999999999999996,
-        0
-      ]
-    ],
-    "calmerMeters" : 4428.9099999999999,
-    "calmerSeconds" : 3467.2571428571428,
-    "calmerStress" : 259.05260000000004,
-    "candidates" : 7,
-    "caveats" : [
-
-    ],
-    "computeSeconds" : 0.34114992618560791,
-    "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 14.770704209858819,
-    "extraSeconds" : 507.59523809523898,
-    "fastestFactors" : [
-      [
-        "markedCrossing",
-        5,
-        225
-      ],
-      [
-        "unmarkedCrossing",
-        2,
-        180
-      ],
-      [
-        "climb",
-        87.400000000000006,
-        175
-      ],
-      [
-        "besideTraffic",
-        1381.9000000000001,
-        83
-      ],
-      [
-        "sideStreetCrossing",
-        15,
-        45
-      ],
-      [
-        "signalCrossing",
-        2,
-        20
-      ],
-      [
-        "stairs",
-        18,
-        18
-      ],
-      [
-        "unknownSidewalk",
-        8.0999999999999996,
-        0
-      ]
-    ],
-    "fastestMeters" : 3687.3200000000002,
-    "fastestSeconds" : 2959.6619047619038,
-    "fastestStress" : 745.87800000000016,
-    "mode" : "walk",
-    "origin" : "Fremont Library",
-    "originSnapMeters" : 14.006930237699915,
-    "reasons" : [
-      "5 fewer marked crossings without a signal",
-      "2 fewer unmarked crossings of busy streets",
-      "10 fewer side-street crossings"
+      "1 fewer unmarked crossing of a busy street",
+      "0.6 mi less walking beside arterial traffic"
     ]
   },
   {
@@ -1632,7 +1635,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.010344982147216797,
+    "computeSeconds" : 0.0054540634155273438,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 29.967064593337788,
     "extraSeconds" : 0,
@@ -1723,13 +1726,8 @@
     "calmerFactors" : [
       [
         "climb",
-        80.700000000000003,
-        323
-      ],
-      [
-        "arterialRiding",
-        609.20000000000005,
-        146
+        70.900000000000006,
+        284
       ],
       [
         "busyArterialRiding",
@@ -1742,19 +1740,19 @@
         84
       ],
       [
+        "arterialRiding",
+        334.5,
+        80
+      ],
+      [
         "turn",
-        19,
-        76
+        20,
+        80
       ],
       [
         "quietStreet",
-        851.89999999999998,
-        51
-      ],
-      [
-        "steepDescent",
-        208.59999999999999,
-        42
+        615.79999999999995,
+        37
       ],
       [
         "leftAtSignal",
@@ -1762,95 +1760,7 @@
         30
       ],
       [
-        "bikeRouteGap",
-        1,
-        20
-      ],
-      [
         "hillStop",
-        1,
-        20
-      ],
-      [
-        "stopSign",
-        1,
-        10
-      ],
-      [
-        "stopAndGo",
-        2,
-        10
-      ],
-      [
-        "unknownSurface",
-        18.5,
-        0
-      ]
-    ],
-    "calmerMeters" : 4226.4099999999999,
-    "calmerSeconds" : 1168.4065714285707,
-    "calmerStress" : 907.23339999999996,
-    "candidates" : 4,
-    "caveats" : [
-
-    ],
-    "computeSeconds" : 0.42444992065429688,
-    "destination" : "Burke Museum of Natural History and Culture",
-    "destinationSnapMeters" : 29.967064593337788,
-    "extraSeconds" : 65.815999999999804,
-    "fastestFactors" : [
-      [
-        "climb",
-        84.099999999999994,
-        336
-      ],
-      [
-        "arterialRiding",
-        1319.5999999999999,
-        317
-      ],
-      [
-        "unsignalledLeft",
-        2,
-        180
-      ],
-      [
-        "busyArterialRiding",
-        158.80000000000001,
-        95
-      ],
-      [
-        "signal",
-        5,
-        70
-      ],
-      [
-        "turn",
-        17,
-        68
-      ],
-      [
-        "quietStreet",
-        818.79999999999995,
-        49
-      ],
-      [
-        "allWayStop",
-        4,
-        40
-      ],
-      [
-        "stopAndGo",
-        7,
-        35
-      ],
-      [
-        "stopSign",
-        3,
-        30
-      ],
-      [
-        "bikeRouteGap",
         1,
         20
       ],
@@ -1860,79 +1770,6 @@
         19
       ],
       [
-        "leftAtSignal",
-        1,
-        15
-      ],
-      [
-        "unknownSurface",
-        18.5,
-        0
-      ]
-    ],
-    "fastestMeters" : 3845.0299999999993,
-    "fastestSeconds" : 1102.5905714285709,
-    "fastestStress" : 1274.4549999999999,
-    "mode" : "bike",
-    "origin" : "Fremont Library",
-    "originSnapMeters" : 14.006930237699915,
-    "reasons" : [
-      "2 fewer left turns across traffic without a signal",
-      "0.4 mi less riding on arterials",
-      "4 fewer all-way stops",
-      "Tradeoff: 400 ft more of steep downhill in traffic",
-      "Tradeoff: 1 more stop on a steep hill"
-    ]
-  },
-  {
-    "budgetMinutes" : 5,
-    "calmerFactors" : [
-      [
-        "climb",
-        82.799999999999997,
-        331
-      ],
-      [
-        "arterialRiding",
-        425.19999999999999,
-        102
-      ],
-      [
-        "turn",
-        25,
-        100
-      ],
-      [
-        "busyArterialRiding",
-        158.80000000000001,
-        95
-      ],
-      [
-        "signal",
-        6,
-        84
-      ],
-      [
-        "quietStreet",
-        895,
-        54
-      ],
-      [
-        "steepDescent",
-        208.59999999999999,
-        42
-      ],
-      [
-        "leftAtSignal",
-        2,
-        30
-      ],
-      [
-        "hillStop",
-        1,
-        20
-      ],
-      [
         "stopAndGo",
         2,
         10
@@ -1944,21 +1781,21 @@
       ],
       [
         "unknownSurface",
-        174.90000000000001,
-        1
+        18.5,
+        0
       ]
     ],
-    "calmerMeters" : 4486.8100000000004,
-    "calmerSeconds" : 1237.7865714285706,
-    "calmerStress" : 878.83805000000007,
-    "candidates" : 4,
+    "calmerMeters" : 4158.4000000000015,
+    "calmerSeconds" : 1132.2545714285709,
+    "calmerStress" : 749.04539999999997,
+    "candidates" : 2,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.40847396850585938,
+    "computeSeconds" : 0.037567019462585449,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 29.967064593337788,
-    "extraSeconds" : 135.19599999999969,
+    "extraSeconds" : 29.663999999999987,
     "fastestFactors" : [
       [
         "climb",
@@ -2040,28 +1877,18 @@
     "reasons" : [
       "0.6 mi less riding on arterials",
       "2 fewer left turns across traffic without a signal",
-      "4 fewer all-way stops",
-      "Tradeoff: 8 more turns",
-      "Tradeoff: 400 ft more of steep downhill in traffic"
+      "43 ft less climbing",
+      "Tradeoff: 1 more stop on a steep hill",
+      "Tradeoff: 1 more left turn at a signal"
     ]
   },
   {
-    "budgetMinutes" : 10,
+    "budgetMinutes" : 5,
     "calmerFactors" : [
       [
         "climb",
-        82.799999999999997,
-        331
-      ],
-      [
-        "arterialRiding",
-        425.19999999999999,
-        102
-      ],
-      [
-        "turn",
-        25,
-        100
+        70.900000000000006,
+        284
       ],
       [
         "busyArterialRiding",
@@ -2074,14 +1901,19 @@
         84
       ],
       [
-        "quietStreet",
-        895,
-        54
+        "arterialRiding",
+        334.5,
+        80
       ],
       [
-        "steepDescent",
-        208.59999999999999,
-        42
+        "turn",
+        20,
+        80
+      ],
+      [
+        "quietStreet",
+        615.79999999999995,
+        37
       ],
       [
         "leftAtSignal",
@@ -2092,6 +1924,11 @@
         "hillStop",
         1,
         20
+      ],
+      [
+        "steepDescent",
+        94.200000000000003,
+        19
       ],
       [
         "stopAndGo",
@@ -2105,21 +1942,21 @@
       ],
       [
         "unknownSurface",
-        174.90000000000001,
-        1
+        18.5,
+        0
       ]
     ],
-    "calmerMeters" : 4486.8100000000004,
-    "calmerSeconds" : 1237.7865714285706,
-    "calmerStress" : 878.83805000000007,
-    "candidates" : 4,
+    "calmerMeters" : 4158.4000000000015,
+    "calmerSeconds" : 1132.2545714285709,
+    "calmerStress" : 749.04539999999997,
+    "candidates" : 2,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.40856802463531494,
+    "computeSeconds" : 0.037352085113525391,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 29.967064593337788,
-    "extraSeconds" : 135.19599999999969,
+    "extraSeconds" : 29.663999999999987,
     "fastestFactors" : [
       [
         "climb",
@@ -2201,9 +2038,170 @@
     "reasons" : [
       "0.6 mi less riding on arterials",
       "2 fewer left turns across traffic without a signal",
-      "4 fewer all-way stops",
-      "Tradeoff: 8 more turns",
-      "Tradeoff: 400 ft more of steep downhill in traffic"
+      "43 ft less climbing",
+      "Tradeoff: 1 more stop on a steep hill",
+      "Tradeoff: 1 more left turn at a signal"
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerFactors" : [
+      [
+        "climb",
+        70.900000000000006,
+        284
+      ],
+      [
+        "busyArterialRiding",
+        158.80000000000001,
+        95
+      ],
+      [
+        "signal",
+        6,
+        84
+      ],
+      [
+        "arterialRiding",
+        334.5,
+        80
+      ],
+      [
+        "turn",
+        20,
+        80
+      ],
+      [
+        "quietStreet",
+        615.79999999999995,
+        37
+      ],
+      [
+        "leftAtSignal",
+        2,
+        30
+      ],
+      [
+        "hillStop",
+        1,
+        20
+      ],
+      [
+        "steepDescent",
+        94.200000000000003,
+        19
+      ],
+      [
+        "stopAndGo",
+        2,
+        10
+      ],
+      [
+        "stopSign",
+        1,
+        10
+      ],
+      [
+        "unknownSurface",
+        18.5,
+        0
+      ]
+    ],
+    "calmerMeters" : 4158.4000000000015,
+    "calmerSeconds" : 1132.2545714285709,
+    "calmerStress" : 749.04539999999997,
+    "candidates" : 2,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.037389993667602539,
+    "destination" : "Burke Museum of Natural History and Culture",
+    "destinationSnapMeters" : 29.967064593337788,
+    "extraSeconds" : 29.663999999999987,
+    "fastestFactors" : [
+      [
+        "climb",
+        84.099999999999994,
+        336
+      ],
+      [
+        "arterialRiding",
+        1319.5999999999999,
+        317
+      ],
+      [
+        "unsignalledLeft",
+        2,
+        180
+      ],
+      [
+        "busyArterialRiding",
+        158.80000000000001,
+        95
+      ],
+      [
+        "signal",
+        5,
+        70
+      ],
+      [
+        "turn",
+        17,
+        68
+      ],
+      [
+        "quietStreet",
+        818.79999999999995,
+        49
+      ],
+      [
+        "allWayStop",
+        4,
+        40
+      ],
+      [
+        "stopAndGo",
+        7,
+        35
+      ],
+      [
+        "stopSign",
+        3,
+        30
+      ],
+      [
+        "bikeRouteGap",
+        1,
+        20
+      ],
+      [
+        "steepDescent",
+        94.200000000000003,
+        19
+      ],
+      [
+        "leftAtSignal",
+        1,
+        15
+      ],
+      [
+        "unknownSurface",
+        18.5,
+        0
+      ]
+    ],
+    "fastestMeters" : 3845.0299999999993,
+    "fastestSeconds" : 1102.5905714285709,
+    "fastestStress" : 1274.4549999999999,
+    "mode" : "bike",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 14.006930237699915,
+    "reasons" : [
+      "0.6 mi less riding on arterials",
+      "2 fewer left turns across traffic without a signal",
+      "43 ft less climbing",
+      "Tradeoff: 1 more stop on a steep hill",
+      "Tradeoff: 1 more left turn at a signal"
     ]
   },
   {
@@ -2216,7 +2214,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.012122988700866699,
+    "computeSeconds" : 0.0068910121917724609,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 59.647793777290069,
     "extraSeconds" : 0,
@@ -2313,12 +2311,12 @@
     ],
     "calmerMeters" : 4001.8999999999983,
     "calmerSeconds" : 565.40443808160308,
-    "calmerStress" : 305.11760000000004,
-    "candidates" : 2,
+    "calmerStress" : 305.11759999999998,
+    "candidates" : 4,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.27873408794403076,
+    "computeSeconds" : 0.022737979888916016,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 59.647793777290069,
     "extraSeconds" : 6.6696045096634862,
@@ -2419,12 +2417,12 @@
     ],
     "calmerMeters" : 4001.8999999999983,
     "calmerSeconds" : 565.40443808160308,
-    "calmerStress" : 305.11760000000004,
-    "candidates" : 2,
+    "calmerStress" : 305.11759999999998,
+    "candidates" : 4,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.29741299152374268,
+    "computeSeconds" : 0.022712945938110352,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 59.647793777290069,
     "extraSeconds" : 6.6696045096634862,
@@ -2525,12 +2523,12 @@
     ],
     "calmerMeters" : 4001.8999999999983,
     "calmerSeconds" : 565.40443808160308,
-    "calmerStress" : 305.11760000000004,
-    "candidates" : 2,
+    "calmerStress" : 305.11759999999998,
+    "candidates" : 4,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.27934300899505615,
+    "computeSeconds" : 0.022647976875305176,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 59.647793777290069,
     "extraSeconds" : 6.6696045096634862,
@@ -2600,7 +2598,7 @@
     "caveats" : [
       "Fastest route: 0.6 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.011162042617797852,
+    "computeSeconds" : 0.0076659917831420898,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 0,
@@ -2713,7 +2711,7 @@
       "Fastest route: 0.6 mi where sidewalks aren't mapped.",
       "Calmer route: 0.3 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.44957995414733887,
+    "computeSeconds" : 0.060436010360717773,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 119.11428571428678,
@@ -2782,57 +2780,46 @@
     "calmerFactors" : [
       [
         "markedCrossing",
-        2,
-        90
+        3,
+        135
       ],
       [
         "besideTraffic",
-        1195.7,
-        72
+        1457,
+        87
       ],
       [
         "climb",
-        29.100000000000001,
-        58
-      ],
-      [
-        "stairs",
-        53,
-        53
+        34,
+        68
       ],
       [
         "sideStreetCrossing",
-        13,
-        39
-      ],
-      [
-        "noSidewalk",
-        95.5,
-        27
-      ],
-      [
-        "unknownSidewalk",
-        542.5,
-        11
+        14,
+        42
       ],
       [
         "signalCrossing",
         1,
         10
+      ],
+      [
+        "unknownSidewalk",
+        205.5,
+        4
       ]
     ],
-    "calmerMeters" : 4303.8199999999988,
-    "calmerSeconds" : 3211.7833333333315,
-    "calmerStress" : 359.53890000000007,
+    "calmerMeters" : 4355.0499999999993,
+    "calmerSeconds" : 3245.7499999999982,
+    "calmerStress" : 346.52960000000002,
     "candidates" : 6,
     "caveats" : [
-      "Fastest route: 0.6 mi where sidewalks aren't mapped.",
-      "Calmer route: 0.3 mi where sidewalks aren't mapped."
+      "Fastest route: 0.6 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.4471060037612915,
+    "computeSeconds" : 0.060750961303710938,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
-    "extraSeconds" : 205.45714285714212,
+    "extraSeconds" : 239.42380952380881,
     "fastestFactors" : [
       [
         "unmarkedCrossing",
@@ -2888,9 +2875,9 @@
     "originSnapMeters" : 2.2992778781403174,
     "reasons" : [
       "6 fewer unmarked crossings of busy streets",
-      "1 fewer marked crossing without a signal",
-      "550 ft less walking beside arterial traffic",
-      "Tradeoff: 3 more side-street crossings"
+      "58 fewer steps",
+      "Tradeoff: 28 ft more climbing",
+      "Tradeoff: 4 more side-street crossings"
     ]
   },
   {
@@ -2898,57 +2885,46 @@
     "calmerFactors" : [
       [
         "markedCrossing",
-        2,
-        90
+        3,
+        135
       ],
       [
         "besideTraffic",
-        1195.7,
-        72
+        1457,
+        87
       ],
       [
         "climb",
-        29.100000000000001,
-        58
-      ],
-      [
-        "stairs",
-        53,
-        53
+        34,
+        68
       ],
       [
         "sideStreetCrossing",
-        13,
-        39
-      ],
-      [
-        "noSidewalk",
-        95.5,
-        27
-      ],
-      [
-        "unknownSidewalk",
-        542.5,
-        11
+        14,
+        42
       ],
       [
         "signalCrossing",
         1,
         10
+      ],
+      [
+        "unknownSidewalk",
+        205.5,
+        4
       ]
     ],
-    "calmerMeters" : 4303.8199999999988,
-    "calmerSeconds" : 3211.7833333333315,
-    "calmerStress" : 359.53890000000007,
+    "calmerMeters" : 4355.0499999999993,
+    "calmerSeconds" : 3245.7499999999982,
+    "calmerStress" : 346.52960000000002,
     "candidates" : 6,
     "caveats" : [
-      "Fastest route: 0.6 mi where sidewalks aren't mapped.",
-      "Calmer route: 0.3 mi where sidewalks aren't mapped."
+      "Fastest route: 0.6 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.45051801204681396,
+    "computeSeconds" : 0.061735033988952637,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
-    "extraSeconds" : 205.45714285714212,
+    "extraSeconds" : 239.42380952380881,
     "fastestFactors" : [
       [
         "unmarkedCrossing",
@@ -3004,9 +2980,9 @@
     "originSnapMeters" : 2.2992778781403174,
     "reasons" : [
       "6 fewer unmarked crossings of busy streets",
-      "1 fewer marked crossing without a signal",
-      "550 ft less walking beside arterial traffic",
-      "Tradeoff: 3 more side-street crossings"
+      "58 fewer steps",
+      "Tradeoff: 28 ft more climbing",
+      "Tradeoff: 4 more side-street crossings"
     ]
   },
   {
@@ -3017,9 +2993,9 @@
     "calmerStress" : null,
     "candidates" : 1,
     "caveats" : [
-      "Fastest route: 1.0 mi with unknown surface."
+      "Fastest route: 0.8 mi with unknown surface."
     ],
-    "computeSeconds" : 0.0097720623016357422,
+    "computeSeconds" : 0.0052620172500610352,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 0,
@@ -3036,18 +3012,18 @@
       ],
       [
         "climb",
-        48.399999999999999,
-        194
+        48.299999999999997,
+        193
       ],
       [
         "quietStreet",
-        2076,
-        125
+        2038.2,
+        122
       ],
       [
         "steepDescent",
-        519.10000000000002,
-        104
+        547.5,
+        110
       ],
       [
         "unsignalledLeft",
@@ -3056,8 +3032,8 @@
       ],
       [
         "turn",
-        22,
-        88
+        18,
+        72
       ],
       [
         "stopSign",
@@ -3075,12 +3051,12 @@
         20
       ],
       [
-        "leftAtSignal",
+        "movableBridge",
         1,
         15
       ],
       [
-        "movableBridge",
+        "leftAtSignal",
         1,
         15
       ],
@@ -3091,8 +3067,8 @@
       ],
       [
         "unknownSurface",
-        1568.5,
-        8
+        1316.9000000000001,
+        7
       ],
       [
         "roughSurface",
@@ -3100,9 +3076,9 @@
         1
       ]
     ],
-    "fastestMeters" : 4391.880000000001,
-    "fastestSeconds" : 1063.869337662338,
-    "fastestStress" : 1338.8177500000002,
+    "fastestMeters" : 4354.0700000000015,
+    "fastestSeconds" : 1048.1073376623378,
+    "fastestStress" : 1324.5871,
     "mode" : "bike",
     "origin" : "Kerry Park",
     "originSnapMeters" : 43.489352068282621,
@@ -3118,9 +3094,9 @@
     "calmerStress" : null,
     "candidates" : 4,
     "caveats" : [
-      "Fastest route: 1.0 mi with unknown surface."
+      "Fastest route: 0.8 mi with unknown surface."
     ],
-    "computeSeconds" : 0.28155696392059326,
+    "computeSeconds" : 0.027404069900512695,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 0,
@@ -3137,18 +3113,18 @@
       ],
       [
         "climb",
-        48.399999999999999,
-        194
+        48.299999999999997,
+        193
       ],
       [
         "quietStreet",
-        2076,
-        125
+        2038.2,
+        122
       ],
       [
         "steepDescent",
-        519.10000000000002,
-        104
+        547.5,
+        110
       ],
       [
         "unsignalledLeft",
@@ -3157,8 +3133,8 @@
       ],
       [
         "turn",
-        22,
-        88
+        18,
+        72
       ],
       [
         "stopSign",
@@ -3176,12 +3152,12 @@
         20
       ],
       [
-        "leftAtSignal",
+        "movableBridge",
         1,
         15
       ],
       [
-        "movableBridge",
+        "leftAtSignal",
         1,
         15
       ],
@@ -3192,8 +3168,8 @@
       ],
       [
         "unknownSurface",
-        1568.5,
-        8
+        1316.9000000000001,
+        7
       ],
       [
         "roughSurface",
@@ -3201,9 +3177,9 @@
         1
       ]
     ],
-    "fastestMeters" : 4391.880000000001,
-    "fastestSeconds" : 1063.869337662338,
-    "fastestStress" : 1338.8177500000002,
+    "fastestMeters" : 4354.0700000000015,
+    "fastestSeconds" : 1048.1073376623378,
+    "fastestStress" : 1324.5871,
     "mode" : "bike",
     "origin" : "Kerry Park",
     "originSnapMeters" : 43.489352068282621,
@@ -3219,9 +3195,9 @@
     "calmerStress" : null,
     "candidates" : 4,
     "caveats" : [
-      "Fastest route: 1.0 mi with unknown surface."
+      "Fastest route: 0.8 mi with unknown surface."
     ],
-    "computeSeconds" : 0.28628194332122803,
+    "computeSeconds" : 0.027171969413757324,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 0,
@@ -3238,18 +3214,18 @@
       ],
       [
         "climb",
-        48.399999999999999,
-        194
+        48.299999999999997,
+        193
       ],
       [
         "quietStreet",
-        2076,
-        125
+        2038.2,
+        122
       ],
       [
         "steepDescent",
-        519.10000000000002,
-        104
+        547.5,
+        110
       ],
       [
         "unsignalledLeft",
@@ -3258,8 +3234,8 @@
       ],
       [
         "turn",
-        22,
-        88
+        18,
+        72
       ],
       [
         "stopSign",
@@ -3277,12 +3253,12 @@
         20
       ],
       [
-        "leftAtSignal",
+        "movableBridge",
         1,
         15
       ],
       [
-        "movableBridge",
+        "leftAtSignal",
         1,
         15
       ],
@@ -3293,8 +3269,8 @@
       ],
       [
         "unknownSurface",
-        1568.5,
-        8
+        1316.9000000000001,
+        7
       ],
       [
         "roughSurface",
@@ -3302,9 +3278,9 @@
         1
       ]
     ],
-    "fastestMeters" : 4391.880000000001,
-    "fastestSeconds" : 1063.869337662338,
-    "fastestStress" : 1338.8177500000002,
+    "fastestMeters" : 4354.0700000000015,
+    "fastestSeconds" : 1048.1073376623378,
+    "fastestStress" : 1324.5871,
     "mode" : "bike",
     "origin" : "Kerry Park",
     "originSnapMeters" : 43.489352068282621,
@@ -3356,13 +3332,13 @@
         60
       ],
       [
-        "bikeRouteGap",
-        1,
+        "stopAndGo",
+        4,
         20
       ],
       [
-        "stopAndGo",
-        4,
+        "bikeRouteGap",
+        1,
         20
       ],
       [
@@ -3383,15 +3359,15 @@
     ],
     "calmerMeters" : 6295.6000000000004,
     "calmerSeconds" : 1463.7751948051941,
-    "calmerStress" : 907.3352000000001,
+    "calmerStress" : 907.33520000000021,
     "candidates" : 4,
     "caveats" : [
-      "Fastest route: 1.0 mi with unknown surface."
+      "Fastest route: 0.8 mi with unknown surface."
     ],
-    "computeSeconds" : 0.28405392169952393,
+    "computeSeconds" : 0.027209997177124023,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
-    "extraSeconds" : 399.90585714285612,
+    "extraSeconds" : 415.66785714285629,
     "fastestFactors" : [
       [
         "arterialRiding",
@@ -3405,18 +3381,18 @@
       ],
       [
         "climb",
-        48.399999999999999,
-        194
+        48.299999999999997,
+        193
       ],
       [
         "quietStreet",
-        2076,
-        125
+        2038.2,
+        122
       ],
       [
         "steepDescent",
-        519.10000000000002,
-        104
+        547.5,
+        110
       ],
       [
         "unsignalledLeft",
@@ -3425,8 +3401,8 @@
       ],
       [
         "turn",
-        22,
-        88
+        18,
+        72
       ],
       [
         "stopSign",
@@ -3444,12 +3420,12 @@
         20
       ],
       [
-        "leftAtSignal",
+        "movableBridge",
         1,
         15
       ],
       [
-        "movableBridge",
+        "leftAtSignal",
         1,
         15
       ],
@@ -3460,8 +3436,8 @@
       ],
       [
         "unknownSurface",
-        1568.5,
-        8
+        1316.9000000000001,
+        7
       ],
       [
         "roughSurface",
@@ -3469,9 +3445,9 @@
         1
       ]
     ],
-    "fastestMeters" : 4391.880000000001,
-    "fastestSeconds" : 1063.869337662338,
-    "fastestStress" : 1338.8177500000002,
+    "fastestMeters" : 4354.0700000000015,
+    "fastestSeconds" : 1048.1073376623378,
+    "fastestStress" : 1324.5871,
     "mode" : "bike",
     "origin" : "Kerry Park",
     "originSnapMeters" : 43.489352068282621,
@@ -3493,7 +3469,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.0097409486770629883,
+    "computeSeconds" : 0.0053240060806274414,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 0,
@@ -3505,12 +3481,12 @@
       ],
       [
         "turn",
-        10,
-        80
+        14,
+        112
       ],
       [
-        "residential",
-        1343.5999999999999,
+        "complexJunction",
+        1,
         40
       ],
       [
@@ -3519,9 +3495,9 @@
         40
       ],
       [
-        "complexJunction",
-        1,
-        40
+        "residential",
+        1258.5,
+        38
       ],
       [
         "movableBridge",
@@ -3544,9 +3520,9 @@
         10
       ]
     ],
-    "fastestMeters" : 4616.4699999999975,
-    "fastestSeconds" : 576.29415712240495,
-    "fastestStress" : 390.30829999999997,
+    "fastestMeters" : 4431.079999999999,
+    "fastestSeconds" : 565.80207587687869,
+    "fastestStress" : 419.755,
     "mode" : "drive",
     "origin" : "Kerry Park",
     "originSnapMeters" : 44.153415073483508,
@@ -3564,7 +3540,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.19008898735046387,
+    "computeSeconds" : 0.0167999267578125,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 0,
@@ -3576,12 +3552,12 @@
       ],
       [
         "turn",
-        10,
-        80
+        14,
+        112
       ],
       [
-        "residential",
-        1343.5999999999999,
+        "complexJunction",
+        1,
         40
       ],
       [
@@ -3590,9 +3566,9 @@
         40
       ],
       [
-        "complexJunction",
-        1,
-        40
+        "residential",
+        1258.5,
+        38
       ],
       [
         "movableBridge",
@@ -3615,30 +3591,71 @@
         10
       ]
     ],
-    "fastestMeters" : 4616.4699999999975,
-    "fastestSeconds" : 576.29415712240495,
-    "fastestStress" : 390.30829999999997,
+    "fastestMeters" : 4431.079999999999,
+    "fastestSeconds" : 565.80207587687869,
+    "fastestStress" : 419.755,
     "mode" : "drive",
     "origin" : "Kerry Park",
     "originSnapMeters" : 44.153415073483508,
     "reasons" : [
-      "By our estimates, calmer routes take 2+ min more."
+      "By our estimates, a clearly calmer route takes 2+ min more."
     ]
   },
   {
     "budgetMinutes" : 5,
-    "calmerFactors" : null,
-    "calmerMeters" : null,
-    "calmerSeconds" : null,
-    "calmerStress" : null,
+    "calmerFactors" : [
+      [
+        "signal",
+        10,
+        100
+      ],
+      [
+        "stopAndGo",
+        5,
+        50
+      ],
+      [
+        "turn",
+        6,
+        48
+      ],
+      [
+        "residential",
+        1075.8,
+        32
+      ],
+      [
+        "movableBridge",
+        1,
+        30
+      ],
+      [
+        "allWayStop",
+        1,
+        20
+      ],
+      [
+        "leftAtSignal",
+        2,
+        20
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
+      ]
+    ],
+    "calmerMeters" : 6143.1599999999999,
+    "calmerSeconds" : 772.73859162490999,
+    "calmerStress" : 315.2731,
     "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.18990206718444824,
+    "computeSeconds" : 0.016788005828857422,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
-    "extraSeconds" : 0,
+    "extraSeconds" : 206.9365157480313,
     "fastestFactors" : [
       [
         "unsignalledLeft",
@@ -3647,12 +3664,12 @@
       ],
       [
         "turn",
-        10,
-        80
+        14,
+        112
       ],
       [
-        "residential",
-        1343.5999999999999,
+        "complexJunction",
+        1,
         40
       ],
       [
@@ -3661,9 +3678,9 @@
         40
       ],
       [
-        "complexJunction",
-        1,
-        40
+        "residential",
+        1258.5,
+        38
       ],
       [
         "movableBridge",
@@ -3686,30 +3703,75 @@
         10
       ]
     ],
-    "fastestMeters" : 4616.4699999999975,
-    "fastestSeconds" : 576.29415712240495,
-    "fastestStress" : 390.30829999999997,
+    "fastestMeters" : 4431.079999999999,
+    "fastestSeconds" : 565.80207587687869,
+    "fastestStress" : 419.755,
     "mode" : "drive",
     "origin" : "Kerry Park",
     "originSnapMeters" : 44.153415073483508,
     "reasons" : [
-      "By our estimates, other routes gain too little."
+      "1 fewer left turn across traffic without a signal",
+      "8 fewer turns",
+      "1 fewer intersection of five or more streets",
+      "Tradeoff: 6 more traffic signals",
+      "Tradeoff: 5 more stop-and-go stops"
     ]
   },
   {
     "budgetMinutes" : 10,
-    "calmerFactors" : null,
-    "calmerMeters" : null,
-    "calmerSeconds" : null,
-    "calmerStress" : null,
+    "calmerFactors" : [
+      [
+        "signal",
+        10,
+        100
+      ],
+      [
+        "stopAndGo",
+        5,
+        50
+      ],
+      [
+        "turn",
+        6,
+        48
+      ],
+      [
+        "residential",
+        1075.8,
+        32
+      ],
+      [
+        "movableBridge",
+        1,
+        30
+      ],
+      [
+        "allWayStop",
+        1,
+        20
+      ],
+      [
+        "leftAtSignal",
+        2,
+        20
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
+      ]
+    ],
+    "calmerMeters" : 6143.1599999999999,
+    "calmerSeconds" : 772.73859162490999,
+    "calmerStress" : 315.2731,
     "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.19049906730651855,
+    "computeSeconds" : 0.016723990440368652,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
-    "extraSeconds" : 0,
+    "extraSeconds" : 206.9365157480313,
     "fastestFactors" : [
       [
         "unsignalledLeft",
@@ -3718,12 +3780,12 @@
       ],
       [
         "turn",
-        10,
-        80
+        14,
+        112
       ],
       [
-        "residential",
-        1343.5999999999999,
+        "complexJunction",
+        1,
         40
       ],
       [
@@ -3732,9 +3794,9 @@
         40
       ],
       [
-        "complexJunction",
-        1,
-        40
+        "residential",
+        1258.5,
+        38
       ],
       [
         "movableBridge",
@@ -3757,14 +3819,18 @@
         10
       ]
     ],
-    "fastestMeters" : 4616.4699999999975,
-    "fastestSeconds" : 576.29415712240495,
-    "fastestStress" : 390.30829999999997,
+    "fastestMeters" : 4431.079999999999,
+    "fastestSeconds" : 565.80207587687869,
+    "fastestStress" : 419.755,
     "mode" : "drive",
     "origin" : "Kerry Park",
     "originSnapMeters" : 44.153415073483508,
     "reasons" : [
-      "By our estimates, other routes gain too little."
+      "1 fewer left turn across traffic without a signal",
+      "8 fewer turns",
+      "1 fewer intersection of five or more streets",
+      "Tradeoff: 6 more traffic signals",
+      "Tradeoff: 5 more stop-and-go stops"
     ]
   },
   {
@@ -3777,7 +3843,7 @@
     "caveats" : [
       "Fastest route: 1.0 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.018571972846984863,
+    "computeSeconds" : 0.013851046562194824,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
     "extraSeconds" : 0,
@@ -3793,13 +3859,13 @@
         100
       ],
       [
-        "unmarkedCrossing",
-        1,
+        "markedCrossing",
+        2,
         90
       ],
       [
-        "markedCrossing",
-        2,
+        "unmarkedCrossing",
+        1,
         90
       ],
       [
@@ -3865,11 +3931,11 @@
     "calmerMeters" : 5527.3899999999985,
     "calmerSeconds" : 4383.1357142857187,
     "calmerStress" : 478.03179999999998,
-    "candidates" : 7,
+    "candidates" : 6,
     "caveats" : [
       "Fastest route: 1.0 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.75132095813751221,
+    "computeSeconds" : 0.12864196300506592,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
     "extraSeconds" : 36.028571428573741,
@@ -3885,13 +3951,13 @@
         100
       ],
       [
-        "unmarkedCrossing",
-        1,
+        "markedCrossing",
+        2,
         90
       ],
       [
-        "markedCrossing",
-        2,
+        "unmarkedCrossing",
+        1,
         90
       ],
       [
@@ -3959,11 +4025,11 @@
     "calmerMeters" : 5616.369999999999,
     "calmerSeconds" : 4467.1928571428616,
     "calmerStress" : 453.66460000000001,
-    "candidates" : 7,
+    "candidates" : 6,
     "caveats" : [
       "Fastest route: 1.0 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.75933098793029785,
+    "computeSeconds" : 0.12907397747039795,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
     "extraSeconds" : 120.08571428571668,
@@ -3979,13 +4045,13 @@
         100
       ],
       [
-        "unmarkedCrossing",
-        1,
+        "markedCrossing",
+        2,
         90
       ],
       [
-        "markedCrossing",
-        2,
+        "unmarkedCrossing",
+        1,
         90
       ],
       [
@@ -4053,11 +4119,11 @@
     "calmerMeters" : 5616.369999999999,
     "calmerSeconds" : 4467.1928571428616,
     "calmerStress" : 453.66460000000001,
-    "candidates" : 7,
+    "candidates" : 6,
     "caveats" : [
       "Fastest route: 1.0 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.74506700038909912,
+    "computeSeconds" : 0.12720394134521484,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
     "extraSeconds" : 120.08571428571668,
@@ -4073,13 +4139,13 @@
         100
       ],
       [
-        "unmarkedCrossing",
-        1,
+        "markedCrossing",
+        2,
         90
       ],
       [
-        "markedCrossing",
-        2,
+        "unmarkedCrossing",
+        1,
         90
       ],
       [
@@ -4118,37 +4184,37 @@
     "calmerStress" : null,
     "candidates" : 1,
     "caveats" : [
-      "Fastest route: 0.5 mi with unknown surface."
+
     ],
-    "computeSeconds" : 0.023787021636962891,
+    "computeSeconds" : 0.013965010643005371,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
     "extraSeconds" : 0,
     "fastestFactors" : [
       [
         "busyArterialRiding",
-        1762.8,
-        1058
-      ],
-      [
-        "climb",
-        118.40000000000001,
-        474
+        1862.7,
+        1118
       ],
       [
         "arterialRiding",
-        1221.5,
-        293
+        1981,
+        475
+      ],
+      [
+        "climb",
+        115.90000000000001,
+        464
+      ],
+      [
+        "signal",
+        11,
+        154
       ],
       [
         "bikeRouteGap",
         5,
         100
-      ],
-      [
-        "signal",
-        7,
-        98
       ],
       [
         "unsignalledLeft",
@@ -4157,23 +4223,33 @@
       ],
       [
         "turn",
-        21,
-        84
-      ],
-      [
-        "quietStreet",
-        1377.4000000000001,
-        83
+        20,
+        80
       ],
       [
         "leftAtSignal",
-        4,
+        5,
+        75
+      ],
+      [
+        "unsignalledCrossing",
+        1,
         60
+      ],
+      [
+        "quietStreet",
+        873.5,
+        52
       ],
       [
         "allWayStop",
         3,
         30
+      ],
+      [
+        "stopAndGo",
+        5,
+        25
       ],
       [
         "steepDescent",
@@ -4192,13 +4268,13 @@
       ],
       [
         "unknownSurface",
-        807,
-        4
+        523.20000000000005,
+        3
       ]
     ],
-    "fastestMeters" : 6007.0300000000007,
-    "fastestSeconds" : 1650.589803571429,
-    "fastestStress" : 2430.9582,
+    "fastestMeters" : 5673.0899999999983,
+    "fastestSeconds" : 1601.7123750000005,
+    "fastestStress" : 2783.5105999999996,
     "mode" : "bike",
     "origin" : "Fremont Library",
     "originSnapMeters" : 14.006930237699915,
@@ -4211,23 +4287,23 @@
     "calmerFactors" : [
       [
         "climb",
-        122,
-        488
+        125.59999999999999,
+        502
       ],
       [
         "arterialRiding",
-        681.10000000000002,
-        163
+        597.60000000000002,
+        143
       ],
       [
         "quietStreet",
-        1793.4000000000001,
-        108
+        1809.0999999999999,
+        109
       ],
       [
         "turn",
-        26,
-        104
+        27,
+        108
       ],
       [
         "signal",
@@ -4235,19 +4311,19 @@
         84
       ],
       [
-        "leftAtSignal",
-        3,
-        45
-      ],
-      [
         "bikeRouteGap",
         2,
         40
       ],
       [
+        "leftAtSignal",
+        2,
+        30
+      ],
+      [
         "steepDescent",
-        103.8,
-        21
+        109.90000000000001,
+        22
       ],
       [
         "allWayStop",
@@ -4275,43 +4351,42 @@
         4
       ]
     ],
-    "calmerMeters" : 6129.9699999999984,
-    "calmerSeconds" : 1693.5053035714291,
-    "calmerStress" : 1125.0287999999998,
-    "candidates" : 3,
+    "calmerMeters" : 6150.4399999999978,
+    "calmerSeconds" : 1715.5350178571432,
+    "calmerStress" : 1110.5311999999999,
+    "candidates" : 5,
     "caveats" : [
-      "Fastest route: 0.5 mi with unknown surface.",
       "Calmer route: 0.5 mi with unknown surface."
     ],
-    "computeSeconds" : 0.7327810525894165,
+    "computeSeconds" : 0.061308979988098145,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
-    "extraSeconds" : 42.915500000000065,
+    "extraSeconds" : 113.82264285714268,
     "fastestFactors" : [
       [
         "busyArterialRiding",
-        1762.8,
-        1058
-      ],
-      [
-        "climb",
-        118.40000000000001,
-        474
+        1862.7,
+        1118
       ],
       [
         "arterialRiding",
-        1221.5,
-        293
+        1981,
+        475
+      ],
+      [
+        "climb",
+        115.90000000000001,
+        464
+      ],
+      [
+        "signal",
+        11,
+        154
       ],
       [
         "bikeRouteGap",
         5,
         100
-      ],
-      [
-        "signal",
-        7,
-        98
       ],
       [
         "unsignalledLeft",
@@ -4320,23 +4395,33 @@
       ],
       [
         "turn",
-        21,
-        84
-      ],
-      [
-        "quietStreet",
-        1377.4000000000001,
-        83
+        20,
+        80
       ],
       [
         "leftAtSignal",
-        4,
+        5,
+        75
+      ],
+      [
+        "unsignalledCrossing",
+        1,
         60
+      ],
+      [
+        "quietStreet",
+        873.5,
+        52
       ],
       [
         "allWayStop",
         3,
         30
+      ],
+      [
+        "stopAndGo",
+        5,
+        25
       ],
       [
         "steepDescent",
@@ -4355,22 +4440,22 @@
       ],
       [
         "unknownSurface",
-        807,
-        4
+        523.20000000000005,
+        3
       ]
     ],
-    "fastestMeters" : 6007.0300000000007,
-    "fastestSeconds" : 1650.589803571429,
-    "fastestStress" : 2430.9582,
+    "fastestMeters" : 5673.0899999999983,
+    "fastestSeconds" : 1601.7123750000005,
+    "fastestStress" : 2783.5105999999996,
     "mode" : "bike",
     "origin" : "Fremont Library",
     "originSnapMeters" : 14.006930237699915,
     "reasons" : [
       "1.1 mi less riding in traffic on busy arterials",
-      "0.3 mi less riding on arterials",
+      "0.9 mi less riding on arterials",
       "1 fewer left turn across traffic without a signal",
-      "Tradeoff: 0.3 mi more on quiet streets",
-      "Tradeoff: 5 more turns"
+      "Tradeoff: 0.6 mi more on quiet streets",
+      "Tradeoff: 32 ft more climbing"
     ]
   },
   {
@@ -4378,23 +4463,23 @@
     "calmerFactors" : [
       [
         "climb",
-        122,
-        488
+        125.59999999999999,
+        502
       ],
       [
         "arterialRiding",
-        681.10000000000002,
-        163
+        597.60000000000002,
+        143
       ],
       [
         "quietStreet",
-        1793.4000000000001,
-        108
+        1809.0999999999999,
+        109
       ],
       [
         "turn",
-        26,
-        104
+        27,
+        108
       ],
       [
         "signal",
@@ -4402,19 +4487,19 @@
         84
       ],
       [
-        "leftAtSignal",
-        3,
-        45
-      ],
-      [
         "bikeRouteGap",
         2,
         40
       ],
       [
+        "leftAtSignal",
+        2,
+        30
+      ],
+      [
         "steepDescent",
-        103.8,
-        21
+        109.90000000000001,
+        22
       ],
       [
         "allWayStop",
@@ -4442,43 +4527,42 @@
         4
       ]
     ],
-    "calmerMeters" : 6129.9699999999984,
-    "calmerSeconds" : 1693.5053035714291,
-    "calmerStress" : 1125.0287999999998,
-    "candidates" : 3,
+    "calmerMeters" : 6150.4399999999978,
+    "calmerSeconds" : 1715.5350178571432,
+    "calmerStress" : 1110.5311999999999,
+    "candidates" : 5,
     "caveats" : [
-      "Fastest route: 0.5 mi with unknown surface.",
       "Calmer route: 0.5 mi with unknown surface."
     ],
-    "computeSeconds" : 0.74315500259399414,
+    "computeSeconds" : 0.07281196117401123,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
-    "extraSeconds" : 42.915500000000065,
+    "extraSeconds" : 113.82264285714268,
     "fastestFactors" : [
       [
         "busyArterialRiding",
-        1762.8,
-        1058
-      ],
-      [
-        "climb",
-        118.40000000000001,
-        474
+        1862.7,
+        1118
       ],
       [
         "arterialRiding",
-        1221.5,
-        293
+        1981,
+        475
+      ],
+      [
+        "climb",
+        115.90000000000001,
+        464
+      ],
+      [
+        "signal",
+        11,
+        154
       ],
       [
         "bikeRouteGap",
         5,
         100
-      ],
-      [
-        "signal",
-        7,
-        98
       ],
       [
         "unsignalledLeft",
@@ -4487,23 +4571,33 @@
       ],
       [
         "turn",
-        21,
-        84
-      ],
-      [
-        "quietStreet",
-        1377.4000000000001,
-        83
+        20,
+        80
       ],
       [
         "leftAtSignal",
-        4,
+        5,
+        75
+      ],
+      [
+        "unsignalledCrossing",
+        1,
         60
+      ],
+      [
+        "quietStreet",
+        873.5,
+        52
       ],
       [
         "allWayStop",
         3,
         30
+      ],
+      [
+        "stopAndGo",
+        5,
+        25
       ],
       [
         "steepDescent",
@@ -4522,22 +4616,22 @@
       ],
       [
         "unknownSurface",
-        807,
-        4
+        523.20000000000005,
+        3
       ]
     ],
-    "fastestMeters" : 6007.0300000000007,
-    "fastestSeconds" : 1650.589803571429,
-    "fastestStress" : 2430.9582,
+    "fastestMeters" : 5673.0899999999983,
+    "fastestSeconds" : 1601.7123750000005,
+    "fastestStress" : 2783.5105999999996,
     "mode" : "bike",
     "origin" : "Fremont Library",
     "originSnapMeters" : 14.006930237699915,
     "reasons" : [
       "1.1 mi less riding in traffic on busy arterials",
-      "0.3 mi less riding on arterials",
+      "0.9 mi less riding on arterials",
       "1 fewer left turn across traffic without a signal",
-      "Tradeoff: 0.3 mi more on quiet streets",
-      "Tradeoff: 5 more turns"
+      "Tradeoff: 0.6 mi more on quiet streets",
+      "Tradeoff: 32 ft more climbing"
     ]
   },
   {
@@ -4545,23 +4639,23 @@
     "calmerFactors" : [
       [
         "climb",
-        122,
-        488
+        125.59999999999999,
+        502
       ],
       [
         "arterialRiding",
-        681.10000000000002,
-        163
+        597.60000000000002,
+        143
       ],
       [
         "quietStreet",
-        1793.4000000000001,
-        108
+        1809.0999999999999,
+        109
       ],
       [
         "turn",
-        26,
-        104
+        27,
+        108
       ],
       [
         "signal",
@@ -4569,19 +4663,19 @@
         84
       ],
       [
-        "leftAtSignal",
-        3,
-        45
-      ],
-      [
         "bikeRouteGap",
         2,
         40
       ],
       [
+        "leftAtSignal",
+        2,
+        30
+      ],
+      [
         "steepDescent",
-        103.8,
-        21
+        109.90000000000001,
+        22
       ],
       [
         "allWayStop",
@@ -4609,43 +4703,42 @@
         4
       ]
     ],
-    "calmerMeters" : 6129.9699999999984,
-    "calmerSeconds" : 1693.5053035714291,
-    "calmerStress" : 1125.0287999999998,
-    "candidates" : 3,
+    "calmerMeters" : 6150.4399999999978,
+    "calmerSeconds" : 1715.5350178571432,
+    "calmerStress" : 1110.5311999999999,
+    "candidates" : 5,
     "caveats" : [
-      "Fastest route: 0.5 mi with unknown surface.",
       "Calmer route: 0.5 mi with unknown surface."
     ],
-    "computeSeconds" : 0.73472702503204346,
+    "computeSeconds" : 0.079100966453552246,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
-    "extraSeconds" : 42.915500000000065,
+    "extraSeconds" : 113.82264285714268,
     "fastestFactors" : [
       [
         "busyArterialRiding",
-        1762.8,
-        1058
-      ],
-      [
-        "climb",
-        118.40000000000001,
-        474
+        1862.7,
+        1118
       ],
       [
         "arterialRiding",
-        1221.5,
-        293
+        1981,
+        475
+      ],
+      [
+        "climb",
+        115.90000000000001,
+        464
+      ],
+      [
+        "signal",
+        11,
+        154
       ],
       [
         "bikeRouteGap",
         5,
         100
-      ],
-      [
-        "signal",
-        7,
-        98
       ],
       [
         "unsignalledLeft",
@@ -4654,23 +4747,33 @@
       ],
       [
         "turn",
-        21,
-        84
-      ],
-      [
-        "quietStreet",
-        1377.4000000000001,
-        83
+        20,
+        80
       ],
       [
         "leftAtSignal",
-        4,
+        5,
+        75
+      ],
+      [
+        "unsignalledCrossing",
+        1,
         60
+      ],
+      [
+        "quietStreet",
+        873.5,
+        52
       ],
       [
         "allWayStop",
         3,
         30
+      ],
+      [
+        "stopAndGo",
+        5,
+        25
       ],
       [
         "steepDescent",
@@ -4689,22 +4792,22 @@
       ],
       [
         "unknownSurface",
-        807,
-        4
+        523.20000000000005,
+        3
       ]
     ],
-    "fastestMeters" : 6007.0300000000007,
-    "fastestSeconds" : 1650.589803571429,
-    "fastestStress" : 2430.9582,
+    "fastestMeters" : 5673.0899999999983,
+    "fastestSeconds" : 1601.7123750000005,
+    "fastestStress" : 2783.5105999999996,
     "mode" : "bike",
     "origin" : "Fremont Library",
     "originSnapMeters" : 14.006930237699915,
     "reasons" : [
       "1.1 mi less riding in traffic on busy arterials",
-      "0.3 mi less riding on arterials",
+      "0.9 mi less riding on arterials",
       "1 fewer left turn across traffic without a signal",
-      "Tradeoff: 0.3 mi more on quiet streets",
-      "Tradeoff: 5 more turns"
+      "Tradeoff: 0.6 mi more on quiet streets",
+      "Tradeoff: 32 ft more climbing"
     ]
   },
   {
@@ -4717,40 +4820,40 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.025665044784545898,
+    "computeSeconds" : 0.015131950378417969,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 20.411380538500193,
     "extraSeconds" : 0,
     "fastestFactors" : [
       [
         "unsignalledLeft",
-        5,
-        600
-      ],
-      [
-        "shortFreewayHop",
-        1,
-        90
-      ],
-      [
-        "unsignalledCrossing",
-        1,
-        90
-      ],
-      [
-        "turn",
-        11,
-        88
+        2,
+        240
       ],
       [
         "signal",
-        6,
+        17,
+        170
+      ],
+      [
+        "stopAndGo",
+        10,
+        100
+      ],
+      [
+        "turn",
+        10,
+        80
+      ],
+      [
+        "hillStop",
+        2,
         60
       ],
       [
-        "allWayStop",
-        3,
-        60
+        "complexJunction",
+        1,
+        40
       ],
       [
         "freewayEntry",
@@ -4758,34 +4861,24 @@
         30
       ],
       [
-        "hillStop",
-        1,
-        30
+        "leftAtSignal",
+        2,
+        20
       ],
       [
         "residential",
-        889.39999999999998,
-        27
-      ],
-      [
-        "stopSign",
-        1,
-        15
-      ],
-      [
-        "stopAndGo",
-        1,
+        328.60000000000002,
         10
       ],
       [
         "narrowWithParking",
-        122.2,
-        5
+        101,
+        4
       ]
     ],
-    "fastestMeters" : 7891.3699999999981,
-    "fastestSeconds" : 865.07584349797162,
-    "fastestStress" : 1104.5682999999999,
+    "fastestMeters" : 6552.5399999999981,
+    "fastestSeconds" : 785.19439722023424,
+    "fastestStress" : 753.8984999999999,
     "mode" : "drive",
     "origin" : "Fremont Library",
     "originSnapMeters" : 26.769035872678163,
@@ -4797,503 +4890,453 @@
     "budgetMinutes" : 2,
     "calmerFactors" : [
       [
+        "signal",
+        17,
+        170
+      ],
+      [
+        "stopAndGo",
+        9,
+        90
+      ],
+      [
         "turn",
-        16,
-        128
+        10,
+        80
+      ],
+      [
+        "leftAtSignal",
+        3,
+        50
+      ],
+      [
+        "hillStop",
+        1,
+        30
+      ],
+      [
+        "movableBridge",
+        1,
+        30
+      ],
+      [
+        "narrowWithParking",
+        517.10000000000002,
+        21
+      ],
+      [
+        "residential",
+        491.5,
+        15
+      ]
+    ],
+    "calmerMeters" : 6104.2900000000009,
+    "calmerSeconds" : 880.19774516821815,
+    "calmerStress" : 485.42780000000005,
+    "candidates" : 5,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.051606059074401855,
+    "destination" : "Capitol Hill Library",
+    "destinationSnapMeters" : 20.411380538500193,
+    "extraSeconds" : 95.003347947983912,
+    "fastestFactors" : [
+      [
+        "unsignalledLeft",
+        2,
+        240
       ],
       [
         "signal",
+        17,
+        170
+      ],
+      [
+        "stopAndGo",
+        10,
+        100
+      ],
+      [
+        "turn",
+        10,
+        80
+      ],
+      [
+        "hillStop",
+        2,
+        60
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "freewayEntry",
+        1,
+        30
+      ],
+      [
+        "leftAtSignal",
+        2,
+        20
+      ],
+      [
+        "residential",
+        328.60000000000002,
+        10
+      ],
+      [
+        "narrowWithParking",
+        101,
+        4
+      ]
+    ],
+    "fastestMeters" : 6552.5399999999981,
+    "fastestSeconds" : 785.19439722023424,
+    "fastestStress" : 753.8984999999999,
+    "mode" : "drive",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 26.769035872678163,
+    "reasons" : [
+      "2 fewer left turns across traffic without a signal",
+      "1 fewer intersection of five or more streets",
+      "1 fewer stop on a steep hill",
+      "Tradeoff: 1 more left turn at a signal",
+      "Tradeoff: 1 more drawbridge"
+    ]
+  },
+  {
+    "budgetMinutes" : 5,
+    "calmerFactors" : [
+      [
+        "signal",
+        17,
+        170
+      ],
+      [
+        "stopAndGo",
+        9,
+        90
+      ],
+      [
+        "turn",
+        10,
+        80
+      ],
+      [
+        "leftAtSignal",
+        3,
+        50
+      ],
+      [
+        "hillStop",
+        1,
+        30
+      ],
+      [
+        "movableBridge",
+        1,
+        30
+      ],
+      [
+        "narrowWithParking",
+        517.10000000000002,
+        21
+      ],
+      [
+        "residential",
+        491.5,
+        15
+      ]
+    ],
+    "calmerMeters" : 6104.2900000000009,
+    "calmerSeconds" : 880.19774516821815,
+    "calmerStress" : 485.42780000000005,
+    "candidates" : 5,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.052641034126281738,
+    "destination" : "Capitol Hill Library",
+    "destinationSnapMeters" : 20.411380538500193,
+    "extraSeconds" : 95.003347947983912,
+    "fastestFactors" : [
+      [
+        "unsignalledLeft",
+        2,
+        240
+      ],
+      [
+        "signal",
+        17,
+        170
+      ],
+      [
+        "stopAndGo",
+        10,
+        100
+      ],
+      [
+        "turn",
+        10,
+        80
+      ],
+      [
+        "hillStop",
+        2,
+        60
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "freewayEntry",
+        1,
+        30
+      ],
+      [
+        "leftAtSignal",
+        2,
+        20
+      ],
+      [
+        "residential",
+        328.60000000000002,
+        10
+      ],
+      [
+        "narrowWithParking",
+        101,
+        4
+      ]
+    ],
+    "fastestMeters" : 6552.5399999999981,
+    "fastestSeconds" : 785.19439722023424,
+    "fastestStress" : 753.8984999999999,
+    "mode" : "drive",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 26.769035872678163,
+    "reasons" : [
+      "2 fewer left turns across traffic without a signal",
+      "1 fewer intersection of five or more streets",
+      "1 fewer stop on a steep hill",
+      "Tradeoff: 1 more left turn at a signal",
+      "Tradeoff: 1 more drawbridge"
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerFactors" : [
+      [
+        "signal",
+        17,
+        170
+      ],
+      [
+        "stopAndGo",
+        9,
+        90
+      ],
+      [
+        "turn",
+        10,
+        80
+      ],
+      [
+        "leftAtSignal",
+        3,
+        50
+      ],
+      [
+        "hillStop",
+        1,
+        30
+      ],
+      [
+        "movableBridge",
+        1,
+        30
+      ],
+      [
+        "narrowWithParking",
+        517.10000000000002,
+        21
+      ],
+      [
+        "residential",
+        491.5,
+        15
+      ]
+    ],
+    "calmerMeters" : 6104.2900000000009,
+    "calmerSeconds" : 880.19774516821815,
+    "calmerStress" : 485.42780000000005,
+    "candidates" : 5,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.051284074783325195,
+    "destination" : "Capitol Hill Library",
+    "destinationSnapMeters" : 20.411380538500193,
+    "extraSeconds" : 95.003347947983912,
+    "fastestFactors" : [
+      [
+        "unsignalledLeft",
+        2,
+        240
+      ],
+      [
+        "signal",
+        17,
+        170
+      ],
+      [
+        "stopAndGo",
+        10,
+        100
+      ],
+      [
+        "turn",
+        10,
+        80
+      ],
+      [
+        "hillStop",
+        2,
+        60
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "freewayEntry",
+        1,
+        30
+      ],
+      [
+        "leftAtSignal",
+        2,
+        20
+      ],
+      [
+        "residential",
+        328.60000000000002,
+        10
+      ],
+      [
+        "narrowWithParking",
+        101,
+        4
+      ]
+    ],
+    "fastestMeters" : 6552.5399999999981,
+    "fastestSeconds" : 785.19439722023424,
+    "fastestStress" : 753.8984999999999,
+    "mode" : "drive",
+    "origin" : "Fremont Library",
+    "originSnapMeters" : 26.769035872678163,
+    "reasons" : [
+      "2 fewer left turns across traffic without a signal",
+      "1 fewer intersection of five or more streets",
+      "1 fewer stop on a steep hill",
+      "Tradeoff: 1 more left turn at a signal",
+      "Tradeoff: 1 more drawbridge"
+    ]
+  },
+  {
+    "budgetMinutes" : 0,
+    "calmerFactors" : null,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "calmerStress" : null,
+    "candidates" : 1,
+    "caveats" : [
+      "Fastest route: 1.0 mi where sidewalks aren't mapped."
+    ],
+    "computeSeconds" : 0.057319998741149902,
+    "destination" : "Hyson Boba & Tea",
+    "destinationSnapMeters" : 7.6688128183663355,
+    "extraSeconds" : 0,
+    "fastestFactors" : [
+      [
+        "unmarkedCrossing",
+        5,
+        540
+      ],
+      [
+        "climb",
+        144.5,
+        289
+      ],
+      [
+        "markedCrossing",
+        5,
+        270
+      ],
+      [
+        "besideTraffic",
+        1873.7,
+        112
+      ],
+      [
+        "signalCrossing",
+        11,
+        110
+      ],
+      [
+        "sideStreetCrossing",
+        32,
+        96
+      ],
+      [
+        "stairs",
+        43,
+        43
+      ],
+      [
+        "unknownSidewalk",
+        1600.4000000000001,
+        32
+      ]
+    ],
+    "fastestMeters" : 10237.410000000003,
+    "fastestSeconds" : 8236.3309523809512,
+    "fastestStress" : 1492.4321999999995,
+    "mode" : "walk",
+    "origin" : "Ballard Library",
+    "originSnapMeters" : 35.41240797439108,
+    "reasons" : [
+      "Extra time is None, so nothing else was checked."
+    ]
+  },
+  {
+    "budgetMinutes" : 2,
+    "calmerFactors" : [
+      [
+        "climb",
+        140.59999999999999,
+        281
+      ],
+      [
+        "markedCrossing",
+        5,
+        225
+      ],
+      [
+        "signalCrossing",
         12,
         120
       ],
       [
-        "stopAndGo",
-        7,
-        70
-      ],
-      [
-        "leftAtSignal",
-        4,
-        70
-      ],
-      [
-        "allWayStop",
-        3,
-        60
-      ],
-      [
-        "hillStop",
-        1,
-        30
-      ],
-      [
-        "unsignalledRight",
-        2,
-        30
-      ],
-      [
-        "movableBridge",
-        1,
-        30
-      ],
-      [
-        "residential",
-        516.39999999999998,
-        15
-      ],
-      [
-        "narrowWithParking",
-        129,
-        5
-      ]
-    ],
-    "calmerMeters" : 6391.1800000000012,
-    "calmerSeconds" : 902.30124075399704,
-    "calmerStress" : 558.65229999999997,
-    "candidates" : 4,
-    "caveats" : [
-
-    ],
-    "computeSeconds" : 0.67622101306915283,
-    "destination" : "Capitol Hill Library",
-    "destinationSnapMeters" : 20.411380538500193,
-    "extraSeconds" : 37.225397256025417,
-    "fastestFactors" : [
-      [
-        "unsignalledLeft",
-        5,
-        600
-      ],
-      [
-        "shortFreewayHop",
-        1,
-        90
-      ],
-      [
-        "unsignalledCrossing",
-        1,
-        90
-      ],
-      [
-        "turn",
-        11,
-        88
-      ],
-      [
-        "signal",
-        6,
-        60
-      ],
-      [
-        "allWayStop",
-        3,
-        60
-      ],
-      [
-        "freewayEntry",
-        1,
-        30
-      ],
-      [
-        "hillStop",
-        1,
-        30
-      ],
-      [
-        "residential",
-        889.39999999999998,
-        27
-      ],
-      [
-        "stopSign",
-        1,
-        15
-      ],
-      [
-        "stopAndGo",
-        1,
-        10
-      ],
-      [
-        "narrowWithParking",
-        122.2,
-        5
-      ]
-    ],
-    "fastestMeters" : 7891.3699999999981,
-    "fastestSeconds" : 865.07584349797162,
-    "fastestStress" : 1104.5682999999999,
-    "mode" : "drive",
-    "origin" : "Fremont Library",
-    "originSnapMeters" : 26.769035872678163,
-    "reasons" : [
-      "5 fewer left turns across traffic without a signal",
-      "1 fewer crossing of a busy street without a signal",
-      "1 fewer short freeway hop with quick lane changes",
-      "Tradeoff: 4 more left turns at signals",
-      "Tradeoff: 6 more traffic signals"
-    ]
-  },
-  {
-    "budgetMinutes" : 5,
-    "calmerFactors" : [
-      [
-        "signal",
-        19,
-        190
-      ],
-      [
-        "shortFreewayHop",
-        1,
-        90
-      ],
-      [
-        "turn",
-        8,
-        64
-      ],
-      [
-        "narrowWithParking",
-        1442.0999999999999,
-        58
-      ],
-      [
-        "stopAndGo",
-        5,
-        50
-      ],
-      [
-        "freewayEntry",
-        1,
-        30
-      ],
-      [
-        "leftAtSignal",
-        2,
-        20
-      ],
-      [
-        "allWayStop",
-        1,
-        20
-      ],
-      [
-        "residential",
-        245.40000000000001,
-        7
-      ]
-    ],
-    "calmerMeters" : 7857.3800000000037,
-    "calmerSeconds" : 999.62751672631805,
-    "calmerStress" : 529.04639999999995,
-    "candidates" : 4,
-    "caveats" : [
-
-    ],
-    "computeSeconds" : 0.68649506568908691,
-    "destination" : "Capitol Hill Library",
-    "destinationSnapMeters" : 20.411380538500193,
-    "extraSeconds" : 134.55167322834643,
-    "fastestFactors" : [
-      [
-        "unsignalledLeft",
-        5,
-        600
-      ],
-      [
-        "shortFreewayHop",
-        1,
-        90
-      ],
-      [
-        "unsignalledCrossing",
-        1,
-        90
-      ],
-      [
-        "turn",
-        11,
-        88
-      ],
-      [
-        "signal",
-        6,
-        60
-      ],
-      [
-        "allWayStop",
-        3,
-        60
-      ],
-      [
-        "freewayEntry",
-        1,
-        30
-      ],
-      [
-        "hillStop",
-        1,
-        30
-      ],
-      [
-        "residential",
-        889.39999999999998,
-        27
-      ],
-      [
-        "stopSign",
-        1,
-        15
-      ],
-      [
-        "stopAndGo",
-        1,
-        10
-      ],
-      [
-        "narrowWithParking",
-        122.2,
-        5
-      ]
-    ],
-    "fastestMeters" : 7891.3699999999981,
-    "fastestSeconds" : 865.07584349797162,
-    "fastestStress" : 1104.5682999999999,
-    "mode" : "drive",
-    "origin" : "Fremont Library",
-    "originSnapMeters" : 26.769035872678163,
-    "reasons" : [
-      "5 fewer left turns across traffic without a signal",
-      "1 fewer crossing of a busy street without a signal",
-      "2 fewer all-way stops",
-      "Tradeoff: 13 more traffic signals",
-      "Tradeoff: 0.8 mi more on narrow streets with parking on both sides"
-    ]
-  },
-  {
-    "budgetMinutes" : 10,
-    "calmerFactors" : [
-      [
-        "signal",
-        19,
-        190
-      ],
-      [
-        "shortFreewayHop",
-        1,
-        90
-      ],
-      [
-        "turn",
-        8,
-        64
-      ],
-      [
-        "narrowWithParking",
-        1442.0999999999999,
-        58
-      ],
-      [
-        "stopAndGo",
-        5,
-        50
-      ],
-      [
-        "freewayEntry",
-        1,
-        30
-      ],
-      [
-        "leftAtSignal",
-        2,
-        20
-      ],
-      [
-        "allWayStop",
-        1,
-        20
-      ],
-      [
-        "residential",
-        245.40000000000001,
-        7
-      ]
-    ],
-    "calmerMeters" : 7857.3800000000037,
-    "calmerSeconds" : 999.62751672631805,
-    "calmerStress" : 529.04639999999995,
-    "candidates" : 4,
-    "caveats" : [
-
-    ],
-    "computeSeconds" : 0.69328093528747559,
-    "destination" : "Capitol Hill Library",
-    "destinationSnapMeters" : 20.411380538500193,
-    "extraSeconds" : 134.55167322834643,
-    "fastestFactors" : [
-      [
-        "unsignalledLeft",
-        5,
-        600
-      ],
-      [
-        "shortFreewayHop",
-        1,
-        90
-      ],
-      [
-        "unsignalledCrossing",
-        1,
-        90
-      ],
-      [
-        "turn",
-        11,
-        88
-      ],
-      [
-        "signal",
-        6,
-        60
-      ],
-      [
-        "allWayStop",
-        3,
-        60
-      ],
-      [
-        "freewayEntry",
-        1,
-        30
-      ],
-      [
-        "hillStop",
-        1,
-        30
-      ],
-      [
-        "residential",
-        889.39999999999998,
-        27
-      ],
-      [
-        "stopSign",
-        1,
-        15
-      ],
-      [
-        "stopAndGo",
-        1,
-        10
-      ],
-      [
-        "narrowWithParking",
-        122.2,
-        5
-      ]
-    ],
-    "fastestMeters" : 7891.3699999999981,
-    "fastestSeconds" : 865.07584349797162,
-    "fastestStress" : 1104.5682999999999,
-    "mode" : "drive",
-    "origin" : "Fremont Library",
-    "originSnapMeters" : 26.769035872678163,
-    "reasons" : [
-      "5 fewer left turns across traffic without a signal",
-      "1 fewer crossing of a busy street without a signal",
-      "2 fewer all-way stops",
-      "Tradeoff: 13 more traffic signals",
-      "Tradeoff: 0.8 mi more on narrow streets with parking on both sides"
-    ]
-  },
-  {
-    "budgetMinutes" : 0,
-    "calmerFactors" : null,
-    "calmerMeters" : null,
-    "calmerSeconds" : null,
-    "calmerStress" : null,
-    "candidates" : 1,
-    "caveats" : [
-      "Fastest route: 1.1 mi where sidewalks aren't mapped."
-    ],
-    "computeSeconds" : 0.069333910942077637,
-    "destination" : "Hyson Boba & Tea",
-    "destinationSnapMeters" : 7.6688128183663355,
-    "extraSeconds" : 0,
-    "fastestFactors" : [
-      [
-        "unmarkedCrossing",
-        5,
-        540
-      ],
-      [
-        "climb",
-        144.80000000000001,
-        290
-      ],
-      [
-        "markedCrossing",
-        5,
-        270
-      ],
-      [
         "besideTraffic",
-        1881.7,
-        113
-      ],
-      [
-        "sideStreetCrossing",
-        33,
-        99
-      ],
-      [
-        "signalCrossing",
-        9,
-        90
-      ],
-      [
-        "stairs",
-        43,
-        43
-      ],
-      [
-        "unknownSidewalk",
-        1693.2,
-        34
-      ]
-    ],
-    "fastestMeters" : 10357.540000000001,
-    "fastestSeconds" : 8322.8880952380932,
-    "fastestStress" : 1478.3655999999996,
-    "mode" : "walk",
-    "origin" : "Ballard Library",
-    "originSnapMeters" : 35.41240797439108,
-    "reasons" : [
-      "Extra time is None, so nothing else was checked."
-    ]
-  },
-  {
-    "budgetMinutes" : 2,
-    "calmerFactors" : [
-      [
-        "climb",
-        144.80000000000001,
-        290
-      ],
-      [
-        "markedCrossing",
-        4,
-        180
-      ],
-      [
-        "besideTraffic",
-        1843.0999999999999,
-        111
-      ],
-      [
-        "signalCrossing",
-        11,
-        110
+        1810.7,
+        109
       ],
       [
         "unmarkedCrossing",
@@ -5312,21 +5355,21 @@
       ],
       [
         "unknownSidewalk",
-        958.5,
-        19
+        865.79999999999995,
+        17
       ]
     ],
-    "calmerMeters" : 10368.089999999993,
-    "calmerSeconds" : 8430.423809523807,
-    "calmerStress" : 923.35699999999963,
+    "calmerMeters" : 10332.719999999996,
+    "calmerSeconds" : 8344.6595238095179,
+    "calmerStress" : 966.15839999999969,
     "candidates" : 7,
     "caveats" : [
-      "Fastest route: 1.1 mi where sidewalks aren't mapped."
+      "Fastest route: 1.0 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 2.1823559999465942,
+    "computeSeconds" : 0.22513401508331299,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 7.6688128183663355,
-    "extraSeconds" : 107.53571428571377,
+    "extraSeconds" : 108.32857142856665,
     "fastestFactors" : [
       [
         "unmarkedCrossing",
@@ -5335,8 +5378,8 @@
       ],
       [
         "climb",
-        144.80000000000001,
-        290
+        144.5,
+        289
       ],
       [
         "markedCrossing",
@@ -5345,18 +5388,18 @@
       ],
       [
         "besideTraffic",
-        1881.7,
-        113
-      ],
-      [
-        "sideStreetCrossing",
-        33,
-        99
+        1873.7,
+        112
       ],
       [
         "signalCrossing",
-        9,
-        90
+        11,
+        110
+      ],
+      [
+        "sideStreetCrossing",
+        32,
+        96
       ],
       [
         "stairs",
@@ -5365,21 +5408,20 @@
       ],
       [
         "unknownSidewalk",
-        1693.2,
-        34
+        1600.4000000000001,
+        32
       ]
     ],
-    "fastestMeters" : 10357.540000000001,
-    "fastestSeconds" : 8322.8880952380932,
-    "fastestStress" : 1478.3655999999996,
+    "fastestMeters" : 10237.410000000003,
+    "fastestSeconds" : 8236.3309523809512,
+    "fastestStress" : 1492.4321999999995,
     "mode" : "walk",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
     "reasons" : [
       "4 fewer unmarked crossings of busy streets",
-      "1 fewer marked crossing without a signal",
-      "6 fewer side-street crossings",
-      "Tradeoff: 2 more signalled crossings"
+      "5 fewer side-street crossings",
+      "Tradeoff: 1 more signalled crossing"
     ]
   },
   {
@@ -5387,23 +5429,23 @@
     "calmerFactors" : [
       [
         "climb",
-        144.80000000000001,
-        290
+        140.59999999999999,
+        281
       ],
       [
         "markedCrossing",
-        4,
-        180
-      ],
-      [
-        "besideTraffic",
-        1843.0999999999999,
-        111
+        5,
+        225
       ],
       [
         "signalCrossing",
-        11,
-        110
+        12,
+        120
+      ],
+      [
+        "besideTraffic",
+        1810.7,
+        109
       ],
       [
         "unmarkedCrossing",
@@ -5422,21 +5464,21 @@
       ],
       [
         "unknownSidewalk",
-        958.5,
-        19
+        865.79999999999995,
+        17
       ]
     ],
-    "calmerMeters" : 10368.089999999993,
-    "calmerSeconds" : 8430.423809523807,
-    "calmerStress" : 923.35699999999963,
+    "calmerMeters" : 10332.719999999996,
+    "calmerSeconds" : 8344.6595238095179,
+    "calmerStress" : 966.15839999999969,
     "candidates" : 7,
     "caveats" : [
-      "Fastest route: 1.1 mi where sidewalks aren't mapped."
+      "Fastest route: 1.0 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 2.1493079662322998,
+    "computeSeconds" : 0.22536289691925049,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 7.6688128183663355,
-    "extraSeconds" : 107.53571428571377,
+    "extraSeconds" : 108.32857142856665,
     "fastestFactors" : [
       [
         "unmarkedCrossing",
@@ -5445,8 +5487,8 @@
       ],
       [
         "climb",
-        144.80000000000001,
-        290
+        144.5,
+        289
       ],
       [
         "markedCrossing",
@@ -5455,18 +5497,18 @@
       ],
       [
         "besideTraffic",
-        1881.7,
-        113
-      ],
-      [
-        "sideStreetCrossing",
-        33,
-        99
+        1873.7,
+        112
       ],
       [
         "signalCrossing",
-        9,
-        90
+        11,
+        110
+      ],
+      [
+        "sideStreetCrossing",
+        32,
+        96
       ],
       [
         "stairs",
@@ -5475,21 +5517,20 @@
       ],
       [
         "unknownSidewalk",
-        1693.2,
-        34
+        1600.4000000000001,
+        32
       ]
     ],
-    "fastestMeters" : 10357.540000000001,
-    "fastestSeconds" : 8322.8880952380932,
-    "fastestStress" : 1478.3655999999996,
+    "fastestMeters" : 10237.410000000003,
+    "fastestSeconds" : 8236.3309523809512,
+    "fastestStress" : 1492.4321999999995,
     "mode" : "walk",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
     "reasons" : [
       "4 fewer unmarked crossings of busy streets",
-      "1 fewer marked crossing without a signal",
-      "6 fewer side-street crossings",
-      "Tradeoff: 2 more signalled crossings"
+      "5 fewer side-street crossings",
+      "Tradeoff: 1 more signalled crossing"
     ]
   },
   {
@@ -5497,13 +5538,13 @@
     "calmerFactors" : [
       [
         "climb",
-        148.30000000000001,
-        297
+        144.30000000000001,
+        289
       ],
       [
         "signalCrossing",
-        14,
-        140
+        16,
+        160
       ],
       [
         "markedCrossing",
@@ -5512,13 +5553,13 @@
       ],
       [
         "besideTraffic",
-        1301.5999999999999,
-        78
+        1470.8,
+        88
       ],
       [
         "sideStreetCrossing",
-        25,
-        75
+        27,
+        81
       ],
       [
         "stairs",
@@ -5527,21 +5568,21 @@
       ],
       [
         "unknownSidewalk",
-        380.69999999999999,
-        8
+        254,
+        5
       ]
     ],
-    "calmerMeters" : 10592.689999999988,
-    "calmerSeconds" : 8724.6023809523795,
-    "calmerStress" : 775.30779999999982,
+    "calmerMeters" : 10528.07,
+    "calmerSeconds" : 8668.4452380952316,
+    "calmerStress" : 800.93019999999979,
     "candidates" : 7,
     "caveats" : [
-      "Fastest route: 1.1 mi where sidewalks aren't mapped."
+      "Fastest route: 1.0 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 2.1664479970932007,
+    "computeSeconds" : 0.24513900279998779,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 7.6688128183663355,
-    "extraSeconds" : 401.71428571428623,
+    "extraSeconds" : 432.11428571428041,
     "fastestFactors" : [
       [
         "unmarkedCrossing",
@@ -5550,8 +5591,8 @@
       ],
       [
         "climb",
-        144.80000000000001,
-        290
+        144.5,
+        289
       ],
       [
         "markedCrossing",
@@ -5560,18 +5601,18 @@
       ],
       [
         "besideTraffic",
-        1881.7,
-        113
-      ],
-      [
-        "sideStreetCrossing",
-        33,
-        99
+        1873.7,
+        112
       ],
       [
         "signalCrossing",
-        9,
-        90
+        11,
+        110
+      ],
+      [
+        "sideStreetCrossing",
+        32,
+        96
       ],
       [
         "stairs",
@@ -5580,20 +5621,20 @@
       ],
       [
         "unknownSidewalk",
-        1693.2,
-        34
+        1600.4000000000001,
+        32
       ]
     ],
-    "fastestMeters" : 10357.540000000001,
-    "fastestSeconds" : 8322.8880952380932,
-    "fastestStress" : 1478.3655999999996,
+    "fastestMeters" : 10237.410000000003,
+    "fastestSeconds" : 8236.3309523809512,
+    "fastestStress" : 1492.4321999999995,
     "mode" : "walk",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
     "reasons" : [
       "5 fewer unmarked crossings of busy streets",
       "2 fewer marked crossings without a signal",
-      "0.4 mi less walking beside arterial traffic",
+      "0.3 mi less walking beside arterial traffic",
       "Tradeoff: 5 more signalled crossings"
     ]
   },
@@ -5607,74 +5648,74 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.031207919120788574,
+    "computeSeconds" : 0.023504018783569336,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 17.408750393960609,
     "extraSeconds" : 0,
     "fastestFactors" : [
       [
         "busyArterialRiding",
-        3463.9000000000001,
-        2078
-      ],
-      [
-        "climb",
-        152.30000000000001,
-        609
+        2377.9000000000001,
+        1427
       ],
       [
         "arterialRiding",
-        2196.5,
-        527
+        2611.6999999999998,
+        627
       ],
       [
-        "signal",
-        24,
-        336
+        "climb",
+        151.40000000000001,
+        606
       ],
       [
         "unsignalledLeft",
-        2,
-        180
-      ],
-      [
-        "quietStreet",
-        2372,
-        142
+        3,
+        270
       ],
       [
         "unsignalledCrossing",
-        2,
-        120
+        4,
+        240
+      ],
+      [
+        "signal",
+        17,
+        238
+      ],
+      [
+        "quietStreet",
+        2992.0999999999999,
+        180
       ],
       [
         "turn",
-        26,
-        104
-      ],
-      [
-        "stopAndGo",
-        19,
-        95
+        35,
+        140
       ],
       [
         "bikeRouteGap",
-        3,
-        60
+        4,
+        80
       ],
       [
         "leftAtSignal",
-        4,
-        60
+        5,
+        75
       ],
       [
-        "hillStop",
-        2,
-        40
+        "stopAndGo",
+        14,
+        70
       ],
       [
         "stopSign",
         4,
+        40
+      ],
+      [
+        "hillStop",
+        2,
         40
       ],
       [
@@ -5694,13 +5735,13 @@
       ],
       [
         "unknownSurface",
-        127.8,
-        1
+        608.89999999999998,
+        3
       ]
     ],
-    "fastestMeters" : 10600.570000000007,
-    "fastestSeconds" : 2805.8083750000014,
-    "fastestStress" : 4477.5566500000004,
+    "fastestMeters" : 10543.29000000001,
+    "fastestSeconds" : 2754.052375000002,
+    "fastestStress" : 4119.5870499999992,
     "mode" : "bike",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
@@ -5713,78 +5754,78 @@
     "calmerFactors" : [
       [
         "climb",
-        155.19999999999999,
-        621
+        155.5,
+        622
       ],
       [
         "arterialRiding",
-        2193.1999999999998,
-        526
-      ],
-      [
-        "quietStreet",
-        3760.0999999999999,
-        226
-      ],
-      [
-        "turn",
-        44,
-        176
-      ],
-      [
-        "signal",
-        10,
-        140
+        1661.2,
+        399
       ],
       [
         "busyArterialRiding",
-        222.30000000000001,
-        133
+        388.39999999999998,
+        233
+      ],
+      [
+        "quietStreet",
+        3574.4000000000001,
+        214
+      ],
+      [
+        "signal",
+        13,
+        182
       ],
       [
         "unsignalledCrossing",
-        2,
-        120
+        3,
+        180
       ],
       [
         "unsignalledLeft",
-        1,
-        90
+        2,
+        180
       ],
       [
-        "leftAtSignal",
-        4,
-        60
+        "turn",
+        41,
+        164
+      ],
+      [
+        "stopAndGo",
+        15,
+        75
       ],
       [
         "allWayStop",
+        6,
+        60
+      ],
+      [
+        "stopSign",
         5,
         50
       ],
       [
-        "bikeRouteGap",
+        "hillStop",
         2,
         40
       ],
       [
-        "stopSign",
-        3,
+        "steepDescent",
+        177.59999999999999,
+        36
+      ],
+      [
+        "leftAtSignal",
+        2,
         30
       ],
       [
-        "hillStop",
+        "bikeRouteGap",
         1,
         20
-      ],
-      [
-        "stopAndGo",
-        4,
-        20
-      ],
-      [
-        "steepDescent",
-        87.400000000000006,
-        17
       ],
       [
         "movableBridge",
@@ -5793,85 +5834,85 @@
       ],
       [
         "unknownSurface",
-        857.10000000000002,
-        4
+        444.5,
+        2
       ]
     ],
-    "calmerMeters" : 11414.620000000003,
-    "calmerSeconds" : 2919.5853035714294,
-    "calmerStress" : 2288.9077000000002,
-    "candidates" : 5,
+    "calmerMeters" : 10629.880000000006,
+    "calmerSeconds" : 2799.256446428572,
+    "calmerStress" : 2501.9178999999999,
+    "candidates" : 6,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.91027402877807617,
+    "computeSeconds" : 0.091717004776000977,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 17.408750393960609,
-    "extraSeconds" : 113.77692857142802,
+    "extraSeconds" : 45.204071428569932,
     "fastestFactors" : [
       [
         "busyArterialRiding",
-        3463.9000000000001,
-        2078
-      ],
-      [
-        "climb",
-        152.30000000000001,
-        609
+        2377.9000000000001,
+        1427
       ],
       [
         "arterialRiding",
-        2196.5,
-        527
+        2611.6999999999998,
+        627
       ],
       [
-        "signal",
-        24,
-        336
+        "climb",
+        151.40000000000001,
+        606
       ],
       [
         "unsignalledLeft",
-        2,
-        180
-      ],
-      [
-        "quietStreet",
-        2372,
-        142
+        3,
+        270
       ],
       [
         "unsignalledCrossing",
-        2,
-        120
+        4,
+        240
+      ],
+      [
+        "signal",
+        17,
+        238
+      ],
+      [
+        "quietStreet",
+        2992.0999999999999,
+        180
       ],
       [
         "turn",
-        26,
-        104
-      ],
-      [
-        "stopAndGo",
-        19,
-        95
+        35,
+        140
       ],
       [
         "bikeRouteGap",
-        3,
-        60
+        4,
+        80
       ],
       [
         "leftAtSignal",
-        4,
-        60
+        5,
+        75
       ],
       [
-        "hillStop",
-        2,
-        40
+        "stopAndGo",
+        14,
+        70
       ],
       [
         "stopSign",
         4,
+        40
+      ],
+      [
+        "hillStop",
+        2,
         40
       ],
       [
@@ -5891,22 +5932,22 @@
       ],
       [
         "unknownSurface",
-        127.8,
-        1
+        608.89999999999998,
+        3
       ]
     ],
-    "fastestMeters" : 10600.570000000007,
-    "fastestSeconds" : 2805.8083750000014,
-    "fastestStress" : 4477.5566500000004,
+    "fastestMeters" : 10543.29000000001,
+    "fastestSeconds" : 2754.052375000002,
+    "fastestStress" : 4119.5870499999992,
     "mode" : "bike",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
     "reasons" : [
-      "2.0 mi less riding in traffic on busy arterials",
-      "14 fewer traffic signals",
+      "1.2 mi less riding in traffic on busy arterials",
+      "0.6 mi less riding on arterials",
       "1 fewer left turn across traffic without a signal",
-      "Tradeoff: 0.9 mi more on quiet streets",
-      "Tradeoff: 18 more turns"
+      "Tradeoff: 0.4 mi more on quiet streets",
+      "Tradeoff: 3 more all-way stops"
     ]
   },
   {
@@ -5914,78 +5955,78 @@
     "calmerFactors" : [
       [
         "climb",
-        163.5,
-        654
+        155.5,
+        622
       ],
       [
         "arterialRiding",
-        1834.8,
-        440
+        1661.2,
+        399
+      ],
+      [
+        "busyArterialRiding",
+        388.39999999999998,
+        233
       ],
       [
         "quietStreet",
-        4222.6000000000004,
-        253
-      ],
-      [
-        "turn",
-        51,
-        204
-      ],
-      [
-        "unsignalledCrossing",
-        2,
-        120
+        3574.4000000000001,
+        214
       ],
       [
         "signal",
-        8,
-        112
+        13,
+        182
+      ],
+      [
+        "unsignalledCrossing",
+        3,
+        180
       ],
       [
         "unsignalledLeft",
-        1,
-        90
+        2,
+        180
       ],
       [
-        "leftAtSignal",
-        4,
-        60
+        "turn",
+        41,
+        164
+      ],
+      [
+        "stopAndGo",
+        15,
+        75
       ],
       [
         "allWayStop",
+        6,
+        60
+      ],
+      [
+        "stopSign",
         5,
         50
       ],
       [
-        "bikeRouteGap",
+        "hillStop",
         2,
         40
       ],
       [
-        "stopSign",
-        4,
-        40
+        "steepDescent",
+        177.59999999999999,
+        36
       ],
       [
-        "stopAndGo",
-        5,
-        25
+        "leftAtSignal",
+        2,
+        30
       ],
       [
-        "hillStop",
+        "bikeRouteGap",
         1,
         20
-      ],
-      [
-        "busyArterialRiding",
-        28.699999999999999,
-        17
-      ],
-      [
-        "steepDescent",
-        83.200000000000003,
-        17
       ],
       [
         "movableBridge",
@@ -5994,85 +6035,85 @@
       ],
       [
         "unknownSurface",
-        827.79999999999995,
-        4
+        444.5,
+        2
       ]
     ],
-    "calmerMeters" : 11517,
-    "calmerSeconds" : 2968.5470178571441,
-    "calmerStress" : 2161.6767999999997,
-    "candidates" : 5,
+    "calmerMeters" : 10629.880000000006,
+    "calmerSeconds" : 2799.256446428572,
+    "calmerStress" : 2501.9178999999999,
+    "candidates" : 6,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.90382599830627441,
+    "computeSeconds" : 0.073668956756591797,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 17.408750393960609,
-    "extraSeconds" : 162.73864285714262,
+    "extraSeconds" : 45.204071428569932,
     "fastestFactors" : [
       [
         "busyArterialRiding",
-        3463.9000000000001,
-        2078
-      ],
-      [
-        "climb",
-        152.30000000000001,
-        609
+        2377.9000000000001,
+        1427
       ],
       [
         "arterialRiding",
-        2196.5,
-        527
+        2611.6999999999998,
+        627
       ],
       [
-        "signal",
-        24,
-        336
+        "climb",
+        151.40000000000001,
+        606
       ],
       [
         "unsignalledLeft",
-        2,
-        180
-      ],
-      [
-        "quietStreet",
-        2372,
-        142
+        3,
+        270
       ],
       [
         "unsignalledCrossing",
-        2,
-        120
+        4,
+        240
+      ],
+      [
+        "signal",
+        17,
+        238
+      ],
+      [
+        "quietStreet",
+        2992.0999999999999,
+        180
       ],
       [
         "turn",
-        26,
-        104
-      ],
-      [
-        "stopAndGo",
-        19,
-        95
+        35,
+        140
       ],
       [
         "bikeRouteGap",
-        3,
-        60
+        4,
+        80
       ],
       [
         "leftAtSignal",
-        4,
-        60
+        5,
+        75
       ],
       [
-        "hillStop",
-        2,
-        40
+        "stopAndGo",
+        14,
+        70
       ],
       [
         "stopSign",
         4,
+        40
+      ],
+      [
+        "hillStop",
+        2,
         40
       ],
       [
@@ -6092,22 +6133,22 @@
       ],
       [
         "unknownSurface",
-        127.8,
-        1
+        608.89999999999998,
+        3
       ]
     ],
-    "fastestMeters" : 10600.570000000007,
-    "fastestSeconds" : 2805.8083750000014,
-    "fastestStress" : 4477.5566500000004,
+    "fastestMeters" : 10543.29000000001,
+    "fastestSeconds" : 2754.052375000002,
+    "fastestStress" : 4119.5870499999992,
     "mode" : "bike",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
     "reasons" : [
-      "2.1 mi less riding in traffic on busy arterials",
-      "16 fewer traffic signals",
+      "1.2 mi less riding in traffic on busy arterials",
+      "0.6 mi less riding on arterials",
       "1 fewer left turn across traffic without a signal",
-      "Tradeoff: 1.1 mi more on quiet streets",
-      "Tradeoff: 25 more turns"
+      "Tradeoff: 0.4 mi more on quiet streets",
+      "Tradeoff: 3 more all-way stops"
     ]
   },
   {
@@ -6115,33 +6156,38 @@
     "calmerFactors" : [
       [
         "climb",
-        174.80000000000001,
-        699
-      ],
-      [
-        "quietStreet",
-        4677.6999999999998,
-        281
+        169.09999999999999,
+        676
       ],
       [
         "arterialRiding",
-        839.10000000000002,
-        201
+        1295.2,
+        311
+      ],
+      [
+        "quietStreet",
+        4173.5,
+        250
       ],
       [
         "turn",
-        39,
-        156
-      ],
-      [
-        "unsignalledCrossing",
-        2,
-        120
+        34,
+        136
       ],
       [
         "signal",
-        8,
-        112
+        9,
+        126
+      ],
+      [
+        "unsignalledCrossing",
+        1,
+        60
+      ],
+      [
+        "leftAtSignal",
+        4,
+        60
       ],
       [
         "bikeRouteGap",
@@ -6149,13 +6195,8 @@
         60
       ],
       [
-        "stopSign",
-        4,
-        40
-      ],
-      [
-        "leftAtSignal",
-        2,
+        "allWayStop",
+        3,
         30
       ],
       [
@@ -6164,14 +6205,14 @@
         20
       ],
       [
-        "allWayStop",
+        "stopSign",
         2,
         20
       ],
       [
         "steepDescent",
-        91,
-        18
+        77.799999999999997,
+        16
       ],
       [
         "busyArterialRiding",
@@ -6184,91 +6225,86 @@
         5
       ],
       [
-        "stopAndGo",
-        1,
-        5
-      ],
-      [
         "yield",
         1,
         4
       ]
     ],
-    "calmerMeters" : 12448.180000000015,
-    "calmerSeconds" : 3201.863714285716,
-    "calmerStress" : 1784.9161999999999,
-    "candidates" : 5,
+    "calmerMeters" : 12381.290000000001,
+    "calmerSeconds" : 3168.0148571428563,
+    "calmerStress" : 1787.6789999999996,
+    "candidates" : 6,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.90630102157592773,
+    "computeSeconds" : 0.073494076728820801,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 17.408750393960609,
-    "extraSeconds" : 396.05533928571458,
+    "extraSeconds" : 413.96248214285424,
     "fastestFactors" : [
       [
         "busyArterialRiding",
-        3463.9000000000001,
-        2078
-      ],
-      [
-        "climb",
-        152.30000000000001,
-        609
+        2377.9000000000001,
+        1427
       ],
       [
         "arterialRiding",
-        2196.5,
-        527
+        2611.6999999999998,
+        627
       ],
       [
-        "signal",
-        24,
-        336
+        "climb",
+        151.40000000000001,
+        606
       ],
       [
         "unsignalledLeft",
-        2,
-        180
-      ],
-      [
-        "quietStreet",
-        2372,
-        142
+        3,
+        270
       ],
       [
         "unsignalledCrossing",
-        2,
-        120
+        4,
+        240
+      ],
+      [
+        "signal",
+        17,
+        238
+      ],
+      [
+        "quietStreet",
+        2992.0999999999999,
+        180
       ],
       [
         "turn",
-        26,
-        104
-      ],
-      [
-        "stopAndGo",
-        19,
-        95
+        35,
+        140
       ],
       [
         "bikeRouteGap",
-        3,
-        60
+        4,
+        80
       ],
       [
         "leftAtSignal",
-        4,
-        60
+        5,
+        75
       ],
       [
-        "hillStop",
-        2,
-        40
+        "stopAndGo",
+        14,
+        70
       ],
       [
         "stopSign",
         4,
+        40
+      ],
+      [
+        "hillStop",
+        2,
         40
       ],
       [
@@ -6288,22 +6324,22 @@
       ],
       [
         "unknownSurface",
-        127.8,
-        1
+        608.89999999999998,
+        3
       ]
     ],
-    "fastestMeters" : 10600.570000000007,
-    "fastestSeconds" : 2805.8083750000014,
-    "fastestStress" : 4477.5566500000004,
+    "fastestMeters" : 10543.29000000001,
+    "fastestSeconds" : 2754.052375000002,
+    "fastestStress" : 4119.5870499999992,
     "mode" : "bike",
     "origin" : "Ballard Library",
     "originSnapMeters" : 35.41240797439108,
     "reasons" : [
-      "2.1 mi less riding in traffic on busy arterials",
+      "1.5 mi less riding in traffic on busy arterials",
       "0.8 mi less riding on arterials",
-      "16 fewer traffic signals",
-      "Tradeoff: 1.4 mi more on quiet streets",
-      "Tradeoff: 74 ft more climbing"
+      "3 fewer left turns across traffic without a signal",
+      "Tradeoff: 0.7 mi more on quiet streets",
+      "Tradeoff: 58 ft more climbing"
     ]
   },
   {
@@ -6316,74 +6352,59 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.031712055206298828,
+    "computeSeconds" : 0.021696925163269043,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 17.408750393960609,
     "extraSeconds" : 0,
     "fastestFactors" : [
       [
-        "unsignalledCrossing",
-        5,
-        510
+        "signal",
+        24,
+        240
       ],
       [
         "unsignalledLeft",
-        4,
-        480
+        2,
+        240
+      ],
+      [
+        "stopAndGo",
+        15,
+        150
       ],
       [
         "turn",
-        22,
-        176
-      ],
-      [
-        "signal",
-        13,
-        130
-      ],
-      [
-        "allWayStop",
-        5,
-        100
-      ],
-      [
-        "residential",
-        3183.4000000000001,
+        12,
         96
       ],
       [
-        "shortFreewayHop",
+        "unsignalledCrossing",
         1,
         90
       ],
       [
-        "complexJunction",
-        2,
-        80
-      ],
-      [
-        "stopAndGo",
-        7,
-        70
-      ],
-      [
-        "hillStop",
-        1,
+        "allWayStop",
+        3,
         60
       ],
       [
-        "unsignalledRight",
+        "hillStop",
+        2,
+        60
+      ],
+      [
+        "stopSign",
         3,
         45
       ],
       [
-        "narrowWithParking",
-        1029.4000000000001,
-        41
+        "complexJunction",
+        1,
+        40
       ],
       [
         "leftAtSignal",
-        3,
+        4,
         40
       ],
       [
@@ -6392,14 +6413,24 @@
         30
       ],
       [
-        "stopSign",
-        2,
-        30
+        "residential",
+        567.29999999999995,
+        17
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
+      ],
+      [
+        "narrowWithParking",
+        101,
+        4
       ]
     ],
-    "fastestMeters" : 11711.180000000004,
-    "fastestSeconds" : 1473.1500053925074,
-    "fastestStress" : 1977.6779999999999,
+    "fastestMeters" : 11125.830000000004,
+    "fastestSeconds" : 1368.7322909210209,
+    "fastestStress" : 1127.0592000000001,
     "mode" : "drive",
     "origin" : "Ballard Library",
     "originSnapMeters" : 43.868584351487677,
@@ -6417,18 +6448,13 @@
       ],
       [
         "turn",
-        18,
-        144
+        14,
+        112
       ],
       [
-        "leftAtSignal",
-        8,
+        "stopAndGo",
+        10,
         100
-      ],
-      [
-        "shortFreewayHop",
-        1,
-        90
       ],
       [
         "allWayStop",
@@ -6436,24 +6462,9 @@
         80
       ],
       [
-        "stopAndGo",
-        8,
-        80
-      ],
-      [
-        "stopSign",
-        3,
-        45
-      ],
-      [
-        "complexJunction",
-        1,
-        40
-      ],
-      [
-        "freewayEntry",
-        1,
-        30
+        "leftAtSignal",
+        6,
+        60
       ],
       [
         "hillStop",
@@ -6461,9 +6472,14 @@
         30
       ],
       [
-        "narrowWithParking",
-        512.89999999999998,
-        21
+        "stopSign",
+        2,
+        30
+      ],
+      [
+        "freewayEntry",
+        1,
+        30
       ],
       [
         "unsignalledRight",
@@ -6472,85 +6488,75 @@
       ],
       [
         "residential",
-        389.10000000000002,
-        12
+        332.10000000000002,
+        10
+      ],
+      [
+        "narrowWithParking",
+        101,
+        4
       ]
     ],
-    "calmerMeters" : 11913.479999999998,
-    "calmerSeconds" : 1531.7213895848242,
-    "calmerStress" : 916.18750000000011,
-    "candidates" : 6,
+    "calmerMeters" : 11571.950000000003,
+    "calmerSeconds" : 1397.6616410164631,
+    "calmerStress" : 701.00109999999995,
+    "candidates" : 4,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.76925396919250488,
+    "computeSeconds" : 0.057494044303894043,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 17.408750393960609,
-    "extraSeconds" : 58.571384192316827,
+    "extraSeconds" : 28.92935009544226,
     "fastestFactors" : [
       [
-        "unsignalledCrossing",
-        5,
-        510
+        "signal",
+        24,
+        240
       ],
       [
         "unsignalledLeft",
-        4,
-        480
+        2,
+        240
+      ],
+      [
+        "stopAndGo",
+        15,
+        150
       ],
       [
         "turn",
-        22,
-        176
-      ],
-      [
-        "signal",
-        13,
-        130
-      ],
-      [
-        "allWayStop",
-        5,
-        100
-      ],
-      [
-        "residential",
-        3183.4000000000001,
+        12,
         96
       ],
       [
-        "shortFreewayHop",
+        "unsignalledCrossing",
         1,
         90
       ],
       [
-        "complexJunction",
-        2,
-        80
-      ],
-      [
-        "stopAndGo",
-        7,
-        70
-      ],
-      [
-        "hillStop",
-        1,
+        "allWayStop",
+        3,
         60
       ],
       [
-        "unsignalledRight",
+        "hillStop",
+        2,
+        60
+      ],
+      [
+        "stopSign",
         3,
         45
       ],
       [
-        "narrowWithParking",
-        1029.4000000000001,
-        41
+        "complexJunction",
+        1,
+        40
       ],
       [
         "leftAtSignal",
-        3,
+        4,
         40
       ],
       [
@@ -6559,23 +6565,33 @@
         30
       ],
       [
-        "stopSign",
-        2,
-        30
+        "residential",
+        567.29999999999995,
+        17
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
+      ],
+      [
+        "narrowWithParking",
+        101,
+        4
       ]
     ],
-    "fastestMeters" : 11711.180000000004,
-    "fastestSeconds" : 1473.1500053925074,
-    "fastestStress" : 1977.6779999999999,
+    "fastestMeters" : 11125.830000000004,
+    "fastestSeconds" : 1368.7322909210209,
+    "fastestStress" : 1127.0592000000001,
     "mode" : "drive",
     "origin" : "Ballard Library",
     "originSnapMeters" : 43.868584351487677,
     "reasons" : [
-      "5 fewer crossings of busy streets without a signal",
-      "4 fewer left turns across traffic without a signal",
-      "1.7 mi less on residential streets",
-      "Tradeoff: 10 more traffic signals",
-      "Tradeoff: 5 more left turns at signals"
+      "2 fewer left turns across traffic without a signal",
+      "1 fewer crossing of a busy street without a signal",
+      "5 fewer stop-and-go stops",
+      "Tradeoff: 2 more left turns at signals",
+      "Tradeoff: 1 more all-way stop"
     ]
   },
   {
@@ -6583,28 +6599,28 @@
     "calmerFactors" : [
       [
         "signal",
-        31,
-        310
-      ],
-      [
-        "stopAndGo",
-        16,
-        160
+        23,
+        230
       ],
       [
         "turn",
-        16,
-        128
+        14,
+        112
       ],
       [
-        "leftAtSignal",
-        7,
+        "stopAndGo",
+        10,
         100
       ],
       [
         "allWayStop",
-        2,
-        40
+        4,
+        80
+      ],
+      [
+        "leftAtSignal",
+        6,
+        60
       ],
       [
         "hillStop",
@@ -6617,14 +6633,19 @@
         30
       ],
       [
-        "movableBridge",
+        "freewayEntry",
         1,
         30
       ],
       [
+        "unsignalledRight",
+        1,
+        15
+      ],
+      [
         "residential",
-        516.89999999999998,
-        16
+        332.10000000000002,
+        10
       ],
       [
         "narrowWithParking",
@@ -6632,81 +6653,66 @@
         4
       ]
     ],
-    "calmerMeters" : 11086.180000000008,
-    "calmerSeconds" : 1596.52496420902,
-    "calmerStress" : 847.54540000000009,
-    "candidates" : 6,
+    "calmerMeters" : 11571.950000000003,
+    "calmerSeconds" : 1397.6616410164631,
+    "calmerStress" : 701.00109999999995,
+    "candidates" : 4,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.77015602588653564,
+    "computeSeconds" : 0.057826995849609375,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 17.408750393960609,
-    "extraSeconds" : 123.37495881651262,
+    "extraSeconds" : 28.92935009544226,
     "fastestFactors" : [
       [
-        "unsignalledCrossing",
-        5,
-        510
+        "signal",
+        24,
+        240
       ],
       [
         "unsignalledLeft",
-        4,
-        480
+        2,
+        240
+      ],
+      [
+        "stopAndGo",
+        15,
+        150
       ],
       [
         "turn",
-        22,
-        176
-      ],
-      [
-        "signal",
-        13,
-        130
-      ],
-      [
-        "allWayStop",
-        5,
-        100
-      ],
-      [
-        "residential",
-        3183.4000000000001,
+        12,
         96
       ],
       [
-        "shortFreewayHop",
+        "unsignalledCrossing",
         1,
         90
       ],
       [
-        "complexJunction",
-        2,
-        80
-      ],
-      [
-        "stopAndGo",
-        7,
-        70
-      ],
-      [
-        "hillStop",
-        1,
+        "allWayStop",
+        3,
         60
       ],
       [
-        "unsignalledRight",
+        "hillStop",
+        2,
+        60
+      ],
+      [
+        "stopSign",
         3,
         45
       ],
       [
-        "narrowWithParking",
-        1029.4000000000001,
-        41
+        "complexJunction",
+        1,
+        40
       ],
       [
         "leftAtSignal",
-        3,
+        4,
         40
       ],
       [
@@ -6715,23 +6721,33 @@
         30
       ],
       [
-        "stopSign",
-        2,
-        30
+        "residential",
+        567.29999999999995,
+        17
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
+      ],
+      [
+        "narrowWithParking",
+        101,
+        4
       ]
     ],
-    "fastestMeters" : 11711.180000000004,
-    "fastestSeconds" : 1473.1500053925074,
-    "fastestStress" : 1977.6779999999999,
+    "fastestMeters" : 11125.830000000004,
+    "fastestSeconds" : 1368.7322909210209,
+    "fastestStress" : 1127.0592000000001,
     "mode" : "drive",
     "origin" : "Ballard Library",
     "originSnapMeters" : 43.868584351487677,
     "reasons" : [
-      "5 fewer crossings of busy streets without a signal",
-      "4 fewer left turns across traffic without a signal",
-      "1 fewer short freeway hop with quick lane changes",
-      "Tradeoff: 18 more traffic signals",
-      "Tradeoff: 9 more stop-and-go stops"
+      "2 fewer left turns across traffic without a signal",
+      "1 fewer crossing of a busy street without a signal",
+      "5 fewer stop-and-go stops",
+      "Tradeoff: 2 more left turns at signals",
+      "Tradeoff: 1 more all-way stop"
     ]
   },
   {
@@ -6739,27 +6755,27 @@
     "calmerFactors" : [
       [
         "signal",
-        31,
-        310
-      ],
-      [
-        "stopAndGo",
-        16,
-        160
+        30,
+        300
       ],
       [
         "turn",
-        16,
-        128
+        9,
+        72
       ],
       [
-        "leftAtSignal",
-        7,
-        100
+        "stopAndGo",
+        5,
+        50
       ],
       [
         "allWayStop",
         2,
+        40
+      ],
+      [
+        "complexJunction",
+        1,
         40
       ],
       [
@@ -6768,101 +6784,86 @@
         30
       ],
       [
-        "stopSign",
-        2,
-        30
-      ],
-      [
-        "movableBridge",
+        "freewayEntry",
         1,
         30
       ],
       [
-        "residential",
-        516.89999999999998,
-        16
+        "leftAtSignal",
+        2,
+        20
       ],
       [
-        "narrowWithParking",
-        101,
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "residential",
+        134.69999999999999,
         4
       ]
     ],
-    "calmerMeters" : 11086.180000000008,
-    "calmerSeconds" : 1596.52496420902,
-    "calmerStress" : 847.54540000000009,
-    "candidates" : 6,
+    "calmerMeters" : 13934.399999999996,
+    "calmerSeconds" : 1674.7885254132998,
+    "calmerStress" : 601.04219999999998,
+    "candidates" : 4,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.77481305599212646,
+    "computeSeconds" : 0.057193994522094727,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 17.408750393960609,
-    "extraSeconds" : 123.37495881651262,
+    "extraSeconds" : 306.05623449227892,
     "fastestFactors" : [
       [
-        "unsignalledCrossing",
-        5,
-        510
+        "signal",
+        24,
+        240
       ],
       [
         "unsignalledLeft",
-        4,
-        480
+        2,
+        240
+      ],
+      [
+        "stopAndGo",
+        15,
+        150
       ],
       [
         "turn",
-        22,
-        176
-      ],
-      [
-        "signal",
-        13,
-        130
-      ],
-      [
-        "allWayStop",
-        5,
-        100
-      ],
-      [
-        "residential",
-        3183.4000000000001,
+        12,
         96
       ],
       [
-        "shortFreewayHop",
+        "unsignalledCrossing",
         1,
         90
       ],
       [
-        "complexJunction",
-        2,
-        80
-      ],
-      [
-        "stopAndGo",
-        7,
-        70
-      ],
-      [
-        "hillStop",
-        1,
+        "allWayStop",
+        3,
         60
       ],
       [
-        "unsignalledRight",
+        "hillStop",
+        2,
+        60
+      ],
+      [
+        "stopSign",
         3,
         45
       ],
       [
-        "narrowWithParking",
-        1029.4000000000001,
-        41
+        "complexJunction",
+        1,
+        40
       ],
       [
         "leftAtSignal",
-        3,
+        4,
         40
       ],
       [
@@ -6871,23 +6872,32 @@
         30
       ],
       [
-        "stopSign",
-        2,
-        30
+        "residential",
+        567.29999999999995,
+        17
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
+      ],
+      [
+        "narrowWithParking",
+        101,
+        4
       ]
     ],
-    "fastestMeters" : 11711.180000000004,
-    "fastestSeconds" : 1473.1500053925074,
-    "fastestStress" : 1977.6779999999999,
+    "fastestMeters" : 11125.830000000004,
+    "fastestSeconds" : 1368.7322909210209,
+    "fastestStress" : 1127.0592000000001,
     "mode" : "drive",
     "origin" : "Ballard Library",
     "originSnapMeters" : 43.868584351487677,
     "reasons" : [
-      "5 fewer crossings of busy streets without a signal",
-      "4 fewer left turns across traffic without a signal",
-      "1 fewer short freeway hop with quick lane changes",
-      "Tradeoff: 18 more traffic signals",
-      "Tradeoff: 9 more stop-and-go stops"
+      "2 fewer left turns across traffic without a signal",
+      "10 fewer stop-and-go stops",
+      "1 fewer crossing of a busy street without a signal",
+      "Tradeoff: 6 more traffic signals"
     ]
   },
   {
@@ -6900,7 +6910,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.0096110105514526367,
+    "computeSeconds" : 0.0065259933471679688,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 4.6714145625487928,
     "extraSeconds" : 0,
@@ -6922,13 +6932,13 @@
       ],
       [
         "climb",
-        64.700000000000003,
-        129
+        64.799999999999997,
+        130
       ],
       [
         "besideTraffic",
-        1755.7,
-        105
+        1771.8,
+        106
       ],
       [
         "signalCrossing",
@@ -6947,13 +6957,13 @@
       ],
       [
         "unknownSidewalk",
-        334.10000000000002,
-        7
+        297.10000000000002,
+        6
       ]
     ],
-    "fastestMeters" : 5216.6600000000062,
-    "fastestSeconds" : 3916.8595238095236,
-    "fastestStress" : 1640.0692000000001,
+    "fastestMeters" : 5204.4400000000069,
+    "fastestSeconds" : 3908.3809523809527,
+    "fastestStress" : 1640.4938000000002,
     "mode" : "walk",
     "origin" : "Twilight",
     "originSnapMeters" : 7.3460796646438604,
@@ -7017,10 +7027,10 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.34077799320220947,
+    "computeSeconds" : 0.056169986724853516,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 4.6714145625487928,
-    "extraSeconds" : 65.078571428571649,
+    "extraSeconds" : 73.55714285714248,
     "fastestFactors" : [
       [
         "noSidewalk",
@@ -7039,13 +7049,13 @@
       ],
       [
         "climb",
-        64.700000000000003,
-        129
+        64.799999999999997,
+        130
       ],
       [
         "besideTraffic",
-        1755.7,
-        105
+        1771.8,
+        106
       ],
       [
         "signalCrossing",
@@ -7064,13 +7074,13 @@
       ],
       [
         "unknownSidewalk",
-        334.10000000000002,
-        7
+        297.10000000000002,
+        6
       ]
     ],
-    "fastestMeters" : 5216.6600000000062,
-    "fastestSeconds" : 3916.8595238095236,
-    "fastestStress" : 1640.0692000000001,
+    "fastestMeters" : 5204.4400000000069,
+    "fastestSeconds" : 3908.3809523809527,
+    "fastestStress" : 1640.4938000000002,
     "mode" : "walk",
     "origin" : "Twilight",
     "originSnapMeters" : 7.3460796646438604,
@@ -7128,10 +7138,10 @@
     "caveats" : [
       "Calmer route: 0.5 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.34488892555236816,
+    "computeSeconds" : 0.058210015296936035,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 4.6714145625487928,
-    "extraSeconds" : 219.39523809523735,
+    "extraSeconds" : 227.87380952380818,
     "fastestFactors" : [
       [
         "noSidewalk",
@@ -7150,13 +7160,13 @@
       ],
       [
         "climb",
-        64.700000000000003,
-        129
+        64.799999999999997,
+        130
       ],
       [
         "besideTraffic",
-        1755.7,
-        105
+        1771.8,
+        106
       ],
       [
         "signalCrossing",
@@ -7175,13 +7185,13 @@
       ],
       [
         "unknownSidewalk",
-        334.10000000000002,
-        7
+        297.10000000000002,
+        6
       ]
     ],
-    "fastestMeters" : 5216.6600000000062,
-    "fastestSeconds" : 3916.8595238095236,
-    "fastestStress" : 1640.0692000000001,
+    "fastestMeters" : 5204.4400000000069,
+    "fastestSeconds" : 3908.3809523809527,
+    "fastestStress" : 1640.4938000000002,
     "mode" : "walk",
     "origin" : "Twilight",
     "originSnapMeters" : 7.3460796646438604,
@@ -7239,10 +7249,10 @@
     "caveats" : [
       "Calmer route: 0.5 mi where sidewalks aren't mapped."
     ],
-    "computeSeconds" : 0.33872401714324951,
+    "computeSeconds" : 0.056021928787231445,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 4.6714145625487928,
-    "extraSeconds" : 219.39523809523735,
+    "extraSeconds" : 227.87380952380818,
     "fastestFactors" : [
       [
         "noSidewalk",
@@ -7261,13 +7271,13 @@
       ],
       [
         "climb",
-        64.700000000000003,
-        129
+        64.799999999999997,
+        130
       ],
       [
         "besideTraffic",
-        1755.7,
-        105
+        1771.8,
+        106
       ],
       [
         "signalCrossing",
@@ -7286,13 +7296,13 @@
       ],
       [
         "unknownSidewalk",
-        334.10000000000002,
-        7
+        297.10000000000002,
+        6
       ]
     ],
-    "fastestMeters" : 5216.6600000000062,
-    "fastestSeconds" : 3916.8595238095236,
-    "fastestStress" : 1640.0692000000001,
+    "fastestMeters" : 5204.4400000000069,
+    "fastestSeconds" : 3908.3809523809527,
+    "fastestStress" : 1640.4938000000002,
     "mode" : "walk",
     "origin" : "Twilight",
     "originSnapMeters" : 7.3460796646438604,
@@ -7314,7 +7324,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.012335062026977539,
+    "computeSeconds" : 0.0069639682769775391,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 33.448348149784529,
     "extraSeconds" : 0,
@@ -7365,13 +7375,13 @@
         40
       ],
       [
-        "leftAtSignal",
-        2,
+        "stopSign",
+        3,
         30
       ],
       [
-        "stopSign",
-        3,
+        "leftAtSignal",
+        2,
         30
       ],
       [
@@ -7407,7 +7417,7 @@
     ],
     "fastestMeters" : 5762.3599999999969,
     "fastestSeconds" : 1416.7199999999996,
-    "fastestStress" : 2343.5047,
+    "fastestStress" : 2343.5047000000004,
     "mode" : "bike",
     "origin" : "Twilight",
     "originSnapMeters" : 11.688301312063711,
@@ -7417,104 +7427,18 @@
   },
   {
     "budgetMinutes" : 2,
-    "calmerFactors" : [
-      [
-        "climb",
-        74.099999999999994,
-        296
-      ],
-      [
-        "unsignalledLeft",
-        3,
-        270
-      ],
-      [
-        "quietStreet",
-        3470.4000000000001,
-        208
-      ],
-      [
-        "arterialRiding",
-        496.89999999999998,
-        119
-      ],
-      [
-        "turn",
-        26,
-        104
-      ],
-      [
-        "busyArterialRiding",
-        125.09999999999999,
-        75
-      ],
-      [
-        "unsignalledCrossing",
-        1,
-        60
-      ],
-      [
-        "signal",
-        3,
-        42
-      ],
-      [
-        "bikeRouteGap",
-        2,
-        40
-      ],
-      [
-        "leftAtSignal",
-        2,
-        30
-      ],
-      [
-        "stopSign",
-        3,
-        30
-      ],
-      [
-        "hillStop",
-        1,
-        20
-      ],
-      [
-        "steepDescent",
-        84.200000000000003,
-        17
-      ],
-      [
-        "movableBridge",
-        1,
-        15
-      ],
-      [
-        "stopAndGo",
-        3,
-        15
-      ],
-      [
-        "allWayStop",
-        1,
-        10
-      ],
-      [
-        "unknownSurface",
-        593.39999999999998,
-        3
-      ]
-    ],
-    "calmerMeters" : 5949.819999999997,
-    "calmerSeconds" : 1501.6634285714281,
-    "calmerStress" : 1354.7458999999999,
-    "candidates" : 6,
+    "calmerFactors" : null,
+    "calmerMeters" : null,
+    "calmerSeconds" : null,
+    "calmerStress" : null,
+    "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.3966519832611084,
+    "computeSeconds" : 0.035691976547241211,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 33.448348149784529,
-    "extraSeconds" : 84.943428571428512,
+    "extraSeconds" : 0,
     "fastestFactors" : [
       [
         "busyArterialRiding",
@@ -7562,13 +7486,13 @@
         40
       ],
       [
-        "leftAtSignal",
-        2,
+        "stopSign",
+        3,
         30
       ],
       [
-        "stopSign",
-        3,
+        "leftAtSignal",
+        2,
         30
       ],
       [
@@ -7604,16 +7528,12 @@
     ],
     "fastestMeters" : 5762.3599999999969,
     "fastestSeconds" : 1416.7199999999996,
-    "fastestStress" : 2343.5047,
+    "fastestStress" : 2343.5047000000004,
     "mode" : "bike",
     "origin" : "Twilight",
     "originSnapMeters" : 11.688301312063711,
     "reasons" : [
-      "1.0 mi less riding in traffic on busy arterials",
-      "0.3 mi less riding on arterials",
-      "1 fewer left turn across traffic without a signal",
-      "Tradeoff: 0.8 mi more on quiet streets",
-      "Tradeoff: 52 ft more climbing"
+      "By our estimates, calmer routes take 2+ min more."
     ]
   },
   {
@@ -7621,18 +7541,13 @@
     "calmerFactors" : [
       [
         "climb",
-        62.5,
-        250
+        63.700000000000003,
+        255
       ],
       [
         "arterialRiding",
-        816,
-        196
-      ],
-      [
-        "unsignalledLeft",
-        1,
-        90
+        362.39999999999998,
+        87
       ],
       [
         "turn",
@@ -7650,19 +7565,14 @@
         28
       ],
       [
-        "bikeRouteGap",
-        1,
-        20
-      ],
-      [
         "movableBridge",
         1,
         15
       ],
       [
         "quietStreet",
-        213.40000000000001,
-        13
+        202.59999999999999,
+        12
       ],
       [
         "stopSign",
@@ -7675,17 +7585,17 @@
         0
       ]
     ],
-    "calmerMeters" : 7269.0700000000006,
-    "calmerSeconds" : 1704.4231428571431,
-    "calmerStress" : 745.91775000000007,
-    "candidates" : 6,
+    "calmerMeters" : 7247.5600000000004,
+    "calmerSeconds" : 1703.1211428571435,
+    "calmerStress" : 531.19195000000013,
+    "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.39419698715209961,
+    "computeSeconds" : 0.035969972610473633,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 33.448348149784529,
-    "extraSeconds" : 287.70314285714358,
+    "extraSeconds" : 286.4011428571439,
     "fastestFactors" : [
       [
         "busyArterialRiding",
@@ -7733,13 +7643,13 @@
         40
       ],
       [
-        "leftAtSignal",
-        2,
+        "stopSign",
+        3,
         30
       ],
       [
-        "stopSign",
-        3,
+        "leftAtSignal",
+        2,
         30
       ],
       [
@@ -7775,171 +7685,7 @@
     ],
     "fastestMeters" : 5762.3599999999969,
     "fastestSeconds" : 1416.7199999999996,
-    "fastestStress" : 2343.5047,
-    "mode" : "bike",
-    "origin" : "Twilight",
-    "originSnapMeters" : 11.688301312063711,
-    "reasons" : [
-      "1.1 mi less riding in traffic on busy arterials",
-      "3 fewer left turns across traffic without a signal",
-      "1.2 mi less on quiet streets"
-    ]
-  },
-  {
-    "budgetMinutes" : 10,
-    "calmerFactors" : [
-      [
-        "climb",
-        76.5,
-        306
-      ],
-      [
-        "turn",
-        21,
-        84
-      ],
-      [
-        "arterialRiding",
-        324.30000000000001,
-        78
-      ],
-      [
-        "unsignalledCrossing",
-        1,
-        60
-      ],
-      [
-        "signal",
-        2,
-        28
-      ],
-      [
-        "steepDescent",
-        114.40000000000001,
-        23
-      ],
-      [
-        "quietStreet",
-        379.19999999999999,
-        23
-      ],
-      [
-        "bikeRouteGap",
-        1,
-        20
-      ],
-      [
-        "movableBridge",
-        1,
-        15
-      ],
-      [
-        "unknownSurface",
-        210,
-        1
-      ]
-    ],
-    "calmerMeters" : 7739.5200000000023,
-    "calmerSeconds" : 1846.7708571428575,
-    "calmerStress" : 637.51420000000007,
-    "candidates" : 6,
-    "caveats" : [
-
-    ],
-    "computeSeconds" : 0.39864909648895264,
-    "destination" : "Microsoft Café",
-    "destinationSnapMeters" : 33.448348149784529,
-    "extraSeconds" : 430.05085714285792,
-    "fastestFactors" : [
-      [
-        "busyArterialRiding",
-        1703.7,
-        1022
-      ],
-      [
-        "unsignalledLeft",
-        4,
-        360
-      ],
-      [
-        "arterialRiding",
-        979.29999999999995,
-        235
-      ],
-      [
-        "climb",
-        58.299999999999997,
-        233
-      ],
-      [
-        "quietStreet",
-        2103.1999999999998,
-        126
-      ],
-      [
-        "turn",
-        18,
-        72
-      ],
-      [
-        "signal",
-        5,
-        70
-      ],
-      [
-        "unsignalledCrossing",
-        1,
-        60
-      ],
-      [
-        "bikeRouteGap",
-        2,
-        40
-      ],
-      [
-        "leftAtSignal",
-        2,
-        30
-      ],
-      [
-        "stopSign",
-        3,
-        30
-      ],
-      [
-        "hillStop",
-        1,
-        20
-      ],
-      [
-        "stopAndGo",
-        3,
-        15
-      ],
-      [
-        "movableBridge",
-        1,
-        15
-      ],
-      [
-        "allWayStop",
-        1,
-        10
-      ],
-      [
-        "unknownSurface",
-        496.69999999999999,
-        2
-      ],
-      [
-        "steepDescent",
-        11.9,
-        2
-      ]
-    ],
-    "fastestMeters" : 5762.3599999999969,
-    "fastestSeconds" : 1416.7199999999996,
-    "fastestStress" : 2343.5047,
+    "fastestStress" : 2343.5047000000004,
     "mode" : "bike",
     "origin" : "Twilight",
     "originSnapMeters" : 11.688301312063711,
@@ -7947,8 +7693,167 @@
       "1.1 mi less riding in traffic on busy arterials",
       "4 fewer left turns across traffic without a signal",
       "0.4 mi less riding on arterials",
-      "Tradeoff: 60 ft more climbing",
-      "Tradeoff: 350 ft more of steep downhill in traffic"
+      "Tradeoff: 18 ft more climbing"
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerFactors" : [
+      [
+        "climb",
+        64.599999999999994,
+        258
+      ],
+      [
+        "turn",
+        16,
+        64
+      ],
+      [
+        "unsignalledCrossing",
+        1,
+        60
+      ],
+      [
+        "arterialRiding",
+        233.59999999999999,
+        56
+      ],
+      [
+        "signal",
+        2,
+        28
+      ],
+      [
+        "bikeRouteGap",
+        1,
+        20
+      ],
+      [
+        "movableBridge",
+        1,
+        15
+      ],
+      [
+        "quietStreet",
+        99.900000000000006,
+        6
+      ],
+      [
+        "unknownSurface",
+        53.600000000000001,
+        0
+      ]
+    ],
+    "calmerMeters" : 7411.1100000000015,
+    "calmerSeconds" : 1741.2388571428578,
+    "calmerStress" : 507.72155000000009,
+    "candidates" : 3,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.035748004913330078,
+    "destination" : "Microsoft Café",
+    "destinationSnapMeters" : 33.448348149784529,
+    "extraSeconds" : 324.51885714285822,
+    "fastestFactors" : [
+      [
+        "busyArterialRiding",
+        1703.7,
+        1022
+      ],
+      [
+        "unsignalledLeft",
+        4,
+        360
+      ],
+      [
+        "arterialRiding",
+        979.29999999999995,
+        235
+      ],
+      [
+        "climb",
+        58.299999999999997,
+        233
+      ],
+      [
+        "quietStreet",
+        2103.1999999999998,
+        126
+      ],
+      [
+        "turn",
+        18,
+        72
+      ],
+      [
+        "signal",
+        5,
+        70
+      ],
+      [
+        "unsignalledCrossing",
+        1,
+        60
+      ],
+      [
+        "bikeRouteGap",
+        2,
+        40
+      ],
+      [
+        "stopSign",
+        3,
+        30
+      ],
+      [
+        "leftAtSignal",
+        2,
+        30
+      ],
+      [
+        "hillStop",
+        1,
+        20
+      ],
+      [
+        "stopAndGo",
+        3,
+        15
+      ],
+      [
+        "movableBridge",
+        1,
+        15
+      ],
+      [
+        "allWayStop",
+        1,
+        10
+      ],
+      [
+        "unknownSurface",
+        496.69999999999999,
+        2
+      ],
+      [
+        "steepDescent",
+        11.9,
+        2
+      ]
+    ],
+    "fastestMeters" : 5762.3599999999969,
+    "fastestSeconds" : 1416.7199999999996,
+    "fastestStress" : 2343.5047000000004,
+    "mode" : "bike",
+    "origin" : "Twilight",
+    "originSnapMeters" : 11.688301312063711,
+    "reasons" : [
+      "1.1 mi less riding in traffic on busy arterials",
+      "4 fewer left turns across traffic without a signal",
+      "0.5 mi less riding on arterials",
+      "Tradeoff: 21 ft more climbing"
     ]
   },
   {
@@ -7961,15 +7866,15 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.016660094261169434,
+    "computeSeconds" : 0.012022972106933594,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 33.448348149784529,
     "extraSeconds" : 0,
     "fastestFactors" : [
       [
         "unsignalledLeft",
-        4,
-        660
+        1,
+        120
       ],
       [
         "signal",
@@ -7978,43 +7883,48 @@
       ],
       [
         "stopAndGo",
-        9,
-        90
-      ],
-      [
-        "turn",
         8,
-        64
+        80
       ],
       [
-        "stopSign",
-        4,
-        60
+        "complexJunction",
+        2,
+        80
       ],
       [
         "allWayStop",
-        2,
-        40
+        3,
+        60
       ],
       [
-        "movableBridge",
+        "turn",
+        7,
+        56
+      ],
+      [
+        "leftAtSignal",
         1,
         30
       ],
       [
-        "hillStop",
+        "freewayEntry",
         1,
         30
       ],
       [
-        "residential",
-        441.89999999999998,
-        13
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
       ]
     ],
-    "fastestMeters" : 5083.7899999999972,
-    "fastestSeconds" : 749.65197745168211,
-    "fastestStress" : 1087.2566999999999,
+    "fastestMeters" : 6961.3199999999997,
+    "fastestSeconds" : 736.64408413266494,
+    "fastestStress" : 586,
     "mode" : "drive",
     "origin" : "Twilight",
     "originSnapMeters" : 197.36964367635457,
@@ -8026,62 +7936,62 @@
     "budgetMinutes" : 2,
     "calmerFactors" : [
       [
-        "unsignalledLeft",
-        1,
-        180
-      ],
-      [
         "signal",
         14,
         140
       ],
       [
         "stopAndGo",
-        9,
-        90
+        8,
+        80
       ],
       [
-        "stopSign",
-        4,
-        60
+        "complexJunction",
+        2,
+        80
+      ],
+      [
+        "leftAtSignal",
+        3,
+        50
       ],
       [
         "turn",
-        7,
-        56
+        6,
+        48
       ],
       [
-        "hillStop",
+        "freewayEntry",
         1,
+        30
+      ],
+      [
+        "unsignalledRight",
+        2,
         30
       ],
       [
         "movableBridge",
         1,
         30
-      ],
-      [
-        "leftAtSignal",
-        2,
-        20
       ]
     ],
-    "calmerMeters" : 4988.329999999999,
-    "calmerSeconds" : 759.26158732999261,
-    "calmerStress" : 606,
-    "candidates" : 3,
+    "calmerMeters" : 7430.4300000000021,
+    "calmerSeconds" : 811.40506693595091,
+    "calmerStress" : 488,
+    "candidates" : 2,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.53067302703857422,
+    "computeSeconds" : 0.051459074020385742,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 33.448348149784529,
-    "extraSeconds" : 9.6096098783104935,
+    "extraSeconds" : 74.76098280328597,
     "fastestFactors" : [
       [
         "unsignalledLeft",
-        4,
-        660
+        1,
+        120
       ],
       [
         "signal",
@@ -8090,114 +8000,119 @@
       ],
       [
         "stopAndGo",
-        9,
-        90
-      ],
-      [
-        "turn",
         8,
-        64
+        80
       ],
       [
-        "stopSign",
-        4,
-        60
+        "complexJunction",
+        2,
+        80
       ],
       [
         "allWayStop",
-        2,
-        40
+        3,
+        60
       ],
       [
-        "movableBridge",
+        "turn",
+        7,
+        56
+      ],
+      [
+        "leftAtSignal",
         1,
         30
       ],
       [
-        "hillStop",
+        "freewayEntry",
         1,
         30
       ],
       [
-        "residential",
-        441.89999999999998,
-        13
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
       ]
     ],
-    "fastestMeters" : 5083.7899999999972,
-    "fastestSeconds" : 749.65197745168211,
-    "fastestStress" : 1087.2566999999999,
+    "fastestMeters" : 6961.3199999999997,
+    "fastestSeconds" : 736.64408413266494,
+    "fastestStress" : 586,
     "mode" : "drive",
     "origin" : "Twilight",
     "originSnapMeters" : 197.36964367635457,
     "reasons" : [
-      "3 fewer left turns across traffic without a signal",
-      "2 fewer all-way stops",
-      "0.3 mi less on residential streets",
+      "1 fewer left turn across traffic without a signal",
+      "3 fewer all-way stops",
+      "1 fewer stop sign",
       "Tradeoff: 4 more traffic signals",
-      "Tradeoff: 2 more left turns at signals"
+      "Tradeoff: 1 more drawbridge"
     ]
   },
   {
     "budgetMinutes" : 5,
     "calmerFactors" : [
       [
-        "unsignalledLeft",
-        1,
-        180
-      ],
-      [
         "signal",
         14,
         140
       ],
       [
         "stopAndGo",
-        9,
-        90
+        8,
+        80
       ],
       [
-        "stopSign",
-        4,
-        60
+        "complexJunction",
+        2,
+        80
+      ],
+      [
+        "leftAtSignal",
+        3,
+        50
       ],
       [
         "turn",
-        7,
-        56
+        6,
+        48
       ],
       [
-        "hillStop",
+        "freewayEntry",
         1,
+        30
+      ],
+      [
+        "unsignalledRight",
+        2,
         30
       ],
       [
         "movableBridge",
         1,
         30
-      ],
-      [
-        "leftAtSignal",
-        2,
-        20
       ]
     ],
-    "calmerMeters" : 4988.329999999999,
-    "calmerSeconds" : 759.26158732999261,
-    "calmerStress" : 606,
-    "candidates" : 3,
+    "calmerMeters" : 7430.4300000000021,
+    "calmerSeconds" : 811.40506693595091,
+    "calmerStress" : 488,
+    "candidates" : 2,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.5293809175491333,
+    "computeSeconds" : 0.051425933837890625,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 33.448348149784529,
-    "extraSeconds" : 9.6096098783104935,
+    "extraSeconds" : 74.76098280328597,
     "fastestFactors" : [
       [
         "unsignalledLeft",
-        4,
-        660
+        1,
+        120
       ],
       [
         "signal",
@@ -8206,114 +8121,119 @@
       ],
       [
         "stopAndGo",
-        9,
-        90
-      ],
-      [
-        "turn",
         8,
-        64
+        80
       ],
       [
-        "stopSign",
-        4,
-        60
+        "complexJunction",
+        2,
+        80
       ],
       [
         "allWayStop",
-        2,
-        40
+        3,
+        60
       ],
       [
-        "movableBridge",
+        "turn",
+        7,
+        56
+      ],
+      [
+        "leftAtSignal",
         1,
         30
       ],
       [
-        "hillStop",
+        "freewayEntry",
         1,
         30
       ],
       [
-        "residential",
-        441.89999999999998,
-        13
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
       ]
     ],
-    "fastestMeters" : 5083.7899999999972,
-    "fastestSeconds" : 749.65197745168211,
-    "fastestStress" : 1087.2566999999999,
+    "fastestMeters" : 6961.3199999999997,
+    "fastestSeconds" : 736.64408413266494,
+    "fastestStress" : 586,
     "mode" : "drive",
     "origin" : "Twilight",
     "originSnapMeters" : 197.36964367635457,
     "reasons" : [
-      "3 fewer left turns across traffic without a signal",
-      "2 fewer all-way stops",
-      "0.3 mi less on residential streets",
+      "1 fewer left turn across traffic without a signal",
+      "3 fewer all-way stops",
+      "1 fewer stop sign",
       "Tradeoff: 4 more traffic signals",
-      "Tradeoff: 2 more left turns at signals"
+      "Tradeoff: 1 more drawbridge"
     ]
   },
   {
     "budgetMinutes" : 10,
     "calmerFactors" : [
       [
-        "unsignalledLeft",
-        1,
-        180
-      ],
-      [
         "signal",
         14,
         140
       ],
       [
         "stopAndGo",
-        9,
-        90
+        8,
+        80
       ],
       [
-        "stopSign",
-        4,
-        60
+        "complexJunction",
+        2,
+        80
+      ],
+      [
+        "leftAtSignal",
+        3,
+        50
       ],
       [
         "turn",
-        7,
-        56
+        6,
+        48
       ],
       [
-        "hillStop",
+        "freewayEntry",
         1,
+        30
+      ],
+      [
+        "unsignalledRight",
+        2,
         30
       ],
       [
         "movableBridge",
         1,
         30
-      ],
-      [
-        "leftAtSignal",
-        2,
-        20
       ]
     ],
-    "calmerMeters" : 4988.329999999999,
-    "calmerSeconds" : 759.26158732999261,
-    "calmerStress" : 606,
-    "candidates" : 3,
+    "calmerMeters" : 7430.4300000000021,
+    "calmerSeconds" : 811.40506693595091,
+    "calmerStress" : 488,
+    "candidates" : 2,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.53108000755310059,
+    "computeSeconds" : 0.051607012748718262,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 33.448348149784529,
-    "extraSeconds" : 9.6096098783104935,
+    "extraSeconds" : 74.76098280328597,
     "fastestFactors" : [
       [
         "unsignalledLeft",
-        4,
-        660
+        1,
+        120
       ],
       [
         "signal",
@@ -8322,52 +8242,57 @@
       ],
       [
         "stopAndGo",
-        9,
-        90
-      ],
-      [
-        "turn",
         8,
-        64
+        80
       ],
       [
-        "stopSign",
-        4,
-        60
+        "complexJunction",
+        2,
+        80
       ],
       [
         "allWayStop",
-        2,
-        40
+        3,
+        60
       ],
       [
-        "movableBridge",
+        "turn",
+        7,
+        56
+      ],
+      [
+        "leftAtSignal",
         1,
         30
       ],
       [
-        "hillStop",
+        "freewayEntry",
         1,
         30
       ],
       [
-        "residential",
-        441.89999999999998,
-        13
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
       ]
     ],
-    "fastestMeters" : 5083.7899999999972,
-    "fastestSeconds" : 749.65197745168211,
-    "fastestStress" : 1087.2566999999999,
+    "fastestMeters" : 6961.3199999999997,
+    "fastestSeconds" : 736.64408413266494,
+    "fastestStress" : 586,
     "mode" : "drive",
     "origin" : "Twilight",
     "originSnapMeters" : 197.36964367635457,
     "reasons" : [
-      "3 fewer left turns across traffic without a signal",
-      "2 fewer all-way stops",
-      "0.3 mi less on residential streets",
+      "1 fewer left turn across traffic without a signal",
+      "3 fewer all-way stops",
+      "1 fewer stop sign",
       "Tradeoff: 4 more traffic signals",
-      "Tradeoff: 2 more left turns at signals"
+      "Tradeoff: 1 more drawbridge"
     ]
   }
 ]

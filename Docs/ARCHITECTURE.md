@@ -36,10 +36,16 @@ The compiler applies an explicit conservative policy:
   bicycle permission. This deliberately omits some locally legal paths.
 - One-way direction, reverse one-way, roundabouts, bicycle exemptions, and
   opposite-cycleway tags are handled. Reversible/unknown one-way tags are excluded.
-- Simple via-node `no_*`/`only_*` restrictions, per-mode variants, and exceptions
-  are compiled. Via-way, conditional, and unsupported relevant restrictions
-  conservatively remove their involved ways for that mode. They are listed in
-  `Data/provenance.json` rather than silently ignored.
+- Via-node `no_*`/`only_*` restrictions, per-mode variants, and exceptions are
+  compiled. A restriction never removes a way. A via-way `no_*` keeps only a ban of the
+  final transition from its last via way into the to way (over-restricting a legal
+  turn at worst, never allowing a banned one). Not represented, and ignored:
+  via-way `only_*`, via-way `no_u_turn` (the router bans immediate U-turns anyway),
+  conditional restrictions, and malformed ones. `restrictionClasses` in
+  `Data/provenance.json` counts each class.
+- A `barrier=lift_gate` blocks driving and cycling except with `access=yes` or on a
+  bridge or a primary-or-bigger road, where it is a movable bridge's gate (Montlake,
+  1st Ave S). Bridge openings are not modeled.
 - Explicit access barriers are respected under the compiler's documented policy.
   A mapped cycle barrier does not prove that a particular bicycle can pass it.
 
@@ -112,6 +118,21 @@ Add or update a region file:
 4. `Scripts/fetch_data <region>` then `Scripts/verify.sh --region`, and commit the manifest.
 
 `PEOPLEMAPS_DATA_URL` points the fetch at another directory URL (a local `file://` folder works) for testing.
+
+### seattle-all
+
+All of Seattle (47.49, -122.44, 47.74, -122.24), release `data-seattle-all-2026-11c` (earlier releases `-11` and `-11b` are superseded; `-11` still holds the 365 MB source extract). The app bundle ships it when it is
+fetched and the fixture otherwise: a "Bundle fetched region" build phase (from `Scripts/generate_project.py`) copies
+`Data/region/seattle-all/expected/{seattle-graph.bin,seattle-map.pmtiles,seattle-search.sqlite.gz}` into the app,
+and `Bundle.dataFile` in Core prefers the app bundle's copy over the package's fixture. `swift test` and CI never see it.
+Run `Scripts/fetch_data seattle-all` and rebuild the app to switch.
+
+Its inputs are made, not downloaded as Overpass JSON: `Scripts/pbf_to_snapshot.py` turns one dated Geofabrik Washington
+extract into `seattle-osm`, `seattle-parks`, `seattle-search` (and `seattle-coast`) snapshots in the importer's format, in about
+15 seconds with the standard library. The extract's URL, SHA-256 and date go into each snapshot and from there into
+`provenance.json`. The extract itself is the unpinned asset `seattle-all--source__washington-261031.osm.pbf` on release `data-seattle-all-2026-11`.
+Elevation comes from `Scripts/fetch_dem_tiles.py 47.45 -122.45 47.75 -122.20 ...` (a 0.05 degree margin, so no 0 m fringe).
+The full import takes about 11 minutes and 3 GB.
 
 ## Routing and budget
 

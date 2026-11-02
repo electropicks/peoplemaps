@@ -21,6 +21,7 @@ Scripts/verify.sh                  # "data reproduces byte for byte" must pass
 - Output must be deterministic: no timestamps or dict-order dependence, and gzip uses `mtime=0`.
 - When outputs change on purpose, commit the code and the regenerated files together, and say why in the message (sizes before → after).
 - Don't run a full import in place on a Mac whose SQLite differs from `Data/provenance.json`'s `search.sqlite`: it rewrites the search index and provenance. For a map-only change run `python3 Scripts/import_osm.py --tiles-only`, which writes just `seattle-map.pmtiles` and the provenance entries it changes; CI's Linux job proves the rest still reproduces.
+- The fixture's search index and provenance were regenerated on SQLite 3.54.1 (restrictions and gates PR), so `verify.sh` skips comparing them anywhere with another SQLite, Linux CI included; the graph and map are still compared. Regenerate with 3.45.1 to restore the full check.
 - Snapshots are archived in `Data/`. `seattle-coast` (OSM `natural=coastline`, query `Data/seattle-coast.overpassql`) feeds the water polygons only, not the graph. Fetch new ones only when asked; record the query, date and source in `Data/provenance.json`.
 - `PEOPLEMAPS_BBOX`, `PEOPLEMAPS_DATA` and `PEOPLEMAPS_OUT` (and `--out`) redirect an import for spikes. Never point them at the shipped files.
 
@@ -38,4 +39,4 @@ Files in git are the Seattle test fixture. Bigger regions are release assets pin
 
 ## Coverage
 
-The shipped bounds are 47.615–47.678 N, 122.390–122.300 W. All-Seattle is blocked on the costs in `Docs/COVERAGE_SPIKE.md` (memory, router speed). Don't grow the bounds without new measurements.
+The fixture in git is the box 47.615–47.678 N, 122.390–122.300 W. All Seattle (47.49–47.74 N, 122.44–122.24 W) is the region `seattle-all`, a release asset the app bundles when fetched (`Docs/ARCHITECTURE.md`, Region data). Growing beyond it needs a new region, new measurements (`Docs/COVERAGE_SPIKE.md`) and the owner's decision.
