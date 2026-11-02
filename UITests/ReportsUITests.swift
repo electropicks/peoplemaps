@@ -73,7 +73,6 @@ final class ReportsUITests: XCTestCase {
         toggle.switches.firstMatch.tap()
         capture("reports-02-about-usage-log")
         app.buttons["close-about"].tap()
-        defer { setUsageLog(app, on: false) }
 
         app.buttons["search-field"].tap()
         let field = app.textFields["search-input"]
@@ -102,17 +101,11 @@ final class ReportsUITests: XCTestCase {
         scrollTo(clear, in: app)
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS '1 trip kept'")).firstMatch.exists)
         clear.tap()
-        app.buttons["Clear"].firstMatch.tap()
+        let confirm = app.sheets.buttons["Clear"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        confirm.tap()
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS '0 trips kept'")).firstMatch.waitForExistence(timeout: 5))
         XCTAssertFalse(clear.exists)
-    }
-
-    @MainActor private func setUsageLog(_ app: XCUIApplication, on: Bool) {
-        if !app.buttons["about"].exists { return }
-        app.buttons["about"].tap()
-        let toggle = app.switches["usage-log-toggle"]
-        scrollTo(toggle, in: app)
-        if (toggle.value as? String) == (on ? "0" : "1") { toggle.switches.firstMatch.tap() }
         app.buttons["close-about"].tap()
     }
 }

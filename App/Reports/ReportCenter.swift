@@ -117,9 +117,11 @@ final class ReportHost: UIHostingController<ReportComposerView> {}
 
 private struct ReportContextModifier: ViewModifier {
     let context: ReportContext
+    private var key: Int { [context.screen, "\(context.mode)", "\(context.extraMinutes)", context.comparison?.fastest.id ?? "", context.comparison?.calmer?.id ?? ""].hashValue }
     func body(content: Content) -> some View {
-        let _ = ReportCenter.shared.context = context
         content
+            .onAppear { ReportCenter.shared.context = context }
+            .onChange(of: key) { ReportCenter.shared.context = context }
     }
 }
 
