@@ -9,6 +9,9 @@ enum Layout {
     static let inset: CGFloat = 16
     /// Landscape card content inset.
     static let cardInset: CGFloat = 12
+    /// Space above and below the content of a portrait sheet.
+    static let sheetTop: CGFloat = 20
+    static let sheetBottom: CGFloat = 12
 }
 
 enum GlassFlags {
@@ -34,13 +37,14 @@ private struct FloatingSurface<S: Shape>: ViewModifier {
         content
             .background { if opaque { shape.fill(Color.panel) } }
             .glassEffect(glass, in: shape)
-            .overlay { if contrast == .increased { shape.stroke(Color(uiColor: .separator), lineWidth: 1) } }
+            .overlay { if opaque || contrast == .increased { shape.stroke(Color(uiColor: .separator), lineWidth: 1) } }
     }
 }
 
 extension View {
-    /// Draws the view on Liquid Glass in `shape`. With Reduce Transparency it switches glass off and fills `.panel`;
-    /// with Increase Contrast it adds a 1 pt separator outline. Use for controls floating over the map, never for reading.
+    /// Draws the view on Liquid Glass in `shape`, responding to touch when `interactive`. With Reduce Transparency it switches glass
+    /// off and fills `.panel`, which in dark mode is nearly the colour of the map's land, so the outline Increase Contrast adds comes
+    /// on there too. Use for controls floating over the map, never for reading.
     func floatingSurface<S: Shape>(in shape: S, interactive: Bool = false) -> some View {
         modifier(FloatingSurface(shape: shape, interactive: interactive))
     }

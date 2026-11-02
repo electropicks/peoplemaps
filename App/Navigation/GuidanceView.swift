@@ -1,22 +1,6 @@
 import SwiftUI
 import PeoplemapsCore
 
-/// `floatingSurface` plus a hairline when Reduce Transparency makes it opaque, so a panel stays distinct from a dark map.
-private struct GlassSurface<S: Shape>: ViewModifier {
-    let shape: S
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.colorSchemeContrast) private var contrast
-
-    func body(content: Content) -> some View {
-        content.floatingSurface(in: shape)
-            .overlay { if (reduceTransparency || GlassFlags.reduceTransparency) && contrast != .increased { shape.stroke(Color(uiColor: .separator), lineWidth: 1) } }
-    }
-}
-
-private extension View {
-    func glassSurface<S: Shape>(in shape: S) -> some View { modifier(GlassSurface(shape: shape)) }
-}
-
 /// Guidance chrome on Liquid Glass (`Docs/DESIGN.md` 4.7, 4.8): turn banner with a "Then:" row, calm-note chip,
 /// trip bar, rerouting state and arrival card. Portrait floats glass at the top and bottom; landscape uses one
 /// leading glass card. Text that must be read sits straight on glass only when short; notes sit on `panelFill`.
@@ -161,7 +145,7 @@ struct GuidanceOverlay: View {
                     .frame(width: width)
                     .frame(maxHeight: geo.size.height + geo.safeAreaInsets.bottom - 24)
                     .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                    .glassSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
                     .padding(.vertical, 12).padding(.leading, 12)
                     .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxX } action: { leadingEdge = $0 }
                     .offset(x: shown || reduceMotion ? 0 : -(width + 24)).opacity(shown ? 1 : 0)
@@ -182,7 +166,7 @@ struct GuidanceOverlay: View {
 
     private var turnCard: some View {
         // Never squeezed: the banner takes the height its text needs and the map gives way.
-        turnContent.fixedSize(horizontal: false, vertical: true).glassSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        turnContent.fixedSize(horizontal: false, vertical: true).floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 
     private var turnContent: some View {
@@ -234,7 +218,7 @@ struct GuidanceOverlay: View {
         if onGlass {
             label.background(.panelFill, in: Capsule()).accessibilityElement(children: .combine).accessibilityIdentifier("guidance-calm-note")
         } else {
-            label.glassSurface(in: Capsule()).accessibilityElement(children: .combine).accessibilityIdentifier("guidance-calm-note")
+            label.floatingSurface(in: Capsule()).accessibilityElement(children: .combine).accessibilityIdentifier("guidance-calm-note")
         }
     }
 
@@ -245,7 +229,7 @@ struct GuidanceOverlay: View {
     // MARK: Rerouting
 
     private var reroutingCard: some View {
-        reroutingContent.glassSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        reroutingContent.floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 
     private var reroutingContent: some View {
@@ -271,7 +255,7 @@ struct GuidanceOverlay: View {
     private var tripBar: some View {
         tripContent
             .padding(16)
-            .glassSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
             .padding(.horizontal, 8).padding(.bottom, 4)
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { bottomEdge = $0 }
     }
@@ -352,7 +336,7 @@ struct GuidanceOverlay: View {
             mapDivider
             markButton
         }
-        .glassSurface(in: Capsule())
+        .floatingSurface(in: Capsule(), interactive: true)
     }
 
     private var mapDivider: some View {
@@ -431,7 +415,7 @@ struct GuidanceOverlay: View {
             }
         }
         .padding(16)
-        .glassSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
         .padding(.horizontal, 8).padding(.bottom, 4)
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { bottomEdge = $0 }
     }

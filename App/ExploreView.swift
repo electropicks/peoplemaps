@@ -488,7 +488,7 @@ struct ExploreView: View {
             }
             .buttonStyle(.plain)
             .font(.system(size: 19)).foregroundStyle(.primary)
-            .floatingSurface(in: Capsule())
+            .floatingSurface(in: Capsule(), interactive: true)
         }
     }
 
