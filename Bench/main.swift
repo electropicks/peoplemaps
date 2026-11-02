@@ -5,7 +5,7 @@ import PeoplemapsCore
 //   swift build -c release --product peoplemaps-bench && .build/release/peoplemaps-bench [--scale N] [--runs N] [--json]
 // --scale N routes on the bundled graph plus N-1 disjoint copies placed to its east, to show cost that grows with graph size.
 
-var scale = 1, runs = 5, json = false, only = "", long = false
+var scale = 1, runs = 5, json = false, only = "", cap: Int?, boundMeters: Double?
 var args = CommandLine.arguments.dropFirst()
 while let arg = args.popFirst() {
     switch arg {
@@ -13,8 +13,9 @@ while let arg = args.popFirst() {
     case "--runs": runs = max(1, Int(args.popFirst() ?? "") ?? 5)
     case "--trip": only = args.popFirst() ?? ""
     case "--json": json = true
-    case "--long": long = true
-    default: FileHandle.standardError.write(Data("usage: peoplemaps-bench [--scale N] [--runs N] [--trip NAME] [--long] [--json]\n".utf8)); exit(64)
+    case "--cap": cap = Int(args.popFirst() ?? "")
+    case "--bound": boundMeters = Double(args.popFirst() ?? "")
+    default: FileHandle.standardError.write(Data("usage: peoplemaps-bench [--scale N] [--runs N] [--trip NAME] [--cap N] [--bound METERS] [--json]\n".utf8)); exit(64)
     }
 }
 
@@ -60,7 +61,10 @@ let baseNodes = graph.nodes.count, baseEdges = graph.edges.count
 var tiledTime = Duration.zero
 if scale > 1 { tiledTime = clock.measure { graph = tiled(graph, copies: scale) } }
 var router: NativeRouter!
-let initTime = clock.measure { router = NativeRouter(graph: graph) }
+// --cap N and --bound METERS override the search limits (the cap, and the walk and bike distance beyond which fewer calmer searches run).
+let limits = SearchLimits(concurrentSearches: cap ?? SearchLimits.standard.concurrentSearches,
+                          longMeters: boundMeters.map { [.walk: $0, .bike: $0] } ?? SearchLimits.standard.longMeters)
+let initTime = clock.measure { router = NativeRouter(graph: graph, limits: limits) }
 let rssAfterInit = peakRSSMB()
 
 func place(_ n: String, _ lat: Double, _ lon: Double) -> Place { Place(id: n, name: n, lat: lat, lon: lon, category: "x") }
@@ -70,8 +74,6 @@ let ballard = place("Ballard", 47.6685, -122.3840), slu = place("SLU", 47.6270, 
 let capHill = place("CapHill", 47.6230, -122.3180), madrona = place("Madrona", 47.6170, -122.3030)
 var trips: [(name: String, a: Place, b: Place)] = [("Fremont-GasWorks", fremont, gasWorks), ("CalAnderson-Volunteer", calAnderson, volunteer)]
 if scale == 1 { trips += [("Ballard-SLU", ballard, slu), ("Ballard-CapHill", ballard, capHill), ("Ballard-Madrona", ballard, madrona)] }
-// --long adds city-length trips (about 20 km), where the walk and bike searches are the slow ones.
-if long { trips += [("BitterLake-RainierBeach", place("BitterLake", 47.7270, -122.3550), place("RainierBeach", 47.5230, -122.2680))] }
 
 // The copies must not connect: no edge or turn restriction leaves its block of ids.
 if scale > 1 {
