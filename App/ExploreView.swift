@@ -269,9 +269,10 @@ struct ExploreView: View {
 
     // MARK: Sheet stops
 
-    private let previewDetent = PresentationDetent.fraction(0.66)
-    /// The system adds room for the home indicator itself. Never so tall that the map disappears; past that it scrolls.
-    private var fitHeight: CGFloat { min(fitContent + 6, screenHeight * 0.7) }
+    private let previewDetent = PresentationDetent.fraction(0.7)
+    /// `fitContent` plus the padding `scrolling` puts around it, or the last of the content is cut off by the sheet's edge.
+    /// Never so tall that the map disappears; past that it scrolls.
+    private var fitHeight: CGFloat { min(fitContent + Layout.sheetTop + Layout.sheetBottom, screenHeight * 0.7) }
     private func detent(_ stop: Stop) -> PresentationDetent {
         switch stop {
         case .fit: .height(fitHeight)
@@ -411,10 +412,16 @@ struct ExploreView: View {
             .presentationBackgroundInteraction(.enabled(upThrough: screen == .preview ? previewDetent : .medium))
             .presentationDragIndicator(.visible)
             .interactiveDismissDisabled()
-            .onGeometryChange(for: CGFloat.self) { $0.size.height + $0.safeAreaInsets.bottom } action: { height in
+            // At its lower stops the system shrinks the sheet and floats it above the screen's edge, so its own height says nothing
+            // about where its top is. The global frame includes that.
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { top in
+                let height = screenHeight - top
                 sheetCover = height
                 if stop != .large, screen != .search { mapCover = height }
             }
+            #if DEBUG
+            .onGeometryChange(for: String.self) { "\(Int($0.frame(in: .global).minY)) \(Int($0.frame(in: .global).maxY)) \(Int($0.safeAreaInsets.bottom))" } action: { MapDebug.shared.sheet = $0 }
+            #endif
     }
 
     private func landscapeLayout(_ geo: GeometryProxy) -> some View {
@@ -458,7 +465,7 @@ struct ExploreView: View {
     private func scrolling<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         ScrollView {
             content()
-                .padding(.horizontal, inset).padding(.top, landscape ? Layout.cardInset : 20).padding(.bottom, 12)
+                .padding(.horizontal, inset).padding(.top, landscape ? Layout.cardInset : Layout.sheetTop).padding(.bottom, Layout.sheetBottom)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                     // The first measurement sizes the card at launch without animating it open.
                     var launch = Transaction(); launch.disablesAnimations = contentHeight == 0
@@ -510,6 +517,8 @@ struct ExploreView: View {
 
     // MARK: Home
 
+    private var peeking: Bool { stop == .fit && !landscape }
+
     private var homeContent: some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 14) {
@@ -535,17 +544,24 @@ struct ExploreView: View {
                 }
             }
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fitContent = $0 }
-            if !saved.recents.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Recents").font(.footnote.weight(.semibold)).foregroundStyle(GuidanceOverlay.onGlass).padding(.leading, 4)
-                        .accessibilityAddTraits(.isHeader)
-                    PlaceList(places: Array(saved.recents.prefix(landscape ? 3 : 5)), minHeight: landscape ? 46 : 52, identifier: { "home-recent-\($0.id)" }, action: open)
+            // The peek stops at the search field and favourites. On a taller peek the system leaves room for the home indicator, and
+            // the next row would show half cut off in it. Not fully transparent, which would take these out of VoiceOver too.
+            VStack(alignment: .leading, spacing: 20) {
+                if !saved.recents.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Recents").font(.footnote.weight(.semibold)).foregroundStyle(GuidanceOverlay.onGlass).padding(.leading, 4)
+                            .accessibilityAddTraits(.isHeader)
+                        PlaceList(places: Array(saved.recents.prefix(landscape ? 3 : 5)), minHeight: landscape ? 46 : 52, identifier: { "home-recent-\($0.id)" }, action: open)
+                    }
                 }
+                Button { sheet = .about } label: {
+                    Label("About PeopleMaps", systemImage: "info.circle").font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
+                }.buttonStyle(.plain).padding(.leading, 4).accessibilityIdentifier("about")
             }
-            Button { sheet = .about } label: {
-                Label("About PeopleMaps", systemImage: "info.circle").font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
-            }.buttonStyle(.plain).padding(.leading, 4).accessibilityIdentifier("about")
+            .opacity(peeking ? 0.01 : 1)
+            .allowsHitTesting(!peeking)
+            .animation(Motion.content(reduceMotion), value: peeking)
         }
     }
 

@@ -23,6 +23,49 @@ final class MapDebug {
     var marker = "none"
     /// How each programmatic camera move was made (`cut`, `glide`, `fly`, `fade`), as it would be with motion on.
     var moves: [String] = []
+    /// The marker feed: `<count> <ms>`, empty until it is on the map.
+    var placeMarkers = ""
+    /// The camera's zoom once the map is idle.
+    var zoom = 0.0
+    /// The portrait sheet on screen, `<top> <bottom> <inset below content>`, in window points.
+    var sheet = ""
+    /// Frame times while panning, with `--measure-frames`: `<frames> p50 <ms> p95 <ms> p99 <ms> max <ms> long <count>`.
+    /// `long` counts frames over 1.5 refresh intervals.
+    var frames = ""
+}
+
+/// Times each frame while a gesture moves the map, with `--measure-frames`, so a UI test can read what panning costs.
+@MainActor final class FrameMeter: NSObject {
+    static let shared = FrameMeter()
+    private var link: CADisplayLink?
+    private var intervals: [Double] = []
+    private var last = 0.0
+    /// Set by the map from a gesture starting until its motion ends.
+    var counting = false { didSet { if !counting { last = 0 } } }
+    func start() {
+        guard link == nil, ProcessInfo.processInfo.arguments.contains("--measure-frames") else { return }
+        let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
+        link.add(to: .main, forMode: .common)
+        self.link = link
+    }
+    /// What the system counts against the app, in MB.
+    private static func footprintMB() -> Int {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count) }
+        }
+        return result == KERN_SUCCESS ? Int(info.phys_footprint / 1_048_576) : -1
+    }
+    @objc private func tick(_ link: CADisplayLink) {
+        guard counting else { return }
+        if last > 0 { intervals.append(link.timestamp - last) }
+        last = link.timestamp
+        guard intervals.count % 30 == 0, !intervals.isEmpty else { return }
+        let sorted = intervals.sorted(), budget = max(link.targetTimestamp - link.timestamp, 1.0 / 120) * 1.5
+        func p(_ q: Double) -> Int { Int((sorted[min(sorted.count - 1, Int(Double(sorted.count) * q))] * 1000).rounded()) }
+        MapDebug.shared.frames = "\(sorted.count) p50 \(p(0.5)) p95 \(p(0.95)) p99 \(p(0.99)) max \(Int((sorted.last! * 1000).rounded())) long \(sorted.filter { $0 > budget }.count) mem \(Self.footprintMB())"
+    }
 }
 
 extension UIColor {
@@ -80,8 +123,13 @@ struct NavigationDebugProbe: View {
             probe("debug-passed", map.passed)
             probe("debug-marker", map.marker)
             probe("debug-camera-moves", map.moves.suffix(6).joined(separator: ","))
+            probe("debug-place-markers", map.placeMarkers)
+            probe("debug-zoom", String(format: "%.2f", map.zoom))
+            probe("debug-sheet", map.sheet)
+            probe("debug-frames", map.frames)
         }
-        .frame(width: 1, height: 10).allowsHitTesting(false)
+        .onAppear { FrameMeter.shared.start() }
+        .frame(width: 1, height: 17).allowsHitTesting(false)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
