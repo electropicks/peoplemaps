@@ -180,7 +180,8 @@ struct GuidanceOverlay: View {
     // MARK: Turn card
 
     private var turnCard: some View {
-        turnContent.glassSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        // Never squeezed: the banner takes the height its text needs and the map gives way.
+        turnContent.fixedSize(horizontal: false, vertical: true).glassSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 
     private var turnContent: some View {
@@ -210,7 +211,7 @@ struct GuidanceOverlay: View {
                 HStack(spacing: 8) {
                     Text("Then:")
                     if let then = navigator.thenStep { Image(systemName: Self.symbol(then.maneuver)).font(.subheadline.weight(.bold)).accessibilityHidden(true) }
-                    Text(navigator.thenText).fontWeight(.semibold).lineLimit(typeSize.isAccessibilitySize ? 4 : 2).fixedSize(horizontal: false, vertical: true)
+                    Text(navigator.thenText).fontWeight(.semibold).lineLimit(typeSize.isAccessibilitySize ? 1 : 2).fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                 }
                 .font(.subheadline).foregroundStyle(Self.onGlass)
@@ -402,14 +403,26 @@ struct GuidanceOverlay: View {
     // MARK: Arrival
 
     private var arrivalSheet: some View {
-        arrivalContent
-            .padding(16)
-            .glassSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .padding(.horizontal, 8).padding(.bottom, 4)
+        // Past the available height (large text) the card scrolls and Done stays pinned under it.
+        ViewThatFits(in: .vertical) {
+            arrivalContent
+            VStack(spacing: 12) {
+                ScrollView { arrivalBody(done: false).accessibilityElement(children: .contain).accessibilityIdentifier("arrival-card") }
+                    .scrollBounceBehavior(.basedOnSize)
+                doneButton
+            }
+        }
+        .padding(16)
+        .glassSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .padding(.horizontal, 8).padding(.bottom, 4)
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { bottomEdge = $0 }
     }
 
     private var arrivalContent: some View {
+        arrivalBody(done: true).accessibilityElement(children: .contain).accessibilityIdentifier("arrival-card")
+    }
+
+    private func arrivalBody(done: Bool) -> some View {
         let name = navigator.destination?.shortName ?? "your destination"
         let minutes = NavigationFormat.minutes(navigator.tripSeconds)
         let summary = "\(NavigationFormat.distance(navigator.tripMeters)) · \(minutes) min · \(navigator.calmerRoute ? "Calmer route" : "Fastest route")"
@@ -421,7 +434,7 @@ struct GuidanceOverlay: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("You've arrived at \(name)").font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("guidance-arrived")
-                    Text(summary).font(.subheadline).foregroundStyle(Self.onGlass).accessibilityIdentifier("arrival-summary")
+                    Text(summary).font(.subheadline).foregroundStyle(Self.onGlass).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("arrival-summary")
                 }
                 Spacer(minLength: 0)
             }
@@ -439,15 +452,18 @@ struct GuidanceOverlay: View {
                 .background(.panelFill, in: RoundedRectangle(cornerRadius: Layout.groupRadius, style: .continuous))
                 .accessibilityElement(children: .contain).accessibilityIdentifier("arrival-notes")
             }
-            Button(action: onDone) {
-                Text("Done").font(.body.weight(.semibold)).foregroundStyle(.directionsText).frame(maxWidth: .infinity, minHeight: 32)
-            }
-            .buttonStyle(.glassProminent).buttonBorderShape(.capsule).tint(.directionsFill).controlSize(.large)
-            .accessibilityIdentifier("done-navigation")
+            if done { doneButton }
             Text("Times are estimates. No live traffic.").font(.footnote).foregroundStyle(Self.onGlass).padding(.horizontal, 4)
             VoiceUpgradeTip()
         }
-        .accessibilityElement(children: .contain).accessibilityIdentifier("arrival-card")
+    }
+
+    private var doneButton: some View {
+        Button(action: onDone) {
+            Text("Done").font(.body.weight(.semibold)).foregroundStyle(.directionsText).frame(maxWidth: .infinity, minHeight: 32)
+        }
+        .buttonStyle(.glassProminent).buttonBorderShape(.capsule).tint(.directionsFill).controlSize(.large)
+        .accessibilityIdentifier("done-navigation")
     }
 
     #if DEBUG

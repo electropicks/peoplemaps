@@ -7,8 +7,8 @@ final class PeoplemapsUITests: XCTestCase {
     private static let atBallardLibrary = "47.6698,-122.3843"
 
     /// Gas Works Park previewed from Current location at Kerry Park (location faked as allowed, no system prompt).
-    @MainActor private func launch(slow: Bool = false, simulateRoute: Bool = false, fast: Bool = false) -> XCUIApplication {
-        let app = launchHome(location: Self.atKerryPark, extra: (slow ? ["--slow-routing"] : []) + (simulateRoute ? ["--simulate-route"] : []) + (fast ? ["--fast-simulation"] : []))
+    @MainActor private func launch(slow: Bool = false, simulateRoute: Bool = false, fast: Bool = false, extra: [String] = []) -> XCUIApplication {
+        let app = launchHome(location: Self.atKerryPark, extra: extra + (slow ? ["--slow-routing"] : []) + (simulateRoute ? ["--simulate-route"] : []) + (fast ? ["--fast-simulation"] : []))
         showGasWorksRoutes(app)
         return app
     }
@@ -482,6 +482,41 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertFalse(app.buttons["end-navigation"].exists)
         capture("08-arrived", app: app)
         app.buttons["done-navigation"].tap()
+        XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 10))
+    }
+    /// AX3 text with long street names: the "Then:" row stays inside the banner, above the calm chip, and the current
+    /// instruction is fully on screen.
+    @MainActor func testGuidanceBannerHoldsLongNamesAtAX3() {
+        let app = launch(simulateRoute: true, extra: ["--long-street-names", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL"])
+        app.buttons["start-navigation"].tap()
+        let instruction = app.staticTexts["guidance-instruction"]
+        XCTAssertTrue(instruction.waitForExistence(timeout: 10))
+        let then = app.descendants(matching: .any)["guidance-then"]
+        XCTAssertTrue(then.waitForExistence(timeout: 5))
+        let card = app.descendants(matching: .any)["guidance-card"].frame
+        XCTAssertTrue(instruction.label.contains("Extension"), instruction.label)
+        XCTAssertGreaterThanOrEqual(then.frame.minY, instruction.frame.maxY - 1, "Then row overprints the instruction")
+        XCTAssertLessThanOrEqual(then.frame.maxY, card.maxY + 1, "Then row spills out of the banner")
+        let chip = app.descendants(matching: .any)["guidance-calm-note"]
+        if chip.exists { XCTAssertGreaterThanOrEqual(chip.frame.minY, card.maxY - 1, "Calm chip overlaps the banner") }
+        capture("guidance-ax3-banner", app: app)
+    }
+    /// AX5 arrival: Done stays on screen, the summary shows in full and the rest scrolls.
+    @MainActor func testArrivalCardFitsAtAX5() {
+        let app = launch(simulateRoute: true, fast: true, extra: ["--long-street-names", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
+        app.buttons["start-navigation"].tap()
+        let arrived = app.staticTexts["guidance-arrived"]
+        XCTAssertTrue(arrived.waitForExistence(timeout: 150), "Never arrived")
+        let window = app.windows.firstMatch.frame
+        let done = app.buttons["done-navigation"]
+        XCTAssertTrue(done.isHittable)
+        XCTAssertLessThanOrEqual(done.frame.maxY, window.maxY)
+        XCTAssertGreaterThanOrEqual(arrived.frame.minY, window.minY)
+        let summary = app.staticTexts["arrival-summary"]
+        XCTAssertTrue(summary.label.contains("route"), summary.label)
+        XCTAssertLessThanOrEqual(summary.frame.maxY, window.maxY)
+        capture("arrival-ax5", app: app)
+        done.tap()
         XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 10))
     }
     /// A tap on the compass while in the overview only leaves it: the orientation it had stays.
