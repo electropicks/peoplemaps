@@ -4,14 +4,17 @@
 #   Scripts/verify.sh --ui       also the UI suite on a simulator (macOS only; creates "PeopleMaps Verify" if needed)
 #   Scripts/verify.sh --ui UDID  the UI suite on that simulator
 #   Scripts/verify.sh --fast     skip data reproduction and the app build
+#   Scripts/verify.sh --region   also reproduce each full region in Data/regions.json from its fetched files
+#                                (Scripts/fetch_data first; regions not fetched are skipped, and it says so)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-ui=""; fast=0
+ui=""; fast=0; region=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --ui) ui="auto"; if [[ $# -gt 1 && "$2" != --* ]]; then ui="$2"; shift; fi ;;
     --fast) fast=1 ;;
+    --region) region=1 ;;
     *) echo "unknown option: $1" >&2; exit 64 ;;
   esac
   shift
@@ -52,6 +55,10 @@ reproduce() {
   return $bad
 }
 [[ $fast == 0 ]] && step "data reproduces byte for byte" reproduce
+
+# Full regions live in release assets, not git, so this is opt-in; CI and the Swift tests never need them.
+if [[ $region == 1 ]]; then step "regions reproduce byte for byte" python3 Scripts/reproduce_regions.py
+else echo "regions not checked (pass --region after Scripts/fetch_data); the shipped fixture is checked above"; fi
 
 step "Swift tests" swift test
 
