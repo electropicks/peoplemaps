@@ -38,4 +38,4 @@ Files in git are the Seattle test fixture. Bigger regions are release assets pin
 
 ## Coverage
 
-The shipped bounds are 47.615–47.678 N, 122.390–122.300 W. All-Seattle is blocked on the costs in `Docs/COVERAGE_SPIKE.md` (memory, router speed). Don't grow the bounds without new measurements.
+The fixture in git is the box 47.615–47.678 N, 122.390–122.300 W. All Seattle (47.49–47.74 N, 122.44–122.24 W) is the region `seattle-all`, a release asset the app bundles when fetched (`Docs/ARCHITECTURE.md`, Region data). Growing beyond it needs a new region, new measurements (`Docs/COVERAGE_SPIKE.md`) and the owner's decision.
