@@ -80,13 +80,20 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertEqual(x, x.sorted(), "Mode order")
         XCTAssertTrue(app.buttons["Drive"].isSelected)
         XCTAssertEqual(app.buttons["extra-time-menu"].value as? String, "10 min", "The default leans to calm")
-        // Routes with less stress exist here but gain too little, so this one must not be called the calmest.
+        // Which of the two the data gives depends on the region: the small fixture has routes that gain too little for their
+        // time (so this one must not be called the calmest), a full city usually has a calmer drive to offer.
         let finding = app.descendants(matching: .any)["no-alternative"]
-        XCTAssertTrue(finding.waitForExistence(timeout: 10))
-        XCTAssertTrue(finding.label.contains("Best balance we found"), finding.label)
-        XCTAssertTrue(finding.label.contains("estimates"), finding.label)
-        XCTAssertFalse(finding.label.localizedCaseInsensitiveContains("calmest"), finding.label)
-        XCTAssertFalse(finding.label.localizedCaseInsensitiveContains("safe"), finding.label)
+        let calmer = app.buttons["route-calmer"]
+        let settled = NSPredicate { _, _ in finding.exists || calmer.exists }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: settled, object: nil)], timeout: 10), .completed)
+        if finding.exists {
+            XCTAssertTrue(finding.label.contains("Best balance we found"), finding.label)
+            XCTAssertTrue(finding.label.contains("estimates"), finding.label)
+            XCTAssertFalse(finding.label.localizedCaseInsensitiveContains("calmest"), finding.label)
+            XCTAssertFalse(finding.label.localizedCaseInsensitiveContains("safe"), finding.label)
+        } else {
+            XCTAssertFalse(calmer.label.localizedCaseInsensitiveContains("safe"), calmer.label)
+        }
         setExtraTime(app, "None")
         let unchecked = NSPredicate { _, _ in finding.exists && finding.label.contains("nothing else was checked") }
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: unchecked, object: nil)], timeout: 10), .completed, "None says it did not look")
@@ -754,10 +761,14 @@ final class PeoplemapsUITests: XCTestCase {
         let app = launchHome(location: Self.atKerryPark)
         openPlace(app, "Gas Works", id: "relation/1047789")
         let value = waitForEstimate(app)
-        XCTAssertNotNil(value.range(of: #"^\d+( to \d+)? minutes? drive, "#, options: .regularExpression), value)
-        XCTAssertTrue(value.contains("best balance we found"), value)
-        XCTAssertFalse(value.contains("Calmer route"), value)
         XCTAssertFalse(value.localizedCaseInsensitiveContains("safe"), value)
+        if value.hasPrefix("Calmer route") {
+            // A full city has a calmer drive here; the card then says so, fastest to calmer.
+            XCTAssertNotNil(value.range(of: #"^Calmer route, \d+( to \d+)? minutes? drive, [\d.]+ (miles?|feet), .+ to .+, .+, estimate without live traffic$"#, options: .regularExpression), value)
+        } else {
+            XCTAssertNotNil(value.range(of: #"^\d+( to \d+)? minutes? drive, "#, options: .regularExpression), value)
+            XCTAssertTrue(value.contains("best balance we found"), value)
+        }
         XCTAssertFalse(app.staticTexts["place-estimate"].exists)
         XCTAssertFalse(app.staticTexts["place-estimate-loading"].exists)
     }
@@ -794,7 +805,7 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["search-field"].tap()
         let field = app.textFields["search-input"]
         XCTAssertTrue(field.waitForExistence(timeout: 5))
-        field.typeText("park")
+        field.typeText("Gas Works Park")
         XCTAssertTrue(app.buttons["result-relation/1047789"].waitForExistence(timeout: 5))
         capture("04-search-park", app: app)
         app.buttons["result-relation/1047789"].tap()
@@ -1106,6 +1117,9 @@ final class PeoplemapsUITests: XCTestCase {
         app.terminate()
         app = launchHome(location: Self.atKerryPark)
         showGasWorksRoutes(app)
+        // With extra time at None nothing else is searched, in any region.
+        setExtraTime(app, "None")
+        XCTAssertTrue(app.descendants(matching: .any)["no-alternative"].waitForExistence(timeout: 10))
         app.buttons["route-details"].tap()
         bar = app.descendants(matching: .any)["calm-bar"]
         XCTAssertTrue(bar.waitForExistence(timeout: 5))
@@ -1176,7 +1190,7 @@ final class PeoplemapsUITests: XCTestCase {
         app.buttons["search-field"].tap()
         let field = app.textFields["search-input"]
         XCTAssertTrue(field.waitForExistence(timeout: 5))
-        field.typeText("park")
+        field.typeText("Gas Works Park")
         let result = app.buttons["result-relation/1047789"]
         XCTAssertTrue(result.waitForExistence(timeout: 5))
         // The visible source line, not just the VoiceOver label.

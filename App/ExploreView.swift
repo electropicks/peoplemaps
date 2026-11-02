@@ -762,7 +762,7 @@ struct ExploreView: View {
     }
 
     private var previewContent: some View {
-        VStack(alignment: .leading, spacing: landscape ? 8 : 12) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Directions").font(.headline).accessibilityAddTraits(.isHeader)
                 Spacer()
