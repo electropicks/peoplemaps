@@ -85,6 +85,54 @@ final class EvidenceTour: XCTestCase {
         shot("details-no-calmer")
     }
 
+    /// Place markers and each screen around them. Run once per appearance.
+    @MainActor func testMapPlaces() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")
+        var app = launch(["--location-granted", "47.6505,-122.35"])
+        Thread.sleep(forTimeInterval: 3)
+        shot("map-neighbourhood")
+        let window = app.windows.firstMatch
+        window.pinch(withScale: 2, velocity: 2)
+        Thread.sleep(forTimeInterval: 2)
+        shot("map-zoomed-in")
+        window.pinch(withScale: 2, velocity: 2)
+        Thread.sleep(forTimeInterval: 2)
+        shot("map-zoomed-in-more")
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 5))
+        app.textFields["search-input"].typeText("coffee")
+        shot("search")
+        app.buttons["cancel-search-home"].tap()
+        open(app, "Gas Works", id: "relation/1047789")
+        waitForEstimate(app)
+        shot("place-card")
+        app.buttons["favourite"].tap()
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["start-navigation"].waitForExistence(timeout: 20))
+        shot("route-preview")
+        app.buttons["close-preview"].tap()
+        XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
+        shot("home-favourites")
+        raise(app)
+        shot("home-raised")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 10))
+        shot("home-landscape")
+        XCUIDevice.shared.orientation = .portrait
+        app.terminate()
+        app = launch(["--location-granted", "47.6505,-122.35", "--simulate-route"])
+        open(app, "Gas Works", id: "relation/1047789")
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["start-navigation"].waitForExistence(timeout: 20))
+        app.buttons["start-navigation"].tap()
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 10))
+        shot("guidance")
+        app.terminate()
+        app = launch([])
+        Thread.sleep(forTimeInterval: 3)
+        shot("map-zoomed-out")
+    }
+
     @MainActor func testEvidence() throws {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")
         // Location allowed, standing in Fremont.
