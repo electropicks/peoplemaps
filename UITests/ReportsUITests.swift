@@ -12,6 +12,15 @@ final class ReportsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 20))
         return app
     }
+    /// About sits below the fit stop, so the home sheet comes up first.
+    @MainActor private func openAbout(_ app: XCUIApplication) {
+        let about = app.buttons["about"]
+        if !about.isHittable {
+            let start = app.buttons["search-field"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -300)))
+        }
+        about.tap()
+    }
     @MainActor private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
@@ -23,7 +32,7 @@ final class ReportsUITests: XCTestCase {
 
     @MainActor func testReportFromAboutIsKeptAndShareable() {
         let app = launch()
-        app.buttons["about"].tap()
+        openAbout(app)
         scrollTo(app.buttons["report-problem-about"], in: app)
         app.buttons["report-problem-about"].tap()
         let note = app.textFields["report-note"]
@@ -46,7 +55,7 @@ final class ReportsUITests: XCTestCase {
 
     @MainActor func testIncludedDetailsAreShownAndFollowTheToggle() {
         let app = launch(location: Self.atKerryPark)
-        app.buttons["about"].tap()
+        openAbout(app)
         scrollTo(app.buttons["report-problem-about"], in: app)
         app.buttons["report-problem-about"].tap()
         let included = app.buttons["What\u{2019}s included"]
@@ -65,7 +74,7 @@ final class ReportsUITests: XCTestCase {
 
     @MainActor func testUsageLogIsOffUntilTurnedOnThenKeepsATripAndClears() {
         let app = launch(location: Self.atKerryPark, extra: ["--simulate-route"])
-        app.buttons["about"].tap()
+        openAbout(app)
         let toggle = app.switches["usage-log-toggle"]
         scrollTo(toggle, in: app)
         XCTAssertEqual(toggle.value as? String, "0", "Off by default")
@@ -93,7 +102,7 @@ final class ReportsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["close-preview"].waitForExistence(timeout: 10))
         app.buttons["close-preview"].tap()
 
-        app.buttons["about"].tap()
+        openAbout(app)
         let saved = app.staticTexts["Marked moment, no words yet"]
         scrollTo(saved, in: app)
         XCTAssertTrue(saved.exists, "The mark waits in the list")
