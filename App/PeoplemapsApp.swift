@@ -6,10 +6,13 @@ struct PeoplemapsApp: App {
     /// Home needs only the graph's bounds and search; the router builds behind it and routing requests wait for it.
     private let ready: Result<(graph: StreetGraph, router: DeferredRouter, search: SearchIndex), Error>
     init() {
+        AppEventHooks.start()
         ready = Result {
-            let header = try StreetGraph.bundledHeader()
-            return (header.boundsOnly, DeferredRouter { Self.holdForTests(); return NativeRouter(graph: try StreetGraph.bundled()) }, try SearchIndex.bundled(graphNodes: header.nodes))
+            let header = try AppEvents.shared.timed(.data, "graph header loaded") { try StreetGraph.bundledHeader() }
+            let router = DeferredRouter { Self.holdForTests(); return try AppEvents.shared.timed(.data, "router ready") { NativeRouter(graph: try StreetGraph.bundled()) } }
+            return (header.boundsOnly, router, try AppEvents.shared.timed(.data, "search index loaded") { try SearchIndex.bundled(graphNodes: header.nodes) })
         }
+        if case let .failure(error) = ready { AppEvents.shared.log(.error, "bundled data failed to load", error: error) }
     }
     /// UI tests pass `--hold-router` to keep the router from being ready, proving home never waits for it.
     private nonisolated static func holdForTests() {

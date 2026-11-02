@@ -33,7 +33,7 @@ final class ProblemReportTests: XCTestCase {
     func testFileHasNoCategoryAndNoServerFields() throws {
         let text = String(decoding: try report().fileData(), as: UTF8.self)
         XCTAssertFalse(text.contains("category"))
-        XCTAssertTrue(text.contains("\"schema\" : 2"))
+        XCTAssertTrue(text.contains("\"schema\" : 3"))
     }
 
     func testFileNameHasDateAndShortDescription() {
