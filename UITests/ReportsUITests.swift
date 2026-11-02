@@ -108,4 +108,42 @@ final class ReportsUITests: XCTestCase {
         XCTAssertFalse(clear.exists)
         app.buttons["close-about"].tap()
     }
+
+    /// A marked moment can get words after the trip, in the normal arrival card and in the scrolling one at AX5.
+    @MainActor private func markThenArrive(extra: [String]) -> XCUIApplication {
+        let app = launch(location: Self.atKerryPark, extra: ["--simulate-route", "--fast-simulation"] + extra)
+        app.buttons["search-field"].tap()
+        let field = app.textFields["search-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("Gas Works")
+        app.buttons["result-relation/1047789"].tap()
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
+        app.buttons["start-navigation"].tap()
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 20))
+        let mark = app.buttons["mark-moment"]
+        XCTAssertTrue(mark.waitForExistence(timeout: 10))
+        mark.tap()
+        XCTAssertTrue(app.staticTexts["guidance-arrived"].waitForExistence(timeout: 150), "Never arrived")
+        return app
+    }
+    @MainActor func testAddWordsShowsOnTheArrivalCard() {
+        let app = markThenArrive(extra: [])
+        let add = app.buttons["add-words"]
+        XCTAssertTrue(add.waitForExistence(timeout: 5))
+        XCTAssertTrue(add.isHittable)
+        add.tap()
+        XCTAssertTrue(app.textFields["report-note"].waitForExistence(timeout: 5))
+        app.buttons["close-report"].tap()
+    }
+    @MainActor func testAddWordsIsReachableAtAX5() {
+        let app = markThenArrive(extra: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
+        let add = app.buttons["add-words"]
+        XCTAssertTrue(add.waitForExistence(timeout: 5))
+        let card = app.scrollViews.containing(.button, identifier: "add-words").firstMatch
+        for _ in 0..<5 where !add.isHittable { card.swipeUp() }
+        XCTAssertTrue(add.isHittable, "Add words is out of reach at AX5")
+        XCTAssertTrue(app.buttons["done-navigation"].isHittable, "Done stays pinned")
+        capture("reports-04-add-words-ax5")
+    }
 }
