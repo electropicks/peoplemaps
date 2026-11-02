@@ -909,9 +909,10 @@ final class PeoplemapsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
         app.buttons["close-preview"].tap()
         // Home now lists it under Recents, and its card estimates in the mode used last.
+        XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
+        raiseHome(app)
         let recent = app.buttons["home-recent-way/37058377"]
         XCTAssertTrue(recent.waitForExistence(timeout: 5))
-        raiseHome(app)
         recent.tap()
         waitForEstimate(app, containing: " cycle")
     }
@@ -1278,6 +1279,9 @@ final class PeoplemapsUITests: XCTestCase {
     @MainActor func testRecentDestinationShowsWhenSearchIsEmpty() {
         let app = launch()
         app.buttons["close-preview"].tap()
+        XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["home-recent-relation/1047789"].exists, "Recents wait for the raised sheet")
+        raiseHome(app)
         XCTAssertTrue(app.buttons["home-recent-relation/1047789"].waitForExistence(timeout: 5), "Home lists Recents")
         XCTAssertFalse(app.staticTexts["home-hint"].exists, "The hint is only for an empty history")
         capture("12b-home-recents", app: app)
