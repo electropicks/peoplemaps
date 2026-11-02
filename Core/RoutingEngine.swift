@@ -39,7 +39,7 @@ public enum NoCalmerFinding: Sendable, Equatable {
     case notChecked
     /// Every search, including those favouring calm, found this one route.
     case onlyRoute
-    /// A long trip, so fewer alternatives were searched; none of those compared is calmer for its time.
+    /// A long trip, so fewer alternatives were searched; none of those compared is clearly calmer for its time, and none past the limit is calmer.
     case fewerChecked(routes: Int)
     /// Other routes were compared and none has less stress.
     case calmestCompared(routes: Int)
@@ -55,7 +55,7 @@ public enum NoCalmerFinding: Sendable, Equatable {
         case .notChecked: "Fastest route only"
         case .onlyRoute, .calmestCompared: "Already the calmest we found"
         case .fewerChecked: "Best of the routes we checked"
-        case .calmerTakesLonger: "Calmest within this extra time"
+        case .calmerTakesLonger: "Calmest we found within this extra time"
         case .tooLittleGain: "Best balance we found"
         case .clearlyCalmerTakesLonger: "Best balance within this extra time"
         }
@@ -65,7 +65,7 @@ public enum NoCalmerFinding: Sendable, Equatable {
         case .notChecked: "Extra time is None, so nothing else was checked."
         case .onlyRoute: "By our estimates, every search found this route."
         case let .calmestCompared(routes): "Calmest of \(routes) routes compared, by our estimates."
-        case let .fewerChecked(routes): "This is a long trip, so we compared only \(routes) \(routes == 1 ? "route" : "routes"). By our estimates, none is calmer for its time."
+        case let .fewerChecked(routes): "This is a long trip, so we checked fewer alternatives (\(routes) \(routes == 1 ? "route" : "routes") compared). By our estimates, none is clearly calmer for its time."
         case let .calmerTakesLonger(minutes): "By our estimates, calmer routes take \(minutes)+ min more."
         case .tooLittleGain: "By our estimates, other routes gain too little."
         case let .clearlyCalmerTakesLonger(minutes): "By our estimates, a clearly calmer route takes \(minutes)+ min more."
@@ -306,18 +306,27 @@ public final class NativeRouter: RouteComputing, Sendable {
         var candidates = [fastest]
         func add(_ candidate: Route) { if !candidates.contains(where: { $0.edgeIDs == candidate.edgeIDs }) { candidates.append(candidate) } }
         routes.dropFirst().forEach(add)
+        let weighed: (Route) -> Double = { scale?.stress($0.metrics.breakdown) ?? $0.metrics.stress }
         if var weight = weights.last {
             let limit = fastest.metrics.seconds + Double(request.extraMinutes) * 60 + 0.000_001
-            // Avoid can make even the lightest weight detour past the budget; then look closer to the fastest route.
-            var retries = bounded ? 1 : Int.max
-            while retries > 0, scale != nil, weight > Self.weights[0] / 4, !candidates.dropFirst().contains(where: { $0.metrics.seconds <= limit }) {
-                retries -= 1
-                weight = min(weight, Self.weights[0]) / 2
-                try cancel.check()
-                add(try shortest(from: start.node, to: end.node, mode: request.mode, weight: weight, stress: scaled, scale: scale, transitions: transitions, cancel: cancel))
+            var withinLimit: Bool { candidates.dropFirst().contains(where: { $0.metrics.seconds <= limit }) }
+            if bounded {
+                // The two lightest weights were dropped. While nothing calmer is offered, try them, 0.5 then 0.25 (or, when Avoid
+                // pushed every detour past the budget, one step closer still to the fastest route).
+                let retries = scale != nil && !withinLimit ? [Self.weights[0] / 2] : [Self.weights[1], Self.weights[0]]
+                for retry in retries where Self.selectCalmer(candidates: candidates, fastest: fastest, extraMinutes: request.extraMinutes, stress: weighed) == nil {
+                    try cancel.check()
+                    add(try shortest(from: start.node, to: end.node, mode: request.mode, weight: retry, stress: scaled, scale: scale, transitions: transitions, cancel: cancel))
+                }
+            } else {
+                // Avoid can make even the lightest weight detour past the budget; then look closer to the fastest route.
+                while scale != nil, weight > Self.weights[0] / 4, !withinLimit {
+                    weight = min(weight, Self.weights[0]) / 2
+                    try cancel.check()
+                    add(try shortest(from: start.node, to: end.node, mode: request.mode, weight: weight, stress: scaled, scale: scale, transitions: transitions, cancel: cancel))
+                }
             }
         }
-        let weighed: (Route) -> Double = { scale?.stress($0.metrics.breakdown) ?? $0.metrics.stress }
         let calmer = Self.selectCalmer(candidates: candidates, fastest: fastest, extraMinutes: request.extraMinutes, stress: weighed)
         return RouteComparison(request: request, fastest: fastest, calmer: calmer, candidateCount: candidates.count,
                                originSnapMeters: start.distance, destinationSnapMeters: end.distance,
@@ -351,12 +360,13 @@ public final class NativeRouter: RouteComputing, Sendable {
     }
 
     /// What the candidates show when `selectCalmer` offered none.
-    /// When `bounded`, fewer searches ran, so findings that say the calmest was found become `fewerChecked`.
+    /// When `bounded`, fewer searches ran, so findings that say nothing calmer exists become `fewerChecked`.
+    /// A calmer route that was found past the limit is still reported, as it is for any request.
     public static func noCalmerFinding(candidates: [Route], fastest: Route, extraMinutes: Int,
                                        stress: (Route) -> Double = { $0.metrics.stress }, bounded: Bool = false) -> NoCalmerFinding {
         let found = plainFinding(candidates: candidates, fastest: fastest, extraMinutes: extraMinutes, stress: stress)
         switch found {
-        case .notChecked, .clearlyCalmerTakesLonger: return found
+        case .notChecked, .calmerTakesLonger, .clearlyCalmerTakesLonger: return found
         default: return bounded ? .fewerChecked(routes: candidates.count) : found
         }
     }

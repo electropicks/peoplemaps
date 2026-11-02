@@ -151,7 +151,7 @@ struct FactorScale: Sendable {
     func multiplier(_ option: RoutePreferences.Option) -> Double { multipliers[option.index] }
 
     /// Route stress as this person weighs it. The breakdown itself keeps the model's real costs.
-    func stress(_ b: Breakdown) -> Double { b.tallies.reduce(0) { $0 + $1.value.cost * self[$1.key] } }
+    func stress(_ b: Breakdown) -> Double { Factor.allCases.reduce(0) { $0 + (b.tallies[$1]?.cost ?? 0) * self[$1] } }
 }
 
 /// Sums costs as scaled by a person's preferences; used inside the search.

@@ -410,7 +410,7 @@ has less stress.
 | Extra time is None, so only the fastest search ran | Fastest route only | Extra time is None, so nothing else was checked. | not in the sample |
 | All six calm-weighted searches found this route | Already the calmest we found | By our estimates, every search found this route. | 7 / 3 / 0 |
 | Other routes compared, none with less stress | Already the calmest we found | Calmest of N routes compared, by our estimates. | 3 / 0 / 0 |
-| Less stress exists, but only beyond the limit | Calmest within this extra time | By our estimates, calmer routes take N+ min more. | 0 / 0 / 0 |
+| Less stress exists, but only beyond the limit | Calmest we found within this extra time | By our estimates, calmer routes take N+ min more. | 0 / 0 / 0 |
 | Less stress exists inside the limit, but under the floors or not worth its time, and nothing beyond the limit clears them | Best balance we found | By our estimates, other routes gain too little. | 4 / 3 / 2 |
 | Too little gain inside the limit, but a route beyond it clears the floors and the price | Best balance within this extra time | By our estimates, a clearly calmer route takes N+ min more. | 0 / 0 / 0 |
 

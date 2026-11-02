@@ -122,12 +122,13 @@ final class SelectionTests: XCTestCase {
         XCTAssertEqual(finding([], bounded: true), .fewerChecked(routes: 1), "Not \"every search found this\"")
         XCTAssertEqual(finding(same, bounded: true), .fewerChecked(routes: 2))
         XCTAssertEqual(finding(small, bounded: true), .fewerChecked(routes: 2))
-        XCTAssertEqual(finding(longer, bounded: true), .fewerChecked(routes: 2), "Not \"calmest within this extra time\"")
+        XCTAssertEqual(finding(longer, bounded: true), .calmerTakesLonger(limitMinutes: 10), "A calmer route found past the limit is reported, not \"none is calmer\"")
         XCTAssertEqual(finding(small + [Fixture.route(id: 2, seconds: 1300, stress: 100)], bounded: true), .clearlyCalmerTakesLonger(limitMinutes: 10),
                        "A route that was found and is clearly calmer is still reported")
         XCTAssertEqual(NativeRouter.noCalmerFinding(candidates: [fast], fastest: fast, extraMinutes: 0, bounded: true), .notChecked)
         XCTAssertEqual(finding(same, bounded: false), .calmestCompared(routes: 2))
-        XCTAssertTrue(NoCalmerFinding.fewerChecked(routes: 2).detail.contains("only 2 routes"))
+        XCTAssertTrue(NoCalmerFinding.fewerChecked(routes: 2).detail.contains("fewer alternatives (2 routes compared)"))
+        XCTAssertTrue(NoCalmerFinding.fewerChecked(routes: 1).detail.contains("(1 route compared)"))
     }
     func testSearchLimitsKeepTheFastestPlusAtLeastOneCalmerSearch() {
         let limits = SearchLimits(concurrentSearches: 3, longMeters: [.walk: 1000])

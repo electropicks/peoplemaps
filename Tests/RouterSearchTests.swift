@@ -54,6 +54,18 @@ final class RouterSearchTests: XCTestCase {
         XCTAssertLessThan(one.candidateCount, full.candidateCount)
     }
 
+    func testALimitedRequestReportsACalmerRouteFoundPastTheTimeLimit() throws {
+        let places = Self.graph.places
+        let a = try XCTUnwrap(places.first { $0.id == "node/2434504399" }), b = try XCTUnwrap(places.first { $0.id == "way/54905018" })
+        func compare(_ router: NativeRouter) throws -> RouteComparison { try router.compute(RouteRequest(origin: a, destination: b, mode: .walk, extraMinutes: 5)) }
+        let full = try compare(Self.router)
+        let limited = try compare(NativeRouter(graph: Self.graph, limits: .init(concurrentSearches: 3, longMeters: [.walk: 4000])))
+        XCTAssertEqual(limited.calmer?.edgeIDs, full.calmer?.edgeIDs)
+        if limited.calmer == nil, case .fewerChecked = limited.noCalmer {
+            XCTAssertFalse(full.noCalmer == .calmerTakesLonger(limitMinutes: 5), "A limited request must not say none is calmer when a calmer route is past the limit")
+        }
+    }
+
     func testConcurrentRequestsMatchOneAtATime() throws {
         let request = try request(5)
         let alone = try Self.router.compute(request)
