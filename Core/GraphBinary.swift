@@ -134,6 +134,6 @@ enum GraphBinary {
             }
         }
 
-                return StreetGraph(bounds: bounds, nodes: nodes, edges: edges, restrictions: tail.restrictions, places: tail.places)
+                return StreetGraph(bounds: bounds, nodes: nodes, edges: edges, restrictions: tail.restrictions, places: tail.places, coverage: .bundled(bounds: bounds))
     }
 }

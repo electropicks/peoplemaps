@@ -452,7 +452,7 @@ final class SeattleTests: XCTestCase {
     func testPlaceSearchIsBoundedAndCaseInsensitive() {
         XCTAssertEqual(Self.graph.search("gAs WoRkS").first?.name, "Gas Works Park")
         XCTAssertTrue(Self.graph.search("unfindableXYZ").isEmpty)
-        XCTAssertTrue(Self.graph.places.allSatisfy { Self.graph.contains($0.coordinate) })
+        XCTAssertTrue(Self.graph.places.allSatisfy { Self.graph.coverage.contains($0.coordinate) })
     }
     func testSearchRanksPrefixThenWordThenContainsThenCategory() {
         let park = Self.graph.search("park")

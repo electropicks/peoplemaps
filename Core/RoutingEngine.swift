@@ -2,6 +2,13 @@ import Foundation
 
 public protocol RouteComputing: Sendable {
     func compare(_ request: RouteRequest) async throws -> RouteComparison
+    /// Whether a place can be routed to and from by this mode: there is a usable road node of the main network within 400 m,
+    /// for leaving and for arriving. False for Vashon, the Kitsap shore and the like, which sit inside coverage but off the road network.
+    func canSnap(_ place: Place, mode: TravelMode) async -> Bool
+}
+
+extension RouteComputing {
+    public func canSnap(_ place: Place, mode: TravelMode) async -> Bool { true }
 }
 
 public struct RouteMetrics: Sendable {
@@ -307,8 +314,8 @@ public final class NativeRouter: RouteComputing, Sendable {
     func compute(_ request: RouteRequest, cancel: CancelFlag, snapLimit: Int = 3) throws -> RouteComparison {
         guard (0...20).contains(request.extraMinutes) else { throw RoutingError.invalidBudget }
         guard request.origin.id != request.destination.id, request.origin.coordinate.distance(to: request.destination.coordinate) >= 10 else { throw RoutingError.samePlace }
-        guard graph.contains(request.origin.coordinate) else { throw RoutingError.startOutsideCoverage }
-        guard graph.contains(request.destination.coordinate) else { throw RoutingError.outsideCoverage }
+        guard graph.coverage.contains(request.origin.coordinate) else { throw RoutingError.startOutsideCoverage }
+        guard graph.coverage.contains(request.destination.coordinate) else { throw RoutingError.outsideCoverage }
         // A stop can snap to a stretch that only a banned turn leads into or out of. On noConnection, try the next nearest usable
         // nodes (within the same 400 m), a few at most, nearest pairs first.
         let starts = try snapCandidates(request.origin, mode: request.mode, departing: true, limit: snapLimit)
@@ -436,6 +443,11 @@ public final class NativeRouter: RouteComputing, Sendable {
     }
 
     /// Usable nodes for a stop, best first: the index's stored node when still valid, then the nearest within 400 m (lowest id on a tie).
+    /// See `RouteComputing.canSnap`. Uses the same snapping a route does, so a true answer means a search can start and end here.
+    public func canSnap(_ place: Place, mode: TravelMode) -> Bool {
+        (try? snapCandidates(place, mode: mode, departing: true, limit: 1)) != nil && (try? snapCandidates(place, mode: mode, departing: false, limit: 1)) != nil
+    }
+
     func snapCandidates(_ place: Place, mode: TravelMode, departing: Bool, limit: Int = 3) throws -> [(node: Int, distance: Double)] {
         guard let connected = connectedNodes[mode] else { throw RoutingError.noConnection }
         let point = place.coordinate
