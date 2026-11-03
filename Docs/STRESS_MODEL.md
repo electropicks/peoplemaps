@@ -180,6 +180,15 @@ Freeways and arterials carry no per-km stress. Driving on a big road isn't
 the problem; getting on, off and across it is. That's the opposite of the
 current model, which charges 35/km for highways and 65/km for residential.
 
+### Whole-route factors steer only the final choice
+
+Stop-and-go clusters, short freeway hops and side-street shortcuts (`StressModel.pathFactors`) are counted once a route
+is finished, because they depend on the stretch of road before them. The A* search only sees per-edge exposure and
+per-junction events, so these can't steer it. They do count in the totals that `selectCalmer` and the "nothing calmer"
+finding compare, and in the rating. The effect is that a route can look cheaper to the search than it turns out to be,
+and a better route may not be among the seven it finds. Don't read any of these factors as something the router
+avoids; it only prefers a candidate that has less of them.
+
 ### Stop-and-go
 
 A core factor, not an option. Several commenters would take a slower route
