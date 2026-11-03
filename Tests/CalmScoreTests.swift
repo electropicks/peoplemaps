@@ -62,6 +62,20 @@ final class CalmScoreTests: XCTestCase {
         XCTAssertEqual(walk.fastestCalm, CalmScore(stress: 500, tripSeconds: 1200, mode: .walk), "freeway time is a drive idea")
     }
 
+    func testTollRoadsAreMentionedNotPriced() {
+        var toll = Fixture.edge(from: 0, to: 1, way: 1, highway: "motorway", meters: 1000); toll.toll = true; toll.name = "Evergreen Point Floating Bridge"
+        var metrics = RouteMetrics(); metrics.seconds = 600
+        let tolled = Route(edgeIDs: [0], edgeMeters: [1000], coordinates: [], metrics: metrics, streetNames: [], edges: [toll, toll])
+        let plain = route(id: 1, seconds: 700, [])
+        let c = comparison(tolled, plain)
+        XCTAssertEqual(c.tollNotes, ["Fastest route: uses a toll road (Evergreen Point Floating Bridge). Tolls aren't in the estimate."])
+        XCTAssertTrue(comparison(tolled, plain, mode: .walk).tollNotes.isEmpty, "tolls are a drive idea")
+        toll.name = ""
+        let unnamed = Route(edgeIDs: [0], edgeMeters: [1000], coordinates: [], metrics: metrics, streetNames: [], edges: [toll])
+        XCTAssertEqual(comparison(unnamed, nil).tollNotes, ["Fastest route: uses a toll road. Tolls aren't in the estimate."])
+        XCTAssertTrue(comparison(plain, nil).tollNotes.isEmpty)
+    }
+
     func testSidewalkCaveatIsOneShareOfTheRoute() {
         let c = comparison(route(id: 0, seconds: 600, meters: 1000, [(.unknownSidewalk, 810, 16)]), nil, mode: .walk)
         XCTAssertEqual(c.caveats, ["Fastest route: sidewalk data is missing for about 80% of it."])

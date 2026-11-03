@@ -46,6 +46,21 @@ def inside(n):
     if not (BBOX[0] <= n['lat'] <= BBOX[2] and BBOX[1] <= n['lon'] <= BBOX[3]): return False
     return COVERAGE_ROWS is None or in_rows(n['lat'], n['lon'], *COVERAGE_ROWS)
 
+# Seattle posts 20 mph on residential streets and 25 on arterials, which the app's class defaults already assume. Outside the city
+# the posted values differ (Docs/STRESS_MODEL.md, Speed estimates), so a road without a usable `maxspeed` there gets an estimate per class.
+# It is stored per segment, never shown as a posted limit, and absent inside the city so Seattle's times stay as they were.
+SEATTLE_CITY = json.loads((ROOT / 'Data/seattle-city.json').read_text())  # OSM relation 237385, from Scripts/region_polygon.py with no buffer
+SEATTLE_ROWS = ring_rows(SEATTLE_CITY['rings'])
+ESTIMATED_MPH = {'residential': 25, 'unclassified': 25, 'tertiary': 30, 'secondary': 35, 'primary': 35, 'trunk': 55}
+ROUGH = {'gravel', 'fine_gravel', 'unpaved', 'dirt', 'ground', 'cobblestone', 'sett', 'sand'}
+
+def estimated_mph(t, lat, lon):
+    """Estimated free-flow mph for an untagged road outside Seattle, else None. A rough unclassified road is 15."""
+    if speed_mph(t.get('maxspeed')) > 0 or in_rows(lat, lon, *SEATTLE_ROWS): return None
+    h = t.get('highway')
+    if h == 'unclassified' and t.get('surface') in ROUGH: return 15
+    return ESTIMATED_MPH.get(h)
+
 def access(tags, mode):
     keys = {'drive': ['motorcar','motor_vehicle','vehicle','access'],
             'bike': ['bicycle','vehicle','access'], 'walk': ['foot','access']}[mode]
@@ -121,12 +136,12 @@ def left_turn_lane(t, direction):
     if v is None: return None
     return any('left' in lane.split(';') for lane in v.split('|'))
 
-def road_class(t):
-    """busy, arterial or local for a drivable road; None for service roads and paths."""
+def road_class(t, estimate=None):
+    """busy, arterial or local for a drivable road; None for service roads and paths. `estimate` is the estimated mph of an untagged road."""
     h = t.get('highway','')
     if h not in ROAD or h in {'service','living_street'}: return None
     if h in {'residential','unclassified'}: return 'local'
-    return 'busy' if (lanes(t) or 2) >= 4 or speed_mph(t.get('maxspeed')) >= 35 else 'arterial'
+    return 'busy' if (lanes(t) or 2) >= 4 or (speed_mph(t.get('maxspeed')) or estimate or 0) >= 35 else 'arterial'
 
 RANK = {None: 0, 'local': 1, 'arterial': 2, 'busy': 3}
 
@@ -372,10 +387,11 @@ def compile_restrictions(relations, ways):
 #   strings:  u32 offsets[count+1] then UTF-8 bytes; names, highway kinds, surfaces etc. are indices into it (NIL = none)
 #   nodes:    i64 osm[n], f64 lat[n], f64 lon[n], f64 z[n], u8 flags[n] (1 signal, 2 pedestrianSignal)
 #   points:   i32 lon,lat pairs in 1e-6 degrees (the JSON rounded to 6 decimals, so this is lossless)
-#   segments: 120 B records, SEGMENT then two DIRECTION (forward, reverse); a direction with modes == 0 is absent
+#   segments: 120 B records, SEGMENT (flags: 1-2 parked both sides, 4 movable bridge, 8 crossing, 16 toll; the last byte is the
+#             estimated mph of an untagged road outside Seattle, 0 for none) then two DIRECTION (forward, reverse); a direction with modes == 0 is absent
 #   json:     {"restrictions": [...], "places": [...]} (small)
 NIL = 0xFFFFFFFF
-SEGMENT = struct.Struct('<q3d10I2iIBBBx')
+SEGMENT = struct.Struct('<q3d10I2iIBBBB')
 DIRECTION = struct.Struct('<dIBBBx')
 MODE_BITS = {'drive': 1, 'bike': 2, 'walk': 4}
 CONTROL_CODES = {None: 0, 'signal': 1, 'stop': 2, 'allstop': 3, 'yield': 4}
@@ -400,11 +416,11 @@ def graph_binary(graph):
         points.extend(int(round(c * 1e6)) for c in g)
         assert all(abs(points[-len(g) + i] / 1e6 - c) == 0 for i, c in enumerate(g)), 'coordinate is not a 6-decimal value'
         pb = s.get('parkedBothSides'); cr = s.get('crossing')
-        flags = (0 if pb is None else 2 if pb else 1) | (4 if s.get('movableBridge') else 0) | (8 if cr else 0)
+        flags = (0 if pb is None else 2 if pb else 1) | (4 if s.get('movableBridge') else 0) | (8 if cr else 0) | (16 if s.get('toll') else 0)
         lanes = s.get('lanes', -1); steps = s.get('steps', -1)
         records.append(SEGMENT.pack(s['way'], s['m'], s['up'], s['down'], s['a'], s['b'], start, len(g) // 2,
             s['n'], sid(s['hw']), sid(s.get('maxspeed')), sid(s.get('surface')), sid(s.get('sidewalk')), sid(s.get('footway')),
-            steps, lanes, sid(cr['control']) if cr else NIL, flags, ROAD_CODES[cr['road']] if cr else 0, ROAD_CODES[s.get('besideRoad')]))
+            steps, lanes, sid(cr['control']) if cr else NIL, flags, ROAD_CODES[cr['road']] if cr else 0, ROAD_CODES[s.get('besideRoad')], s.get('est', 0)))
         for key in 'fr':
             d = s.get(key)
             if not d:
@@ -526,9 +542,12 @@ def main():
     def elevation(n): return lifted.get(n) if n in lifted else z(allnodes[n]['lat'], allnodes[n]['lon'])
 
     # The busiest road through each node, for crossings that a footway makes of it.
+    def way_estimate(w):
+        mid=allnodes[w['nodes'][len(w['nodes'])//2]]
+        return estimated_mph(w['tags'], mid['lat'], mid['lon'])
     crossed_class={}
     for w in ways:
-        cls=road_class(w['tags'])
+        cls=road_class(w['tags'], way_estimate(w))
         for n in w['nodes']:
             if RANK[cls]>RANK[crossed_class.get(n)]: crossed_class[n]=cls
 
@@ -581,7 +600,9 @@ def main():
                               ('parkedBothSides',parked_both_sides(t)),
                               ('movableBridge',True if t.get('bridge')=='movable' or 'bridge:movable' in t else None),
                               ('footway',t.get('footway') if t['highway']=='footway' else None),
-                              ('ref',freeway_ref(t))]:
+                              ('ref',freeway_ref(t)),
+                              ('toll',True if t.get('toll')=='yes' else None),
+                              ('est',estimated_mph(t, pts[len(pts)//2]['lat'], pts[len(pts)//2]['lon']))]:
                 if value is not None: s[key]=value
             if t['highway']=='steps':
                 try: s['steps']=int(t.get('step_count',''))
@@ -602,7 +623,7 @@ def main():
                 s[key]=entry
             segments.append(s); geometry.append((w,pts))
     sidewalks=[i for i,s in enumerate(segments) if s.get('footway')=='sidewalk']
-    roads=[(road_class(w['tags']),pts) for w,pts in geometry if road_class(w['tags'])]
+    roads=[(road_class(w['tags'], way_estimate(w)),pts) for w,pts in geometry if road_class(w['tags'])]
     for i,cls in zip(sidewalks,beside_roads([geometry[i][1] for i in sidewalks],roads)):
         if cls: segments[i]['besideRoad']=cls
     for n,i in nodeindex.items():

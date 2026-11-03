@@ -60,6 +60,7 @@ struct RouteDetails: View {
                     Text(modeNote)
                     Text("Hills come from a 16 ft USGS ground model; bridges and tunnels are interpolated between their ends.")
                     ForEach(comparison.caveats, id: \.self) { Text("Unknown in the map: \($0)") }
+                    ForEach(comparison.tollNotes, id: \.self) { Text($0) }
                     Text("Routes begin and end at nearby points on the main connected network: \(DistanceFormat.distance(comparison.originSnapMeters)) from the start place and \(DistanceFormat.distance(comparison.destinationSnapMeters)) from the destination. These gaps are not routed or included in time.")
                 } header: { note("Good to know") }.font(.subheadline).foregroundStyle(.secondary)
                 Section {

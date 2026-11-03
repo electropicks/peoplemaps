@@ -111,6 +111,9 @@ enum GraphBinary {
                                   maxspeed: string(get(UInt32.self, at + 56)), lanes: lanes < 0 ? nil : Int(lanes))
                 e.sidewalk = string(get(UInt32.self, at + 64))
                 e.ref = tail.refs?[String(s)]
+                e.toll = flags & 16 != 0
+                let estimate = get(UInt8.self, at + 87)
+                e.estimatedMph = estimate == 0 ? nil : Double(estimate)
                 let parked = flags & 3
                 e.parkedBothSides = parked == 0 ? nil : parked == 2
                 e.movableBridge = flags & 4 != 0

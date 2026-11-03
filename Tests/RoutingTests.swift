@@ -234,6 +234,22 @@ final class StressModelTests: XCTestCase {
                                 stops: [], mode: .drive, into: &shortcut)
         XCTAssertEqual(shortcut[.cutThrough].amount, 1)
     }
+    func testEstimatedSpeedsApplyOnlyWithoutAPostedLimit() {
+        var untagged = Fixture.edge(from: 0, to: 1, way: 7, highway: "primary", meters: 1000)
+        XCTAssertEqual(StressModel.seconds(untagged, mode: .drive), 1000 / (25 * 0.447_04), accuracy: 0.01, "no estimate: the class default, as in Seattle")
+        XCTAssertEqual(untagged.roadClass, .arterial)
+        untagged.estimatedMph = 35
+        XCTAssertEqual(StressModel.seconds(untagged, mode: .drive), 1000 / (35 * 0.447_04), accuracy: 0.01)
+        XCTAssertEqual(untagged.roadClass, .busy, "an untagged 35 mph estimate is busy, as a posted 35 is")
+        XCTAssertNil(untagged.speedLimitMph, "an estimate is never a posted limit")
+        untagged.maxspeed = "25 mph"
+        XCTAssertEqual(StressModel.seconds(untagged, mode: .drive), 1000 / (25 * 0.447_04), accuracy: 0.01, "posted wins")
+        XCTAssertEqual(untagged.roadClass, .arterial)
+        var residential = Fixture.northbound; residential.estimatedMph = 25
+        XCTAssertEqual(StressModel.levelOfTrafficStress(residential), 2)
+        residential.estimatedMph = 30
+        XCTAssertEqual(StressModel.levelOfTrafficStress(residential), 3)
+    }
     func testBikeLevelOfTrafficStress() {
         var e = Fixture.westArterial
         XCTAssertEqual(StressModel.levelOfTrafficStress(e), 3)

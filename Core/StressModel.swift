@@ -180,7 +180,7 @@ public enum StressModel {
         case .drive:
             // Free-flow time at the posted limit (else the class default). Slowing for signals, stops and turns is
             // charged once, in `transitionSeconds`, so the speed carries no urban factor.
-            let mph = e.speedLimitMph ?? driveDefaultsMph[e.highway] ?? 15
+            let mph = e.speedLimitMph ?? e.estimatedMph ?? driveDefaultsMph[e.highway] ?? 15
             let top = e.highway.hasSuffix("_link") ? driveRampMph : driveTopMph
             return e.meters / (min(max(mph, 5), top) * 0.447_04)
         case .bike:
@@ -262,7 +262,7 @@ public enum StressModel {
         if e.hasCycleTrackTag || e.facility == "sharedPath" || ["cycleway", "path", "footway", "pedestrian", "living_street", "track"].contains(e.highway) { return 1 }
         guard let road = e.roadClass else { return 2 }  // service roads
         switch road {
-        case .local: return (e.speedLimitMph ?? 25) <= 25 ? 2 : 3
+        case .local: return (e.speedLimitMph ?? e.estimatedMph ?? 25) <= 25 ? 2 : 3
         case .arterial: return e.facility == "lane" ? 2 : 3
         case .busy: return e.facility == "lane" ? 3 : 4
         }

@@ -116,6 +116,20 @@ public struct RouteComparison: Sendable {
         return (gains.isEmpty ? ["Fewer small hassles spread across the whole route"] : gains) + costs
     }
 
+    /// Drive routes that use a road tagged as a toll: mentioned, never priced, and no estimate of what it costs. Named where the
+    /// road has a name ("Fastest route: uses a toll road (Evergreen Point Floating Bridge). Tolls aren't in the estimate.").
+    public var tollNotes: [String] {
+        guard request.mode == .drive else { return [] }
+        return [fastest, calmer].compactMap { $0 }.compactMap { route in
+            let tolled = route.edges.filter(\.toll)
+            guard !tolled.isEmpty else { return nil }
+            var names: [String] = []
+            for name in tolled.map(\.name) where !name.isEmpty && !names.contains(name) { names.append(name) }
+            let which = names.isEmpty ? "" : " (\(names.prefix(2).joined(separator: ", ")))"
+            return "\(route.edgeIDs == fastest.edgeIDs ? "Fastest" : "Calmer") route: uses a toll road\(which). Tolls aren't in the estimate."
+        }
+    }
+
     /// Gaps in the map data large enough to mention.
     public var caveats: [String] {
         [fastest, calmer].compactMap { $0 }.flatMap { route in
