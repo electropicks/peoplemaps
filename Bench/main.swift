@@ -144,7 +144,7 @@ if let sampleFile {
         times.sort(); gains.sort()
         func at(_ q: Double, _ v: [Double]) -> Double { v.isEmpty ? 0 : v[min(v.count - 1, Int(q * Double(v.count)))] }
         print("sample \(mode.rawValue): \(lines.count) pairs, noConnection \(none), other errors \(other), routed \(times.count), calmer offered \(calmer), ms p50 \(r1(at(0.5, times))) p95 \(r1(at(0.95, times))) max \(r1(times.last ?? 0)), calmer extra min p50 \(r1(at(0.5, gains) / 60)), fastest levels \(levels.sorted { $0.key < $1.key }), peak RSS \(r1(peakRSSMB())) footprint \(r1(peakFootprintMB()))")
-        fflush(stdout)
+        fflush(nil)
     }
     exit(0)
 }
