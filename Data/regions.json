@@ -69,7 +69,8 @@
         "seattle-graph.bin",
         "seattle-map.pmtiles",
         "seattle-search.sqlite.gz",
-        "provenance.json"
+        "provenance.json",
+        "seattle-coverage.json"
       ],
       "files": {}
     }

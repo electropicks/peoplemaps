@@ -1,6 +1,6 @@
 import array, collections, gzip, json, pathlib, sqlite3, struct, tempfile, unittest
 import build_search, build_tiles
-from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,load_dem,compile_restrictions,ring_rows,in_rows,freeway_ref,estimated_mph,road_class
+from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,load_dem,compile_restrictions,ring_rows,in_rows,freeway_ref,estimated_mph,road_class,write_coverage
 
 class ImportPolicyTests(unittest.TestCase):
     def test_private_road_excluded(self):
@@ -558,6 +558,31 @@ class SpeedEstimateTests(unittest.TestCase):
         self.assertEqual(road_class({'highway': 'primary'}, 35), 'busy')
         self.assertEqual(road_class({'highway': 'tertiary'}, 30), 'arterial')
         self.assertEqual(road_class({'highway': 'primary', 'maxspeed': '25 mph'}, None), 'arterial')
+
+class CoverageFileTests(unittest.TestCase):
+    def test_a_polygon_region_gets_its_polygon_byte_for_byte(self):
+        with tempfile.TemporaryDirectory() as d:
+            source = pathlib.Path(d) / 'king-county-coverage.json'; out = pathlib.Path(d) / 'out'; out.mkdir()
+            source.write_bytes(b'{"bbox":[0,0,1,1],"rings":[[[0,0],[1,0],[1,1],[0,0]]]}\n')
+            write_coverage(out, source)
+            self.assertEqual((out / 'seattle-coverage.json').read_bytes(), source.read_bytes())
+    def test_bundled_seattle_has_no_polygon_and_gets_no_file(self):
+        with tempfile.TemporaryDirectory() as d:
+            write_coverage(d, None)
+            self.assertEqual(list(pathlib.Path(d).iterdir()), [])
+    def test_a_missing_polygon_fails_the_import_instead_of_falling_back_to_the_box(self):
+        import os, subprocess, sys
+        root = pathlib.Path(__file__).resolve().parent
+        env = dict(os.environ, PEOPLEMAPS_COVERAGE=str(pathlib.Path(tempfile.gettempdir()) / 'no-such-polygon.json'))
+        p = subprocess.run([sys.executable, str(root / 'import_osm.py'), '--out', tempfile.mkdtemp()], env=env, capture_output=True, text=True)
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn('no-such-polygon', p.stderr)
+    def test_the_county_region_lists_the_file_among_its_outputs(self):
+        manifest = json.loads((pathlib.Path(__file__).resolve().parent.parent / 'Data/regions.json').read_text())
+        county = manifest['regions']['king-county']
+        self.assertTrue(county['coverage'])
+        self.assertIn('seattle-coverage.json', county['outputs'], 'reproduction compares what a polygon import writes')
+        self.assertNotIn('seattle-coverage.json', manifest['regions']['seattle-all']['outputs'], 'bundled Seattle stays byte-identical')
 
 class CoveragePolygonTests(unittest.TestCase):
     # An L: the box 0..2 by 0..2 less its top right quarter.

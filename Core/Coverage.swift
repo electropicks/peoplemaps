@@ -10,9 +10,14 @@ public struct Coverage: Sendable, Equatable {
     private let rings: [[Coordinate]]
 
     /// The box alone.
-    public static func box(_ bounds: [Double]) -> Coverage { Coverage(bounds: bounds, rings: []) }
+    public static func box(_ bounds: [Double]) -> Coverage { Coverage(box: bounds) }
 
-    public init(bounds: [Double], rings: [[Coordinate]]) {
+    private init(box bounds: [Double]) { self.bounds = bounds; rings = [] }
+
+    /// Rings must be closed (first point equals last) with at least three distinct points, and bounds must be S, W, N, E; anything else
+    /// throws `missingData`, so a damaged polygon is refused rather than read as covering nothing, or trapping.
+    public init(bounds: [Double], rings: [[Coordinate]]) throws {
+        guard bounds.count == 4, rings.allSatisfy({ $0.count >= 4 && $0.first == $0.last }) else { throw RoutingError.missingData }
         self.bounds = bounds; self.rings = rings
     }
 
@@ -20,8 +25,8 @@ public struct Coverage: Sendable, Equatable {
     public init(polygonJSON data: Data) throws {
         struct File: Decodable { let bbox: [Double]; let rings: [[[Double]]] }
         let file = try JSONDecoder().decode(File.self, from: data)
-        guard file.bbox.count == 4, !file.rings.isEmpty, file.rings.allSatisfy({ $0.count >= 4 && $0.allSatisfy { $0.count == 2 } }) else { throw RoutingError.missingData }
-        self.init(bounds: file.bbox, rings: file.rings.map { $0.map { Coordinate(lat: $0[1], lon: $0[0]) } })
+        guard !file.rings.isEmpty, file.rings.allSatisfy({ $0.allSatisfy { $0.count == 2 } }) else { throw RoutingError.missingData }
+        try self.init(bounds: file.bbox, rings: file.rings.map { $0.map { Coordinate(lat: $0[1], lon: $0[0]) } })
     }
 
     /// The polygon shipped with the data when there is one, else the box. A file that can't be read falls back to the box.

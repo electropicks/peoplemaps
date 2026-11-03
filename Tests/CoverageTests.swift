@@ -3,7 +3,7 @@ import XCTest
 
 final class CoverageTests: XCTestCase {
     /// An L: the box 0..2 by 0..2 less its top right quarter.
-    private let l = Coverage(bounds: [0, 0, 2, 2], rings: [[[0, 0], [2, 0], [2, 1], [1, 1], [1, 2], [0, 2], [0, 0]].map { Coordinate(lat: $0[1], lon: $0[0]) }])
+    private let l = try! Coverage(bounds: [0, 0, 2, 2], rings: [[[0, 0], [2, 0], [2, 1], [1, 1], [1, 2], [0, 2], [0, 0]].map { Coordinate(lat: $0[1], lon: $0[0]) }])
 
     func testBoxCoversItsBoundsAndNothingElse() {
         let box = Coverage.box([47.6, -122.4, 47.7, -122.3])
@@ -37,6 +37,19 @@ final class CoverageTests: XCTestCase {
         }
     }
 
+    func testDamagedRingsAreRefusedNotTrapped() {
+        let a = Coordinate(lat: 0, lon: 0), b = Coordinate(lat: 0, lon: 1), c = Coordinate(lat: 1, lon: 1)
+        XCTAssertThrowsError(try Coverage(bounds: [0, 0, 1, 1], rings: [[]]), "an empty ring used to trap on 1..<0")
+        XCTAssertThrowsError(try Coverage(bounds: [0, 0, 1, 1], rings: [[a]]))
+        XCTAssertThrowsError(try Coverage(bounds: [0, 0, 1, 1], rings: [[a, b, c]]), "fewer than a triangle and its closing point")
+        XCTAssertThrowsError(try Coverage(bounds: [0, 0, 1, 1], rings: [[a, b, c, b]]), "not closed")
+        XCTAssertThrowsError(try Coverage(bounds: [0, 0, 1], rings: [[a, b, c, a]]), "bounds are S, W, N, E")
+        XCTAssertNoThrow(try Coverage(bounds: [0, 0, 1, 1], rings: [[a, b, c, a]]))
+        XCTAssertNoThrow(try Coverage(bounds: [0, 0, 1, 1], rings: []), "no rings is the box")
+        XCTAssertThrowsError(try Coverage(polygonJSON: Data(#"{"bbox":[0,0,1,1],"rings":[[]]}"#.utf8)))
+        XCTAssertThrowsError(try Coverage(polygonJSON: Data(#"{"bbox":[0,0,1,1],"rings":[[[0,0],[1,0],[1,1],[0,1]]]}"#.utf8)), "not closed")
+    }
+
     func testPolygonJSONMustBeWellFormed() {
         XCTAssertThrowsError(try Coverage(polygonJSON: Data("{}".utf8)))
         XCTAssertThrowsError(try Coverage(polygonJSON: Data(#"{"bbox":[0,0,1,1],"rings":[]}"#.utf8)))
@@ -55,7 +68,7 @@ final class CoverageTests: XCTestCase {
         // A graph whose coverage is the L: the router must use it, not the box.
         let g = Fixture.graph()
         let notched = StreetGraph(bounds: [47.6, -122.4, 47.7, -122.3], nodes: g.nodes, edges: g.edges, restrictions: [], places: [],
-                                  coverage: Coverage(bounds: [47.6, -122.4, 47.7, -122.3], rings: [[(47.6, -122.4), (47.6, -122.3), (47.65, -122.3), (47.65, -122.35), (47.7, -122.35), (47.7, -122.4), (47.6, -122.4)]
+                                  coverage: try Coverage(bounds: [47.6, -122.4, 47.7, -122.3], rings: [[(47.6, -122.4), (47.6, -122.3), (47.65, -122.3), (47.65, -122.35), (47.7, -122.35), (47.7, -122.4), (47.6, -122.4)]
                                       .map { Coordinate(lat: $0.0, lon: $0.1) }]))
         let router = NativeRouter(graph: notched)
         let inside = Place(id: "a", name: "A", lat: 47.64, lon: -122.35, category: "x"), notch = Place(id: "b", name: "B", lat: 47.68, lon: -122.32, category: "x")

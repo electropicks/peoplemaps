@@ -12,7 +12,8 @@ def shown(path):
     # A fetched region's files are named alone, so provenance doesn't depend on where the checkout is or how the import was started.
     return str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) and not path.is_relative_to(ROOT / 'Data/region') else path.name
 REPORT = DATA  # provenance.json; --out redirects it with the outputs
-COVERAGE = json.loads(pathlib.Path(os.environ['PEOPLEMAPS_COVERAGE']).read_text()) if os.environ.get('PEOPLEMAPS_COVERAGE') else None
+COVERAGE_PATH = pathlib.Path(os.environ['PEOPLEMAPS_COVERAGE']) if os.environ.get('PEOPLEMAPS_COVERAGE') else None
+COVERAGE = json.loads(COVERAGE_PATH.read_text()) if COVERAGE_PATH else None  # a polygon region with no readable file fails here, never falls back to the box
 BBOX = [float(x) for x in os.environ['PEOPLEMAPS_BBOX'].split(',')] if os.environ.get('PEOPLEMAPS_BBOX') else COVERAGE['bbox'] if COVERAGE else [47.615, -122.390, 47.678, -122.300]  # S,W,N,E
 WATER_MARGIN = 0.1  # degrees: water is drawn this far past BBOX, so it doesn't stop in a straight line at the routing edge
 MODES = ['drive', 'bike', 'walk']
@@ -403,6 +404,14 @@ def freeway_ref(t):
     if t.get('highway') not in ('motorway', 'trunk'): return None
     return (t.get('ref') or '').split(';')[0].strip() or None
 
+def write_coverage(out, source):
+    """A polygon region ships its polygon beside the graph, byte for byte, as seattle-coverage.json (Core/Coverage.swift reads it).
+    Bundled Seattle has no polygon, so nothing is written and its outputs are unchanged."""
+    if source is None: return
+    target = pathlib.Path(out) / 'seattle-coverage.json'
+    target.write_bytes(pathlib.Path(source).read_bytes())
+    if not target.is_file() or target.stat().st_size == 0: raise SystemExit(f'coverage polygon {source} was not written to {target}')
+
 def pad8(b): return b + b'\0' * (-len(b) % 8)
 
 def graph_binary(graph):
@@ -652,6 +661,7 @@ def main():
     graph={'schemaVersion':2,'bounds':BBOX,'names':list(names),'nodes':nodes,'segments':segments,'restrictions':mapped,'places':places}
     graph_bin=graph_binary(graph)
     (OUT/'seattle-graph.bin').write_bytes(graph_bin)
+    write_coverage(OUT, COVERAGE_PATH)
     if args.json_graph: pathlib.Path(args.json_graph).write_text(json.dumps(graph,separators=(',',':'))+'\n')
     # Search reads its own, newer extract (places and addresses), kept apart so the graph's inputs don't change.
     search_json, search_source = read_snapshot('seattle-search'); sources.append(search_source)

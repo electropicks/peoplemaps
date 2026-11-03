@@ -2,8 +2,9 @@ import Foundation
 
 public protocol RouteComputing: Sendable {
     func compare(_ request: RouteRequest) async throws -> RouteComparison
-    /// Whether a place can be routed to and from by this mode: there is a usable road node of the main network within 400 m,
-    /// for leaving and for arriving. False for Vashon, the Kitsap shore and the like, which sit inside coverage but off the road network.
+    /// Whether a place can be routed to and from by this mode: the main network has a usable road node for it, for leaving and for
+    /// arriving: the node the search index stored for the place, or one within 400 m. False for Vashon, the Kitsap shore and the like,
+    /// which sit inside coverage but off the road network.
     func canSnap(_ place: Place, mode: TravelMode) async -> Bool
 }
 
@@ -442,12 +443,13 @@ public final class NativeRouter: RouteComputing, Sendable {
         try snapCandidates(place, mode: mode, departing: departing, limit: 1)[0]
     }
 
-    /// Usable nodes for a stop, best first: the index's stored node when still valid, then the nearest within 400 m (lowest id on a tie).
     /// See `RouteComputing.canSnap`. Uses the same snapping a route does, so a true answer means a search can start and end here.
     public func canSnap(_ place: Place, mode: TravelMode) -> Bool {
         (try? snapCandidates(place, mode: mode, departing: true, limit: 1)) != nil && (try? snapCandidates(place, mode: mode, departing: false, limit: 1)) != nil
     }
 
+    /// Usable nodes for a stop, best first: the node the search index stored for the place (`place.snap`), when still valid, with no
+    /// distance limit because the importer chose it; then the nearest others within 400 m (lowest id on a tie).
     func snapCandidates(_ place: Place, mode: TravelMode, departing: Bool, limit: Int = 3) throws -> [(node: Int, distance: Double)] {
         guard let connected = connectedNodes[mode] else { throw RoutingError.noConnection }
         let point = place.coordinate
