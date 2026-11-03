@@ -75,7 +75,7 @@ struct VoiceUpgradeTip: View {
                 Spacer(minLength: 0)
                 Button("Got it") { dismissed = true }.font(.footnote.weight(.semibold)).accessibilityIdentifier("voice-tip-dismiss")
             }
-            .padding(12).background(.panelFill, in: RoundedRectangle(cornerRadius: 12))
+            .padding(12).background(.glassWell, in: RoundedRectangle(cornerRadius: 12))
             .accessibilityElement(children: .contain).accessibilityIdentifier("voice-tip")
         }
     }

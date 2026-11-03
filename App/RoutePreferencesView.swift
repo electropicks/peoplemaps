@@ -1,7 +1,7 @@
 import SwiftUI
 import PeoplemapsCore
 
-/// The route preview's "Calmer means" row: opens the preferences sheet and says whether anything differs from the defaults.
+/// The route preview's "Calmer means" button: opens the preferences sheet and says when anything differs from the defaults.
 struct RoutePreferencesRow: View {
     let isCustom: Bool
     let action: () -> Void
@@ -9,18 +9,9 @@ struct RoutePreferencesRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: "slider.horizontal.3").foregroundStyle(.secondary)
-                Text("Calmer means").foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 8)
-                Text(value).foregroundStyle(.secondary)
-                Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
-            }
-            .font(.subheadline)
-            .padding(.horizontal, 14).padding(.vertical, 8)
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-            .background(.panelFill, in: RoundedRectangle(cornerRadius: Layout.groupRadius))
-            .contentShape(Rectangle())
+            Text(isCustom ? "Calmer means: Custom" : "Calmer means").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                .multilineTextAlignment(.trailing).fixedSize(horizontal: false, vertical: true)
+                .frame(minHeight: 44).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
@@ -62,7 +53,7 @@ struct RoutePreferencesView: View {
             .listStyle(.insetGrouped)
             .navigationTitle("Calmer means").navigationSubtitle(mode.activity).navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() }.accessibilityIdentifier("preferences-done") }
+                ToolbarItem(placement: .topBarTrailing) { Button(role: .close) { dismiss() }.accessibilityIdentifier("preferences-done") }
             }
         }
         .tint(.primary).presentationDetents([.medium, .large])

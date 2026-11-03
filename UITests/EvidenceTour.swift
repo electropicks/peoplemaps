@@ -85,6 +85,71 @@ final class EvidenceTour: XCTestCase {
         shot("details-no-calmer")
     }
 
+    /// Every screen the glass and colour rules touch (Docs/DESIGN.md section 1). Run once per appearance;
+    /// `TEST_RUNNER_PEOPLEMAPS_GLASS` adds launch arguments, such as `--glass-regular`.
+    @MainActor func testGlassScreens() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")
+        let extra = ProcessInfo.processInfo.environment["PEOPLEMAPS_GLASS"].map { [$0] } ?? []
+        let ballard = "47.6698,-122.3843"
+        var app = launch(["--location-granted", ballard] + extra)
+        Thread.sleep(forTimeInterval: 3)
+        shot("home")
+        let window = app.windows.firstMatch
+        window.pinch(withScale: 2, velocity: 2)
+        Thread.sleep(forTimeInterval: 2)
+        shot("markers")
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 5))
+        app.textFields["search-input"].typeText("coffee")
+        shot("search")
+        app.buttons["cancel-search-home"].tap()
+        open(app, "Gas Works", id: "relation/1047789")
+        waitForEstimate(app)
+        shot("place")
+        app.buttons["favourite"].tap()
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["start-navigation"].waitForExistence(timeout: 20))
+        shot("preview")
+        if app.buttons["route-calmer"].exists {
+            app.buttons["route-fastest"].tap()
+            shot("preview-fastest")
+            app.buttons["route-calmer"].tap()
+        }
+        let top = app.buttons["start-navigation"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: -6))
+        top.press(forDuration: 0.05, thenDragTo: top.withOffset(CGVector(dx: 0, dy: -230)))
+        shot("preview-raised")
+        app.buttons["route-details"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["calm-bar"].waitForExistence(timeout: 5))
+        shot("details")
+        app.buttons["close-details"].tap()
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(app.buttons["start-navigation"].waitForExistence(timeout: 10))
+        shot("preview-landscape")
+        XCUIDevice.shared.orientation = .portrait
+        XCTAssertTrue(app.buttons["close-preview"].waitForExistence(timeout: 10))
+        app.buttons["close-preview"].tap()
+        XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
+        shot("home-favourites")
+        raise(app)
+        shot("home-raised")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 10))
+        shot("home-landscape")
+        XCUIDevice.shared.orientation = .portrait
+        app.terminate()
+        app = launch(["--location-granted", ballard, "--simulate-route"] + extra)
+        open(app, "Gas Works", id: "relation/1047789")
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["start-navigation"].waitForExistence(timeout: 20))
+        app.buttons["start-navigation"].tap()
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 10))
+        shot("guidance")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        Thread.sleep(forTimeInterval: 1)
+        shot("guidance-landscape")
+        XCUIDevice.shared.orientation = .portrait
+    }
+
     /// Place markers and each screen around them. Run once per appearance.
     @MainActor func testMapPlaces() throws {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")

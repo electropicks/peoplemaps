@@ -16,9 +16,9 @@ struct RouteDetails: View {
                     CalmBar(comparison: comparison)
                     if comparison.calmer == nil { Text(comparison.noCalmer.title).font(.headline) }
                 } header: {
-                    Text("Calm estimate")
+                    note("Calm estimate")
                 } footer: {
-                    Text("An estimate from 0 to 100, higher is calmer, from the things listed below per minute of the trip. It knows only what the map knows: no live traffic.")
+                    note("An estimate from 0 to 100, higher is calmer, from the things listed below per minute of the trip. It knows only what the map knows: no live traffic.")
                 }
                 Section {
                     ForEach(comparison.reasons, id: \.self) { reason in
@@ -29,13 +29,13 @@ struct RouteDetails: View {
                         } icon: {
                             // With no calmer route the reason is a finding, not a benefit.
                             Image(systemName: tradeoff ? "minus" : comparison.calmer == nil ? "info.circle" : "checkmark").fontWeight(.semibold)
-                                .foregroundStyle(tradeoff || comparison.calmer == nil ? Color.secondary : Color.calmerText)
+                                .foregroundStyle(tradeoff || comparison.calmer == nil ? Color.secondary : Color.primary)
                         }
                     }
                 } header: {
-                    Text(comparison.calmer == nil ? "Why one route" : comparison.tradesStress ? "What this route avoids" : "Why the calmer route")
+                    note(comparison.calmer == nil ? "Why one route" : comparison.tradesStress ? "What this route avoids" : "Why the calmer route")
                 } footer: {
-                    Text("The extra-time limit is a maximum, applied to unrounded estimates. A slower route must also remove enough estimated stress to be worth its extra time. \(comparison.candidateCount == 1 ? "1 distinct route was found" : "\(comparison.candidateCount) distinct candidates were compared"); the search does not guarantee the calmest possible route.")
+                    note("The extra-time limit is a maximum, applied to unrounded estimates. A slower route must also remove enough estimated stress to be worth its extra time. \(comparison.candidateCount == 1 ? "1 distinct route was found" : "\(comparison.candidateCount) distinct candidates were compared"); the search does not guarantee the calmest possible route.")
                 }
                 Section {
                     metricsRow("Time", comparison.fastest.duration, comparison.calmer?.duration)
@@ -46,33 +46,36 @@ struct RouteDetails: View {
                     }
                 } header: {
                     HStack {
-                        Text("What each route asks")
+                        note("What each route asks")
                         Spacer()
-                        Text("Fastest").frame(minWidth: 64, alignment: .trailing)
-                        Text("Calmer").frame(minWidth: 64, alignment: .trailing)
+                        note("Fastest").frame(minWidth: 64, alignment: .trailing)
+                        note("Calmer").frame(minWidth: 64, alignment: .trailing)
                     }
                 } footer: {
-                    Text("Ordered by how much each adds to the fastest route's stress.")
+                    note("Ordered by how much each adds to the fastest route's stress.")
                 }
-                Section("Good to know") {
+                Section {
                     Text(goodToKnowCalmer)
                     Text("Times use assumed speeds, hills and junction delays. They do not include live traffic, closures, parking, signal timing, or verified travel times.")
                     Text(modeNote)
                     Text("Hills come from a 16 ft USGS ground model; bridges and tunnels are interpolated between their ends.")
                     ForEach(comparison.caveats, id: \.self) { Text("Unknown in the map: \($0)") }
                     Text("Routes begin and end at nearby points on the main connected network: \(DistanceFormat.distance(comparison.originSnapMeters)) from the start place and \(DistanceFormat.distance(comparison.destinationSnapMeters)) from the destination. These gaps are not routed or included in time.")
-                }.font(.subheadline).foregroundStyle(.secondary)
-                Section("Streets") {
+                } header: { note("Good to know") }.font(.subheadline).foregroundStyle(.secondary)
+                Section {
                     streets("Fastest", comparison.fastest, color: .fastest)
                     if let calmer = comparison.calmer { streets("Calmer", calmer, color: .calmer) }
-                }
+                } header: { note("Streets") }
                 Section { Button { ReportCenter.shared.open(from: "route details") } label: { Label("Report a problem", systemImage: "exclamationmark.bubble") }
                     .accessibilityIdentifier("report-problem-details") }
             }.listStyle(.insetGrouped)
                 .navigationTitle("Behind the routes").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() }.accessibilityIdentifier("close-details") } }
-        }.tint(.primary).presentationDetents([.medium, .large])
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button(role: .close) { dismiss() }.accessibilityIdentifier("close-details") } }
+        // Long reading, with secondary text: solid, not glass.
+        }.tint(.primary).presentationDetents([.medium, .large]).presentationBackground(Color.panel)
     }
+    /// A section header or footer: the list's own grey measures about 3:1 on its background.
+    private func note(_ text: String) -> some View { Text(text).foregroundStyle(GuidanceOverlay.onGlass) }
     /// With the person's own Calmer means settings the second route is the one that avoids what they chose, which isn't always less stress overall.
     private var goodToKnowCalmer: String {
         let custom = !comparison.request.preferences.isDefault(in: comparison.request.mode)
@@ -92,7 +95,7 @@ struct RouteDetails: View {
             Text(name)
             Spacer()
             Text(fastest).foregroundStyle(.secondary).frame(minWidth: 64, alignment: .trailing)
-            Text(calmer ?? "—").fontWeight(.semibold).foregroundStyle(.calmerText).frame(minWidth: 64, alignment: .trailing)
+            Text(calmer ?? "—").fontWeight(.semibold).frame(minWidth: 64, alignment: .trailing)
         }.font(.subheadline.monospacedDigit())
     }
     private func streets(_ title: String, _ route: Route, color: Color) -> some View {
@@ -132,11 +135,11 @@ struct AboutView: View {
             }.listStyle(.insetGrouped)
                 .task { edgeCount = graph.edges.isEmpty ? await Task.detached { try? StreetGraph.bundledEdgeCount() }.value : graph.edges.count }
                 .navigationTitle("About PeopleMaps").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() }.accessibilityIdentifier("close-about") } }
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button(role: .close) { dismiss() }.accessibilityIdentifier("close-about") } }
         }.tint(.primary).presentationDetents([.large])
     }
     private func header(_ title: String) -> some View {
-        Text(title).font(.footnote.weight(.semibold)).textCase(nil).accessibilityAddTraits(.isHeader)
+        Text(title).font(.footnote.weight(.semibold)).foregroundStyle(GuidanceOverlay.onGlass).textCase(nil).accessibilityAddTraits(.isHeader)
     }
 }
 

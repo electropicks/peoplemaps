@@ -30,7 +30,7 @@ struct AppleMapsLookup: View {
             .padding(.horizontal, 14).frame(minHeight: 52).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(.panelFill, in: RoundedRectangle(cornerRadius: Layout.groupRadius))
+        .rowGroup()
         .accessibilityLabel("Look up \u{201C}\(query)\u{201D} in Apple Maps")
         .accessibilityHint("Opens the Maps app")
         .accessibilityIdentifier("apple-maps-lookup")

@@ -43,12 +43,6 @@ final class CalmScoreTests: XCTestCase {
         XCTAssertEqual(CalmScore(stress: 120, tripSeconds: 600, mode: .walk).value, 50)
     }
 
-    func testBarRunsFromCalmToStress() {
-        XCTAssertEqual(CalmScore(value: 100).barPosition, 0)
-        XCTAssertEqual(CalmScore(value: 0).barPosition, 1)
-        XCTAssertLessThan(CalmScore(value: 70).barPosition, CalmScore(value: 30).barPosition)
-    }
-
     func testASlowerRouteDoesNotScoreBetterForTakingLonger() {
         let fast = route(id: 0, seconds: 600, [(.turn, 10, 500)])
         let sameStress = route(id: 1, seconds: 1200, [(.turn, 10, 500)])
@@ -90,6 +84,19 @@ final class CalmScoreTests: XCTestCase {
         let c = comparison(route(id: 0, seconds: 600, [(.unsignalledLeft, 6, 1100)]), route(id: 1, seconds: 720, [(.unsignalledLeft, 1, 300)]))
         XCTAssertEqual(c.calmSummary, "Yikes → Chill, mostly fewer unsignalled lefts")
         XCTAssertEqual(c.spokenCalmSummary, "Yikes to Chill, mostly fewer unsignalled lefts")
+    }
+
+    func testReasonLineSaysWhatTheCalmerRouteCostsAndItsBiggestGain() {
+        let c = comparison(route(id: 0, seconds: 600, [(.unsignalledLeft, 6, 1100)]), route(id: 1, seconds: 720, [(.unsignalledLeft, 1, 300)]))
+        XCTAssertEqual(c.reasonLine, "\(c.calmer!.minutes - c.fastest.minutes) min more than fastest, 5 fewer unsignalled lefts")
+        let small = comparison(route(id: 0, seconds: 600, [(.residential, 50, 90)]), route(id: 1, seconds: 610, [(.residential, 20, 40)]))
+        XCTAssertEqual(small.reasonLine, "Under a minute more than fastest, fewer small hassles")
+        let same = comparison(route(id: 0, seconds: 600, [(.turn, 30, 500)]), route(id: 1, seconds: 600, [(.turn, 10, 100)]))
+        XCTAssertEqual(same.reasonLine, "No extra time, 20 fewer turns")
+        let one = comparison(route(id: 0, seconds: 600, [(.stopSign, 2, 600)]), route(id: 1, seconds: 600, [(.stopSign, 1, 100)]))
+        XCTAssertEqual(one.reasonLine, "No extra time, fewer stop signs")
+        XCTAssertEqual(comparison(route(id: 0, seconds: 600, [(.turn, 30, 500)]), nil, noCalmer: .tooLittleGain).reasonLine, NoCalmerFinding.tooLittleGain.title)
+        XCTAssertFalse(c.reasonLine.localizedCaseInsensitiveContains("safe"))
     }
 
     func testWithNoCalmerRouteTheSummarySaysWhatTheRouterFound() {

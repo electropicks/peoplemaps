@@ -25,6 +25,7 @@ macOS with Xcode only. In a cloud or Linux session, say so and leave the screens
 | `--slow-routing` | 3 s router delay, to show loading states |
 | `--keep-saved` | keep favourites and recents between UI-test launches |
 | `--reduce-transparency` | debug builds: glass surfaces use the opaque Reduce Transparency fallback, without changing Settings |
+| `--glass-regular` | debug builds: swap `.clear` glass for `.regular`, to compare |
 
 ## Capture
 
