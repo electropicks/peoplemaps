@@ -118,6 +118,17 @@ Issaquah to Renton: the freeway route that was the "calmer" alternative is now t
 there. The golden fixture changed for two drive entries only (the long trip, both budgets: 790.9 s to 757.2 s); every walk
 and bike entry and the other 35 drive entries are unchanged.
 
+**A worse calmer route on one golden trip.** In the long fixture trip at the 5 minute budget the calmer route went from
+811.7 s, stress 441.6 to 975.2 s, stress 519.2. The old route is still there and, re-timed under the new speeds, is
+unchanged (it is all surface streets: 811.7 s, stress 441.6), so it beats the new one on both. The search
+doesn't return it because it can't see the whole-route factors (`pathFactors`: stop-and-go clusters, short freeway hops,
+side-street shortcuts): the new calmer route carries 15 stop-and-go stops (150 s) that only show once the route is
+finished, so for weights 4 and 8 it looks cheaper to the search (975 + 369w) than the old one (812 + 431w). The 60 mph cap
+didn't cause the gap, it moved which routes the six weights land on. It is the limit described under "Whole-route factors
+steer only the final choice" below, not a selection bug, and it isn't fixed here. Across the 200 sampled trips, 8 of 183
+Seattle and 15 of 167 county drive trips (offered a calmer route both before and after) show a higher calmer-route stress
+than before; only 1 and 3 of them also take more extra time. These are upper bounds, since the fastest route changed too.
+
 **Not in the estimate.** Traffic queues, signal coordination, waiting for a
 gap on an unsignalled left (charged as stress, not time), bridge openings and
 finding parking. Each would need data the app does not have offline; the first
@@ -169,6 +180,15 @@ Built from the complaints in the thread. "Arterial" means OSM
 Freeways and arterials carry no per-km stress. Driving on a big road isn't
 the problem; getting on, off and across it is. That's the opposite of the
 current model, which charges 35/km for highways and 65/km for residential.
+
+### Whole-route factors steer only the final choice
+
+Stop-and-go clusters, short freeway hops and side-street shortcuts (`StressModel.pathFactors`) are counted once a route
+is finished, because they depend on the stretch of road before them. The A* search only sees per-edge exposure and
+per-junction events, so these can't steer it. They do count in the totals that `selectCalmer` and the "nothing calmer"
+finding compare, and in the rating. The effect is that a route can look cheaper to the search than it turns out to be,
+and a better route may not be among the seven it finds. Don't read any of these factors as something the router
+avoids; it only prefers a candidate that has less of them.
 
 ### Stop-and-go
 
