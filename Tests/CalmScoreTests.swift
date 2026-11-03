@@ -88,6 +88,19 @@ final class CalmScoreTests: XCTestCase {
         let unnamed = Route(edgeIDs: [0], edgeMeters: [1000], coordinates: [], metrics: metrics, streetNames: [], edges: [toll])
         XCTAssertEqual(comparison(unnamed, nil).tollNotes, ["Fastest route: uses a toll road. Tolls aren't in the estimate."])
         XCTAssertTrue(comparison(plain, nil).tollNotes.isEmpty)
+        // Colman Dock's approaches: a real name, a way named only "15", and no name.
+        for (name, shown) in [("Colman Dock", " (Colman Dock)"), ("15", ""), ("", ""), ("SR", ""), ("SR 304", " (SR 304)")] {
+            toll.name = name
+            let ferry = Route(edgeIDs: [0], edgeMeters: [1000], coordinates: [], metrics: metrics, streetNames: [], edges: [toll])
+            XCTAssertEqual(comparison(ferry, nil).tollNote(calmer: false), "Fastest route: uses a toll road\(shown). Tolls aren't in the estimate.", "\"\(name)\"")
+        }
+        // Start defaults to Calmer: its note is available on its own, and the fastest route's is not borrowed.
+        toll.name = "Evergreen Point Floating Bridge"
+        let tolledCalmer = Route(edgeIDs: [1], edgeMeters: [1000], coordinates: [], metrics: metrics, streetNames: [], edges: [toll])
+        let calmerOnly = comparison(plain, tolledCalmer)
+        XCTAssertNil(calmerOnly.tollNote(calmer: false))
+        XCTAssertEqual(calmerOnly.tollNote(calmer: true), "Calmer route: uses a toll road (Evergreen Point Floating Bridge). Tolls aren't in the estimate.")
+        XCTAssertNil(comparison(plain, nil).tollNote(calmer: true), "no calmer route, no calmer note")
     }
 
     func testSidewalkCaveatIsOneShareOfTheRoute() {

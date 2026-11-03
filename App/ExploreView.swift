@@ -1020,6 +1020,11 @@ struct ExploreView: View {
         case let .failed(message):
             status(title: "Try another route", message: message, button: "Try again")
         case let .ready(comparison):
+            if let note = comparison.tollNote(calmer: selectedCalmer && comparison.calmer != nil) {
+                // The route Start takes, said before Start: the details sheet is a tap away.
+                Text(note).font(.footnote).foregroundStyle(GuidanceOverlay.onGlass).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("toll-note")
+            }
             if let calmer = comparison.calmer, let score = comparison.calmerCalm {
                 routeButton(calmer, title: "Calmer", score: score, spoken: "\(comparison.extraTimeLabel), \(comparison.spokenCalmSummary)", selected: selectedCalmer, calmer: true) {
                     VStack(alignment: .leading, spacing: 10) {

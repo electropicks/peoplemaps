@@ -118,17 +118,22 @@ public struct RouteComparison: Sendable {
 
     /// Drive routes that use a road tagged as a toll: mentioned, never priced, and no estimate of what it costs. Named where the
     /// road has a name ("Fastest route: uses a toll road (Evergreen Point Floating Bridge). Tolls aren't in the estimate.").
-    public var tollNotes: [String] {
-        guard request.mode == .drive else { return [] }
-        return [fastest, calmer].compactMap { $0 }.compactMap { route in
-            let tolled = route.edges.filter(\.toll)
-            guard !tolled.isEmpty else { return nil }
-            var names: [String] = []
-            for name in tolled.map(\.name) where !name.isEmpty && !names.contains(name) { names.append(name) }
-            let which = names.isEmpty ? "" : " (\(names.prefix(2).joined(separator: ", ")))"
-            return "\(route.edgeIDs == fastest.edgeIDs ? "Fastest" : "Calmer") route: uses a toll road\(which). Tolls aren't in the estimate."
-        }
+    public var tollNotes: [String] { [tollNote(calmer: false), tollNote(calmer: true)].compactMap { $0 } }
+
+    /// The toll note for one route, to show where the route is chosen: nil off a drive trip, with no calmer route, or with no toll.
+    /// A name is shown only if it reads as a road name: OSM names one Colman Dock approach way "15".
+    public func tollNote(calmer isCalmer: Bool) -> String? {
+        guard request.mode == .drive, let route = isCalmer ? calmer : fastest else { return nil }
+        let tolled = route.edges.filter(\.toll)
+        guard !tolled.isEmpty else { return nil }
+        var names: [String] = []
+        for name in tolled.map(\.name) where Self.isRoadName(name) && !names.contains(name) { names.append(name) }
+        let which = names.isEmpty ? "" : " (\(names.prefix(2).joined(separator: ", ")))"
+        return "\(isCalmer ? "Calmer" : "Fastest") route: uses a toll road\(which). Tolls aren't in the estimate."
     }
+
+    /// A letter and at least three characters: not "15", not empty.
+    static func isRoadName(_ name: String) -> Bool { name.count >= 3 && name.contains { $0.isLetter } }
 
     /// Gaps in the map data large enough to mention.
     public var caveats: [String] {
