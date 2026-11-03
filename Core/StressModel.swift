@@ -327,7 +327,7 @@ public enum StressModel {
             if turned { add(.turn, 8) }
             if j.legs >= 5 { add(.complexJunction, 40) }
             if waits, let g = p.approachGrade, g > 8 { add(.hillStop, g > 12 ? 60 : 30) }
-            if !p.isHighway && n.isHighway { add(.freewayEntry, freewaySwitchSeconds) }
+            if !p.isFreeway && n.isFreeway { add(.freewayEntry, freewaySwitchSeconds) }
             if n.movableBridge && !p.movableBridge { add(.movableBridge, 30) }
         case .bike:
             // A signal costs more than a stop sign: waiting at a red beside traffic, versus a quick stop and go.
@@ -376,16 +376,16 @@ public enum StressModel {
         // with no ref leaves the state alone, so a gap in the tagging neither starts nor hides a switch.
         var freeway: String?, onRamp = false
         for e in edges {
-            guard e.isHighway else { freeway = nil; onRamp = false; continue }
+            guard e.isFreeway else { freeway = nil; onRamp = false; continue }
             if e.highway.hasSuffix("_link") { onRamp = true; continue }
             guard let ref = e.ref else { continue }
             if let was = freeway, onRamp, was != ref { r.add(.freewayEntry, amount: 1, cost: freewaySwitchSeconds) }
             freeway = ref; onRamp = false
         }
         for (i, e) in edges.enumerated() {
-            let wasHighway = i > 0 && edges[i - 1].isHighway
-            if e.isHighway && !wasHighway { entered = run }
-            if !e.isHighway && wasHighway, let start = entered, run - start < 2000 { r.add(.shortFreewayHop, amount: 1, cost: 90) }
+            let wasFreeway = i > 0 && edges[i - 1].isFreeway
+            if e.isFreeway && !wasFreeway { entered = run }
+            if !e.isFreeway && wasFreeway, let start = entered, run - start < 2000 { r.add(.shortFreewayHop, amount: 1, cost: 90) }
             run += e.meters
         }
         // Leaving a named arterial for side streets and rejoining it within 1.5 km.

@@ -125,7 +125,7 @@ struct Row { var trip: String, mode: String, prefs: String, median: Double, min:
 var rows: [Row] = []
 /// Freeway-to-freeway switches charged on a route: freeway entries less the ones from a street.
 func switches(_ r: Route) -> Int {
-    let fromStreet = zip(r.edges, r.edges.dropFirst()).filter { !$0.0.isHighway && $0.1.isHighway }.count
+    let fromStreet = zip(r.edges, r.edges.dropFirst()).filter { !$0.0.isFreeway && $0.1.isFreeway }.count
     return Int(r.metrics.breakdown[.freewayEntry].amount.rounded()) - fromStreet
 }
 if let sampleFile {
@@ -141,7 +141,7 @@ if let sampleFile {
                 if let m = c.calmer { calmer += 1; gains.append(m.metrics.seconds - c.fastest.metrics.seconds) }
                 levels[c.fastestCalm.level.title, default: 0] += 1
                 if printRows {
-                    let free = c.fastest.edgeIDs.reduce(0.0) { $0 + (graph.edges[$1].isHighway ? graph.edges[$1].meters : 0) }
+                    let free = c.fastest.edgeIDs.reduce(0.0) { $0 + (graph.edges[$1].isFreeway ? graph.edges[$1].meters : 0) }
                     print("row", mode.rawValue, i, Int(c.fastest.metrics.meters), Int(c.fastest.metrics.seconds), Int(c.fastest.metrics.stress), Int(free), c.calmer.map { Int($0.metrics.seconds) } ?? -1, c.calmer.map { Int($0.metrics.stress) } ?? -1, c.fastestCalm.value, r1(ms(clock.now - began)), switches(c.fastest), c.calmer.map(switches) ?? -1)
                 }
             } catch RoutingError.noConnection { none += 1 } catch { other += 1 }
