@@ -210,16 +210,25 @@ final class StressModelTests: XCTestCase {
         var hop = Breakdown()
         StressModel.pathFactors(edges: [road("A", "primary"), road("I-5", "motorway", 1500), road("B", "primary")], stops: [], mode: .drive, into: &hop)
         XCTAssertEqual(hop[.shortFreewayHop].amount, 1)
+        // Real tag shapes: the county's freeways carry a ref and mostly no name (I 5, I 90, SR 520), ramps carry neither.
+        func freeway(_ ref: String?, _ name: String = "", _ highway: String = "motorway") -> GraphEdge {
+            var e = road(name, highway, 5000); e.ref = ref; return e
+        }
+        func switches(_ edges: [GraphEdge]) -> Double {
+            var b = Breakdown(); StressModel.pathFactors(edges: edges, stops: [], mode: .drive, into: &b); return b[.freewayEntry].amount
+        }
         var switched = Breakdown()
-        StressModel.pathFactors(edges: [road("I-405", "motorway", 5000), road("Ramp", "motorway_link"), road("I-90", "motorway", 5000)], stops: [], mode: .drive, into: &switched)
-        XCTAssertEqual(switched[.freewayEntry].amount, 1, "freeway to freeway through a ramp is an entry")
+        StressModel.pathFactors(edges: [freeway("I 405"), freeway(nil, "", "motorway_link"), freeway("I 90")], stops: [], mode: .drive, into: &switched)
+        XCTAssertEqual(switched[.freewayEntry].amount, 1, "freeway to freeway through a ramp is an entry, on refs alone")
         XCTAssertEqual(switched[.freewayEntry].cost, 30, "a starting guess, as for the surface entry")
-        var bridge = Breakdown()
-        StressModel.pathFactors(edges: [road("I-90", "motorway", 5000), road("Bridge", "motorway", 5000), road("I-90", "motorway", 5000)], stops: [], mode: .drive, into: &bridge)
-        XCTAssertEqual(bridge[.freewayEntry].amount, 0, "a name change with no ramp is not a switch")
-        var sameRoad = Breakdown()
-        StressModel.pathFactors(edges: [road("I-5", "motorway", 5000), road("Ramp", "motorway_link"), road("I-5", "motorway", 5000)], stops: [], mode: .drive, into: &sameRoad)
-        XCTAssertEqual(sameRoad[.freewayEntry].amount, 0, "off and back onto the same freeway is not a switch")
+        XCTAssertEqual(switches([freeway("I 90", "Lacey V. Murrow Memorial Bridge"), freeway("I 90"), freeway("I 90", "Mount Baker Ridge Tunnel")]), 0, "names change on one freeway, with no ramp")
+        XCTAssertEqual(switches([freeway("I 90", "Lacey V. Murrow Memorial Bridge"), freeway(nil, "", "motorway_link"), freeway("I 90"), freeway("I 90", "Mount Baker Ridge Tunnel")]), 0,
+                       "an auxiliary link on one freeway, with names changing around it, is not a switch")
+        XCTAssertEqual(switches([freeway("I 5"), freeway(nil, "", "motorway_link"), freeway("I 5")]), 0, "off and back onto the same freeway")
+        XCTAssertEqual(switches([freeway("I 5"), freeway(nil, "", "motorway_link"), freeway(nil), freeway("I 90")]), 1, "an untagged stretch between does not hide the switch")
+        XCTAssertEqual(switches([freeway("I 5"), freeway(nil, "", "motorway_link"), freeway("I 405"), freeway(nil, "", "motorway_link"), freeway("SR 520")]), 2, "two switches in a row are two")
+        XCTAssertEqual(switches([freeway("I 5"), freeway(nil, "", "motorway_link"), freeway("I 405"), freeway("I 405", "Name appears")]), 1, "a name on the second freeway is not a third")
+        XCTAssertEqual(switches([road("Main", "primary"), freeway(nil, "", "motorway_link"), freeway("I 5")]), 0, "from a street the entry is charged elsewhere, not as a switch")
         var shortcut = Breakdown()
         StressModel.pathFactors(edges: [road("Main", "primary"), road("Elm", "residential"), road("Oak", "residential"), road("Main", "primary")],
                                 stops: [], mode: .drive, into: &shortcut)

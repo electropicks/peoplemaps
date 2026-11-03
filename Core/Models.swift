@@ -112,6 +112,8 @@ public struct GraphEdge: Sendable {
     public var sidewalk: String?
     public var parkedBothSides: Bool?
     public var movableBridge = false
+    /// Which freeway a motorway or trunk edge is, from OSM `ref` ("I 5", "SR 520"); nil elsewhere and in graphs imported without it.
+    public var ref: String?
     /// OSM footway kind (sidewalk, crossing, ...) for footway edges.
     public var footway: String?
     public var steps: Int?

@@ -381,6 +381,12 @@ MODE_BITS = {'drive': 1, 'bike': 2, 'walk': 4}
 CONTROL_CODES = {None: 0, 'signal': 1, 'stop': 2, 'allstop': 3, 'yield': 4}
 ROAD_CODES = {None: 0, 'local': 1, 'arterial': 2, 'busy': 3}
 
+def freeway_ref(t):
+    """Which freeway a motorway or trunk segment is: the first entry of `ref`, so "SR 161;SR 512" is "SR 161". Freeways are mostly
+    unnamed in OSM (I 5, I 90, SR 520), so `name` can't tell two of them apart."""
+    if t.get('highway') not in ('motorway', 'trunk'): return None
+    return (t.get('ref') or '').split(';')[0].strip() or None
+
 def pad8(b): return b + b'\0' * (-len(b) % 8)
 
 def graph_binary(graph):
@@ -409,7 +415,9 @@ def graph_binary(graph):
     table = list(strings)
     encoded = [t.encode() for t in table]
     offsets = array.array('I', [0]); [offsets.append(offsets[-1] + len(e)) for e in encoded]
-    tail = json.dumps({'restrictions': graph['restrictions'], 'places': graph['places']}, separators=(',', ':')).encode()
+    # Freeway identity is a few thousand segments, so it rides in the JSON tail (segment index to ref) and the record layout stays as it was.
+    refs = {str(i): s['ref'] for i, s in enumerate(graph['segments']) if s.get('ref')}
+    tail = json.dumps({'restrictions': graph['restrictions'], 'places': graph['places'], 'refs': refs}, separators=(',', ':')).encode()
     out = bytearray(struct.pack('<4sI4d5I', b'PMGB', 3, *graph['bounds'], len(table), len(nodes), len(graph['segments']), len(points) // 2, len(tail)))
     out += b'\0' * (64 - len(out))
     out += pad8(offsets.tobytes() + b''.join(encoded))
@@ -572,7 +580,8 @@ def main():
                               ('sidewalk',sidewalk(t) if t['highway'] in ROAD else None),
                               ('parkedBothSides',parked_both_sides(t)),
                               ('movableBridge',True if t.get('bridge')=='movable' or 'bridge:movable' in t else None),
-                              ('footway',t.get('footway') if t['highway']=='footway' else None)]:
+                              ('footway',t.get('footway') if t['highway']=='footway' else None),
+                              ('ref',freeway_ref(t))]:
                 if value is not None: s[key]=value
             if t['highway']=='steps':
                 try: s['steps']=int(t.get('step_count',''))

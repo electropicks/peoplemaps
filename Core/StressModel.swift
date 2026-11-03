@@ -371,15 +371,16 @@ public enum StressModel {
         }
         guard mode == .drive else { return }
         var run = 0.0, entered: Double?
-        // Changing freeways at an interchange (I-90 to I-405) is weaving and merging again, charged like an entry: the
-        // named freeway changes with a ramp between. A name change on one freeway, say onto a bridge, has no ramp.
+        // Changing freeways at an interchange (I-90 to I-405) is weaving and merging again, charged like an entry: the freeway's
+        // `ref` changes with a ramp between. Freeways are mostly unnamed in OSM, so identity is the ref, never the name. An edge
+        // with no ref leaves the state alone, so a gap in the tagging neither starts nor hides a switch.
         var freeway: String?, onRamp = false
         for e in edges {
             guard e.isHighway else { freeway = nil; onRamp = false; continue }
             if e.highway.hasSuffix("_link") { onRamp = true; continue }
-            guard !e.name.isEmpty else { continue }
-            if let was = freeway, onRamp, was != e.name { r.add(.freewayEntry, amount: 1, cost: freewaySwitchSeconds) }
-            freeway = e.name; onRamp = false
+            guard let ref = e.ref else { continue }
+            if let was = freeway, onRamp, was != ref { r.add(.freewayEntry, amount: 1, cost: freewaySwitchSeconds) }
+            freeway = ref; onRamp = false
         }
         for (i, e) in edges.enumerated() {
             let wasHighway = i > 0 && edges[i - 1].isHighway

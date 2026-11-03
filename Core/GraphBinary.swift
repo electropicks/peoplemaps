@@ -52,6 +52,9 @@ enum GraphBinary {
         let segmentsAt = pointsAt + 8 * pointCount
         let tailAt = segmentsAt + (segmentSize + 2 * directionSize) * segmentCount
         guard raw.count >= tailAt + tailSize else { throw RoutingError.missingData }
+        // `refs` (segment index to freeway ref) is absent from graphs imported before it existed; those just have no switches to charge.
+        struct Tail: Decodable { let restrictions: [TurnRestriction]; let places: [Place]; let refs: [String: String]? }
+        let tail = try JSONDecoder().decode(Tail.self, from: Data(raw[tailAt..<(tailAt + tailSize)]))
         let textAt = stringsAt + 4 * (stringCount + 1)
 
         let strings: [String] = (0..<stringCount).map { i in
@@ -107,6 +110,7 @@ enum GraphBinary {
                                   highway: strings[Int(hw)], name: strings[Int(nameIndex)], surface: string(get(UInt32.self, at + 60)),
                                   maxspeed: string(get(UInt32.self, at + 56)), lanes: lanes < 0 ? nil : Int(lanes))
                 e.sidewalk = string(get(UInt32.self, at + 64))
+                e.ref = tail.refs?[String(s)]
                 let parked = flags & 3
                 e.parkedBothSides = parked == 0 ? nil : parked == 2
                 e.movableBridge = flags & 4 != 0
@@ -127,8 +131,6 @@ enum GraphBinary {
             }
         }
 
-        struct Tail: Decodable { let restrictions: [TurnRestriction]; let places: [Place] }
-        let tail = try JSONDecoder().decode(Tail.self, from: Data(raw[tailAt..<(tailAt + tailSize)]))
-        return StreetGraph(bounds: bounds, nodes: nodes, edges: edges, restrictions: tail.restrictions, places: tail.places)
+                return StreetGraph(bounds: bounds, nodes: nodes, edges: edges, restrictions: tail.restrictions, places: tail.places)
     }
 }

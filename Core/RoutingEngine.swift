@@ -84,11 +84,15 @@ public struct RouteComparison: Sendable {
     public let snappedDestination: Coordinate
     /// Meaningful only when `calmer` is nil.
     public let noCalmer: NoCalmerFinding
+    /// Drive time on the fastest route's freeway edges, worked out once here: the calm score reads it on every view update.
+    /// The same for both routes, like the trip time. Zero for walk and bike.
+    let fastestFreewaySeconds: Double
     public init(request: RouteRequest, fastest: Route, calmer: Route?, candidateCount: Int, originSnapMeters: Double,
                 destinationSnapMeters: Double, snappedOrigin: Coordinate, snappedDestination: Coordinate, noCalmer: NoCalmerFinding = .notChecked) {
         self.request = request; self.fastest = fastest; self.calmer = calmer; self.candidateCount = candidateCount
         self.originSnapMeters = originSnapMeters; self.destinationSnapMeters = destinationSnapMeters
         self.snappedOrigin = snappedOrigin; self.snappedDestination = snappedDestination; self.noCalmer = noCalmer
+        fastestFreewaySeconds = request.mode == .drive ? fastest.edges.filter(\.isHighway).reduce(0) { $0 + StressModel.seconds($1, mode: .drive) } : 0
     }
 
     public var extraSeconds: Double { max(0, (calmer?.metrics.seconds ?? fastest.metrics.seconds) - fastest.metrics.seconds) }

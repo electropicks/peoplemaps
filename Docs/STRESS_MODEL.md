@@ -115,7 +115,7 @@ Measured on a Mac (shared, load about 7), 200 seeded random trips each from the 
 | Ballard to Bellevue | 28.2 min | 26.6 min |
 
 Issaquah to Renton: the freeway route that was the "calmer" alternative is now the fastest, so no calmer route is offered
-there. The golden fixture changed for two drive entries only (the long trip, both budgets: 790.9 s to 757.2 s); every walk
+there: the finding is `onlyRoute`, with one candidate (all six weights land on the fastest route). The golden fixture changed for two drive entries only (the long trip, both budgets: 790.9 s to 757.2 s); every walk
 and bike entry and the other 35 drive entries are unchanged.
 
 **A worse calmer route on one golden trip.** In the long fixture trip at the 5 minute budget the calmer route went from
@@ -165,7 +165,7 @@ Built from the complaints in the thread. "Arterial" means OSM
 | Junction with 5 or more legs | +40 | 44 in the extract | "weird five-way intersections" |
 | Stop or signal on a grade over 8% | 30 (over 12%: 60) | **Needs elevation data** | Hill starts in a manual or a weak car |
 | Freeway entry | 30 | Road class | |
-| Freeway to freeway through a ramp (I-405 to I-90) | 30, as an entry | Road class, ramp, name along the route | Weaving again. **30 is a starting guess**, like the other weights, not tuned against anyone's driving. A name change with no ramp (onto a bridge) and leaving then rejoining the same freeway are not switches |
+| Freeway to freeway through a ramp (I-405 to I-90) | 30, as an entry | Road class, ramp, `ref` along the route | Weaving again. **30 is a starting guess**, like the other weights, not tuned against anyone's driving. Identity is the OSM `ref` (first entry, "SR 161;SR 512" is "SR 161"), kept in the graph for motorway and trunk segments: most freeways are unnamed (in the county 44% of motorway and trunk ways have a name and 94% a ref), so `name` can't tell them apart and also changes along one freeway (a bridge, a tunnel). A switch needs a ramp between two different refs; an edge with no ref changes nothing. Leaving and rejoining the same freeway is not a switch. **Counted when the route is finished, so it can't steer the search**; see "Whole-route factors steer only the final choice". The router prefers a candidate with fewer of them, it does not avoid interchanges |
 | Freeway exit less than 2 km after entering | +90 | Road class and distance | On at Mercer, weave across, off at James |
 | Movable bridge | 30 | 10 bascule ways: Fremont, Ballard, University, Montlake | Openings are unpredictable; no schedule data |
 
@@ -553,11 +553,15 @@ Measured on a Mac with the 200 seeded random trips per graph (`peoplemaps-bench 
 
 | Graph | Before | After | Levels that change |
 |---|---|---|---:|
-| Seattle | 36 / 70 / 64 / 21 / 5 | 9 / 59 / 84 / 39 / 5 | 82 of 196 |
-| King County | 103 / 58 / 21 / 9 / 0 | 62 / 78 / 38 / 13 / 0 | 66 of 191 |
+| Seattle | 36 / 70 / 64 / 21 / 5 | 10 / 62 / 81 / 38 / 5 | 77 of 196 |
+| King County | 103 / 58 / 21 / 9 / 0 | 59 / 80 / 39 / 13 / 0 | 70 of 191 |
 
-The score moved down 8 points at the median in Seattle (7 in the county), at most 22. The earlier 150 trip drive row in the table above predates the
-speed recalibration, the 60 mph top speed and this change.
+The score moved down 8 points at the median in both, at most 20 in Seattle and 26 in the county. Real switches charged on the
+fastest routes of the sample: 8 in Seattle (8 of 196 routes) and 151 in the county (97 of 191 routes, up to 3 on one). No
+fastest route changed; the calmer route changed on 4 trips in each. A first version compared `name` and charged 32 Seattle switches
+(4 times the real ones, so mostly false) and 52 in the county (about a third of the real ones); counts there are worked out from the
+stress each version added. The
+earlier 150 trip drive row in the table above predates the speed recalibration, the 60 mph top speed and this change.
 
 The time range is −5% to +12% of the estimate, a judgement call with no live
 traffic to measure against, not a measured spread.

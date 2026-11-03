@@ -84,10 +84,6 @@ extension RouteComparison {
     private func calm(_ route: Route) -> CalmScore {
         CalmScore(stress: route.metrics.stress, tripSeconds: fastest.metrics.seconds, freewaySeconds: fastestFreewaySeconds, mode: request.mode)
     }
-    /// Drive time on the fastest route's freeway edges, the same for both routes like the trip time. Zero for walk and bike.
-    private var fastestFreewaySeconds: Double {
-        request.mode == .drive ? fastest.edges.filter(\.isHighway).reduce(0) { $0 + StressModel.seconds($1, mode: .drive) } : 0
-    }
 
     /// Fastest to calmer: "Yikes → Chill", with the scores when the word doesn't change: "Chill, 62 → 71". One word with no calmer route.
     public var calmChange: String { calmChange(arrow: "→") }
