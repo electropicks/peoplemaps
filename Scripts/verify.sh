@@ -88,8 +88,13 @@ print(names[-1])')"
   # from the result bundle and keeps the bundle for Xcode.
   ui_tests() {
     local bundle; bundle="${PEOPLEMAPS_UI_RESULT:-$(mktemp -d)/ui-tests.xcresult}"
+    # Every app test class (UITests/*UITests.swift): Xcode parallelises by class. ReportsUITests and the tours are not part of this run.
+    local only=() f
+    for f in UITests/*UITests.swift; do
+      f="$(basename "$f" .swift)"; [[ "$f" == ReportsUITests ]] || only+=("-only-testing:PeoplemapsUITests/$f")
+    done
     xcodebuild -project Peoplemaps.xcodeproj -scheme Peoplemaps -configuration Debug \
-      -destination "platform=iOS Simulator,id=$ui" -only-testing:PeoplemapsUITests/PeoplemapsUITests \
+      -destination "platform=iOS Simulator,id=$ui" "${only[@]}" \
       -parallel-testing-enabled NO -resultBundlePath "$bundle" test 2>&1 \
       | grep --line-buffered -E "Test [Cc]ase .* (passed|failed|skipped)|error:|Executed [0-9]+ test" && return 0
     echo "result bundle: $bundle"
