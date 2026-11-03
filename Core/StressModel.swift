@@ -38,8 +38,8 @@ public enum Factor: String, CaseIterable, Sendable, Comparable {
         case .stopAndGo: "Stop-and-go stops"
         case .complexJunction: "5+ way intersections"
         case .hillStop: "Stops on steep hills"
-        case .freewayEntry: "Freeway entries"
-        case .shortFreewayHop: "Short freeway hops"
+        case .freewayEntry: "Highway merges"
+        case .shortFreewayHop: "Short highway hops"
         case .movableBridge: "Drawbridges"
         case .cutThrough: "Side-street shortcuts"
         case .bikeRouteGap: "Bike route gaps"
@@ -106,8 +106,8 @@ public enum Factor: String, CaseIterable, Sendable, Comparable {
         case .stopAndGo: ("stop-and-go stop", "stop-and-go stops")
         case .complexJunction: ("intersection of five or more streets", "intersections of five or more streets")
         case .hillStop: ("stop on a steep hill", "stops on steep hills")
-        case .freewayEntry: ("freeway entry", "freeway entries")
-        case .shortFreewayHop: ("short freeway hop with quick lane changes", "short freeway hops with quick lane changes")
+        case .freewayEntry: ("highway merge", "highway merges")
+        case .shortFreewayHop: ("short highway hop with quick lane changes", "short highway hops with quick lane changes")
         case .movableBridge: ("drawbridge", "drawbridges")
         case .cutThrough: ("side-street shortcut", "side-street shortcuts")
         case .bikeRouteGap: ("place where the bike route drops you into traffic", "places where the bike route drops you into traffic")
