@@ -1042,6 +1042,11 @@ struct ExploreView: View {
                 }
                 .accessibilityElement(children: .combine).accessibilityIdentifier("no-alternative")
             }
+            if let note = comparison.tollNote(calmer: selectedCalmer && comparison.calmer != nil) {
+                // The route Start takes, said before Start: the details sheet is a tap away.
+                Text(note).font(.footnote).foregroundStyle(GuidanceOverlay.onGlass).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("toll-note")
+            }
         }
     }
 
