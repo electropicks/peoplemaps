@@ -42,7 +42,7 @@ Launch in the simulator (ms since process start; median of 4 runs current, 3 run
 
 The "interactive" row is the first fully rendered map frame after the router was ready. The `Opening Seattle…` spinner covers 0–1.4 s now and 0–4.6 s all-Seattle.
 
-Router, median of 5 runs (ms, macOS release, `extraMinutes: 5`; `Scripts/coverage_bench`). Route length is the fastest route; the same trip finds the same route in both graphs.
+Router, median of 5 runs (ms, macOS release, `extraMinutes: 5`; the since-removed `Scripts/coverage_bench`). Route length is the fastest route; the same trip finds the same route in both graphs.
 
 | Trip (fastest route) | walk cur → all | bike cur → all | drive cur → all |
 |---|---:|---:|---:|
@@ -75,9 +75,9 @@ The importer now takes `PEOPLEMAPS_BBOX="S,W,N,E"`, `PEOPLEMAPS_DATA` (default `
 python3 Scripts/fetch_dem_tiles.py 47.49 -122.44 47.74 -122.24 Spikes/all-seattle/data/seattle-dem.tif.gz Spikes/all-seattle/demtiles
 # put seattle-osm.json.gz / seattle-parks.json.gz (Overpass output, gzipped) in Spikes/all-seattle/data/
 PEOPLEMAPS_BBOX=47.49,-122.44,47.74,-122.24 PEOPLEMAPS_DATA=Spikes/all-seattle/data PEOPLEMAPS_OUT=Spikes/all-seattle/out python3 Scripts/import_osm.py
-cd Scripts/coverage_bench && swift build -c release && PEOPLEMAPS_GRAPH=<graph.json.gz> .build/release/bench
+swift build -c release --product peoplemaps-bench && .build/release/peoplemaps-bench   # replaces the spike's Scripts/coverage_bench
 ```
 
-`StreetGraph.bundled()` gained a `PEOPLEMAPS_GRAPH` environment override, solely so the benchmark can load other graphs. Do not merge it. `Scripts/coverage_bench/launch-logging.patch` is the temporary `NSLog` timing patch used for the simulator numbers; it was never committed to `App/`.
+`StreetGraph.bundled()` gained a `PEOPLEMAPS_GRAPH` environment override, solely so the benchmark can load other graphs. Do not merge it. The removed `Scripts/coverage_bench/launch-logging.patch` is the temporary `NSLog` timing patch used for the simulator numbers; it was never committed to `App/`.
 
 Caveats: single machine, single sample set, simulator rather than device; the all-Seattle `map-fully-rendered` line has 2 samples. Coverage was not checked for correctness (for example, graph connectivity across the larger box or routes across the water crossings), only for cost.

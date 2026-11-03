@@ -1,6 +1,6 @@
 # Router performance
 
-How long a route takes, what it costs in memory, and the budgets we hold it to. Measured with `peoplemaps-bench` (`Bench/`), which supersedes `Scripts/coverage_bench`.
+How long a route takes, what it costs in memory, and the budgets we hold it to. Measured with `peoplemaps-bench` (`Bench/`).
 
 **These numbers come from a shared 4-core Linux container, not an iPhone.** Load average was 2 to 3 from other jobs while measuring, so expect about ±10% between runs. The coverage spike put Mac to phone at roughly 2 to 3 times slower; nothing here has been run on a device. The *ratios* (before to after, scale 4 to scale 1) should carry over better than the milliseconds.
 
