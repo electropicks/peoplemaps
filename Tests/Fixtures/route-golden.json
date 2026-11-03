@@ -1692,9 +1692,9 @@
       "edges" : "63c730c41c6625bf",
       "meters" : 7915.37,
       "seconds" : 830.047468,
-      "stress" : 293.5361
+      "stress" : 263.5361
     },
-    "candidates" : 6,
+    "candidates" : 4,
     "fastest" : {
       "count" : 193,
       "edges" : "8633c0fea20079fd",
@@ -1708,7 +1708,7 @@
       "3 fewer stop-and-go stops",
       "1 fewer traffic signal",
       "Tradeoff: 1 more intersection of five or more streets",
-      "Tradeoff: 1 more freeway entry"
+      "Tradeoff: 1 more left turn at a signal"
     ]
   },
   {
@@ -1805,13 +1805,13 @@
   },
   {
     "calmer" : {
-      "count" : 228,
-      "edges" : "3fe829d2fed0c363",
-      "meters" : 8316.96,
-      "seconds" : 975.226915,
-      "stress" : 519.1993
+      "count" : 276,
+      "edges" : "768dad308f43516e",
+      "meters" : 8896.5,
+      "seconds" : 955.411641,
+      "stress" : 369.3003
     },
-    "candidates" : 3,
+    "candidates" : 4,
     "fastest" : {
       "count" : 130,
       "edges" : "64889e98f27fd8ea",
@@ -1822,9 +1822,10 @@
     "key" : "way\/234054122>node\/1995793592 drive 5 default",
     "reasons" : [
       "2 fewer left turns across traffic without a signal",
-      "1 fewer stop on a steep hill",
-      "1 fewer intersection of five or more streets",
-      "Tradeoff: 5 more traffic signals"
+      "14 fewer stop-and-go stops",
+      "10 fewer traffic signals",
+      "Tradeoff: 7 more stop signs",
+      "Tradeoff: 0.4 mi more on residential streets"
     ]
   },
   {
@@ -2156,7 +2157,7 @@
       "edges" : "63c730c41c6625bf",
       "meters" : 7915.37,
       "seconds" : 830.047468,
-      "stress" : 293.5361
+      "stress" : 263.5361
     },
     "candidates" : 4,
     "fastest" : {
@@ -2172,7 +2173,7 @@
       "1 fewer traffic signal",
       "3 fewer stop-and-go stops",
       "Tradeoff: 1 more intersection of five or more streets",
-      "Tradeoff: 1 more freeway entry"
+      "Tradeoff: 1 more left turn at a signal"
     ]
   }
 ]

@@ -195,9 +195,9 @@ Built from the complaints in the thread. "Arterial" means OSM
 | Any turn or change of road (a "decision") | 8 | Geometry and way names | "fewest decisions" |
 | Junction with 5 or more legs | +40 | 44 in the extract | "weird five-way intersections" |
 | Stop or signal on a grade over 8% | 30 (over 12%: 60) | **Needs elevation data** | Hill starts in a manual or a weak car |
-| Freeway entry | 30 | Road class | |
+| Freeway entry | 30 | Road class | A freeway is OSM `motorway` and `motorway_link` (`GraphEdge.isFreeway`). Getting onto a trunk road such as Aurora is not an entry, and a short run on one is not a hop |
 | Freeway to freeway through a ramp (I-405 to I-90) | 30, as an entry | Road class, ramp, `ref` along the route | Weaving again. **30 is a starting guess**, like the other weights, not tuned against anyone's driving. Identity is the OSM `ref` (first entry, "SR 161;SR 512" is "SR 161"), kept in the graph for motorway and trunk segments: most freeways are unnamed (in the county 44% of motorway and trunk ways have a name and 94% a ref), so `name` can't tell them apart and also changes along one freeway (a bridge, a tunnel). A switch needs a ramp between two different refs; an edge with no ref changes nothing. Leaving and rejoining the same freeway is not a switch. **Counted when the route is finished, so it can't steer the search**; see "Whole-route factors steer only the final choice". The router prefers a candidate with fewer of them, it does not avoid interchanges |
-| Freeway exit less than 2 km after entering | +90 | Road class and distance | On at Mercer, weave across, off at James |
+| Freeway exit less than 2 km after entering | +90 | Road class and distance (motorway only) | On at Mercer, weave across, off at James |
 | Movable bridge | 30 | 10 bascule ways: Fremont, Ballard, University, Montlake | Openings are unpredictable; no schedule data |
 
 ### Exposure
@@ -571,13 +571,12 @@ fastest. When both share a level the summary shows scores ("Meh, 44 → 53"). Li
 the weights, R and the cutoffs are hypotheses: the score only knows what the map
 knows, so it is labelled an estimate.
 
-**Freeway minutes count half.** In the denominator, drive time on freeway edges (motorway and trunk, the same test
-as the freeway entry) counts half, so a trip with busy ends and a long freeway run isn't diluted into Breezy by
+**Freeway minutes count half.** In the denominator, drive time on freeway edges (OSM `motorway` and `motorway_link` only) counts half, so a trip with busy ends and a long freeway run isn't diluted into Breezy by
 minutes that carry almost no stress. The freeway time is taken from the fastest route and used for both routes, like
 the trip time. Walk and bike are unchanged. This changes only the rating people see. **The router never reads the
 score:** route choice, the calmer route's selection (`selectCalmer`) and the "clearly calmer" test all use raw stress and
 seconds (`Route.metrics`), so which routes are offered is unaffected; only the words and numbers shown change.
-Trunk roads such as Aurora count as freeway here because the whole model treats `trunk` that way.
+Trunk roads such as Aurora count in full: the owner treats a highway and a freeway as different things (`GraphEdge.isFreeway` against `isHighway`).
 
 Measured on a Mac with the 200 seeded random trips per graph (`peoplemaps-bench --sample`), drive, fastest route's level
 (Breezy / Chill / Meh / Spicy / Yikes), before this change and after it. After also includes the 30 s freeway switch.

@@ -50,6 +50,20 @@ final class CalmScoreTests: XCTestCase {
         XCTAssertEqual(CalmScore(stress: 120, tripSeconds: 400, freewaySeconds: 9000, mode: .drive), CalmScore(stress: 120, tripSeconds: 200, mode: .drive), "never more than the trip")
     }
 
+    func testOnlyMotorwayMinutesCountHalfNotTrunkRoads() {
+        func fastest(_ highway: String) -> Route {
+            var edge = Fixture.edge(from: 0, to: 1, way: 1, highway: highway, meters: 600 * 40 * 0.447_04); edge.maxspeed = "40 mph"
+            var metrics = RouteMetrics(); metrics.seconds = 1200; metrics.breakdown.add(.turn, amount: 10, cost: 500)
+            return Route(edgeIDs: [0], edgeMeters: [edge.meters], coordinates: [], metrics: metrics, streetNames: [], edges: [edge])
+        }
+        let plain = route(id: 9, seconds: 1200, [(.turn, 10, 500)]), none = CalmScore(stress: 500, tripSeconds: 1200, mode: .drive)
+        XCTAssertEqual(comparison(fastest("trunk"), plain).fastestCalm, none, "Aurora counts in full")
+        XCTAssertEqual(comparison(fastest("trunk_link"), plain).fastestCalm, none)
+        XCTAssertEqual(comparison(fastest("motorway"), plain).fastestCalm, CalmScore(stress: 500, tripSeconds: 1200, freewaySeconds: 600, mode: .drive))
+        XCTAssertEqual(comparison(fastest("motorway_link"), plain).fastestCalm, CalmScore(stress: 500, tripSeconds: 1200, freewaySeconds: 600, mode: .drive))
+        XCTAssertLessThan(comparison(fastest("motorway"), plain).fastestCalm.value, none.value)
+    }
+
     func testTheComparisonTakesFreewayTimeFromTheFastestRouteForBothRoutes() {
         var freeway = Fixture.edge(from: 0, to: 1, way: 1, highway: "motorway", meters: 600 * 60 * 0.447_04); freeway.maxspeed = "60 mph"
         var metrics = RouteMetrics(); metrics.seconds = 1200; metrics.breakdown.add(.turn, amount: 10, cost: 500)

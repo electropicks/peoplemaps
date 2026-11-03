@@ -142,6 +142,8 @@ public struct GraphEdge: Sendable {
     }
 
     public var isHighway: Bool { highway.hasPrefix("motorway") || highway.hasPrefix("trunk") }
+    /// A true freeway: OSM motorway and its ramps. Trunk roads such as Aurora are highways but not freeways.
+    public var isFreeway: Bool { highway.hasPrefix("motorway") }
     public var isArterial: Bool { ["primary", "secondary", "tertiary"].contains(highway.replacingOccurrences(of: "_link", with: "")) }
     public var isResidential: Bool { ["residential", "living_street"].contains(highway) }
     public var isRoad: Bool { isHighway || isArterial || ["residential", "unclassified", "living_street", "service"].contains(highway) }
