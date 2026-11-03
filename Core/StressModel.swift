@@ -38,8 +38,8 @@ public enum Factor: String, CaseIterable, Sendable, Comparable {
         case .stopAndGo: "Stop-and-go stops"
         case .complexJunction: "5+ way intersections"
         case .hillStop: "Stops on steep hills"
-        case .freewayEntry: "Freeway entries"
-        case .shortFreewayHop: "Short freeway hops"
+        case .freewayEntry: "Highway merges"
+        case .shortFreewayHop: "Short highway hops"
         case .movableBridge: "Drawbridges"
         case .cutThrough: "Side-street shortcuts"
         case .bikeRouteGap: "Bike route gaps"
@@ -106,8 +106,8 @@ public enum Factor: String, CaseIterable, Sendable, Comparable {
         case .stopAndGo: ("stop-and-go stop", "stop-and-go stops")
         case .complexJunction: ("intersection of five or more streets", "intersections of five or more streets")
         case .hillStop: ("stop on a steep hill", "stops on steep hills")
-        case .freewayEntry: ("freeway entry", "freeway entries")
-        case .shortFreewayHop: ("short freeway hop with quick lane changes", "short freeway hops with quick lane changes")
+        case .freewayEntry: ("highway merge", "highway merges")
+        case .shortFreewayHop: ("short highway hop with quick lane changes", "short highway hops with quick lane changes")
         case .movableBridge: ("drawbridge", "drawbridges")
         case .cutThrough: ("side-street shortcut", "side-street shortcuts")
         case .bikeRouteGap: ("place where the bike route drops you into traffic", "places where the bike route drops you into traffic")
@@ -327,7 +327,7 @@ public enum StressModel {
             if turned { add(.turn, 8) }
             if j.legs >= 5 { add(.complexJunction, 40) }
             if waits, let g = p.approachGrade, g > 8 { add(.hillStop, g > 12 ? 60 : 30) }
-            if !p.isFreeway && n.isFreeway { add(.freewayEntry, freewaySwitchSeconds) }
+            if !p.isHighway && n.isHighway { add(.freewayEntry, freewaySwitchSeconds) }
             if n.movableBridge && !p.movableBridge { add(.movableBridge, 30) }
         case .bike:
             // A signal costs more than a stop sign: waiting at a red beside traffic, versus a quick stop and go.
@@ -376,16 +376,16 @@ public enum StressModel {
         // with no ref leaves the state alone, so a gap in the tagging neither starts nor hides a switch.
         var freeway: String?, onRamp = false
         for e in edges {
-            guard e.isFreeway else { freeway = nil; onRamp = false; continue }
+            guard e.isHighway else { freeway = nil; onRamp = false; continue }
             if e.highway.hasSuffix("_link") { onRamp = true; continue }
             guard let ref = e.ref else { continue }
             if let was = freeway, onRamp, was != ref { r.add(.freewayEntry, amount: 1, cost: freewaySwitchSeconds) }
             freeway = ref; onRamp = false
         }
         for (i, e) in edges.enumerated() {
-            let wasFreeway = i > 0 && edges[i - 1].isFreeway
-            if e.isFreeway && !wasFreeway { entered = run }
-            if !e.isFreeway && wasFreeway, let start = entered, run - start < 2000 { r.add(.shortFreewayHop, amount: 1, cost: 90) }
+            let wasHighway = i > 0 && edges[i - 1].isHighway
+            if e.isHighway && !wasHighway { entered = run }
+            if !e.isHighway && wasHighway, let start = entered, run - start < 2000 { r.add(.shortFreewayHop, amount: 1, cost: 90) }
             run += e.meters
         }
         // Leaving a named arterial for side streets and rejoining it within 1.5 km.
