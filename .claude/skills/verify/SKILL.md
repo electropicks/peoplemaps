@@ -11,7 +11,7 @@ Run the checks, paste the summary, say what was not covered. Never skip, weaken 
 
 ```bash
 Scripts/verify.sh            # every change; ~5 min on a Mac, less on Linux
-Scripts/verify.sh --ui       # also the full UI suite (macOS only, ~15 min)
+Scripts/verify.sh --ui       # also the full UI suite (macOS only, ~10 min: 5 parallel simulator clones; PEOPLEMAPS_UI_WORKERS=1 for serial)
 Scripts/verify.sh --fast     # inner loop only: skips data reproduction and the app build
 ```
 

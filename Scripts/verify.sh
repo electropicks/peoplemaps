@@ -3,6 +3,7 @@
 #   Scripts/verify.sh            importer tests, data reproduction, Swift tests; plus the app build on macOS
 #   Scripts/verify.sh --ui       also the UI suite on a simulator (macOS only; creates "PeopleMaps Verify" if needed)
 #   Scripts/verify.sh --ui UDID  the UI suite on that simulator
+#                                (5 parallel workers; 1 on CI, or set PEOPLEMAPS_UI_WORKERS=N)
 #   Scripts/verify.sh --fast     skip data reproduction and the app build
 #   Scripts/verify.sh --region   also reproduce each full region in Data/regions.json from its fetched files
 #                                (Scripts/fetch_data first; regions not fetched are skipped, and it says so)
@@ -93,9 +94,13 @@ print(names[-1])')"
     for f in UITests/*UITests.swift; do
       f="$(basename "$f" .swift)"; [[ "$f" == ReportsUITests ]] || only+=("-only-testing:PeoplemapsUITests/$f")
     done
+    # Xcode clones the simulator per worker. 5 workers ran the suite in about 8 min against 26 to 42 serial. GitHub's runner has
+    # 3 cores, so CI stays serial; PEOPLEMAPS_UI_WORKERS=N overrides (1 is serial).
+    local workers="${PEOPLEMAPS_UI_WORKERS:-$([[ -n "${CI:-}" ]] && echo 1 || echo 5)}" par=(-parallel-testing-enabled NO)
+    [[ "$workers" -gt 1 ]] && par=(-parallel-testing-enabled YES -parallel-testing-worker-count "$workers")
     xcodebuild -project Peoplemaps.xcodeproj -scheme Peoplemaps -configuration Debug \
       -destination "platform=iOS Simulator,id=$ui" "${only[@]}" \
-      -parallel-testing-enabled NO -resultBundlePath "$bundle" test 2>&1 \
+      "${par[@]}" -resultBundlePath "$bundle" test 2>&1 \
       | grep --line-buffered -E "Test [Cc]ase .* (passed|failed|skipped)|error:|Executed [0-9]+ test" && return 0
     echo "result bundle: $bundle"
     xcrun xcresulttool get test-results summary --path "$bundle" 2>/dev/null | python3 -c '
