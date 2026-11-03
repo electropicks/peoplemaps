@@ -14,8 +14,8 @@
           "sha256": "0185dc6564619070e257741cd7788371178ab8eadf3083323d5f4ef2b0a915a1"
         },
         "expected/seattle-graph.bin": {
-          "bytes": 61694008,
-          "sha256": "dfc29a68052488e80d6317848084913b9d5492aa365d6873d811cbce7733e16b"
+          "bytes": 61711736,
+          "sha256": "a9b63f64c908866006cc4fc864f4332b887efedfb8235379e10701b69dcc8a95"
         },
         "expected/seattle-map.pmtiles": {
           "bytes": 3159741,
