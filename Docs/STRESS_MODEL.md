@@ -154,6 +154,7 @@ Built from the complaints in the thread. "Arterial" means OSM
 | Junction with 5 or more legs | +40 | 44 in the extract | "weird five-way intersections" |
 | Stop or signal on a grade over 8% | 30 (over 12%: 60) | **Needs elevation data** | Hill starts in a manual or a weak car |
 | Freeway entry | 30 | Road class | |
+| Freeway to freeway through a ramp (I-405 to I-90) | 30, as an entry | Road class, ramp, name along the route | Weaving again. **30 is a starting guess**, like the other weights, not tuned against anyone's driving. A name change with no ramp (onto a bridge) and leaving then rejoining the same freeway are not switches |
 | Freeway exit less than 2 km after entering | +90 | Road class and distance | On at Mercer, weave across, off at James |
 | Movable bridge | 30 | 10 bascule ways: Fremont, Ballard, University, Montlake | Openings are unpredictable; no schedule data |
 
@@ -271,7 +272,7 @@ Routing on the real sidewalk-and-crossing network makes the router weigh
 | Sidewalk beside a residential street, path or trail | 0 | |
 | Road with no sidewalk: residential | 30 | |
 | Road with no sidewalk: arterial | 400 | |
-| Sidewalk status unknown | 20 | Flagged in the explanation |
+| Sidewalk status unknown | 20 | Flagged in the explanation, once per route as a share: "sidewalk data is missing for about 80% of it". Mapped on 74-88% of Seattle's non-service street length but 4-17% of residential streets outside it, so a distance misleads. The 20 s/km stays |
 | Climbing | 2 s per metre of ascent | **Needs elevation data**; time uses Tobler's hiking function |
 | Stairs | 1 s per step (estimated from length if not tagged) | Impassable under a step-free preference |
 
@@ -518,6 +519,25 @@ is the point of the app; no calmer route landed in Yikes or scored worse than it
 fastest. When both share a level the summary shows scores ("Meh, 44 → 53"). Like
 the weights, R and the cutoffs are hypotheses: the score only knows what the map
 knows, so it is labelled an estimate.
+
+**Freeway minutes count half.** In the denominator, drive time on freeway edges (motorway and trunk, the same test
+as the freeway entry) counts half, so a trip with busy ends and a long freeway run isn't diluted into Breezy by
+minutes that carry almost no stress. The freeway time is taken from the fastest route and used for both routes, like
+the trip time. Walk and bike are unchanged. This changes only the rating people see. **The router never reads the
+score:** route choice, the calmer route's selection (`selectCalmer`) and the "clearly calmer" test all use raw stress and
+seconds (`Route.metrics`), so which routes are offered is unaffected; only the words and numbers shown change.
+Trunk roads such as Aurora count as freeway here because the whole model treats `trunk` that way.
+
+Measured on a Mac with the 200 seeded random trips per graph (`peoplemaps-bench --sample`), drive, fastest route's level
+(Breezy / Chill / Meh / Spicy / Yikes), before this change and after it. After also includes the 30 s freeway switch.
+
+| Graph | Before | After | Levels that change |
+|---|---|---|---:|
+| Seattle | 36 / 70 / 64 / 21 / 5 | 9 / 59 / 84 / 39 / 5 | 82 of 196 |
+| King County | 103 / 58 / 21 / 9 / 0 | 62 / 78 / 38 / 13 / 0 | 66 of 191 |
+
+The score moved down 8 points at the median in Seattle (7 in the county), at most 22. The earlier 150 trip drive row in the table above predates the
+speed recalibration, the 60 mph top speed and this change.
 
 The time range is −5% to +12% of the estimate, a judgement call with no live
 traffic to measure against, not a measured spread.

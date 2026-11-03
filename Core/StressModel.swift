@@ -172,6 +172,8 @@ public enum StressModel {
     static let driveTopMph = 60.0
     /// Ramps (`*_link`) inherit the freeway's tagged limit but are driven slower.
     static let driveRampMph = 40.0
+    /// Stress seconds for getting onto a freeway, or from one freeway to another. A starting guess, like the other weights.
+    static let freewaySwitchSeconds = 30.0
 
     static func seconds(_ e: GraphEdge, mode: TravelMode) -> Double {
         switch mode {
@@ -325,7 +327,7 @@ public enum StressModel {
             if turned { add(.turn, 8) }
             if j.legs >= 5 { add(.complexJunction, 40) }
             if waits, let g = p.approachGrade, g > 8 { add(.hillStop, g > 12 ? 60 : 30) }
-            if !p.isHighway && n.isHighway { add(.freewayEntry, 30) }
+            if !p.isHighway && n.isHighway { add(.freewayEntry, freewaySwitchSeconds) }
             if n.movableBridge && !p.movableBridge { add(.movableBridge, 30) }
         case .bike:
             // A signal costs more than a stop sign: waiting at a red beside traffic, versus a quick stop and go.
@@ -369,6 +371,16 @@ public enum StressModel {
         }
         guard mode == .drive else { return }
         var run = 0.0, entered: Double?
+        // Changing freeways at an interchange (I-90 to I-405) is weaving and merging again, charged like an entry: the
+        // named freeway changes with a ramp between. A name change on one freeway, say onto a bridge, has no ramp.
+        var freeway: String?, onRamp = false
+        for e in edges {
+            guard e.isHighway else { freeway = nil; onRamp = false; continue }
+            if e.highway.hasSuffix("_link") { onRamp = true; continue }
+            guard !e.name.isEmpty else { continue }
+            if let was = freeway, onRamp, was != e.name { r.add(.freewayEntry, amount: 1, cost: freewaySwitchSeconds) }
+            freeway = e.name; onRamp = false
+        }
         for (i, e) in edges.enumerated() {
             let wasHighway = i > 0 && edges[i - 1].isHighway
             if e.isHighway && !wasHighway { entered = run }

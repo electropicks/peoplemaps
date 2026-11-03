@@ -43,6 +43,31 @@ final class CalmScoreTests: XCTestCase {
         XCTAssertEqual(CalmScore(stress: 120, tripSeconds: 600, mode: .walk).value, 50)
     }
 
+    func testFreewayMinutesCountHalfInTheDenominator() {
+        XCTAssertEqual(CalmScore(stress: 500, tripSeconds: 1200, freewaySeconds: 600, mode: .drive), CalmScore(stress: 500, tripSeconds: 900, mode: .drive))
+        XCTAssertEqual(CalmScore(stress: 500, tripSeconds: 1200, freewaySeconds: 0, mode: .drive), CalmScore(stress: 500, tripSeconds: 1200, mode: .drive))
+        XCTAssertLessThan(CalmScore(stress: 500, tripSeconds: 1200, freewaySeconds: 600, mode: .drive).value, CalmScore(stress: 500, tripSeconds: 1200, mode: .drive).value)
+        XCTAssertEqual(CalmScore(stress: 120, tripSeconds: 400, freewaySeconds: 9000, mode: .drive), CalmScore(stress: 120, tripSeconds: 200, mode: .drive), "never more than the trip")
+    }
+
+    func testTheComparisonTakesFreewayTimeFromTheFastestRouteForBothRoutes() {
+        var freeway = Fixture.edge(from: 0, to: 1, way: 1, highway: "motorway", meters: 600 * 60 * 0.447_04); freeway.maxspeed = "60 mph"
+        var metrics = RouteMetrics(); metrics.seconds = 1200; metrics.breakdown.add(.turn, amount: 10, cost: 500)
+        let fastest = Route(edgeIDs: [0], edgeMeters: [freeway.meters], coordinates: [], metrics: metrics, streetNames: [], edges: [freeway])
+        let calmer = route(id: 1, seconds: 1300, [(.turn, 10, 300)])
+        let c = comparison(fastest, calmer)
+        XCTAssertEqual(c.fastestCalm, CalmScore(stress: 500, tripSeconds: 1200, freewaySeconds: 600, mode: .drive))
+        XCTAssertEqual(c.calmerCalm, CalmScore(stress: 300, tripSeconds: 1200, freewaySeconds: 600, mode: .drive))
+        let walk = comparison(fastest, calmer, mode: .walk)
+        XCTAssertEqual(walk.fastestCalm, CalmScore(stress: 500, tripSeconds: 1200, mode: .walk), "freeway time is a drive idea")
+    }
+
+    func testSidewalkCaveatIsOneShareOfTheRoute() {
+        let c = comparison(route(id: 0, seconds: 600, meters: 1000, [(.unknownSidewalk, 810, 16)]), nil, mode: .walk)
+        XCTAssertEqual(c.caveats, ["Fastest route: sidewalk data is missing for about 80% of it."])
+        XCTAssertTrue(comparison(route(id: 0, seconds: 600, meters: 1000, [(.unknownSidewalk, 90, 2)]), nil, mode: .walk).caveats.isEmpty)
+    }
+
     func testASlowerRouteDoesNotScoreBetterForTakingLonger() {
         let fast = route(id: 0, seconds: 600, [(.turn, 10, 500)])
         let sameStress = route(id: 1, seconds: 1200, [(.turn, 10, 500)])

@@ -117,10 +117,17 @@ public struct RouteComparison: Sendable {
         [fastest, calmer].compactMap { $0 }.flatMap { route in
             [Factor.unknownSurface, .unknownSidewalk].compactMap { factor -> String? in
                 let meters = route.metrics.breakdown[factor].amount
-                return meters > route.metrics.meters * 0.1 ? factor.describe(meters) : nil
+                guard meters > route.metrics.meters * 0.1 else { return nil }
+                // Sidewalk is reported once, as a share of the route: a distance reads as a lot on a long drive or walk.
+                return factor == .unknownSidewalk ? "sidewalk data is missing for about \(Self.roundedShare(meters / route.metrics.meters)) of it" : factor.describe(meters)
             }.map { "\(route.edgeIDs == fastest.edgeIDs ? "Fastest" : "Calmer") route: \($0)." }
         }
     }
+}
+
+extension RouteComparison {
+    /// "40%": to the nearest 5%.
+    static func roundedShare(_ share: Double) -> String { "\(min(100, Int((share * 20).rounded()) * 5))%" }
 }
 
 extension Factor {
