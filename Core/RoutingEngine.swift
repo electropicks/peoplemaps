@@ -92,7 +92,7 @@ public struct RouteComparison: Sendable {
         self.request = request; self.fastest = fastest; self.calmer = calmer; self.candidateCount = candidateCount
         self.originSnapMeters = originSnapMeters; self.destinationSnapMeters = destinationSnapMeters
         self.snappedOrigin = snappedOrigin; self.snappedDestination = snappedDestination; self.noCalmer = noCalmer
-        fastestFreewaySeconds = request.mode == .drive ? fastest.edges.filter(\.isHighway).reduce(0) { $0 + StressModel.seconds($1, mode: .drive) } : 0
+        fastestFreewaySeconds = request.mode == .drive ? fastest.edges.filter(\.isFreeway).reduce(0) { $0 + StressModel.seconds($1, mode: .drive) } : 0
     }
 
     public var extraSeconds: Double { max(0, (calmer?.metrics.seconds ?? fastest.metrics.seconds) - fastest.metrics.seconds) }
