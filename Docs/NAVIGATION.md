@@ -77,7 +77,7 @@ sense of direction.
 
 ## Stages
 
-Each stage builds, passes `./Scripts/test.sh`, and is reviewed before the next.
+Each stage builds, passes `Scripts/verify.sh`, and is reviewed before the next.
 
 1. **Core plan.** `NavigationPlan` from a `Route`: depart; a step at each
    decision (name change with a turn above 35°, ramps, forks, U-turns); arrive.

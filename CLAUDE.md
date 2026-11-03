@@ -6,7 +6,7 @@ An offline iOS maps app for Seattle that picks the calmer route a local would ch
 
 - `Core/`: Swift package `PeoplemapsCore`. Graph, router (`RoutingEngine.swift`), stress model, navigation plan, search index, saved places, spoken text. Builds on macOS, iOS and Linux.
 - `App/`: SwiftUI app. MapLibre map (`SeattleMap.swift`), `ExploreView.swift` (home, search, place card, preview), `Navigation/` (Ferrostar guidance, voice). macOS and Xcode only.
-- `Bench/`: `peoplemaps-bench`, the router benchmark (timings, peak RSS, `--scale N` graph copies, `--json`). Budgets and method: `Docs/PERFORMANCE.md`. Replaces `Scripts/coverage_bench`.
+- `Bench/`: `peoplemaps-bench`, the router benchmark (timings, peak RSS, `--scale N` graph copies, `--json`). Budgets and method: `Docs/PERFORMANCE.md`.
 - `Scripts/`: Python data importer and search builder, project generator, `verify.sh`.
 - `Data/`: OSM snapshots, elevation, provenance, licences.
 - `Core/Resources/`: generated data. Never hand-edit it.

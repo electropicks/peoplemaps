@@ -11,10 +11,9 @@ turn by turn with a note on each junction ("Signalled left", "Stop sign"). No
 route is ever labelled safe.
 
 <p>
-  <img src="Evidence/home-light.png" width="200" alt="Home">
-  <img src="Evidence/redesign-portrait-light.png" width="200" alt="Route preview">
-  <img src="Evidence/nav-guidance-light.png" width="200" alt="Guidance">
-  <img src="Evidence/nav-arrived.png" width="200" alt="Arrival">
+  <img src="Evidence/liquid-glass-home-after-light.png" width="200" alt="Home">
+  <img src="Evidence/liquid-glass-preview-after-light.png" width="200" alt="Route preview">
+  <img src="Evidence/liquid-glass-guidance-after-light.png" width="200" alt="Guidance">
 </p>
 
 SwiftUI, MapLibre Native, bundled OpenStreetMap and USGS elevation data, our own
