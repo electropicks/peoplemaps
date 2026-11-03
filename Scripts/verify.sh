@@ -3,6 +3,7 @@
 #   Scripts/verify.sh            importer tests, data reproduction, Swift tests; plus the app build on macOS
 #   Scripts/verify.sh --ui       also the UI suite on a simulator (macOS only; creates "PeopleMaps Verify" if needed)
 #   Scripts/verify.sh --ui UDID  the UI suite on that simulator
+#                                (3 parallel workers; 1 on CI, or set PEOPLEMAPS_UI_WORKERS=N)
 #   Scripts/verify.sh --fast     skip data reproduction and the app build
 #   Scripts/verify.sh --region   also reproduce each full region in Data/regions.json from its fetched files
 #                                (Scripts/fetch_data first; regions not fetched are skipped, and it says so)
@@ -88,10 +89,26 @@ print(names[-1])')"
   # from the result bundle and keeps the bundle for Xcode.
   ui_tests() {
     local bundle; bundle="${PEOPLEMAPS_UI_RESULT:-$(mktemp -d)/ui-tests.xcresult}"
+    # Every app test class (UITests/*UITests.swift): Xcode parallelises by class. ReportsUITests and the tours are not part of this run.
+    local only=() f
+    for f in UITests/*UITests.swift; do
+      f="$(basename "$f" .swift)"; [[ "$f" == ReportsUITests ]] || only+=("-only-testing:PeoplemapsUITests/$f")
+    done
+    # Xcode clones the simulator per worker. 3 workers ran the suite in about 10 min against 26 to 42 serial, 5 about 8 but one 5-worker run
+    # hung on a busy Mac. GitHub's runner has 3 cores, so CI stays serial; PEOPLEMAPS_UI_WORKERS=N overrides (1 is serial).
+    local workers="${PEOPLEMAPS_UI_WORKERS:-$([[ -n "${CI:-}" ]] && echo 1 || echo 3)}" par=(-parallel-testing-enabled NO) ran=0
+    [[ "$workers" -gt 1 ]] && par=(-parallel-testing-enabled YES -parallel-testing-worker-count "$workers")
     xcodebuild -project Peoplemaps.xcodeproj -scheme Peoplemaps -configuration Debug \
-      -destination "platform=iOS Simulator,id=$ui" -only-testing:PeoplemapsUITests/PeoplemapsUITests \
-      -parallel-testing-enabled NO -resultBundlePath "$bundle" test 2>&1 \
-      | grep --line-buffered -E "Test [Cc]ase .* (passed|failed|skipped)|error:|Executed [0-9]+ test" && return 0
+      -destination "platform=iOS Simulator,id=$ui" "${only[@]}" \
+      "${par[@]}" -resultBundlePath "$bundle" test 2>&1 \
+      | grep --line-buffered -E "Test [Cc]ase .* (passed|failed|skipped)|error:|Executed [0-9]+ test" && ran=1
+    # Parallel runs print no "Executed N tests" line, so the totals come from the bundle. No tests run counts as a failure.
+    xcrun xcresulttool get test-results summary --path "$bundle" 2>/dev/null | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+print("Executed %d tests: %d passed, %d failed, %d skipped" % (d["totalTestCount"], d["passedTests"], d["failedTests"], d["skippedTests"]))
+sys.exit(0 if d["totalTestCount"] else 1)' || ran=0
+    [[ "$ran" == 1 ]] && return 0
     echo "result bundle: $bundle"
     xcrun xcresulttool get test-results summary --path "$bundle" 2>/dev/null | python3 -c '
 import json, sys
