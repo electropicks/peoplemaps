@@ -155,30 +155,29 @@ final class PeoplemapsUITests: XCTestCase {
         capture("40-far-move-lands", app: app)
     }
 
-    /// Outside guidance the marker is a plain dot: with no heading source there is no direction to show, and none is invented.
-    @MainActor func testMarkerIsAPlainDotOutsideGuidance() {
+    /// Outside guidance the marker is the plain ring: with no heading source there is no direction to show, and none is invented.
+    @MainActor func testMarkerIsAPlainRingOutsideGuidance() {
         let app = launchHome(location: Self.atKerryPark)
-        let dot = NSPredicate { _, _ in self.probe(app, "debug-marker") == "dot" }
+        let dot = NSPredicate { _, _ in self.probe(app, "debug-marker") == "ring" }
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: dot, object: nil)], timeout: 10), .completed, probe(app, "debug-marker"))
     }
 
-    /// With a heading (the compass; here injected with `--fake-heading`) the dot gains a beam and a rim tip, and loses them again
-    /// when guidance starts. Captured in light and dark.
+    /// With a heading (the compass; here injected with `--fake-heading`) the ring grows into its pointed form. Captured in light and dark.
     @MainActor func testMarkerShowsHeadingFromTheCompass() {
         let app = launchHome(location: Self.atKerryPark, extra: ["--fake-heading", "70"])
-        let beam = NSPredicate { _, _ in self.probe(app, "debug-marker") == "dot 70" }
+        let beam = NSPredicate { _, _ in self.probe(app, "debug-marker") == "point 70" }
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: beam, object: nil)], timeout: 10), .completed, probe(app, "debug-marker"))
         capture("42-heading-beam-light", app: app)
         XCUIDevice.shared.appearance = .dark
         Thread.sleep(forTimeInterval: 1)
-        XCTAssertEqual(probe(app, "debug-marker"), "dot 70")
+        XCTAssertEqual(probe(app, "debug-marker"), "point 70")
         capture("43-heading-beam-dark", app: app)
         XCUIDevice.shared.appearance = .light
     }
 
-    /// While guiding, the marker is a dot until a course is known, then an arrow; the line splits at progress, the part behind
+    /// While guiding, the marker is the ring until a course is known, then the pointed ring; the line splits at progress, the part behind
     /// in the passed colour, and is never emptied or rebuilt on the way.
-    @MainActor func testGuidanceShowsArrowAndSplitsTheRouteAtProgress() {
+    @MainActor func testGuidanceShowsPointedRingAndSplitsTheRouteAtProgress() {
         let app = launchAskingForLocation(answer: "Allow While Using App", at: Self.seattleCenterLawn)
         showGasWorksRoutes(app)
         startGuidanceReal(app)
@@ -191,7 +190,7 @@ final class PeoplemapsUITests: XCTestCase {
         let split = NSPredicate { _, _ in passedMetres() > 100 }
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: split, object: nil)], timeout: 15), .completed,
                        "The line did not split as the device moved: \(probe(app, "debug-passed"))")
-        XCTAssertTrue(probe(app, "debug-marker").hasPrefix("arrow "), "Marker: \(probe(app, "debug-marker"))")
+        XCTAssertTrue(probe(app, "debug-marker").hasPrefix("point "), "Marker: \(probe(app, "debug-marker"))")
         XCTAssertEqual(probe(app, "debug-route-clears"), "0", "The followed route's line was emptied while it was split")
         capture("41-arrow-and-passed-line", app: app)
     }

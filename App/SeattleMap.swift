@@ -290,10 +290,10 @@ struct SeattleMap: UIViewRepresentable {
                 if let userDot { map.addAnnotation(userDot) }
             } else if let userDot, latest.userHeading != userDotHeading {
                 userDotHeading = latest.userHeading
-                (map.view(for: userDot) as? PuckView)?.show(heading: latest.userHeading, arrow: false, duration: Motion.camera(reduce, 0.25))
+                (map.view(for: userDot) as? PuckView)?.show(heading: latest.userHeading, duration: Motion.camera(reduce, 0.25), fade: Motion.camera(reduce, 0.2))
             }
             #if DEBUG
-            MapDebug.shared.marker = latest.user == nil ? "none" : latest.userHeading.map { "dot \(Int($0.rounded()))" } ?? "dot"
+            MapDebug.shared.marker = latest.user == nil ? "none" : latest.userHeading.map { "point \(Int($0.rounded()))" } ?? "ring"
             #endif
             // Home refits once when the user's location first becomes known, never on later fixes.
             let focus = c != nil ? "route" : latest.selected?.id ?? (latest.user != nil ? "home-user" : "home")
@@ -667,9 +667,9 @@ struct SeattleMap: UIViewRepresentable {
                 let new = MapPuck(); new.coordinate = point; puck = new; map.addAnnotation(new)
             }
             puckHeading = heading
-            (puck.flatMap { map.view(for: $0) } as? PuckView)?.show(heading: heading, arrow: true, duration: duration)
+            (puck.flatMap { map.view(for: $0) } as? PuckView)?.show(heading: heading, duration: duration, fade: Motion.camera(reduce, 0.2))
             #if DEBUG
-            MapDebug.shared.marker = heading.map { "arrow \(Int($0.rounded()))" } ?? "dot"
+            MapDebug.shared.marker = heading.map { "point \(Int($0.rounded()))" } ?? "ring"
             #endif
         }
 
@@ -791,8 +791,8 @@ struct SeattleMap: UIViewRepresentable {
                 view.layer.cornerRadius = 9
             case let dot as MapPuck:
                 let puckView = PuckView(traits: traits)
-                if dot === puck { puckView.show(heading: puckHeading, arrow: true, duration: 0) }
-                else if let heading = userDotHeading { puckView.show(heading: heading, arrow: false, duration: 0) }
+                if dot === puck { puckView.show(heading: puckHeading, duration: 0, fade: 0) }
+                else if let heading = userDotHeading { puckView.show(heading: heading, duration: 0, fade: 0) }
                 view = puckView
             case is MapDestination:
                 view = MLNAnnotationView(reuseIdentifier: nil)
@@ -852,88 +852,90 @@ private final class MapPin: MLNPointAnnotation {
 private final class MapOrigin: MLNPointAnnotation {}
 private final class MapPuck: MLNPointAnnotation {}
 
-/// The user's marker, always `userLocation` blue with a white ring and a faint dark halo, so it reads on light and dark land and on the
-/// green or grey route line (the colour alone is not what separates them). The view turns with the map, so a layer's own rotation
-/// is the course from north and heading-up leaves it pointing at the top of the screen.
+/// The user's marker: the route ring, in `userLocation` blue with a white outer ring and centre, and a faint dark halo so it reads on
+/// light and dark land and on the route line. The view turns with the map, so a layer's own rotation is the course from north and
+/// heading-up leaves the point at the top of the screen.
 ///
-/// - Plain dot: heading unknown. No direction is drawn.
-/// - Dot with a beam and a rim tip: heading known outside guidance.
-/// - Arrow: guidance, once a course is known. It replaces the dot, and keeps the last course while stopped.
+/// - Ring: heading unknown. A 28 pt disc whose white centre makes it a thick ring. No direction is drawn.
+/// - Pointed ring: a course is known, outside guidance or in it. The outline grows into one rounded point 24 pt from the centre,
+///   like a teardrop. It keeps the last course while stopped.
+///
+/// The two shapes crossfade; the turn itself is the caller's `duration`.
 private final class PuckView: MLNAnnotationView {
-    private let turning = CALayer()
-    private let beam = CAGradientLayer()
-    private let tip = CAShapeLayer()
-    private let dot = CALayer()
-    private let arrow = CALayer()
+    private static let radius: CGFloat = 14, tip: CGFloat = 24, outline: CGFloat = 2.5, centre: CGFloat = 6
+    private let round = CALayer()
+    private let pointed = CALayer()
     private var shown: Double?
     init(traits: UITraitCollection) {
         super.init(reuseIdentifier: nil)
         frame = CGRect(x: 0, y: 0, width: 72, height: 72)
         rotatesToMatchCamera = true
         let blue = UIColor.userLocation.resolvedColor(with: traits)
-        let centre = CGPoint(x: 36, y: 36)
-        turning.frame = bounds
-        let cone = UIBezierPath()
-        cone.move(to: centre)
-        cone.addArc(withCenter: centre, radius: 36, startAngle: -.pi / 2 - .pi / 6, endAngle: -.pi / 2 + .pi / 6, clockwise: true)
-        cone.close()
-        let mask = CAShapeLayer(); mask.path = cone.cgPath
-        beam.frame = bounds; beam.mask = mask; beam.type = .radial
-        beam.startPoint = CGPoint(x: 0.5, y: 0.5); beam.endPoint = CGPoint(x: 1, y: 1)
-        beam.colors = [blue.withAlphaComponent(0.6).cgColor, blue.withAlphaComponent(0).cgColor]
-        turning.addSublayer(beam)
-        // A small triangle on the dot's rim, pointing out: the heading cue that survives when the beam is faint.
-        let nub = UIBezierPath()
-        nub.move(to: CGPoint(x: 36, y: 11)); nub.addLine(to: CGPoint(x: 43, y: 25)); nub.addLine(to: CGPoint(x: 29, y: 25)); nub.close()
-        tip.path = nub.cgPath; tip.fillColor = blue.cgColor
-        tip.strokeColor = UIColor.white.cgColor; tip.lineWidth = 2.5; tip.lineJoin = .round
-        turning.addSublayer(tip)
-        layer.addSublayer(turning)
-        dot.frame = CGRect(x: 25, y: 25, width: 22, height: 22)
-        dot.backgroundColor = blue.cgColor
-        dot.borderColor = UIColor.white.cgColor; dot.borderWidth = 3.5; dot.cornerRadius = 11
-        dot.shadowColor = UIColor.black.cgColor; dot.shadowOpacity = 0.35; dot.shadowRadius = 3; dot.shadowOffset = CGSize(width: 0, height: 1)
-        layer.addSublayer(dot)
-        // The navigation arrow: a chevron with a notch, 34 pt tall, centred on the position.
-        arrow.frame = bounds
-        let shape = UIBezierPath()
-        shape.move(to: CGPoint(x: 36, y: 17)); shape.addLine(to: CGPoint(x: 50, y: 53)); shape.addLine(to: CGPoint(x: 36, y: 45))
-        shape.addLine(to: CGPoint(x: 22, y: 53)); shape.close()
-        let halo = CAShapeLayer()
-        halo.path = shape.cgPath; halo.fillColor = UIColor.black.withAlphaComponent(0.35).cgColor
-        halo.strokeColor = UIColor.black.withAlphaComponent(0.35).cgColor; halo.lineWidth = 7; halo.lineJoin = .round
-        let body = CAShapeLayer()
-        body.path = shape.cgPath; body.fillColor = blue.cgColor
-        body.strokeColor = UIColor.white.cgColor; body.lineWidth = 3.5; body.lineJoin = .round
-        arrow.addSublayer(halo); arrow.addSublayer(body)
-        arrow.shadowColor = UIColor.black.cgColor; arrow.shadowOpacity = 0.3; arrow.shadowRadius = 3; arrow.shadowOffset = CGSize(width: 0, height: 1)
-        arrow.opacity = 0
-        layer.addSublayer(arrow)
-        turning.opacity = 0
+        let middle = CGPoint(x: 36, y: 36)
+        let o = Self.outline
+        // Each shape is a dark halo, a white outer ring (a stroke twice as wide, hidden under the fill) and the blue body.
+        func build(_ path: CGPath, into host: CALayer) {
+            host.frame = bounds
+            let halo = CAShapeLayer()
+            halo.path = path; halo.fillColor = UIColor.black.withAlphaComponent(0.3).cgColor
+            halo.strokeColor = UIColor.black.withAlphaComponent(0.3).cgColor; halo.lineWidth = o * 2 + 3; halo.lineJoin = .round
+            let white = CAShapeLayer()
+            white.path = path; white.fillColor = UIColor.white.cgColor
+            white.strokeColor = UIColor.white.cgColor; white.lineWidth = o * 2; white.lineJoin = .round
+            let body = CAShapeLayer()
+            body.path = path; body.fillColor = blue.cgColor
+            host.addSublayer(halo); host.addSublayer(white); host.addSublayer(body)
+        }
+        build(UIBezierPath(arcCenter: middle, radius: Self.radius, startAngle: 0, endAngle: 2 * .pi, clockwise: true).cgPath, into: round)
+        build(Self.teardrop(centre: middle), into: pointed)
+        layer.addSublayer(round)
+        layer.addSublayer(pointed)
+        pointed.opacity = 0
+        let hole = CALayer()
+        hole.frame = CGRect(x: 36 - Self.centre, y: 36 - Self.centre, width: Self.centre * 2, height: Self.centre * 2)
+        hole.backgroundColor = UIColor.white.cgColor; hole.cornerRadius = Self.centre
+        layer.addSublayer(hole)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
-    /// Shows the right marker for `heading` (degrees from north), turning it over `duration`. Without a heading it is a plain dot.
-    func show(heading: Double?, arrow useArrow: Bool, duration: TimeInterval) {
+    /// The ring's circle with tangent lines out to a point `tip` from the centre, pointing up, and a small round at the point.
+    private static func teardrop(centre c: CGPoint) -> CGPath {
+        let r = radius
+        let alpha = acos(r / tip)                       // tangent points sit this far round from the tip, seen from the centre
+        let tangentAxis = r * cos(alpha), tangentSide = r * sin(alpha)
+        let f: CGFloat = 0.2                            // how far down each tangent line the round starts
+        // The quad's apex is (P0 + 2C + P2) / 4; solve for the control distance that puts it at `tip`.
+        let control = (tip - f * tangentAxis / 2) / (1 - f / 2)
+        let right = CGPoint(x: c.x + tangentSide, y: c.y - tangentAxis)
+        let left = CGPoint(x: c.x - tangentSide, y: c.y - tangentAxis)
+        let apex = CGPoint(x: c.x, y: c.y - control)
+        func along(_ t: CGPoint) -> CGPoint { CGPoint(x: apex.x + f * (t.x - apex.x), y: apex.y + f * (t.y - apex.y)) }
+        let path = UIBezierPath()
+        path.move(to: right)
+        path.addArc(withCenter: c, radius: r, startAngle: -.pi / 2 + alpha, endAngle: 3 * .pi / 2 - alpha, clockwise: true)
+        path.addLine(to: along(left))
+        path.addQuadCurve(to: along(right), controlPoint: apex)
+        path.close()
+        return path.cgPath
+    }
+
+    /// Shows the right marker for `heading` (degrees from north), turning over `duration` and crossfading over `fade`.
+    /// Without a heading it is the plain ring.
+    func show(heading: Double?, duration: TimeInterval, fade: TimeInterval) {
         defer { shown = heading }
-        let known = heading != nil
         guard let heading else {
-            animate(duration) { turning.opacity = 0; arrow.opacity = 0; dot.opacity = 1 }
+            animate(fade) { pointed.opacity = 0; round.opacity = 1 }
             return
         }
         let rotation = CATransform3DMakeRotation(heading * .pi / 180, 0, 0, 1)
         if shown == nil {
             // Appearing after not knowing: turn first, unseen, then fade in.
             CATransaction.begin(); CATransaction.setDisableActions(true)
-            turning.transform = rotation; arrow.transform = rotation
+            pointed.transform = rotation
             CATransaction.commit()
         }
-        animate(duration) {
-            turning.transform = rotation; arrow.transform = rotation
-            turning.opacity = known && !useArrow ? 1 : 0
-            arrow.opacity = known && useArrow ? 1 : 0
-            dot.opacity = useArrow ? 0 : 1
-        }
+        animate(duration) { pointed.transform = rotation }
+        animate(fade) { pointed.opacity = 1; round.opacity = 0 }
     }
     private func animate(_ duration: TimeInterval, _ changes: () -> Void) {
         CATransaction.begin()
