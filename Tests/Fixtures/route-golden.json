@@ -1792,11 +1792,11 @@
   {
     "candidates" : 1,
     "fastest" : {
-      "count" : 222,
-      "edges" : "bf2342280a108b0a",
-      "meters" : 7606.51,
-      "seconds" : 790.939111,
-      "stress" : 665.4229
+      "count" : 130,
+      "edges" : "64889e98f27fd8ea",
+      "meters" : 7310.27,
+      "seconds" : 757.150882,
+      "stress" : 876.3056
     },
     "key" : "way\/234054122>node\/1995793592 drive 0 default",
     "reasons" : [
@@ -1805,26 +1805,26 @@
   },
   {
     "calmer" : {
-      "count" : 227,
-      "edges" : "abfddbea09cea385",
-      "meters" : 7695.1,
-      "seconds" : 811.675599,
-      "stress" : 441.5555
+      "count" : 228,
+      "edges" : "3fe829d2fed0c363",
+      "meters" : 8316.96,
+      "seconds" : 975.226915,
+      "stress" : 519.1993
     },
     "candidates" : 3,
     "fastest" : {
-      "count" : 222,
-      "edges" : "bf2342280a108b0a",
-      "meters" : 7606.51,
-      "seconds" : 790.939111,
-      "stress" : 665.4229
+      "count" : 130,
+      "edges" : "64889e98f27fd8ea",
+      "meters" : 7310.27,
+      "seconds" : 757.150882,
+      "stress" : 876.3056
     },
     "key" : "way\/234054122>node\/1995793592 drive 5 default",
     "reasons" : [
       "2 fewer left turns across traffic without a signal",
-      "1 fewer turn",
-      "Tradeoff: 1 more stop sign",
-      "Tradeoff: 1000 ft more on residential streets"
+      "1 fewer stop on a steep hill",
+      "1 fewer intersection of five or more streets",
+      "Tradeoff: 5 more traffic signals"
     ]
   },
   {

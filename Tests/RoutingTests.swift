@@ -266,7 +266,13 @@ final class StressModelTests: XCTestCase {
         var unposted = Fixture.northbound; unposted.meters = 1000
         XCTAssertEqual(StressModel.seconds(unposted, mode: .drive), 1000 / (20 * 0.447_04), accuracy: 0.01, "residential default is 20 mph")
         var freeway = Fixture.edge(from: 0, to: 1, way: 5, highway: "motorway", meters: 1000); freeway.maxspeed = "60 mph"
-        XCTAssertEqual(StressModel.seconds(freeway, mode: .drive), 1000 / (70 / 3.6), accuracy: 0.01, "never faster than the router's A* bound")
+        XCTAssertEqual(StressModel.seconds(freeway, mode: .drive), 1000 / (60 * 0.447_04), accuracy: 0.01, "a posted 60 is driven at 60")
+        freeway.maxspeed = "70 mph"
+        XCTAssertEqual(StressModel.seconds(freeway, mode: .drive), 1000 / (StressModel.driveTopMph * 0.447_04), accuracy: 0.01, "never faster than the router's A* bound")
+        var ramp = Fixture.edge(from: 0, to: 1, way: 6, highway: "motorway_link", meters: 1000); ramp.maxspeed = "60 mph"
+        XCTAssertEqual(StressModel.seconds(ramp, mode: .drive), 1000 / (40 * 0.447_04), accuracy: 0.01, "a ramp that inherits the freeway's limit is capped at 40")
+        ramp.maxspeed = "25 mph"
+        XCTAssertEqual(StressModel.seconds(ramp, mode: .drive), 1000 / (25 * 0.447_04), accuracy: 0.01, "a slower tagged ramp keeps its limit")
         var signal = Fixture.northbound; signal.control = .signal
         let plain = Junction(legs: 4), straight = StressModel.transitionSeconds(previous: signal, next: Fixture.continueNorth, turned: false, junction: plain, mode: .drive)
         XCTAssertEqual(straight, 15)

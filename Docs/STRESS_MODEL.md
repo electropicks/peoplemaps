@@ -57,8 +57,8 @@ what slow a Seattle driver down, and they are counted where they happen.
 | Road | Free-flow speed (mph) | Note |
 | --- | --- | --- |
 | Any road with a posted limit | the posted limit | 99.5% of non-service drive edges (89% of all drive edges) have `maxspeed`; Seattle posts 25 on arterials and 20 on residential streets |
-| motorway | 60 | capped at 43 (70 km/h), see below |
-| motorway_link | 35 | |
+| motorway | 60 | the cap, see below |
+| motorway_link | 35 | any ramp (`*_link`) is capped at 40, even where tagged with the freeway's limit |
 | trunk | 40 | Aurora |
 | trunk_link | 30 | |
 | primary, secondary, tertiary and their links | 25 | the citywide arterial limit |
@@ -92,13 +92,31 @@ fewer stops, which is also what a local does. Kerry Park to Gas Works now
 runs over the Fremont Bridge instead of Aurora, and no other route the search
 finds gains enough to offer.
 
-**The 70 km/h cap.** `NativeRouter`'s A* heuristic divides straight-line
-distance by 70 km/h, and A* is only exact when no edge is faster than that. So
-drive speeds are capped at 43 mph (`driveTopMph`) until the router reads its
-top speed from the time model, which would let motorways use their posted 60.
-Inside the bundled bounds the motorways are I-5 (posted 60) and SR 99 south
-of the Aurora Bridge (posted 40), and 43 is not far from a midday estimate on
-either.
+**The top speed.** No drive edge is timed faster than `StressModel.driveTopMph`, 60, and `NativeRouter`'s A* heuristic reads
+its bound from the same constant, so the search stays exact if it changes. It was 43 mph (70 km/h) while the heuristic
+was hard-coded. 60 is the posted limit on I-5 and most of the county's freeways; rural 55 mph highways are no longer
+capped. 70 mph was tried on the county sample and changed no more routes. Ramps are capped at 40 (`driveRampMph`): tagged
+links inherit the freeway's limit (65% of tagged Eastside links say 60), which is wrong for a ramp. Free flow only:
+I-405 at rush hour is slower than this says.
+
+Measured on a Mac (shared, load about 7), 200 seeded random trips each from the all-Seattle and King County graphs
+(`peoplemaps-bench --sample`). Walk and bike are untouched (0 routes change).
+
+| Drive, fastest route | Before (43.5) | After (60) |
+|---|---:|---:|
+| Seattle sample, routes whose fastest route changes | | 34 of 196 |
+| Seattle sample, time change | | p50 -2.9%, p5 -16.1% |
+| County sample, routes whose fastest route changes | | 72 of 191 |
+| County sample, time change | | p50 -11.9%, p5 -20.4% |
+| Issaquah to Renton | 28.5 min, stress 668, 26.6 km | 23.6 min, stress 168, 29.7 km |
+| Kirkland to Renton | 27.8 min, stress 874 | 23.1 min, stress 374 |
+| Federal Way to Bothell | 53.7 min | 42.7 min |
+| Ballard to North Bend | 59.0 min | 48.4 min |
+| Ballard to Bellevue | 28.2 min | 26.6 min |
+
+Issaquah to Renton: the freeway route that was the "calmer" alternative is now the fastest, so no calmer route is offered
+there. The golden fixture changed for two drive entries only (the long trip, both budgets: 790.9 s to 757.2 s); every walk
+and bike entry and the other 35 drive entries are unchanged.
 
 **Not in the estimate.** Traffic queues, signal coordination, waiting for a
 gap on an unsignalled left (charged as stress, not time), bridge openings and
