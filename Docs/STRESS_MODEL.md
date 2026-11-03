@@ -3,7 +3,7 @@
 Implemented 27 October 2026 in `Core/StressModel.swift`, with data from
 `Scripts/import_osm.py`. Differences from the first draft: walking has no
 per-turn cost (sidewalk geometry makes turn counts noise), and the whole-route
-factors (stop-and-go clusters, short freeway hops, side-street shortcuts) are
+factors (stop-and-go clusters, short highway hops, side-street shortcuts) are
 scored on each candidate but are not visible to the search itself. Drive times
 were recalibrated on 31 October 2026 against a real trip (see Time).
 
@@ -152,7 +152,7 @@ and bike entry and the other 35 drive entries are unchanged.
 **A worse calmer route on one golden trip.** In the long fixture trip at the 5 minute budget the calmer route went from
 811.7 s, stress 441.6 to 975.2 s, stress 519.2. The old route is still there and, re-timed under the new speeds, is
 unchanged (it is all surface streets: 811.7 s, stress 441.6), so it beats the new one on both. The search
-doesn't return it because it can't see the whole-route factors (`pathFactors`: stop-and-go clusters, short freeway hops,
+doesn't return it because it can't see the whole-route factors (`pathFactors`: stop-and-go clusters, short highway hops,
 side-street shortcuts): the new calmer route carries 15 stop-and-go stops (150 s) that only show once the route is
 finished, so for weights 4 and 8 it looks cheaper to the search (975 + 369w) than the old one (812 + 431w). The 60 mph cap
 didn't cause the gap, it moved which routes the six weights land on. It is the limit described under "Whole-route factors
@@ -195,9 +195,9 @@ Built from the complaints in the thread. "Arterial" means OSM
 | Any turn or change of road (a "decision") | 8 | Geometry and way names | "fewest decisions" |
 | Junction with 5 or more legs | +40 | 44 in the extract | "weird five-way intersections" |
 | Stop or signal on a grade over 8% | 30 (over 12%: 60) | **Needs elevation data** | Hill starts in a manual or a weak car |
-| Freeway entry | 30 | Road class | A freeway is OSM `motorway` and `motorway_link` (`GraphEdge.isFreeway`). Getting onto a trunk road such as Aurora is not an entry, and a short run on one is not a hop |
-| Freeway to freeway through a ramp (I-405 to I-90) | 30, as an entry | Road class, ramp, `ref` along the route | Weaving again. **30 is a starting guess**, like the other weights, not tuned against anyone's driving. Identity is the OSM `ref` (first entry, "SR 161;SR 512" is "SR 161"), kept in the graph for motorway and trunk segments: most freeways are unnamed (in the county 44% of motorway and trunk ways have a name and 94% a ref), so `name` can't tell them apart and also changes along one freeway (a bridge, a tunnel). A switch needs a ramp between two different refs; an edge with no ref changes nothing. Leaving and rejoining the same freeway is not a switch. **Counted when the route is finished, so it can't steer the search**; see "Whole-route factors steer only the final choice". The router prefers a candidate with fewer of them, it does not avoid interchanges |
-| Freeway exit less than 2 km after entering | +90 | Road class and distance (motorway only) | On at Mercer, weave across, off at James |
+| Highway merge (getting onto a motorway or trunk road, ramps included) | 30 | Road class | Shown to people as a "highway merge": Aurora is a trunk road, not a freeway |
+| Highway to highway through a ramp (I-405 to I-90) | 30, as an entry | Road class, ramp, `ref` along the route | Weaving again. **30 is a starting guess**, like the other weights, not tuned against anyone's driving. Identity is the OSM `ref` (first entry, "SR 161;SR 512" is "SR 161"), kept in the graph for motorway and trunk segments: most freeways are unnamed (in the county 44% of motorway and trunk ways have a name and 94% a ref), so `name` can't tell them apart and also changes along one freeway (a bridge, a tunnel). A switch needs a ramp between two different refs; an edge with no ref changes nothing. Leaving and rejoining the same freeway is not a switch. **Counted when the route is finished, so it can't steer the search**; see "Whole-route factors steer only the final choice". The router prefers a candidate with fewer of them, it does not avoid interchanges |
+| Highway exit less than 2 km after merging (short highway hop) | +90 | Road class and distance | On at Mercer, weave across, off at James |
 | Movable bridge | 30 | 10 bascule ways: Fremont, Ballard, University, Montlake | Openings are unpredictable; no schedule data |
 
 ### Exposure
@@ -214,7 +214,7 @@ current model, which charges 35/km for highways and 65/km for residential.
 
 ### Whole-route factors steer only the final choice
 
-Stop-and-go clusters, short freeway hops and side-street shortcuts (`StressModel.pathFactors`) are counted once a route
+Stop-and-go clusters, short highway hops and side-street shortcuts (`StressModel.pathFactors`) are counted once a route
 is finished, because they depend on the stretch of road before them. The A* search only sees per-edge exposure and
 per-junction events, so these can't steer it. They do count in the totals that `selectCalmer` and the "nothing calmer"
 finding compare, and in the rating. The effect is that a route can look cheaper to the search than it turns out to be,
@@ -372,9 +372,9 @@ Choices behind the mapping:
   signs, and walking has no per-turn cost.
 - **Stairs are a hill for walkers**: the people who avoid hills (strollers,
   sore knees, luggage) avoid steps too. A strict step-free mode is still later.
-- **Not scaled:** stop-and-go clusters, freeway hops and side-street shortcuts
+- **Not scaled:** stop-and-go clusters, highway hops and side-street shortcuts
   (scored only on finished routes), yields, rights into traffic, five-way
-  junctions, freeway entries, drawbridges, residential and narrow streets,
+  junctions, highway merges, drawbridges, residential and narrow streets,
   rough surfaces, and unknowns. "Fewest stops of any kind" is Avoid on both
   Traffic lights and Stop signs.
 

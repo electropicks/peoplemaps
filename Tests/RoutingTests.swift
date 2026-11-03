@@ -210,13 +210,6 @@ final class StressModelTests: XCTestCase {
         var hop = Breakdown()
         StressModel.pathFactors(edges: [road("A", "primary"), road("I-5", "motorway", 1500), road("B", "primary")], stops: [], mode: .drive, into: &hop)
         XCTAssertEqual(hop[.shortFreewayHop].amount, 1)
-        var aurora = Breakdown()
-        StressModel.pathFactors(edges: [road("A", "primary"), road("Aurora", "trunk", 1500), road("B", "primary")], stops: [], mode: .drive, into: &aurora)
-        XCTAssertEqual(aurora[.shortFreewayHop].amount, 0, "a short run on a trunk road is not a freeway hop")
-        var trunkEntry = Breakdown()
-        var trunk = Fixture.continueNorth; trunk.highway = "trunk"
-        _ = StressModel.transition(previous: Fixture.northbound, next: trunk, junction: Junction(legs: 3), mode: .drive, into: &trunkEntry)
-        XCTAssertEqual(trunkEntry[.freewayEntry].amount, 0, "getting onto a trunk road is not a freeway entry")
         // Real tag shapes: the county's freeways carry a ref and mostly no name (I 5, I 90, SR 520), ramps carry neither.
         func freeway(_ ref: String?, _ name: String = "", _ highway: String = "motorway") -> GraphEdge {
             var e = road(name, highway, 5000); e.ref = ref; return e

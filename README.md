@@ -69,7 +69,7 @@ router or data.
   no live traffic, closures or signal timing.
 - Signals, stops, crossings, sidewalks and bike facilities come from OSM tags.
   Missing tags are disclosed as unknown, never treated as facts.
-- Whole-route factors (stop-and-go clusters, short freeway hops, cut-throughs)
+- Whole-route factors (stop-and-go clusters, short highway hops, cut-throughs)
   are scored on candidates but don't steer the search.
 - Guidance is foreground-only and hasn't been tested on a real phone yet.
 
