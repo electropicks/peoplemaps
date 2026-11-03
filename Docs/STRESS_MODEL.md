@@ -164,9 +164,9 @@ Built from the complaints in the thread. "Arterial" means OSM
 | Any turn or change of road (a "decision") | 8 | Geometry and way names | "fewest decisions" |
 | Junction with 5 or more legs | +40 | 44 in the extract | "weird five-way intersections" |
 | Stop or signal on a grade over 8% | 30 (over 12%: 60) | **Needs elevation data** | Hill starts in a manual or a weak car |
-| Freeway entry | 30 | Road class | |
+| Freeway entry | 30 | Road class | A freeway is OSM `motorway` and `motorway_link` (`GraphEdge.isFreeway`). Getting onto a trunk road such as Aurora is not an entry, and a short run on one is not a hop |
 | Freeway to freeway through a ramp (I-405 to I-90) | 30, as an entry | Road class, ramp, `ref` along the route | Weaving again. **30 is a starting guess**, like the other weights, not tuned against anyone's driving. Identity is the OSM `ref` (first entry, "SR 161;SR 512" is "SR 161"), kept in the graph for motorway and trunk segments: most freeways are unnamed (in the county 44% of motorway and trunk ways have a name and 94% a ref), so `name` can't tell them apart and also changes along one freeway (a bridge, a tunnel). A switch needs a ramp between two different refs; an edge with no ref changes nothing. Leaving and rejoining the same freeway is not a switch. **Counted when the route is finished, so it can't steer the search**; see "Whole-route factors steer only the final choice". The router prefers a candidate with fewer of them, it does not avoid interchanges |
-| Freeway exit less than 2 km after entering | +90 | Road class and distance | On at Mercer, weave across, off at James |
+| Freeway exit less than 2 km after entering | +90 | Road class and distance (motorway only) | On at Mercer, weave across, off at James |
 | Movable bridge | 30 | 10 bascule ways: Fremont, Ballard, University, Montlake | Openings are unpredictable; no schedule data |
 
 ### Exposure
