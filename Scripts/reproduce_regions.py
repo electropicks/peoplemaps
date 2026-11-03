@@ -10,12 +10,15 @@ bad = ran = 0
 for name, r in sorted(m['regions'].items()):
     d = root / 'Data/region' / name
     missing = [f for f in r['files'] if not (d / f).is_file()]
+    if not r['files']:
+        print(f'SKIPPED region {name}: no files pinned yet'); continue
     if missing:
         print(f'SKIPPED region {name}: {len(missing)} files not fetched; run Scripts/fetch_data {name}')
         continue
     ran += 1
     out = pathlib.Path(tempfile.mkdtemp())
     env = dict(os.environ, PEOPLEMAPS_DATA=str(d), PEOPLEMAPS_BBOX=','.join(map(str, r['bbox'])), PEOPLEMAPS_OUT=str(out))
+    if r.get('coverage'): env['PEOPLEMAPS_COVERAGE'] = str(root / r['coverage'])  # a committed polygon, not a fetched file
     p = subprocess.run([sys.executable, str(root / 'Scripts/import_osm.py'), '--out', str(out)], env=env, capture_output=True, text=True)
     if p.returncode:
         print(p.stdout[-2000:], p.stderr[-2000:]); bad += 1; continue
