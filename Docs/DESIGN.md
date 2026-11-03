@@ -97,7 +97,7 @@ rendered pixels (below).
 | `glassHairline` | `#142D23` 14% | white 14% | dividers on glass | decorative |
 | `glassTrack`, `glassWell`, `glassChosen` | `#142D23`/white, low alpha | same | rating track, close and mode wells, chosen mode | graphic only |
 | `panelFill` | elevated `secondarySystemBackground` | same | cards in solid modal sheets only, never on glass | text uses `label`/`secondaryLabel` |
-| `userLocation` | `#4A8FD6` | `#4A8FD6` | the map marker and Current location row only. White ring and a faint dark halo keep it clear of the route line by lightness (vs land 3.0 / 4.7) | |
+| `userLocation` | `#4A8FD6` | `#4A8FD6` | the map marker (the route ring) and Current location row only. A white outer ring, white centre and a faint dark halo keep it clear of the route line by lightness (vs land 3.0 / 4.7) | |
 
 ### Rating
 
@@ -511,13 +511,16 @@ would push mute, compass and overview off it. Secondary text on glass uses
 
 #### Map marker and route line while guiding
 
-- **Marker.** Outside guidance: a blue dot with a white ring; with a known
-  heading it gains a beam and a small rim triangle, without one it stays a
-  plain dot (no direction is invented). Nothing outside guidance supplies a
-  heading yet, so today it is always the dot. During guidance: a blue arrow
-  (chevron with a notch, 34 pt, white 3.5 pt outline, dark halo) pointing along
-  the course, replacing the dot once a course is known and keeping the last
-  course while stopped.
+- **Marker.** One family, the route ring, inspired by the ring-shaped stops in
+  the app icon, in `userLocation` blue (never green) with a faint dark halo. With
+  no heading, or standing still outside guidance, it is a 28 pt blue disc with a
+  2.5 pt white outer ring and a 12 pt white centre, so it reads as a thick blue
+  ring; no direction is invented. With a known course, outside guidance or in it,
+  the same ring's outline grows into one rounded point in the direction of travel,
+  like a teardrop, tip 24 pt from the centre; the white centre and outer ring
+  stay. There is no beam, rim tip or separate arrow. The view turns with the map,
+  and guidance keeps the last course while stopped. The two forms crossfade over
+  0.2 s; with Reduce Motion there is no animation.
 - **Route line.** The line splits at progress: behind is `passedRoute`, 3.5 pt
   (casing 6), ahead keeps the route colour at 5.5 pt. Colour is not the only
   cue: width and the marker at the join carry it. Only the two shapes are
