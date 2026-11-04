@@ -112,6 +112,8 @@ struct ExploreView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.dynamicTypeSize) private var typeSize
+    /// The calm word is `.largeTitle`, held to 48 pt so at accessibility sizes the time under it stays in view.
+    @ScaledMetric(relativeTo: .largeTitle) private var scaledWord = 34.0
 
     /// UI tests start muted and in their own defaults, so they never change the real preference.
     static let voiceStore: UserDefaults = {
@@ -275,8 +277,8 @@ struct ExploreView: View {
         switch next {
         case .home: stop = homeStop
         case .search: stop = .large
-        case .place: stop = typeSize.isAccessibilitySize ? .large : .fit
-        case .preview: stop = typeSize.isAccessibilitySize ? .large : .fit
+        case .place: stop = .fit
+        case .preview: stop = typeSize.isAccessibilitySize ? .raised : .fit
         case .navigating: break
         }
         centred = false
@@ -358,7 +360,9 @@ struct ExploreView: View {
     }
     private var detents: Set<PresentationDetent> {
         switch screen {
-        case .home, .search: [.medium, .large]
+        // Home tops out at medium: at large it was a flat opaque page holding a search field and one row. Search is the screen that goes large.
+        case .home: [.medium]
+        case .search: [.medium, .large]
         case .place: [detent(.fit), .medium, .large]
         case .preview, .navigating: [detent(.fit), raisedDetent, .large]
         }
@@ -472,9 +476,11 @@ struct ExploreView: View {
     private func mapPadding(_ geo: GeometryProxy, _ mapCover: CGFloat) -> UIEdgeInsets {
         let safe = geo.safeAreaInsets
         if screen == .home {
-            // Home frames the user's neighbourhood or the area we cover: clear of the panel and the map buttons, 48 pt elsewhere.
+            // Home frames the user's neighbourhood or the area we cover: clear of the map buttons, 48 pt elsewhere, and of the sheet's medium stop at the
+            // bottom, so the location dot sits about 30% down at rest instead of where the raised sheet's edge lands. It never reads the stop, so
+            // pulling the sheet up moves nothing.
             if landscape { return UIEdgeInsets(top: safe.top + 48, left: safe.leading + 12 + cardWidth + 24, bottom: safe.bottom + 48, right: safe.trailing + 16 + 44 + 24) }
-            return UIEdgeInsets(top: safe.top + 48, left: 48, bottom: fitHeight + 48, right: 16 + 44 + 24)
+            return UIEdgeInsets(top: safe.top + 48, left: 48, bottom: max(fitHeight, screenHeight * 0.5) + 24, right: 16 + 44 + 24)
         }
         if landscape {
             return UIEdgeInsets(top: safe.top + 24, left: safe.leading + 12 + cardWidth + 32, bottom: safe.bottom + 36, right: safe.trailing + 16 + 44 + 24)
@@ -751,6 +757,11 @@ struct ExploreView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     if query.isEmpty {
                         if !saved.recents.isEmpty { resultGroup("Recents", saved.recents, prefix: "recent-") }
+                        else {
+                            Text("Search a place, an address or a street").font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
+                                .fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4).padding(.top, 8)
+                                .accessibilityIdentifier("search-hint")
+                        }
                     } else if results.isEmpty {
                         EmptySearch(count: search.count).padding(.top, 48)
                         AppleMapsLookup(query: query)
@@ -808,6 +819,7 @@ struct ExploreView: View {
             }
             if let source = place.source { Text(source).font(.caption).foregroundStyle(GuidanceOverlay.onGlass).accessibilityIdentifier("place-source") }
         }
+        .dynamicTypeSize(...DynamicTypeSize.accessibility3)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fitContent = $0 }
         .task(id: estimateRequest(for: place)) { await loadEstimate(estimateRequest(for: place)) }
     }
@@ -929,6 +941,10 @@ struct ExploreView: View {
     }
 
     private var previewContent: some View {
+        previewBody.dynamicTypeSize(...DynamicTypeSize.accessibility2)
+    }
+
+    private var previewBody: some View {
         VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 10) {
                 previewHeader
@@ -1111,7 +1127,7 @@ struct ExploreView: View {
         VStack(alignment: .leading, spacing: 8) {
             let line = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8))
             line {
-                Text(score.level.title).font(.largeTitle.weight(.semibold)).tracking(-0.5).foregroundStyle(Color.calmWord(score.level))
+                Text(score.level.title).font(.system(size: min(scaledWord, 48), weight: .semibold)).tracking(-0.5).foregroundStyle(Color.calmWord(score.level))
                 if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
                 Text(route.timeRange).font(.title2.weight(.semibold)).monospacedDigit().foregroundStyle(.primary)
             }

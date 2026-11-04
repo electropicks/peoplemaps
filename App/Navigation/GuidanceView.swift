@@ -24,7 +24,9 @@ struct GuidanceOverlay: View {
     @State private var screen: CGSize = .zero
     @ScaledMetric(relativeTo: .largeTitle) private var scaledArrow = 52.0
     /// Capped with the rest of the chrome (the environment cap below doesn't reach this view's own metrics).
-    private var arrowSize: CGFloat { min(scaledArrow, 80) }
+    private var arrowSize: CGFloat { typeSize.isAccessibilitySize && !landscape ? min(scaledArrow, 56) : min(scaledArrow, 80) }
+    /// At accessibility sizes the banner and trip bar together would fill the screen, so the type steps down a style and gaps widen.
+    private var compact: Bool { typeSize.isAccessibilitySize && !landscape }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @Namespace private var glassNS
@@ -37,6 +39,9 @@ struct GuidanceOverlay: View {
         }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { screen = $0; report() }
         .onChange(of: topEdge) { report() }
+        .onChange(of: navigator.hasArrived) { report() }
+        // The arrival card is near-opaque, so Done takes the solid fill: the glass fill is white and vanishes on it.
+        .environment(\.solidSurface, navigator.hasArrived)
         .onChange(of: bottomEdge) { report() }
         .onChange(of: leadingEdge) { report() }
         .onChange(of: landscape) { report() }
@@ -56,7 +61,8 @@ struct GuidanceOverlay: View {
             onInsets(UIEdgeInsets(top: 0, left: leadingEdge + 12, bottom: 0, right: 72))
         } else {
             let bottom = bottomEdge.isFinite ? max(0, screen.height - bottomEdge) : 0
-            onInsets(UIEdgeInsets(top: topEdge + 8, left: 0, bottom: bottom + 8, right: 0))
+            // The travel camera rides the puck low in what is left, so at accessibility sizes the map is inset further to keep it off the trip bar.
+            onInsets(UIEdgeInsets(top: topEdge + 8, left: 0, bottom: bottom + (navigator.hasArrived ? (compact ? 96 : 64) : compact ? 72 : 8), right: 0))
         }
     }
 
@@ -66,7 +72,7 @@ struct GuidanceOverlay: View {
         VStack(spacing: 8) {
             if !navigator.hasArrived {
                 GlassEffectContainer(spacing: 8) {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: compact ? 12 : 8) {
                         if shown {
                             ZStack(alignment: .top) {
                                 if navigator.isRerouting { reroutingCard.transition(.opacity) } else { turnCard.transition(.opacity) }
@@ -162,11 +168,11 @@ struct GuidanceOverlay: View {
                     .accessibilityLabel("Arrow").accessibilityValue(Self.symbol(navigator.currentStep?.maneuver ?? .depart))
                     .accessibilityIdentifier("guidance-arrow")
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(NavigationFormat.distance(navigator.distanceToManeuver)).font(.largeTitle.bold()).monospacedDigit()
+                    Text(NavigationFormat.distance(navigator.distanceToManeuver)).font(compact ? .title2.bold() : .largeTitle.bold()).monospacedDigit()
                         .lineLimit(1).minimumScaleFactor(0.8)
                         .contentTransition(.numericText(value: -navigator.distanceToManeuver))
                         .accessibilityIdentifier("guidance-distance")
-                    Text(navigator.instruction).font(.title3.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+                    Text(navigator.instruction).font(compact ? .headline : .title3.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("guidance-instruction")
                 }
                 .animation(Motion.content(reduceMotion), value: navigator.instruction)
@@ -176,11 +182,15 @@ struct GuidanceOverlay: View {
             .padding(.leading, 16).padding(.trailing, 18).padding(.vertical, 14)
             if navigator.thenStep != nil {
                 Hairline().padding(.horizontal, 16)
-                HStack(spacing: 8) {
-                    Text("Then:")
-                    if let then = navigator.thenStep { Image(systemName: Self.symbol(then.maneuver)).font(.subheadline.weight(.bold)).accessibilityHidden(true) }
-                    Text(navigator.thenText).fontWeight(.semibold).lineLimit(typeSize.isAccessibilitySize ? 1 : 2).fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 0)
+                // At accessibility sizes "Then" is its own line and the street wraps under it, instead of cutting to "St...".
+                let then = compact ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout(spacing: 8))
+                then {
+                    HStack(spacing: 8) {
+                        Text("Then:")
+                        if let step = navigator.thenStep { Image(systemName: Self.symbol(step.maneuver)).font(.subheadline.weight(.bold)).accessibilityHidden(true) }
+                    }
+                    Text(navigator.thenText).fontWeight(.semibold).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                    if !compact { Spacer(minLength: 0) }
                 }
                 .font(.subheadline).foregroundStyle(Self.onGlass)
                 .padding(.horizontal, 18).padding(.vertical, 10).frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
@@ -252,8 +262,15 @@ struct GuidanceOverlay: View {
                 Text(estimateNote(waiting)).font(.caption).foregroundStyle(Self.onGlass).padding(.top, 6)
                 endButton(fullWidth: true)
             } else if typeSize.isAccessibilitySize {
-                stats(waiting)
-                endButton(fullWidth: true)
+                // Two rows: arrival and minutes, then distance beside End.
+                HStack(alignment: .top, spacing: 12) {
+                    stat(waiting ? "–" : Date().addingTimeInterval(navigator.remainingSeconds).formatted(date: .omitted, time: .shortened), "arrival", id: "trip-arrival", waiting: waiting)
+                    stat(waiting ? "–" : "\(NavigationFormat.minutes(navigator.remainingSeconds)) min", "left", id: "trip-minutes", waiting: waiting)
+                }
+                HStack(alignment: .center, spacing: 12) {
+                    stat(waiting ? "–" : NavigationFormat.distance(navigator.remainingMeters), "left", id: "trip-distance", waiting: waiting)
+                    endButton(fullWidth: false)
+                }
                 Text(estimateNote(waiting)).font(.caption).foregroundStyle(Self.onGlass)
             } else {
                 HStack(spacing: 12) { stats(waiting); endButton(fullWidth: false) }
@@ -284,10 +301,10 @@ struct GuidanceOverlay: View {
     }
 
     private func stat(_ value: String, _ label: String, id: String, waiting: Bool) -> some View {
-        let stacked = typeSize.isAccessibilitySize
-        let layout = stacked ? AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8)) : AnyLayout(VStackLayout(alignment: .leading, spacing: 1))
+        let inline = typeSize.isAccessibilitySize && landscape
+        let layout = inline ? AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8)) : AnyLayout(VStackLayout(alignment: .leading, spacing: 1))
         return layout {
-            Text(value).font(.title3.weight(.semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
+            Text(value).font(typeSize.isAccessibilitySize ? .headline : .title3.weight(.semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
                 .foregroundStyle(waiting ? Self.onGlass : Color.primary).accessibilityIdentifier(id)
                 .contentTransition(.numericText()).animation(Motion.content(reduceMotion), value: value)
             Text(label).font(.footnote).foregroundStyle(Self.onGlass)
@@ -444,19 +461,28 @@ struct GuidanceOverlay: View {
                     .frame(width: 48, height: 48).background(.glassWell, in: Circle())
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("You've arrived at \(name)").font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
+                    Text("You\u{2019}ve arrived at \(name)").font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("guidance-arrived")
                     Text(summary).font(.subheadline).foregroundStyle(Self.onGlass).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("arrival-summary")
                 }
                 Spacer(minLength: 0)
             }
-            if !navigator.tripNotes.isEmpty {
+            if !navigator.tripNotes.isEmpty || navigator.tripCost != nil {
                 VStack(spacing: 0) {
                     ForEach(Array(navigator.tripNotes.enumerated()), id: \.offset) { index, note in
                         if index > 0 { Hairline().padding(.leading, 34) }
                         HStack(spacing: 12) {
                             Image(systemName: "checkmark").font(.body.weight(.bold)).foregroundStyle(.primary).frame(width: 22).accessibilityHidden(true)
                             Text(note).font(.subheadline).fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 0)
+                        }.padding(.vertical, 10).frame(minHeight: 44)
+                    }
+                    // A cost is not a gain: a neutral glyph, never a tick.
+                    if let cost = navigator.tripCost {
+                        if !navigator.tripNotes.isEmpty { Hairline().padding(.leading, 34) }
+                        HStack(spacing: 12) {
+                            Image(systemName: "minus.circle").font(.body.weight(.semibold)).foregroundStyle(Self.onGlass).frame(width: 22).accessibilityHidden(true)
+                            Text(cost).font(.subheadline).foregroundStyle(Self.onGlass).fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 0)
                         }.padding(.vertical, 10).frame(minHeight: 44)
                     }

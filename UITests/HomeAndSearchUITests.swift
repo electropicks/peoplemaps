@@ -55,6 +55,8 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.textFields["search-input"].placeholderValue, "Where to?")
         XCTAssertFalse(app.descendants(matching: .any)["search-empty"].exists)
+        XCTAssertTrue(app.staticTexts["search-hint"].exists, "The empty search sheet says what to type")
+        XCTAssertEqual(app.staticTexts["search-hint"].label, "Search a place, an address or a street")
     }
     @MainActor func testSearchFindsParkAndOpensPlaceCard() {
         let app = launchHome()

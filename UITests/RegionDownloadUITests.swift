@@ -34,10 +34,12 @@ final class RegionDownloadUITests: PeoplemapsUITestCase {
         raiseHome(app)
         app.buttons["about"].tap()
         let card = app.descendants(matching: .any)["region-card"]
-        for _ in 0..<5 where !(card.exists && card.isHittable) { app.collectionViews.firstMatch.swipeUp() }
+        // Home tops out at medium, so About is half a screen tall and takes more swipes to reach the section.
+        for _ in 0..<10 where !(card.exists && card.isHittable) { app.collectionViews.firstMatch.swipeUp() }
         XCTAssertTrue(card.waitForExistence(timeout: 5))
-        // The controls under the card: one more swipe brings them clear of the sheet's bottom edge.
-        app.collectionViews.firstMatch.swipeUp(velocity: .slow)
+        // The controls under the card: swipes bring them clear of the sheet's bottom edge.
+        let controls = app.buttons["region-download"]
+        for _ in 0..<4 where !(controls.exists && controls.isHittable) { app.collectionViews.firstMatch.swipeUp(velocity: .slow) }
     }
 
     @MainActor func testTheOfferShowsTheManifestsDownloadSizeAndSpace() {
@@ -119,6 +121,10 @@ final class RegionDownloadUITests: PeoplemapsUITestCase {
         app = launchHome(extra: arguments + ["--keep-regions"])
         XCTAssertEqual(app.buttons["search-field"].label, "Where to?", "Home still works on the bundled map")
         openMapArea(app)
+        let fallback = app.staticTexts["region-fallback"]
+        // openMapArea may have scrolled past it, either way: look both directions.
+        for _ in 0..<4 where !(fallback.exists && fallback.isHittable) { app.collectionViews.firstMatch.swipeDown() }
+        for _ in 0..<4 where !(fallback.exists && fallback.isHittable) { app.collectionViews.firstMatch.swipeUp() }
         XCTAssertTrue(app.staticTexts["region-fallback"].waitForExistence(timeout: 5))
         capture("region-fallback", app: app)
     }

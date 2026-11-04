@@ -106,6 +106,7 @@ rendered pixels (below).
 | Token | Light | Dark | Use | Contrast |
 |---|---|---|---|---|
 | `calmer` | `#4A6F97` | `#7FA3CC` | route line (white casing in light, black in dark), leader, selected pin, destination dot, a switch track when on | vs land 4.6 / 6.1, vs water 3.4 / 3.9 (≥3:1 graphic) |
+| `switchOn` | `#4A6F97` | `#4A6F97` | a switch's track when on. Not `calmer` in dark: `#7FA3CC` under the white thumb is 2.6:1 and reads as off | track vs a near-black card `#1C1C1E` 3.3, vs the white thumb 5.2 |
 | `fastest` | `#6B7872` | `#AEBAB3` | fastest line, dotted | vs land 4.1 / 7.9 |
 | `passedRoute` | `#A6B3C0` | `#53616F` | the part of the followed route already driven, drawn 3.5 pt (the route is 5.5) | vs land 1.9 / 2.5; vs the route ahead 2.5 / 2.4. Below 3:1 on purpose: it is a trail, not information, and the width, the puck at its end and the casing say "behind" without colour |
 | `primaryActionFill` | white 72% | white 86% | fill of the solid `.borderedProminent` primary actions: Directions, Start, Done | |
@@ -117,6 +118,11 @@ rendered pixels (below).
 | `glassTrack`, `glassWell`, `glassChosen` | `#142D23`/white, low alpha | same | rating track, close and mode wells, chosen mode | graphic only |
 | `panelFill` | elevated `secondarySystemBackground` | same | cards in solid modal sheets only, never on glass | text uses `label`/`secondaryLabel` |
 | `userLocation` | `#4A8FD6` | `#4A8FD6` | the map marker (the route ring) and Current location row only. A white outer ring, white centre and a faint dark halo keep it clear of the route line by lightness (vs land 3.0 / 4.7) | |
+
+### Costs and gains
+
+A gain (what the calmer route avoids) takes a tick. A cost (minutes over the fastest route)
+takes `minus.circle` in `onGlass`, never a tick: on the arrival card, and in "Behind the routes".
 
 ### Rating
 
@@ -350,8 +356,11 @@ floating controls over it, each on its own `.clear` glass. Favourite chips above
 First launch shows a one-line hint chip where the favourites go: "Search a place or
 address, or long-press the map" (D4).
 
-More, or dragging the capsule up, presents a system sheet at `.medium` and `.large`
-(`raiseHome`). It holds the same chips and field, then Recents and the rows **Edit
+More, or dragging the capsule up, presents a system sheet at `.medium` only
+(`raiseHome`). Home has no large stop (decision, 4 November 2026): at large it was a flat,
+square-edged, opaque page with the map dimmed, holding a hint, the field and one row.
+Medium keeps the inset frosted card over a live map. Search is the screen that goes large,
+where results need the room. It holds the same chips and field, then Recents and the rows **Edit
 favourites** and **About PeopleMaps**. Pulling it down dismisses it back to the
 floating controls.
 
@@ -402,7 +411,7 @@ list. Each row:
 ### 4.4 Place card
 
 Proposed (with `ux-round-1` content): sheet sized to fit the card, so medium
-doesn't leave half of it empty; large at accessibility sizes.
+doesn't leave half of it empty; at accessibility sizes the same fit stop, capped at 70% of the screen, the card scrolling and its type held at `accessibility3`.
 - Header: 44-pt category badge, name `.title2.bold()`, "Restaurant ·
   Fremont" `.subheadline`. Trailing: favourite (`star`/`star.fill`) and close
   (`xmark`) as small bordered circular buttons (not glass: they sit on
@@ -437,7 +446,7 @@ Top to bottom:
    in the large content viewer) beside **Start** (`.primaryAction()`).
 
 Raised (0.72 of the screen, or large, or in landscape and at accessibility sizes)
-it also shows **swap** and the **Extra time** menu. Accessibility sizes open large.
+it also shows **swap** and the **Extra time** menu. At accessibility sizes it opens raised, not large, so the map stays above it; the scrolling body holds its type at `accessibility2` and the calm word at 48 pt, with the footer pinned.
 
 ```
 ╭────────────────────────────╮

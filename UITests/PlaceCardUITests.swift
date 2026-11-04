@@ -120,7 +120,7 @@ final class PlaceCardUITests: PeoplemapsUITestCase {
     }
     @MainActor func testLongPressDropsPinWithDirections() {
         let app = launchHome(location: Self.atKerryPark)
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.3)).press(forDuration: 1.2)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.2)).press(forDuration: 1.2)
         XCTAssertTrue(app.staticTexts["place-subtitle"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS '° N'")).firstMatch.exists)
         capture("09-dropped-pin", app: app)

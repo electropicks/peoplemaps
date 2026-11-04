@@ -25,11 +25,11 @@ struct RouteDetails: View {
                         let tradeoff = reason.hasPrefix("Tradeoff: ")
                         Label {
                             Text(tradeoff ? "Costs you " + reason.dropFirst("Tradeoff: ".count) : reason)
-                                .foregroundStyle(tradeoff ? .secondary : .primary)
+                                .foregroundStyle(tradeoff ? GuidanceOverlay.onGlass : Color.primary)
                         } icon: {
                             // With no calmer route the reason is a finding, not a benefit.
-                            Image(systemName: tradeoff ? "minus" : comparison.calmer == nil ? "info.circle" : "checkmark").fontWeight(.semibold)
-                                .foregroundStyle(tradeoff || comparison.calmer == nil ? Color.secondary : Color.primary)
+                            Image(systemName: tradeoff ? "minus.circle" : comparison.calmer == nil ? "info.circle" : "checkmark").fontWeight(.semibold)
+                                .foregroundStyle(tradeoff || comparison.calmer == nil ? GuidanceOverlay.onGlass : Color.primary)
                         }
                     }
                 } header: {
