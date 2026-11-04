@@ -474,9 +474,11 @@ struct ExploreView: View {
     private func mapPadding(_ geo: GeometryProxy, _ mapCover: CGFloat) -> UIEdgeInsets {
         let safe = geo.safeAreaInsets
         if screen == .home {
-            // Home frames the user's neighbourhood or the area we cover: clear of the panel and the map buttons, 48 pt elsewhere.
+            // Home frames the user's neighbourhood or the area we cover: clear of the map buttons, 48 pt elsewhere, and of the sheet's medium stop at the
+            // bottom, so the location dot sits about 30% down at rest instead of where the raised sheet's edge lands. It never reads the stop, so
+            // pulling the sheet up moves nothing.
             if landscape { return UIEdgeInsets(top: safe.top + 48, left: safe.leading + 12 + cardWidth + 24, bottom: safe.bottom + 48, right: safe.trailing + 16 + 44 + 24) }
-            return UIEdgeInsets(top: safe.top + 48, left: 48, bottom: fitHeight + 48, right: 16 + 44 + 24)
+            return UIEdgeInsets(top: safe.top + 48, left: 48, bottom: max(fitHeight, screenHeight * 0.5) + 24, right: 16 + 44 + 24)
         }
         if landscape {
             return UIEdgeInsets(top: safe.top + 24, left: safe.leading + 12 + cardWidth + 32, bottom: safe.bottom + 36, right: safe.trailing + 16 + 44 + 24)
