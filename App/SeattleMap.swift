@@ -194,11 +194,31 @@ struct SeattleMap: UIViewRepresentable {
             MapDebug.shared.zoom = map.zoomLevel
             #endif
             reportVisiblePlaces(map)
+            declutterLabels(map)
         }
 
-        #if DEBUG
-        func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) { FrameMeter.shared.counting = false }
-        #endif
+        func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
+            #if DEBUG
+            FrameMeter.shared.counting = false
+            #endif
+            declutterLabels(mapView)
+        }
+        func mapViewRegionIsChanging(_ mapView: MLNMapView) { declutterLabels(mapView) }
+        func mapView(_ mapView: MLNMapView, didAdd annotationViews: [MLNAnnotationView]) { declutterLabels(mapView) }
+
+        /// District names are annotation views, which the map's own collision pass doesn't see. Where two would print over each other
+        /// (Wallingford and University District at the city view), the later one in `labels` gives way until zooming in separates them.
+        private func declutterLabels(_ map: MLNMapView) {
+            var taken: [CGRect] = []
+            for label in shownLabels {
+                guard let view = map.view(for: label) else { continue }
+                let point = map.convert(label.coordinate, toPointTo: map)
+                let box = CGRect(x: point.x - 46, y: point.y - 16, width: 92, height: 32)
+                let hide = taken.contains { $0.intersects(box) }
+                if !hide { taken.append(box) }
+                view.alpha = hide ? 0 : 1
+            }
+        }
 
         func mapView(_ map: MLNMapView, didFinishLoading style: MLNStyle) {
             AppEvents.shared.log(.map, "map style loaded")
