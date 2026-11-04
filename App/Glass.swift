@@ -107,7 +107,8 @@ extension View {
         modifier(FloatingSurface(shape: shape, interactive: interactive, veil: veil))
     }
 
-    /// The style of a primary action (Start, Directions, Done): glass, brighter than the panel it sits on, with dark text.
+    /// The style of a primary action (Start, Directions, Done): a solid `primaryActionFill` button with dark text. Every one sits on a
+    /// glass panel, where a glass button would be glass on glass (Docs/DESIGN.md, principle 3).
     func primaryAction(shape: ButtonBorderShape = .capsule) -> some View { modifier(PrimaryAction(shape: shape)) }
 }
 
@@ -118,7 +119,7 @@ private struct PrimaryAction: ViewModifier {
     /// White on a solid white panel wouldn't show.
     private var fill: Color { solid || reduceTransparency || GlassFlags.reduceTransparency ? .primaryActionSolidFill : .primaryActionFill }
     func body(content: Content) -> some View {
-        content.buttonStyle(.glassProminent).buttonBorderShape(shape).tint(fill).controlSize(.large)
+        content.buttonStyle(.borderedProminent).buttonBorderShape(shape).tint(fill).controlSize(.large)
     }
 }
 

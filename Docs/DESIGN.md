@@ -69,8 +69,11 @@ which lets the map show through; SwiftUI has no modifier for it. An empty
    badges (list rows, map markers, place card); they never tint glass, text or
    buttons.
 6. **Glass stays neutral.** The sheet and banner are never tinted. Start and the
-   other primary actions are `.glassProminent` with a white `primaryActionFill`
-   and dark `primaryActionText`, a token so they can move to dusk blue later.
+   other primary actions (Directions, Start, Done) all sit on a glass panel, so by
+   principle 3 they are solid `.borderedProminent` buttons filled with
+   `primaryActionFill`, with dark `primaryActionText`, a token so they can move to
+   dusk blue later. `.glassProminent` is only for a button floating directly over the
+   map; there is none today.
 7. **Honest words survive the redesign.** Every "Estimate", "unknown" and
    source/date line in the current UI stays. No screen says "safe".
 
@@ -88,7 +91,7 @@ rendered pixels (below).
 | `calmer` | `#4A6F97` | `#7FA3CC` | route line (white casing in light, black in dark), leader, selected pin, destination dot | vs land 4.6 / 6.1, vs water 3.4 / 3.9 (≥3:1 graphic) |
 | `fastest` | `#6B7872` | `#AEBAB3` | fastest line, dotted | vs land 4.1 / 7.9 |
 | `passedRoute` | `#A6B3C0` | `#53616F` | the part of the followed route already driven, drawn 3.5 pt (the route is 5.5) | vs land 1.9 / 2.5; vs the route ahead 2.5 / 2.4. Below 3:1 on purpose: it is a trail, not information, and the width, the puck at its end and the casing say "behind" without colour |
-| `primaryActionFill` | white 72% | white 86% | tint of `.glassProminent`: Directions, Start, Done | |
+| `primaryActionFill` | white 72% | white 86% | fill of the solid `.borderedProminent` primary actions: Directions, Start, Done | |
 | `primaryActionSolidFill` | `#DCE3EA` | white 86% | the same on a solid panel: the large stop, Reduce Transparency | |
 | `primaryActionText` | `#20384F` | `#20384F` | label on the above | 12.1 on white, 9.3 on the solid fill |
 | `glassVeil` | white 34% | `#101412` 50% | over `.clear` on text surfaces: guidance, landscape card, credit | |
