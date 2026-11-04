@@ -118,3 +118,17 @@ Proposed, for this box in a release build, as limits on the medians above (curre
 - Debug `RouteGoldenTests`: under 30 s (16 s here).
 
 Walking is the slowest because the walk network has the most edges. If a long walk is still too slow on a device, the next step is a better lower bound (landmarks), which this work did not need and did not try.
+
+## Drive top speed 60 (Mac, measured)
+
+Bench on a Mac (shared, load about 7), 200 seeded random trips per graph, `--sample`, 5 extra minutes, 3 searches at once. The county graph is the 7,804 km2 build; Seattle is all of Seattle. Walk and bike are unchanged.
+
+| Drive | Seattle 43.5 | Seattle 60 | County 43.5 | County 60 |
+|---|---:|---:|---:|---:|
+| noConnection | 4 | 4 | 9 | 9 |
+| Calmer offered, of routed | 184 of 196 | 185 of 196 | 172 of 191 | 171 of 191 |
+| p50 ms | 107.5 | 123.0 | 214.4 | 242.2 |
+| p95 ms | 248.0 | 246.6 | 1,093.9 | 1,261.4 |
+| max ms | 274.9 | 285.9 | 1,483.1 | 1,567.6 |
+
+A* explores more at 60 because the heuristic is looser on slow roads relative to the new bound, so county p95 is up about 15%. Run to run noise on this Mac is about +-10%. Peak footprint on the county graph is unchanged (1,313 MB, 3 searches at once).

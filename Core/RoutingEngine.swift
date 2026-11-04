@@ -473,7 +473,7 @@ public final class NativeRouter: RouteComputing, Sendable {
 
     /// Fastest plausible travel speed per mode in m/s, for the A* lower bound on remaining time.
     private static func topSpeed(_ mode: TravelMode) -> Double {
-        switch mode { case .walk: 1.4; case .bike: 32 / 3.6; case .drive: 70 / 3.6 }
+        switch mode { case .walk: 1.4; case .bike: 32 / 3.6; case .drive: StressModel.driveTopMph * 0.447_04 }
     }
 
     /// A* over edge states: the state includes the incoming directed edge, so a turn restriction cannot be lost

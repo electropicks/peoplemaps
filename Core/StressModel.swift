@@ -167,8 +167,11 @@ public enum StressModel {
     static let driveDefaultsMph: [String: Double] = ["motorway": 60, "motorway_link": 35, "trunk": 40, "trunk_link": 30,
         "primary": 25, "primary_link": 25, "secondary": 25, "secondary_link": 25, "tertiary": 25, "tertiary_link": 25,
         "residential": 20, "unclassified": 20, "living_street": 10, "service": 10]
-    /// `NativeRouter`'s A* heuristic assumes no drive edge is faster than 70 km/h; faster edges would make it inexact.
-    static let driveTopMph = 70 / 1.609_344
+    /// No drive edge is timed faster than this, and `NativeRouter`'s A* heuristic reads it as its top speed, so the search stays exact.
+    /// 60 is the posted limit on I-5 and most of the county's freeways; 70 mph changed no more routes.
+    static let driveTopMph = 60.0
+    /// Ramps (`*_link`) inherit the freeway's tagged limit but are driven slower.
+    static let driveRampMph = 40.0
 
     static func seconds(_ e: GraphEdge, mode: TravelMode) -> Double {
         switch mode {
@@ -176,7 +179,8 @@ public enum StressModel {
             // Free-flow time at the posted limit (else the class default). Slowing for signals, stops and turns is
             // charged once, in `transitionSeconds`, so the speed carries no urban factor.
             let mph = e.speedLimitMph ?? driveDefaultsMph[e.highway] ?? 15
-            return e.meters / (min(max(mph, 5), driveTopMph) * 0.447_04)
+            let top = e.highway.hasSuffix("_link") ? driveRampMph : driveTopMph
+            return e.meters / (min(max(mph, 5), top) * 0.447_04)
         case .bike:
             let kph = e.isRough ? 11.0 : e.facility == "sharedPath" ? 14 : 18
             // About 3 s per metre climbed (roughly 8 km/h up an 8% grade), a little back going down, capped at 32 km/h.
