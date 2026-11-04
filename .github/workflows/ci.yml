@@ -81,8 +81,8 @@ jobs:
         with:
           path: ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
           key: spm-${{ hashFiles('Peoplemaps.xcodeproj/project.pbxproj', 'Package.swift') }}
-      # Full Seattle data from the private R2 bucket with a read-only key. A run without the secrets (a fork's, or before they
-      # exist) passes them empty, and fetch_data then does a plain GET of the public release, which goes away with the releases.
+      # Full Seattle data from the private R2 bucket with a read-only key. There is no public fallback: a run without the secrets (a fork's)
+      # passes them empty and fails this step. Region runs are dispatch-only, so that only affects a dispatch on a fork.
       - if: inputs.region
         run: Scripts/fetch_data seattle-all
         env:
