@@ -23,7 +23,7 @@ struct ReportComposerView: View {
                     Text(report.moment == nil ? "Mention the street if you can." : "This moment is already marked. Words are optional.")
                 }
                 Section {
-                    Toggle("Include exact locations", isOn: $report.includeExact).accessibilityIdentifier("report-exact")
+                    Toggle("Include exact locations", isOn: $report.includeExact).switchTint().accessibilityIdentifier("report-exact")
                     DisclosureGroup("What\u{2019}s included") {
                         Text(json).font(.caption.monospaced()).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                             .accessibilityIdentifier("report-json")

@@ -36,9 +36,9 @@ struct ReportsAboutSection: View {
             }.accessibilityIdentifier("saved-reports")
         }
         Section {
-            Toggle("Keep a usage log", isOn: $logOn).accessibilityIdentifier("usage-log-toggle")
+            Toggle("Keep a usage log", isOn: $logOn).switchTint().accessibilityIdentifier("usage-log-toggle")
             if logOn {
-                Toggle("Exact places in the log", isOn: $logExact).accessibilityIdentifier("usage-log-exact")
+                Toggle("Exact places in the log", isOn: $logExact).switchTint().accessibilityIdentifier("usage-log-exact")
             }
             if tripCount > 0 {
                 if let logFile {
@@ -50,7 +50,7 @@ struct ReportsAboutSection: View {
             Text("Off by default. When on, each trip\u{2019}s mode, route choice, estimates and where you left the route (rounded to about 100 m) are kept on this phone, and stay here unless you share the file. \(tripCount) \(tripCount == 1 ? "trip" : "trips") kept.")
         }
         Section {
-            Toggle("Keep a detailed log", isOn: $driveOn).accessibilityIdentifier("drive-log-toggle")
+            Toggle("Keep a detailed log", isOn: $driveOn).switchTint().accessibilityIdentifier("drive-log-toggle")
             if driveOn {
                 Button {
                     if recorder.isRecording { recorder.stop(); refresh() } else {
