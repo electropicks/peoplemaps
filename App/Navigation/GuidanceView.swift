@@ -145,7 +145,7 @@ struct GuidanceOverlay: View {
                     .frame(width: width)
                     .frame(maxHeight: geo.size.height + geo.safeAreaInsets.bottom - 24)
                     .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                    .floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous), veil: .light)
+                    .floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous), veil: .light, legible: true)
                     .padding(.vertical, 12).padding(.leading, 12)
                     .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxX } action: { leadingEdge = $0 }
                     .offset(x: shown || reduceMotion ? 0 : -(width + 24)).opacity(shown ? 1 : 0)
@@ -166,7 +166,7 @@ struct GuidanceOverlay: View {
 
     private var turnCard: some View {
         // Never squeezed: the banner takes the height its text needs and the map gives way.
-        turnContent.fixedSize(horizontal: false, vertical: true).floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous), veil: .light)
+        turnContent.fixedSize(horizontal: false, vertical: true).floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous), veil: .light, legible: true)
     }
 
     private var turnContent: some View {
@@ -229,7 +229,7 @@ struct GuidanceOverlay: View {
     // MARK: Rerouting
 
     private var reroutingCard: some View {
-        reroutingContent.floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous), veil: .light)
+        reroutingContent.floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous), veil: .light, legible: true)
     }
 
     private var reroutingContent: some View {
@@ -255,7 +255,7 @@ struct GuidanceOverlay: View {
     private var tripBar: some View {
         tripContent
             .padding(16)
-            .floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous), veil: .light)
+            .floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous), veil: .light, legible: true)
             .padding(.horizontal, 8).padding(.bottom, 4)
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { bottomEdge = $0 }
     }

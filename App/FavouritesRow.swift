@@ -15,33 +15,31 @@ struct FavouritesRow: View {
 
     var body: some View {
         ScrollView(.horizontal) {
-            GlassEffectContainer(spacing: 2) {
-                HStack(spacing: 8) {
-                    ForEach(favourites) { place in
-                        Button { onOpen(place) } label: {
-                            HStack(spacing: 8) {
-                                CategoryBadge(badge: place.badge, raw: place.category, size: 30)
-                                Text(place.shortName).font(.subheadline.weight(.semibold)).foregroundStyle(.primary).lineLimit(1)
-                            }
-                            .padding(.leading, (chipHeight - badgeSize) / 2).padding(.trailing, 14)
-                            .frame(minHeight: chipHeight).contentShape(Capsule())
-                            .chip(floating: floating, in: Capsule())
+            HStack(spacing: 8) {
+                ForEach(favourites) { place in
+                    Button { onOpen(place) } label: {
+                        HStack(spacing: 8) {
+                            CategoryBadge(badge: place.badge, raw: place.category, size: 30)
+                            Text(place.shortName).font(.subheadline.weight(.semibold)).foregroundStyle(.primary).lineLimit(1)
                         }
-                        .buttonStyle(.plain)
-                        .contextMenu {
-                            Button(role: .destructive) { onRemove(place) } label: { Label("Remove from Favourites", systemImage: "star.slash") }
-                        }
-                        .accessibilityLabel("\(place.shortName), \(place.categoryLabel)")
-                        .accessibilityAction(named: "Remove from Favourites") { onRemove(place) }
-                        .accessibilityIdentifier("favourite-\(place.id)")
+                        .padding(.leading, (chipHeight - badgeSize) / 2).padding(.trailing, 14)
+                        .frame(minHeight: chipHeight).contentShape(Capsule())
+                        .chip(floating: floating, in: Capsule())
                     }
-                    Button(action: onAdd) {
-                        Image(systemName: "plus").font(.body.weight(.semibold)).foregroundStyle(.primary)
-                            .frame(width: chipHeight, height: chipHeight).contentShape(Circle())
-                            .chip(floating: floating, in: Circle())
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button(role: .destructive) { onRemove(place) } label: { Label("Remove from Favourites", systemImage: "star.slash") }
                     }
-                    .buttonStyle(.plain).accessibilityLabel("Add a favourite").accessibilityIdentifier("add-favourite")
+                    .accessibilityLabel("\(place.shortName), \(place.categoryLabel)")
+                    .accessibilityAction(named: "Remove from Favourites") { onRemove(place) }
+                    .accessibilityIdentifier("favourite-\(place.id)")
                 }
+                Button(action: onAdd) {
+                    Image(systemName: "plus").font(.body.weight(.semibold)).foregroundStyle(.primary)
+                        .frame(width: chipHeight, height: chipHeight).contentShape(Circle())
+                        .chip(floating: floating, in: Circle())
+                }
+                .buttonStyle(.plain).accessibilityLabel("Add a favourite").accessibilityIdentifier("add-favourite")
             }
         }
         .scrollIndicators(.hidden).scrollBounceBehavior(.basedOnSize, axes: .horizontal)

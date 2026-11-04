@@ -472,7 +472,7 @@ struct ExploreView: View {
 
     private var portraitSheet: some View {
         presenting(panel)
-            .background { SheetGlass() }
+            .background { SheetGlass(detents: detents, screen: "\(screen)") }
             .presentationBackground { sheetBackdrop }
             .presentationCornerRadius(Layout.sheetRadius)
             .safeAreaBar(edge: .bottom, spacing: 0) {
@@ -563,24 +563,22 @@ struct ExploreView: View {
 
     /// One glass capsule: Locate, always there, and Fit.
     private var mapButtons: some View {
-        GlassEffectContainer {
-            VStack(spacing: 0) {
-                Button(action: locateTapped) {
-                    Image(systemName: centred ? "location.fill" : "location").frame(width: 44, height: 44)
-                        .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
-                }
-                .accessibilityLabel("Show my location")
-                .accessibilityValue(centred ? "Centred" : userInCoverage != nil ? "Found" : "")
-                .accessibilityIdentifier("locate")
-                Divider().frame(width: 44)
-                Button { recenter += 1; centred = false } label: { Image(systemName: "viewfinder").frame(width: 44, height: 44) }
-                    .accessibilityLabel(screen == .preview && request != nil ? "Fit routes on map" : selectedPlace != nil ? "Centre on this place" : "Fit map to Seattle")
-                    .accessibilityIdentifier("recenter")
+        VStack(spacing: 0) {
+            Button(action: locateTapped) {
+                Image(systemName: centred ? "location.fill" : "location").frame(width: 44, height: 44)
+                    .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
             }
-            .buttonStyle(.plain)
-            .font(.system(size: 19)).foregroundStyle(.primary)
-            .floatingSurface(in: Capsule(), interactive: true)
+            .accessibilityLabel("Show my location")
+            .accessibilityValue(centred ? "Centred" : userInCoverage != nil ? "Found" : "")
+            .accessibilityIdentifier("locate")
+            Divider().frame(width: 44)
+            Button { recenter += 1; centred = false } label: { Image(systemName: "viewfinder").frame(width: 44, height: 44) }
+                .accessibilityLabel(screen == .preview && request != nil ? "Fit routes on map" : selectedPlace != nil ? "Centre on this place" : "Fit map to Seattle")
+                .accessibilityIdentifier("recenter")
         }
+        .buttonStyle(.plain)
+        .font(.system(size: 19)).foregroundStyle(.primary)
+        .floatingSurface(in: Capsule(), interactive: true)
     }
 
     private var attribution: some View {
@@ -606,27 +604,28 @@ struct ExploreView: View {
 
     /// What home's panel and floating controls share: favourites, or the first-launch hint, over the search capsule.
     private var homeControls: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if !saved.favourites.isEmpty {
-                FavouritesRow(favourites: saved.favourites, floating: floatingHome, onOpen: open,
-                              onRemove: { place in withAnimation(Motion.panel(reduceMotion)) { saved.removeFavourite(place) } },
-                              onAdd: { addingFavourite = true; show(.search) })
-                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
-            }
-            if saved.favourites.isEmpty && saved.recents.isEmpty {
-                Text("Search a place or address, or long-press the map").font(.footnote).foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 12).padding(.vertical, 6)
-                    .chip(floating: floatingHome, in: Capsule())
-                    .accessibilityIdentifier("home-hint")
-            }
-            GlassEffectContainer(spacing: 2) {
+        // One container for the whole cluster, so the chips, hint and search capsule sample and blend together.
+        GlassEffectContainer(spacing: 2) {
+            VStack(alignment: .leading, spacing: 8) {
+                if !saved.favourites.isEmpty {
+                    FavouritesRow(favourites: saved.favourites, floating: floatingHome, onOpen: open,
+                                  onRemove: { place in withAnimation(Motion.panel(reduceMotion)) { saved.removeFavourite(place) } },
+                                  onAdd: { addingFavourite = true; show(.search) })
+                    .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+                }
+                if saved.favourites.isEmpty && saved.recents.isEmpty {
+                    Text("Search a place or address, or long-press the map").font(.footnote).foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 12).padding(.vertical, 6)
+                        .chip(floating: floatingHome, in: Capsule())
+                        .accessibilityIdentifier("home-hint")
+                }
                 HStack(spacing: 8) {
                     searchCapsule
                     if floatingHome { moreButton.transition(.opacity) }
                 }
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fitContent = $0 }
         }
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fitContent = $0 }
     }
 
     private var homeContent: some View {
