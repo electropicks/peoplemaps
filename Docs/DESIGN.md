@@ -566,6 +566,15 @@ Overture Places lands on `search/overture-places`),
 USGS). Remove "not turn-by-turn navigation". Links in `label` colour with
 `arrow.up.forward`.
 
+**Map area (About).** A section between Data and Coverage, plain list rows (nothing on glass): the King County offer
+("King County: Seattle, Bellevue and the rest of the county, plus 3 miles", its download size and "About N MB on your phone",
+and which map is on the phone now), then one control row per state. Download; progress bar with "x MB of y MB" and Pause;
+Waiting for Wi-Fi with Use cellular; Paused with Resume; the plain reason with Retry; Verifying; Ready ("Ready. Switches at
+next launch", with Switch now only when no route is shown and the person is not navigating) and Remove, which asks first.
+Colour comes only from the system; the bar is the standard `ProgressView`. After the switch the place card says "PeopleMaps
+covers King County and a little beyond." outside coverage, and a place no road reaches inside it says "No road route to this
+place in PeopleMaps. It may need a ferry or a road outside the map, as Vashon, the Kitsap shore and Skykomish do."
+
 ## 5. Motion
 
 All through `Motion` (`App/PeoplemapsApp.swift`); no new durations.

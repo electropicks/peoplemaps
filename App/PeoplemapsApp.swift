@@ -1,33 +1,93 @@
 import SwiftUI
 import PeoplemapsCore
 
-@main
-struct PeoplemapsApp: App {
+/// The launch data, loaded off the selected region (`RegionSelection`) and rebuilt on Switch now.
+@MainActor @Observable
+final class AppData {
+    typealias Loaded = (graph: StreetGraph, router: DeferredRouter, search: SearchIndex)
     /// Home needs only the graph's bounds and search; the router builds behind it and routing requests wait for it.
-    private let ready: Result<(graph: StreetGraph, router: DeferredRouter, search: SearchIndex), Error>
-    init() {
-        AppEventHooks.start()
-        ready = Result {
+    private(set) var loaded: Result<Loaded, Error>
+    /// Changes when the data does, so the screen is rebuilt on the new map.
+    private(set) var generation = 0
+
+    init() { loaded = Self.load() }
+
+    /// A downloaded region that fails to load is dropped for this launch and Seattle is loaded instead.
+    private static func load() -> Result<Loaded, Error> {
+        var result = attempt()
+        if case let .failure(error) = result, RegionSelection.launchFolder != nil {
+            AppEvents.shared.log(.error, "downloaded region failed to load", error: error)
+            RegionSelection.suppress()
+            result = attempt()
+        }
+        if case let .failure(error) = result { AppEvents.shared.log(.error, "bundled data failed to load", error: error) }
+        return result
+    }
+
+    private static func attempt() -> Result<Loaded, Error> {
+        Result {
             let header = try AppEvents.shared.timed(.data, "graph header loaded") { try StreetGraph.bundledHeader() }
-            let router = DeferredRouter { Self.holdForTests(); return try AppEvents.shared.timed(.data, "router ready") { NativeRouter(graph: try StreetGraph.bundled()) } }
+            let router = DeferredRouter { holdForTests(); return try AppEvents.shared.timed(.data, "router ready") { NativeRouter(graph: try StreetGraph.bundled()) } }
             return (header.boundsOnly, router, try AppEvents.shared.timed(.data, "search index loaded") { try SearchIndex.bundled(graphNodes: header.nodes) })
         }
-        if case let .failure(error) = ready { AppEvents.shared.log(.error, "bundled data failed to load", error: error) }
     }
+
+    /// Loads whatever `RegionSelection` now points at. Only called with no route shown and no guidance running.
+    func reload() {
+        loaded = Self.load()
+        generation += 1
+    }
+
     /// UI tests pass `--hold-router` to keep the router from being ready, proving home never waits for it.
     private nonisolated static func holdForTests() {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--hold-router") { Thread.sleep(forTimeInterval: 60) }
         #endif
     }
+}
+
+/// Lets the system hand the app the finish of region downloads it kept going while the app was suspended or gone.
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication, handleEventsForBackgroundURLSession identifier: String, completionHandler: @escaping () -> Void) {
+        guard identifier == RegionStore.backgroundIdentifier else { return completionHandler() }
+        nonisolated(unsafe) let finish = completionHandler   // the store calls it on the main thread
+        RegionStore.setBackgroundCompletion { finish() }
+    }
+}
+
+@main
+struct PeoplemapsApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+    @State private var data: AppData
+    @State private var regions: RegionModel
+    init() {
+        Self.isolateRegionsForUITests()
+        AppEventHooks.start()
+        let data = AppData(), regions = RegionModel.make()
+        regions.reload = { [weak data] in data?.reload() }
+        _data = State(initialValue: data)
+        _regions = State(initialValue: regions)
+    }
+    /// UI tests keep downloaded regions in a folder of their own, emptied at each launch (`--keep-regions` keeps it), so they never touch the real ones.
+    private static func isolateRegionsForUITests() {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        guard arguments.contains("--ui-testing") else { return }
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("ui-test-regions", isDirectory: true)
+        if !arguments.contains("--keep-regions") { try? FileManager.default.removeItem(at: folder) }
+        RegionSelection.configure(root: folder)
+        #endif
+    }
     var body: some Scene {
         WindowGroup {
             Group {
-                switch ready {
-                case let .success(ready): ExploreView(graph: ready.graph, router: ready.router, search: ready.search)
-                case let .failure(error): ContentUnavailableView("Seattle data unavailable", systemImage: "map", description: Text(error.localizedDescription))
+                switch data.loaded {
+                case let .success(ready): ExploreView(graph: ready.graph, router: ready.router, search: ready.search).id(data.generation)
+                case let .failure(error): ContentUnavailableView("Map data unavailable", systemImage: "map", description: Text(error.localizedDescription))
                 }
             }
+            .environment(regions)
+            .task { await regions.start() }
             .tint(.primary)
         }
     }

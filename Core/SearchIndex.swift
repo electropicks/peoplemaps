@@ -29,6 +29,8 @@ public final class SearchIndex: @unchecked Sendable {
 
     /// The bundled index, opened without the decoded graph (`graphNodes` is the header's node count), inflated once into `directory` (Caches by default) and reused on later launches.
     public static func bundled(graphNodes: Int? = nil, directory: URL? = nil) throws -> SearchIndex {
+        // A downloaded region carries its index already inflated.
+        if let inflated = RegionSelection.file("seattle-search.sqlite") { return try SearchIndex(opening: inflated, graphNodeCount: graphNodes) }
         guard let url = Bundle.dataFile("seattle-search.sqlite", "gz") else { throw RoutingError.missingData }
         let folder = try directory ?? FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
         // Only the 8-byte trailer is read to name the file; the gzip is read in full only on a launch that has to inflate it.
@@ -46,7 +48,7 @@ public final class SearchIndex: @unchecked Sendable {
         try self.init(trailer: gzipped.suffix(8), inflate: { gzipped.gunzipped() }, graphNodeCount: graphNodeCount, directory: directory)
     }
 
-    private init(trailer: Data, inflate: () -> Data?, graphNodeCount: Int?, directory: URL) throws {
+    private convenience init(trailer: Data, inflate: () -> Data?, graphNodeCount: Int?, directory: URL) throws {
         // The gzip trailer's CRC-32 and size name the inflated file, so a new build never reuses a stale one.
         guard trailer.count == 8 else { throw RoutingError.missingData }
         let key = trailer.map { String(format: "%02x", $0) }.joined()
@@ -60,6 +62,11 @@ public final class SearchIndex: @unchecked Sendable {
                 try? FileManager.default.removeItem(at: old)
             }
         }
+        try self.init(opening: file, graphNodeCount: graphNodeCount)
+    }
+
+    /// Opens an inflated index file read-only.
+    private init(opening file: URL, graphNodeCount: Int?) throws {
         var handle: OpaquePointer?
         let uri = "file:\(file.path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? file.path)?immutable=1"
         guard sqlite3_open_v2(uri, &handle, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI | SQLITE_OPEN_NOMUTEX, nil) == SQLITE_OK, let handle else {

@@ -149,7 +149,7 @@ struct EmptySearch: View {
     let count: Int
     var body: some View {
         ContentUnavailableView {
-            Label("No places match in this Seattle area", systemImage: "magnifyingglass")
+            Label("No places match in this \(RegionSelection.usesCounty ? "map" : "Seattle") area", systemImage: "magnifyingglass")
         } description: {
             Text("PeopleMaps searches \(count.formatted()) places and addresses in this offline area.")
         }

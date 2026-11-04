@@ -13,7 +13,7 @@ one is wrong and gets fixed.
 
 - The app works offline. Maps, search and routes are on your phone.
 - Nothing leaves your phone unless you tap **Send** on a report you have
-  read.
+  read, or **Download** on a bigger map (see Downloading a bigger map).
 - There are no accounts, no sign-in, no analytics, no ads, no tracking.
 - A report you send is stored on our server and read by a maintainer. Nothing
   is published automatically. A maintainer may file a useful report as a public
@@ -132,6 +132,19 @@ A report contains:
 A report never contains your name, email, phone number, Apple ID, contacts,
 photos, other apps, your saved places, your trip history, your device name,
 your language or time zone, or your IP address as stored data.
+
+## Downloading a bigger map
+
+The King County map is an optional download from About, under Map area. Tapping **Download** sends requests to our
+server for the map files, and nothing else. There is no account. A request carries the name of the file and a check that
+the app is a genuine copy of PeopleMaps (Apple's App Attest), and nothing about you: not your location, your searches,
+your routes or your report ID. Like any web server, ours and our host's network see the address your phone connects from
+for the moment of the download; `Docs/REPORTS.md` says what the server keeps. The app then checks every file against a
+checksum it already has before using it. Downloads go over Wi-Fi unless you tap **Use cellular**.
+
+> **Not switched on yet.** The app side is in this version: the screen, the download and the checks. The server that
+> answers the requests, with its App Attest check, is built but not deployed, and this version of the app does not call
+> it, so a release build cannot download a map yet and contacts no server.
 
 ## Your report ID
 
