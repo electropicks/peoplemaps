@@ -22,7 +22,7 @@ export interface Bucket {
 
 /** App Attest and the download token (4.5, 4.7). Empty strings mean not set up, and those routes answer 500. */
 export interface AttestConfig {
-  /** `<team id>.<bundle id>`, from the `APP_ID` var. */
+  /** `<team id>.<bundle id>`, from the `APP_ID` secret; the team ID is never committed. */
   appId: string;
   /** True only when the `ATTEST_ENV` var is `development`: then `appattestdevelop` keys are accepted too. */
   allowDevelopment: boolean;

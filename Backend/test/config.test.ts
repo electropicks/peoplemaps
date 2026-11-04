@@ -29,7 +29,9 @@ describe("wrangler.jsonc", () => {
   it("binds the data bucket as DATA and accepts production App Attest keys only (4.5)", () => {
     expect(config.r2_buckets).toEqual([{ binding: "DATA", bucket_name: "peoplemaps-data" }]);
     expect(config.vars.ATTEST_ENV).toBe("production");
-    expect(typeof config.vars.APP_ID).toBe("string");
+    // APP_ID holds the team ID, so it is a secret, never committed (Backend/README.md).
+    expect(config.vars.APP_ID).toBeUndefined();
+    expect(text).not.toMatch(/"APP_ID"\s*:/);
   });
 });
 

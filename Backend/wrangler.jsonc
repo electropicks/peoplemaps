@@ -1,6 +1,6 @@
 // Docs/REPORTS.md 7.2. preview_urls and invocation_logs stay false (4.6); a test checks.
-// APP_ID is `<team id>.<bundle id>`, set by the owner before the first deploy; ATTEST_ENV stays production (4.5).
-// DOWNLOAD_TOKEN_SECRET is a secret (`wrangler secret put`), never a var here.
+// APP_ID (`<team id>.<bundle id>`) and DOWNLOAD_TOKEN_SECRET are secrets (`wrangler secret put`), never vars here:
+// the team ID is never committed. ATTEST_ENV stays production (4.5).
 {
   "name": "peoplemaps-reports",
   "main": "src/index.ts",
@@ -8,7 +8,7 @@
   "workers_dev": true,
   "preview_urls": false,
   "observability": { "enabled": false, "logs": { "invocation_logs": false } },
-  "vars": { "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "5", "INSTALLS_PER_HOUR": "60", "APP_ID": "", "ATTEST_ENV": "production" },
+  "vars": { "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "5", "INSTALLS_PER_HOUR": "60", "ATTEST_ENV": "production" },
   "d1_databases": [{ "binding": "DB", "database_name": "peoplemaps-reports", "database_id": "22e78664-ede8-40dd-80bf-7e2b0e7ec41f", "migrations_dir": "migrations" }],
   "r2_buckets": [{ "binding": "DATA", "bucket_name": "peoplemaps-data" }],
   "ratelimits": [

@@ -333,7 +333,7 @@ Body: { "keyId": "<base64>", "attestation": "<base64>", "challenge": "<the chall
 - **The checks**, per Apple's "Validating apps that connect to your server": the object is CBOR with `fmt`
   `apple-appattest`; `x5c` is a leaf and an intermediate that chain to the pinned root, each certificate inside its
   validity and each issuer a CA; the leaf's `1.2.840.113635.100.8.2` extension holds SHA-256(authData ||
-  SHA-256(challenge)); SHA-256 of the leaf's public key is `keyId`; authData's rpIdHash is SHA-256 of the `APP_ID` var
+  SHA-256(challenge)); SHA-256 of the leaf's public key is `keyId`; authData's rpIdHash is SHA-256 of the `APP_ID` secret
   (`<team id>.<bundle id>`), its counter is 0, its aaguid is `appattest` (or `appattestdevelop`, accepted only when the
   `ATTEST_ENV` var is `development`), and its credential ID is `keyId`. The receipt is not stored or sent to Apple.
 - **On success** the key's public key, counter 0, environment and hour go in `attest_keys` by key ID, and the answer is a
@@ -582,7 +582,7 @@ Handlers are plain functions, `(request, deps) => Response`. None imports anythi
   "workers_dev": true,
   "preview_urls": false,
   "observability": { "enabled": false, "logs": { "invocation_logs": false } },
-  "vars": { "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "5", "INSTALLS_PER_HOUR": "60", "APP_ID": "", "ATTEST_ENV": "production" },
+  "vars": { "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "5", "INSTALLS_PER_HOUR": "60", "ATTEST_ENV": "production" },
   "d1_databases": [{ "binding": "DB", "database_name": "peoplemaps-reports", "database_id": "22e78664-ede8-40dd-80bf-7e2b0e7ec41f", "migrations_dir": "migrations" }],
   "r2_buckets": [{ "binding": "DATA", "bucket_name": "peoplemaps-data" }],
   "ratelimits": [
@@ -600,9 +600,10 @@ The database ID is not a secret. `preview_urls` stays explicit, because since wr
 `workers_dev`, and each version's URL would be public. `invocation_logs` stays false even if `observability` is later
 turned on for debugging.
 
-**Worker secret and vars.** The Worker has one secret, `DOWNLOAD_TOKEN_SECRET` (4.7), set with `wrangler secret put`
-and never written in this file. The owner sets `APP_ID` in `vars` before the first deploy that serves downloads;
-`ATTEST_ENV` stays `production` here, and a test checks it.
+**Worker secrets and vars.** The Worker has two secrets, set by the owner with `wrangler secret put` and never written in
+this file: `DOWNLOAD_TOKEN_SECRET` (4.7) and `APP_ID` (4.5), which holds the team ID and so is never committed. Until both
+are set, the attest routes answer 500 and store nothing. `ATTEST_ENV` stays a `production` var here, and a test checks
+it and that neither secret appears.
 
 **Deploy secrets.** `CLOUDFLARE_API_TOKEN` is an account-owned token, from the Account API Tokens page, with
 Workers: Editor and D1: Edit, and is narrowed to the `peoplemaps-reports` Worker once that exists. "Workers Scripts: Edit" is
