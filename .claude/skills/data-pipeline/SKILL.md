@@ -27,7 +27,7 @@ Scripts/verify.sh                  # "data reproduces byte for byte" must pass
 
 ## Region data
 
-Files in git are the Seattle test fixture. Bigger regions are release assets pinned in `Data/regions.json`: `Scripts/fetch_data`, then `Scripts/verify.sh --region`. See "Region data" in `Docs/ARCHITECTURE.md`. Never commit a big region.
+Files in git are the Seattle test fixture. Full regions are in a private Cloudflare R2 bucket (`peoplemaps-data`), pinned in `Data/regions.json`: `Scripts/fetch_data`, then `Scripts/verify.sh --region`. Keys and the secrets CI uses: "Region data" in `Docs/ARCHITECTURE.md`. Never commit a big region, and never write a token value anywhere. The derived database is available on request under ODbL.
 
 ## Licences (ask before adding any source)
 
@@ -39,4 +39,4 @@ Files in git are the Seattle test fixture. Bigger regions are release assets pin
 
 ## Coverage
 
-The fixture in git is the box 47.615–47.678 N, 122.390–122.300 W. All Seattle (47.49–47.74 N, 122.44–122.24 W) is the region `seattle-all`, a release asset the app bundles when fetched (`Docs/ARCHITECTURE.md`, Region data). Growing beyond it needs a new region, new measurements (`Docs/COVERAGE_SPIKE.md`) and the owner's decision.
+The fixture in git is the box 47.615–47.678 N, 122.390–122.300 W. All Seattle (47.49–47.74 N, 122.44–122.24 W) is the region `seattle-all`, stored in the private R2 bucket and bundled by the app when fetched (`Docs/ARCHITECTURE.md`, Region data). Growing beyond it needs a new region, new measurements (`Docs/COVERAGE_SPIKE.md`) and the owner's decision.
