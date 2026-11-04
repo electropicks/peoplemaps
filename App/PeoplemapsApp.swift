@@ -93,7 +93,7 @@ extension UIColor {
         switch level {
         case .breezy: hex(0x7FB2D6)
         case .chill: hex(0x6FAFA8)
-        case .meh: hex(0xB8AE9A)
+        case .mixed: hex(0xB8AE9A)
         case .spicy: hex(0xD19A6B)
         case .yikes: hex(0xCF8A88)
         }
@@ -103,7 +103,7 @@ extension UIColor {
         switch level {
         case .breezy: dynamic(light: 0x285A7E, dark: 0xA3D0F0)
         case .chill: dynamic(light: 0x1F5F5A, dark: 0x93D8D0)
-        case .meh: dynamic(light: 0x5F5646, dark: 0xD3CBB8)
+        case .mixed: dynamic(light: 0x5F5646, dark: 0xD3CBB8)
         case .spicy: dynamic(light: 0x84491A, dark: 0xF0BE8F)
         case .yikes: dynamic(light: 0x8C3B39, dark: 0xF0AFAD)
         }

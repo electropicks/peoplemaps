@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Upload the region files named in Data/regions.json from Data/region/ to the private R2 bucket (the owner runs this once).
+  PEOPLEMAPS_DATA_URL=https://<account id>.r2.cloudflarestorage.com/peoplemaps-data \\
+  PEOPLEMAPS_DATA_KEY_ID=... PEOPLEMAPS_DATA_SECRET=... Scripts/upload_data [region ...]
+Needs a read-and-write token; the one CI uses is read-only. Objects are <release>/<region>--<path with / as __>.
+Each file's SHA-256 is checked against the manifest first. An object whose size already matches is skipped
+(ETag is not a content hash for multipart uploads, so it is not used). One line per file. Nothing secret is printed."""
+import json, os, pathlib, sys
+import s3sig
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+MANIFEST = ROOT / 'Data/regions.json'
+SRC = ROOT / 'Data/region'
+
+def main(names, manifest=MANIFEST, src=SRC):
+    m = json.loads(pathlib.Path(manifest).read_text())
+    try:
+        creds = s3sig.credentials()
+    except s3sig.DataError as e:
+        sys.exit(str(e))
+    base = (os.environ.get('PEOPLEMAPS_DATA_URL') or '').rstrip('/')
+    if not creds or not base:
+        sys.exit('set PEOPLEMAPS_DATA_URL, PEOPLEMAPS_DATA_KEY_ID and PEOPLEMAPS_DATA_SECRET (see Docs/ARCHITECTURE.md, "Region data")')
+    regions = m['regions']
+    for n in names:
+        if n not in regions: sys.exit(f'no region "{n}" in {pathlib.Path(manifest).name}')
+    jobs = []
+    for name in names or sorted(regions):
+        for rel, pin in sorted(regions[name]['files'].items()):
+            path = pathlib.Path(src) / name / rel
+            if not path.is_file(): sys.exit(f'{name}/{rel}: not in {pathlib.Path(src).name}/{name}/ (run Scripts/fetch_data {name})')
+            if s3sig.sha256(path) != pin['sha256']: sys.exit(f'{name}/{rel}: SHA-256 does not match the manifest; not uploading')
+            jobs.append((name, rel, pin, path))
+    for name, rel, pin, path in jobs:
+        key = f"{m['release']}/{s3sig.asset_name(name, rel)}"
+        url = f'{base}/{key}'
+        try:
+            try:
+                with s3sig.request('HEAD', url, creds) as r:
+                    have = int(r.headers.get('Content-Length', -1))
+            except s3sig.DataError as e:
+                if e.status != 404: raise
+                have = None
+            if have == pin['bytes']:
+                print(f'skip   {key} ({pin["bytes"]} bytes already there)', flush=True); continue
+            with s3sig.request('PUT', url, creds, data=path.read_bytes(), timeout=600,
+                               headers={'Content-Type': 'application/octet-stream'}):
+                pass
+        except s3sig.DataError as e:
+            sys.exit(f'{key}: {e}')
+        print(f'upload {key} ({pin["bytes"]} bytes)', flush=True)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

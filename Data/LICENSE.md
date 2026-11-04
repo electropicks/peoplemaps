@@ -17,7 +17,7 @@ The raw response timestamps and SHA-256 hashes appear in `provenance.json`.
 Timestamps are recorded exactly as reported by the upstream service. They are
 not a guarantee of present-day road conditions.
 
-The all-Seattle region (`seattle-all`, a release asset, not in git) is built from one
+The all-Seattle region (`seattle-all`, kept in a private object store, not in git; the derived database is available on request under ODbL 1.0) is built from one
 Geofabrik Washington extract (`washington-261031.osm.pbf`, OSM base timestamp 2026-10-31T21:23:06Z,
 https://download.geofabrik.de/north-america/us/washington-261031.osm.pbf) by `Scripts/pbf_to_snapshot.py`.
 It is OpenStreetMap data under the same ODbL 1.0 and attribution as above; its derived graph, map tiles and

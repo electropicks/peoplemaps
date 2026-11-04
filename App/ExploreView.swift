@@ -16,11 +16,11 @@ private enum Stop { case fit, medium, raised, large }
 
 /// Why location can't do what was just asked of it.
 private enum LocationNotice: String, Identifiable {
-    case startGuidance, locate, outside, noFix
+    case startGuidance, locate, outside, noFix, record
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .startGuidance, .locate: "Location is off for PeopleMaps"
+        case .startGuidance, .locate, .record: "Location is off for PeopleMaps"
         case .outside: "You\u{2019}re outside the area we cover"
         case .noFix: "Can\u{2019}t find you right now"
         }
@@ -29,11 +29,12 @@ private enum LocationNotice: String, Identifiable {
         switch self {
         case .startGuidance: "Turn on location in Settings to start guidance. You can still compare routes without it."
         case .locate: "Turn on location in Settings to see where you are and start routes from there. You can still choose a start yourself."
+        case .record: "Turn on location in Settings to record. A recording keeps running in the background until you stop it."
         case .outside: "The map covers Seattle for now, so it can\u{2019}t show where you are. You can still choose a start inside it."
         case .noFix: "Your iPhone hasn\u{2019}t given a location yet. Try again in a moment, or choose a start yourself."
         }
     }
-    var offersSettings: Bool { self == .startGuidance || self == .locate }
+    var offersSettings: Bool { self == .startGuidance || self == .locate || self == .record }
 }
 
 extension TravelMode {
@@ -70,7 +71,7 @@ struct ExploreView: View {
     /// The device's last fix, kept only while location is allowed.
     @State private var userLocation: Coordinate?
     /// Compass heading, only while the map shows the user outside guidance; nil draws a plain dot.
-    @State private var userHeading: Double?
+    @State private var compass = CompassHeading()
     /// The nearest indexed address of the open place when it has none of its own.
     @State private var placeNear: String?
     /// The place card's comparison and the request it answers; nil when no route could be found.
@@ -92,6 +93,8 @@ struct ExploreView: View {
     @State private var camera = GuidanceCamera()
     @State private var guidanceInset = UIEdgeInsets.zero
     @State private var permission = LocationPermission()
+    @State private var recorder = ManualRecorder.shared
+    @AppStorage(DriveLogger.enabledKey, store: ExploreView.voiceStore) private var detailedLogOn = false
     @State private var asking = false
     @State private var notice: LocationNotice?
     @State private var saved = SavedPlacesStore()
@@ -272,6 +275,14 @@ struct ExploreView: View {
         screen = next
     }
 
+    /// What the detailed log's app-use file watches (`App/Reports/DriveLogHooks.swift`).
+    private var driveLogSnapshot: DriveLogSnapshot {
+        DriveLogSnapshot(screen: String(String(describing: screen).prefix { $0 != "(" }), place: selectedPlace, query: query, mode: mode, budget: budget,
+                         sheet: sheet?.rawValue, calmer: selectedCalmer,
+                         request: previewRequest.map { "\($0.destination.id) \($0.mode) \($0.extraMinutes)" }, destination: previewRequest?.destination,
+                         routeReady: session.comparison != nil)
+    }
+
     private func open(_ place: Place) {
         let place = search.withAddress(place)
         query = ""
@@ -280,6 +291,8 @@ struct ExploreView: View {
     }
     /// A search result: its place card, or a new favourite when Add opened the search.
     private func picked(_ place: Place) {
+        DriveLogger.use("search_pick", ["query": .string(query), "id": .string(place.id), "name": .string(place.name),
+                                        "rank": .num(results.firstIndex { $0.id == place.id } ?? -1), "results": .num(results.count), "addingFavourite": .bool(addingFavourite)])
         guard addingFavourite else { open(place); return }
         let place = search.withAddress(place)
         if !saved.isFavourite(place) { saved.toggleFavourite(place) }
@@ -359,7 +372,7 @@ struct ExploreView: View {
         GeometryReader { geo in
             ZStack {
                 SeattleMap(comparison: screen == .preview ? session.comparison : nil, selectedCalmer: selectedCalmer, recenter: recenter, locate: locateCount, selected: mapSelection,
-                           user: userInCoverage, userHeading: wantsCompass ? userHeading : nil, coverage: coverage, onLongPress: dropPin, guidance: guidance,
+                           user: userInCoverage, compass: compass, showsHeading: wantsCompass, coverage: coverage, onLongPress: dropPin, guidance: guidance,
                            onCameraGesture: { if guiding { camera.pan() } else if centred { centred = false } }, padding: mapPadding(geo),
                            markerFeed: markerFeed, showsPlaces: showsPlaces, onPlaceTap: openMarker, reportsPlaces: reportsPlaces, onVisiblePlaces: { visiblePlaces = $0 })
                     .ignoresSafeArea()
@@ -374,6 +387,7 @@ struct ExploreView: View {
                 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("--ui-testing") { NavigationDebugProbe(navigator: navigator) }
                 #endif
+                if let startedAt = recorder.startedAt { recordingPill(startedAt, geo) }
             }
             .animation(Motion.panel(reduceMotion), value: screen)
             .onGeometryChange(for: CGFloat.self) { $0.size.height + $0.safeAreaInsets.top + $0.safeAreaInsets.bottom } action: { screenHeight = $0 }
@@ -382,15 +396,22 @@ struct ExploreView: View {
         .ignoresSafeArea(.keyboard)
         .sheet(isPresented: sheetUp) { portraitSheet }
         .task(id: previewRequest) {
-            if let previewRequest { selectedCalmer = true; session.start(previewRequest) } else { session.cancel() }
+            if let previewRequest {
+                selectedCalmer = true
+                // The place card already ran this compare for its estimate.
+                if let estimate, estimate.request == previewRequest, let seed = estimate.comparison { session.start(previewRequest, seed: seed) } else { session.start(previewRequest) }
+            } else { session.cancel() }
         }
+        .task { DriveLogger.resetForUITests(); recorder.closeLeftOpen() }
+        .onChange(of: detailedLogOn) { if !detailedLogOn { recorder.stop(reason: "log_off") } }
         .task { await locate(prompting: true) }
         .task { if !Self.markersOff { markerFeed = await PlaceMarkerFeed.load(search) } }
         .onDisappear { session.cancel(); navigator.stop() }
         .onChange(of: voiceMuted) { navigator.setMuted(voiceMuted) }
+        .driveLogUse(driveLogSnapshot)
         .reportContext(screen: String(String(describing: screen).prefix { $0 != "(" }), mode: mode, extraMinutes: budget, comparison: session.comparison, navigator: navigator, dataVersion: search.dataVersion)
         .onChange(of: userLocation) { followUser() }
-        .onChange(of: wantsCompass, initial: true) { permission.onHeading = { userHeading = $0 }; permission.compass(on: wantsCompass) }
+        .onChange(of: wantsCompass, initial: true) { permission.onHeading = { [compass] in compass.degrees = $0 }; permission.compass(on: wantsCompass) }
         // Pulling the search sheet down is the same as Cancel, at wherever it was let go.
         .onChange(of: stop) { if screen == .search, stop != .large { homeStop = stop; query = ""; addingFavourite = false; screen = .home } }
         .onChange(of: scenePhase) {
@@ -468,7 +489,7 @@ struct ExploreView: View {
 
     private var portraitSheet: some View {
         presenting(panel)
-            .background { SheetGlass() }
+            .background { SheetGlass(detents: detents, screen: "\(screen)") }
             .presentationBackground { sheetBackdrop }
             .presentationCornerRadius(Layout.sheetRadius)
             .safeAreaBar(edge: .bottom, spacing: 0) {
@@ -559,24 +580,44 @@ struct ExploreView: View {
 
     /// One glass capsule: Locate, always there, and Fit.
     private var mapButtons: some View {
-        GlassEffectContainer {
-            VStack(spacing: 0) {
-                Button(action: locateTapped) {
-                    Image(systemName: centred ? "location.fill" : "location").frame(width: 44, height: 44)
-                        .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
-                }
-                .accessibilityLabel("Show my location")
-                .accessibilityValue(centred ? "Centred" : userInCoverage != nil ? "Found" : "")
-                .accessibilityIdentifier("locate")
-                Divider().frame(width: 44)
-                Button { recenter += 1; centred = false } label: { Image(systemName: "viewfinder").frame(width: 44, height: 44) }
-                    .accessibilityLabel(screen == .preview && request != nil ? "Fit routes on map" : selectedPlace != nil ? "Centre on this place" : "Fit map to Seattle")
-                    .accessibilityIdentifier("recenter")
+        VStack(spacing: 0) {
+            Button(action: locateTapped) {
+                Image(systemName: centred ? "location.fill" : "location").frame(width: 44, height: 44)
+                    .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
             }
-            .buttonStyle(.plain)
-            .font(.system(size: 19)).foregroundStyle(.primary)
-            .floatingSurface(in: Capsule(), interactive: true)
+            .accessibilityLabel("Show my location")
+            .accessibilityValue(centred ? "Centred" : userInCoverage != nil ? "Found" : "")
+            .accessibilityIdentifier("locate")
+            Divider().frame(width: 44)
+            Button { recenter += 1; centred = false } label: { Image(systemName: "viewfinder").frame(width: 44, height: 44) }
+                .accessibilityLabel(screen == .preview && request != nil ? "Fit routes on map" : selectedPlace != nil ? "Centre on this place" : "Fit map to Seattle")
+                .accessibilityIdentifier("recenter")
+            if detailedLogOn && !recorder.isRecording {
+                Divider().frame(width: 44)
+                Button(action: startRecording) { Image(systemName: "record.circle").frame(width: 44, height: 44) }
+                    .accessibilityLabel("Start recording")
+                    .accessibilityHint("Records your location in the detailed log until you stop it")
+                    .accessibilityIdentifier("record-start")
+            }
         }
+        .buttonStyle(.plain)
+        .font(.system(size: 19)).foregroundStyle(.primary)
+        .floatingSurface(in: Capsule(), interactive: true)
+    }
+
+    private func startRecording() {
+        Task { if !(await recorder.start()), detailedLogOn, permission.access != .granted { notice = .record } }
+    }
+
+    /// Over every screen but the map's own controls: top leading in portrait (under the guidance banner while guiding), and left of
+    /// the map buttons in landscape.
+    private func recordingPill(_ startedAt: Date, _ geo: GeometryProxy) -> some View {
+        let guidingPortrait = screen == .navigating && !landscape
+        return RecordingPill(startedAt: startedAt) { recorder.stop() }
+            .padding(.top, 8 + (guidingPortrait ? guidanceInset.top : 0))
+            .padding(landscape ? .trailing : .leading, landscape ? 16 + 44 + 8 : 16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: landscape ? .topTrailing : .topLeading)
+            .transition(.opacity)
     }
 
     private var attribution: some View {
@@ -602,27 +643,28 @@ struct ExploreView: View {
 
     /// What home's panel and floating controls share: favourites, or the first-launch hint, over the search capsule.
     private var homeControls: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if !saved.favourites.isEmpty {
-                FavouritesRow(favourites: saved.favourites, floating: floatingHome, onOpen: open,
-                              onRemove: { place in withAnimation(Motion.panel(reduceMotion)) { saved.removeFavourite(place) } },
-                              onAdd: { addingFavourite = true; show(.search) })
-                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
-            }
-            if saved.favourites.isEmpty && saved.recents.isEmpty {
-                Text("Search a place or address, or long-press the map").font(.footnote).foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 12).padding(.vertical, 6)
-                    .chip(floating: floatingHome, in: Capsule())
-                    .accessibilityIdentifier("home-hint")
-            }
-            GlassEffectContainer(spacing: 2) {
+        // One container for the whole cluster, so the chips, hint and search capsule sample and blend together.
+        GlassEffectContainer(spacing: 2) {
+            VStack(alignment: .leading, spacing: 8) {
+                if !saved.favourites.isEmpty {
+                    FavouritesRow(favourites: saved.favourites, floating: floatingHome, onOpen: open,
+                                  onRemove: { place in withAnimation(Motion.panel(reduceMotion)) { saved.removeFavourite(place) } },
+                                  onAdd: { addingFavourite = true; show(.search) })
+                    .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+                }
+                if saved.favourites.isEmpty && saved.recents.isEmpty {
+                    Text("Search a place or address, or long-press the map").font(.footnote).foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 12).padding(.vertical, 6)
+                        .chip(floating: floatingHome, in: Capsule())
+                        .accessibilityIdentifier("home-hint")
+                }
                 HStack(spacing: 8) {
                     searchCapsule
                     if floatingHome { moreButton.transition(.opacity) }
                 }
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fitContent = $0 }
         }
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fitContent = $0 }
     }
 
     private var homeContent: some View {
@@ -773,7 +815,7 @@ struct ExploreView: View {
     /// From where Directions would start, in the last-used mode, when both ends are inside the area we cover.
     private func estimateRequest(for place: Place) -> RouteRequest? {
         guard graph.coverage.contains(place.coordinate), let from = start(for: place), graph.coverage.contains(from.coordinate) else { return nil }
-        return .init(origin: from, destination: place, mode: mode, extraMinutes: budget)
+        return .init(origin: from, destination: place, mode: mode, extraMinutes: budget, preferences: preferences[mode])
     }
 
     /// Runs off the main thread; SwiftUI cancels it when the card closes or shows another place.

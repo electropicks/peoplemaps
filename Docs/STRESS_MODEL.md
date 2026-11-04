@@ -494,7 +494,7 @@ exists, and the Why this route sheet says so.
 first and selects it, resetting on every new request, and Start follows the
 selection. This already leaned calm and did not change, including for routes
 that cost only seconds. The place card's Directions button shows the route Start
-would take: "Calmer: 12–14 min, 3.4 mi" over "Meh → Breezy, mostly fewer
+would take: "Calmer: 12–14 min, 3.4 mi" over "Mixed → Breezy, mostly fewer
 unsignalled lefts", or the fastest route and what the router found when there is
 no calmer one.
 
@@ -548,15 +548,15 @@ stress per minute of the fastest route's time, with a 5 minute floor. Both route
 in a comparison divide by the same time, so a route can't look calmer just for
 being slower, and the floor stops one left turn on a two minute trip from reading
 as Yikes. Stress means different things per mode, so R is per mode: **drive 50,
-bike 65, walk 12**, about where a typical fastest route lands in Spicy to Meh.
+bike 65, walk 12**, about where a typical fastest route lands in Spicy to Mixed.
 
-| Level | Breezy | Chill | Meh | Spicy | Yikes |
+| Level | Breezy | Chill | Mixed | Spicy | Yikes |
 | --- | --- | --- | --- | --- | --- |
 | Score | 80+ | 60–79 | 40–59 | 20–39 | under 20 |
 
 The cutoffs are even so the bar's bands can be even, with no number axis. R was
 set on real trips: 150 seeded pairs in each mode, 10 minute limit
-(`peoplemaps-audit --calm-sample 150`). Counts below are Breezy / Chill / Meh /
+(`peoplemaps-audit --calm-sample 150`). Counts below are Breezy / Chill / Mixed /
 Spicy / Yikes.
 
 | Mode | Fastest | Calmer, where shown | Same level | Same score |
@@ -567,7 +567,7 @@ Spicy / Yikes.
 
 All five levels get used. Fastest routes skew Spicy and calmer ones Chill, which
 is the point of the app; no calmer route landed in Yikes or scored worse than its
-fastest. When both share a level the summary shows scores ("Meh, 44 → 53"). Like
+fastest. When both share a level the summary shows scores ("Mixed, 44 → 53"). Like
 the weights, R and the cutoffs are hypotheses: the score only knows what the map
 knows, so it is labelled an estimate.
 

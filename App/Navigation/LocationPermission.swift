@@ -27,6 +27,9 @@ final class LocationPermission: NSObject, CLLocationManagerDelegate {
     private static let fake: (access: Access, at: CLLocationCoordinate2D?)? = nil
     #endif
 
+    /// Where UI tests say the device is (`--location-granted`); nil outside tests.
+    static var fakeCoordinate: CLLocationCoordinate2D? { fake?.at }
+
     var access: Access { Self.fake?.access ?? Self.access(manager.authorizationStatus) }
 
     private static func access(_ status: CLAuthorizationStatus) -> Access {
@@ -88,7 +91,7 @@ final class LocationPermission: NSObject, CLLocationManagerDelegate {
             manager.stopUpdatingHeading(); onHeading?(nil); return
         }
         manager.delegate = self
-        manager.headingFilter = 3
+        manager.headingFilter = 8
         manager.startUpdatingHeading()
     }
 

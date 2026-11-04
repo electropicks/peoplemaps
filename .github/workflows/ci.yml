@@ -81,8 +81,14 @@ jobs:
         with:
           path: ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
           key: spm-${{ hashFiles('Peoplemaps.xcodeproj/project.pbxproj', 'Package.swift') }}
+      # Full Seattle data from the private R2 bucket with a read-only key. There is no public fallback: a run without the secrets (a fork's)
+      # passes them empty and fails this step. Region runs are dispatch-only, so that only affects a dispatch on a fork.
       - if: inputs.region
         run: Scripts/fetch_data seattle-all
+        env:
+          PEOPLEMAPS_DATA_URL: ${{ secrets.PEOPLEMAPS_DATA_URL }}
+          PEOPLEMAPS_DATA_KEY_ID: ${{ secrets.PEOPLEMAPS_DATA_KEY_ID }}
+          PEOPLEMAPS_DATA_SECRET: ${{ secrets.PEOPLEMAPS_DATA_SECRET }}
       - run: PEOPLEMAPS_XCODE="$(xcode-select -p)" PEOPLEMAPS_UI_RESULT="$RUNNER_TEMP/ui-tests.xcresult" Scripts/verify.sh --fast --ui
       - if: always()
         run: |

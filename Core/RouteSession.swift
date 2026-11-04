@@ -37,6 +37,13 @@ public final class RouteSession {
             }
         }
     }
+    /// Shows a comparison already computed for the same request, without running it again.
+    public func start(_ request: RouteRequest, seed: RouteComparison) {
+        generation += 1
+        task?.cancel(); task = nil
+        AppEvents.shared.log(.route, "route compare reused", mode: request.mode)
+        state = .ready(seed)
+    }
     public func cancel() {
         generation += 1; task?.cancel(); task = nil; state = .cancelled
     }

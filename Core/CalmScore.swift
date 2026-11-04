@@ -3,13 +3,13 @@ import Foundation
 /// Five words for how calm a route is estimated to be, calmest first, left to right on the bar. Cutoffs and their
 /// calibration: Docs/STRESS_MODEL.md, Calm score.
 public enum CalmLevel: Int, CaseIterable, Sendable, Identifiable {
-    case breezy, chill, meh, spicy, yikes
+    case breezy, chill, mixed, spicy, yikes
     public var id: Int { rawValue }
     public var title: String {
         switch self {
         case .breezy: "Breezy"
         case .chill: "Chill"
-        case .meh: "Meh"
+        case .mixed: "Mixed"
         case .spicy: "Spicy"
         case .yikes: "Yikes"
         }
@@ -19,7 +19,7 @@ public enum CalmLevel: Int, CaseIterable, Sendable, Identifiable {
         switch self {
         case .breezy: 80
         case .chill: 60
-        case .meh: 40
+        case .mixed: 40
         case .spicy: 20
         case .yikes: 0
         }
@@ -120,7 +120,7 @@ extension RouteComparison {
             .map { (factor: $0, saved: (f[$0].cost - c[$0].cost) * (scale?[$0] ?? 1)) }.filter { $0.saved > 0 }.sorted { $0.saved > $1.saved }
     }
 
-    /// The line under the time: "Yikes → Chill, mostly fewer unsignalled lefts", or what the router found: "Meh, already the calmest we found".
+    /// The line under the time: "Yikes → Chill, mostly fewer unsignalled lefts", or what the router found: "Mixed, already the calmest we found".
     public var calmSummary: String { summary(calmChange) }
     /// As `calmSummary`, for VoiceOver.
     public var spokenCalmSummary: String { summary(spokenCalmChange) }

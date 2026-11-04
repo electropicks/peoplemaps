@@ -43,6 +43,11 @@ struct Guidance: Equatable {
     var inset = UIEdgeInsets.zero
 }
 
+/// The compass heading on its own, so a tick re-runs `SeattleMap.updateUIView` and not the screen that owns the map.
+@Observable @MainActor final class CompassHeading {
+    var degrees: Double?
+}
+
 struct SeattleMap: UIViewRepresentable {
     let comparison: RouteComparison?
     let selectedCalmer: Bool
@@ -54,7 +59,10 @@ struct SeattleMap: UIViewRepresentable {
     /// Where the device is, when known and inside coverage: a blue dot, and what Home frames at neighbourhood zoom.
     var user: Coordinate?
     /// Which way the device faces, in degrees from north, when known outside guidance. Nil draws a plain dot: no direction is invented.
-    var userHeading: Double?
+    var compass = CompassHeading()
+    /// The compass is wanted: the map shows the user outside guidance.
+    var showsHeading = false
+    private var userHeading: Double? { showsHeading ? compass.degrees : nil }
     /// South-west and north-east corners of the area we cover, framed by Home when the user's location is unknown.
     var coverage: [Coordinate] = []
     /// A long-press on the map, at that spot.

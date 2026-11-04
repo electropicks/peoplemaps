@@ -31,16 +31,28 @@ public final class SearchIndex: @unchecked Sendable {
     public static func bundled(graphNodes: Int? = nil, directory: URL? = nil) throws -> SearchIndex {
         guard let url = Bundle.dataFile("seattle-search.sqlite", "gz") else { throw RoutingError.missingData }
         let folder = try directory ?? FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        return try SearchIndex(gzipped: try Data(contentsOf: url), graphNodeCount: graphNodes, directory: folder)
+        // Only the 8-byte trailer is read to name the file; the gzip is read in full only on a launch that has to inflate it.
+        let reader = try FileHandle(forReadingFrom: url)
+        defer { try? reader.close() }
+        let size = try reader.seekToEnd()
+        guard size >= 18 else { throw RoutingError.missingData }
+        try reader.seek(toOffset: size - 8)
+        let trailer = try reader.read(upToCount: 8) ?? Data()
+        return try SearchIndex(trailer: trailer, inflate: { (try? Data(contentsOf: url))?.gunzipped() }, graphNodeCount: graphNodes, directory: folder)
     }
 
-    public init(gzipped: Data, graphNodeCount: Int?, directory: URL) throws {
-        // The gzip trailer's CRC-32 and size name the inflated file, so a new build never reuses a stale one.
+    public convenience init(gzipped: Data, graphNodeCount: Int?, directory: URL) throws {
         guard gzipped.count >= 18 else { throw RoutingError.missingData }
-        let key = gzipped.suffix(8).map { String(format: "%02x", $0) }.joined()
+        try self.init(trailer: gzipped.suffix(8), inflate: { gzipped.gunzipped() }, graphNodeCount: graphNodeCount, directory: directory)
+    }
+
+    private init(trailer: Data, inflate: () -> Data?, graphNodeCount: Int?, directory: URL) throws {
+        // The gzip trailer's CRC-32 and size name the inflated file, so a new build never reuses a stale one.
+        guard trailer.count == 8 else { throw RoutingError.missingData }
+        let key = trailer.map { String(format: "%02x", $0) }.joined()
         let file = directory.appendingPathComponent("seattle-search-\(key).sqlite")
         if !FileManager.default.fileExists(atPath: file.path) {
-            guard let sqlite = gzipped.gunzipped() else { throw RoutingError.missingData }
+            guard let sqlite = inflate() else { throw RoutingError.missingData }
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             try sqlite.write(to: file, options: .atomic)
             for old in (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []

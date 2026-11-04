@@ -1,41 +1,55 @@
 #!/usr/bin/env python3
-"""Download region data files from the GitHub release named in Data/regions.json into Data/region/ (gitignored).
+"""Download region data files named in Data/regions.json into Data/region/ (gitignored).
 Each file's SHA-256 is pinned in the manifest. Files already present and matching are left alone, quietly.
   Scripts/fetch_data [region ...]    all regions in the manifest when none are named
-PEOPLEMAPS_DATA_URL replaces the release URL (a directory URL; file:// works) for tests and mirrors.
-Asset name on the release: <region>--<path with / replaced by __>."""
-import hashlib, json, os, pathlib, shutil, sys, tempfile, urllib.request
+Where from:
+  PEOPLEMAPS_DATA_URL, no keys                 plain GET of <url>/<region>--<path with / as __> (a directory URL; file:// works),
+                                               for tests and mirrors
+  PEOPLEMAPS_DATA_URL + PEOPLEMAPS_DATA_KEY_ID + PEOPLEMAPS_DATA_SECRET
+                                               SigV4-signed GET of <url>/<release>/<region>--<path with / as __>, for the
+                                               private R2 bucket: https://<account id>.r2.cloudflarestorage.com/peoplemaps-data
+PEOPLEMAPS_DATA_URL is required: unset, it exits with a message (there is no public fallback). Empty variables count as
+unset, so a fork's CI run, which gets empty secrets, exits the same way.
+Nothing secret is ever printed."""
+import json, os, pathlib, shutil, sys, tempfile
+import s3sig
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / 'Data/regions.json'
 DEST = ROOT / 'Data/region'
 
-def sha256(path):
-    h = hashlib.sha256()
-    with open(path, 'rb') as f:
-        for chunk in iter(lambda: f.read(1 << 20), b''):
-            h.update(chunk)
-    return h.hexdigest()
-
-def main(names):
-    m = json.loads(MANIFEST.read_text())
-    base = os.environ.get('PEOPLEMAPS_DATA_URL') or f"https://github.com/electropicks/peoplemaps/releases/download/{m['release']}"
-    base = base.rstrip('/')
+def main(names, manifest=MANIFEST, dest=DEST):
+    m = json.loads(pathlib.Path(manifest).read_text())
+    try:
+        creds = s3sig.credentials()
+    except s3sig.DataError as e:
+        sys.exit(str(e))
+    base = (os.environ.get('PEOPLEMAPS_DATA_URL') or '').rstrip('/')
+    if creds and not base: sys.exit('PEOPLEMAPS_DATA_KEY_ID is set but PEOPLEMAPS_DATA_URL is not')
+    if not base: sys.exit('PEOPLEMAPS_DATA_URL, PEOPLEMAPS_DATA_KEY_ID and PEOPLEMAPS_DATA_SECRET are needed; see Docs/ARCHITECTURE.md, "Region data"')
+    if creds:
+        base += '/' + m['release']  # the bucket holds one folder per release
     regions = m['regions']
     for n in names:
-        if n not in regions: sys.exit(f'no region "{n}" in {MANIFEST.relative_to(ROOT)}')
+        if n not in regions: sys.exit(f'no region "{n}" in {pathlib.Path(manifest).name}')
     for name in names or sorted(regions):
         for rel, pin in sorted(regions[name]['files'].items()):
-            target = DEST / name / rel
-            if target.is_file() and sha256(target) == pin['sha256']: continue
-            url = f"{base}/{name}--{rel.replace('/', '__')}"
+            target = pathlib.Path(dest) / name / rel
+            if target.is_file() and s3sig.sha256(target) == pin['sha256']: continue
+            asset = s3sig.asset_name(name, rel)
+            url = f"{base}/{asset}"
+            # What is safe to print: the asset name, never the URL when signed (it holds the account id).
+            where = f"{m['release']}/{asset}" if creds else url
             print(f'fetching {name}/{rel} ({pin["bytes"] / 1e6:.1f} MB)', flush=True)
             target.parent.mkdir(parents=True, exist_ok=True)
             fd, tmp = tempfile.mkstemp(dir=target.parent, suffix='.part'); os.close(fd)
             try:
-                with urllib.request.urlopen(url) as r, open(tmp, 'wb') as f: shutil.copyfileobj(r, f)
-                got = sha256(tmp)
-                if got != pin['sha256']: sys.exit(f'{url}: SHA-256 {got} does not match the pin {pin["sha256"]}')
+                try:
+                    with s3sig.request('GET', url, creds) as r, open(tmp, 'wb') as f: shutil.copyfileobj(r, f)
+                except s3sig.DataError as e:
+                    sys.exit(f'{where}: {e}')
+                got = s3sig.sha256(tmp)
+                if got != pin['sha256']: sys.exit(f'{where}: SHA-256 {got} does not match the pin {pin["sha256"]}')
                 os.chmod(tmp, 0o644)  # mkstemp makes it 0600; the build copies it into the app
                 os.replace(tmp, target)
             finally:
