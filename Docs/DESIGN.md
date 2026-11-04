@@ -61,6 +61,12 @@ which lets the map show through; SwiftUI has no modifier for it. An empty
    owner couldn't see on the phone. Busy-map legibility comes from `glassVeil`
    (`.light`) on text surfaces such as guidance, as Apple asks for `.clear`, and
    `glassSheetVeil` in the dark sheet. `--glass-regular` swaps it in Debug builds.
+   **Deliberate deviation from Apple, who reserve `.clear` for media-rich
+   backgrounds and recommend `.regular` for text:** the guidance turn banner,
+   rerouting card, trip bar and landscape card (`legible: true` in
+   `floatingSurface`) use `.regular` under the same `glassVeil`, because a route
+   line behind the text showed through and these are read at a glance while
+   driving. Map buttons, chips, the home capsule and the sheet stay `.clear`.
 5. **No accent on controls, plus category colour.** Controls and text use the
    label colour; the app's tint is `.primary`. Dusk blue (`.calmer`) is a map
    colour only: the route line, its leader and the selected pin. Green no longer
@@ -219,9 +225,16 @@ Worst case over the map under each surface, in contrast ratio:
 |---|---|---|---|---|
 | Sheet | `#F8F8F0` to `#D3EDF6` | `#2D3632` to `#2B464D` | 17.2 / 10.1 | 9.3 / 6.5 |
 | Home capsule and chips (no veil) | white to `#CEECF7` | `#38423F` to `#3F626D` | 17.0 / 6.6 | none on them |
-| Guidance banner, route under the text | white to `#ABC1D8` | `#232A28` to `#4C5F70` | 11.4 / 6.6 | 7.2 / 4.6 |
+| Guidance banner, route under the text (`.regular`) | `#E6F5FA` to `#FCFCF9` | `#202826` to `#203337` | 18.8 / 13.2 | 9.8 / 8.1 |
 | Trip bar | white to `#EBF8ED` | `#242B29` to `#293C35` | 19.2 / 11.7 | 9.9 / 7.4 |
 | Landscape card | white to `#C3D6DC` | `#242B29` to `#45565B` | 14.0 / 7.7 | 8.2 / 5.2 |
+
+The banner row above was re-measured on 3 November 2026 over the route line, which runs under the banner in the capture, after
+it moved from `.clear` to `.regular`. On `.clear` the line showed through as `#9BB4CF` (light) and `#52677D` (dark),
+and the same method gave 9.8 / 5.8 for primary text and 6.5 / 4.1 for `onGlass`: dark `onGlass` was under 4.5:1. On
+`.regular` the line no longer shows, and along its path the worst background is `#F2F6F5` / `#252E2F` (19.3 / 13.9 primary,
+9.9 / 8.5 `onGlass`). Method: every background pixel in the banner outside the text boxes, taking the worst against the
+text colour (black or white; `onGlass` is that at 75% over the pixel); WCAG ratios.
 
 Rating words on the sheet are 5.9 or more in light and 6.1 or more in dark.
 Behind the routes is solid: its headers and footers measure 9.7 / 10.0, once they use
@@ -469,6 +482,7 @@ toolbar (`.confirmationAction`). No "safe", no scores.
 
 Portrait: the persistent sheet is hidden; guidance owns the screen. Every surface
 is `.clear` with `glassVeil` (`.light`), and `glassVeilDense` with Increase Contrast.
+The turn banner, rerouting card, trip bar and landscape card are `.regular` under the same veil (principle 4).
 - **Turn banner**: glass, top, full width minus 8. Arrow in `.primary`,
   distance `.largeTitle.bold()`, instruction `.title3.semibold`. The "Then:"
   row sits inside the same glass with a hairline divider, not a second fill
