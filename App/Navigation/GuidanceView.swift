@@ -62,7 +62,7 @@ struct GuidanceOverlay: View {
         } else {
             let bottom = bottomEdge.isFinite ? max(0, screen.height - bottomEdge) : 0
             // The travel camera rides the puck low in what is left, so at accessibility sizes the map is inset further to keep it off the trip bar.
-            onInsets(UIEdgeInsets(top: topEdge + 8, left: 0, bottom: bottom + (navigator.hasArrived ? 64 : compact ? 72 : 8), right: 0))
+            onInsets(UIEdgeInsets(top: topEdge + 8, left: 0, bottom: bottom + (navigator.hasArrived ? (compact ? 96 : 64) : compact ? 72 : 8), right: 0))
         }
     }
 
