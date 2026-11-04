@@ -269,6 +269,56 @@ final class RegionStoreTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: installedFolder("data-test-old2").appendingPathComponent("seattle-graph.bin").path))
     }
 
+    // MARK: The Worker source
+
+    /// A Worker stand-in: files under `v1/regions/<release>/`, and a fake device whose n-th attestation yields `pmd_n`.
+    private func workerStore(_ fake: FakeRegion, accepting: Set<String>) throws -> (RegionStore, TinyHTTPServer, AttestFixture) {
+        var files: [String: Data] = [:]
+        for (name, data) in fake.objects() { files["v1/regions/\(fake.release)/\(name)"] = data }
+        let server = try TinyHTTPServer(files: files)
+        server.requireAuthorization(accepting)
+        servers.append(server)
+        let attest = AttestFixture(challenge: Data(repeating: 7, count: 68), supported: true, now: Date(), lifetime: 86_400, statuses: [:])
+        let authorizer = DownloadAuthorizer(client: AttestClient(baseURL: server.baseURL, service: attest, transport: attest.transport), store: attest)
+        let store = RegionStore(manifest: fake.manifest(), source: WorkerSource(base: server.baseURL, authorizer: authorizer), root: root, configuration: .default)
+        return (store, server, attest)
+    }
+
+    func testAFirstRejectedTokenIsReplacedOnceAndTheDownloadFinishes() async throws {
+        let fake = FakeRegion(release: "data-test-w1")
+        let (store, server, attest) = try workerStore(fake, accepting: ["Bearer pmd_1"])
+        attest.save(DownloadToken(value: "pmd_old", expiresAt: Date().addingTimeInterval(3_600)))   // cached, but the server has forgotten it
+        await store.download(region: "king-county")
+        let done = await wait(store, { $0 == .ready })
+        XCTAssertEqual(done, .ready)
+        XCTAssertEqual(attest.keysMade, 1, "one re-attestation, however many files saw the 401")
+        XCTAssertTrue(server.requests.contains { $0.auth == "Bearer pmd_old" })
+        XCTAssertTrue(server.requests.contains { $0.auth == "Bearer pmd_1" })
+    }
+
+    func testASecondRejectionSurfacesAndStops() async throws {
+        let fake = FakeRegion(release: "data-test-w2")
+        let (store, _, attest) = try workerStore(fake, accepting: ["Bearer nothing-matches"])
+        await store.download(region: "king-county")
+        let failed = await wait(store, { Self.isFailed($0) })
+        XCTAssertEqual(failed, .failed(RegionError.badStatus(401).errorDescription!))
+        XCTAssertLessThanOrEqual(attest.keysMade, 2, "no loop of attestations")
+        let state = await store.state(of: "king-county")
+        XCTAssertTrue(Self.isFailed(state))
+    }
+
+    func testAnUnsupportedDeviceFailsTheDownloadWithThePlainMessage() async throws {
+        let fake = FakeRegion(release: "data-test-w3")
+        let server = try TinyHTTPServer(files: [:]); servers.append(server)
+        let attest = AttestFixture(challenge: Data(repeating: 7, count: 68), supported: false, now: Date(), lifetime: 86_400, statuses: [:])
+        let authorizer = DownloadAuthorizer(client: AttestClient(baseURL: server.baseURL, service: attest, transport: attest.transport), store: attest)
+        let store = RegionStore(manifest: fake.manifest(), source: WorkerSource(base: server.baseURL, authorizer: authorizer), root: root, configuration: .default)
+        await store.download(region: "king-county")
+        let failed = await wait(store, { Self.isFailed($0) })
+        XCTAssertEqual(failed, .failed("This device can\u{2019}t prove it\u{2019}s a genuine copy of the app, so map downloads aren\u{2019}t available."))
+        XCTAssertTrue(server.requests.isEmpty)
+    }
+
     // MARK: Pieces
 
     func testSourcesNameFilesAsTheBucketDoes() async throws {
@@ -277,9 +327,6 @@ final class RegionStoreTests: XCTestCase {
         XCTAssertEqual(url.absoluteString, "http://127.0.0.1:9/king-county--expected__seattle-graph.bin")
         let auth = try await direct.authorization()
         XCTAssertNil(auth)
-        do { _ = try await WorkerSource().url(for: "x", in: "y", release: "z"); XCTFail("the Worker source is a stub") } catch {
-            XCTAssertEqual(error as? RegionError, .sourceUnavailable)
-        }
     }
 
     func testTheShippedManifestPinsTheCountyOutputs() throws {

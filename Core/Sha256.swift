@@ -19,6 +19,16 @@ public enum Sha256 {
         #endif
     }
 
+    /// SHA-256 of bytes already in memory (an attest challenge).
+    public static func digest(_ data: Data) -> [UInt8] {
+        #if canImport(CryptoKit)
+        return Array(SHA256.hash(data: data))
+        #else
+        let hex = portableHex(of: data)
+        return stride(from: 0, to: hex.count, by: 2).map { UInt8(hex.dropFirst($0).prefix(2), radix: 16)! }
+        #endif
+    }
+
     /// The portable implementation, compiled everywhere so tests can check it against CryptoKit.
     static func portableHex(of data: Data) -> String {
         var hasher = Portable()
