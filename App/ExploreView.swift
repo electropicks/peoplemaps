@@ -468,7 +468,7 @@ struct ExploreView: View {
 
     private var portraitSheet: some View {
         presenting(panel)
-            .background { SheetGlass() }
+            .background { SheetGlass(detents: detents, screen: "\(screen)") }
             .presentationBackground { sheetBackdrop }
             .presentationCornerRadius(Layout.sheetRadius)
             .safeAreaBar(edge: .bottom, spacing: 0) {

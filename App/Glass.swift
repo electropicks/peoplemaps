@@ -84,19 +84,24 @@ private struct FloatingSurface<S: Shape>: ViewModifier {
 /// Gives the UIKit sheet this view is in our glass at its partial stops, where the system floats it. SwiftUI has no modifier for a
 /// detent's effect, and the system's own glass draws under any `presentationBackground`. Large stays the system's: it's read at length.
 /// With Reduce Transparency the system's own effect stays too, since it frosts itself.
+/// `detents` and `screen` are inputs only so this runs again when SwiftUI swaps the sheet's detents, which come back with the system glass.
 struct SheetGlass: UIViewRepresentable {
+    let detents: Set<PresentationDetent>
+    let screen: String
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     func makeUIView(context: Context) -> UIView { let view = UIView(); view.isUserInteractionEnabled = false; return view }
     func updateUIView(_ view: UIView, context: Context) {
         let plain = reduceTransparency || GlassFlags.reduceTransparency
         // After this update, since SwiftUI may have just replaced the detents.
-        DispatchQueue.main.async {
-            guard let controller = sequence(first: view as UIResponder, next: \.next).lazy.compactMap({ $0 as? UIViewController }).first,
+        DispatchQueue.main.async { [weak view] in
+            guard let view,
+                  let controller = sequence(first: view as UIResponder, next: \.next).lazy.compactMap({ $0 as? UIViewController }).first,
                   let sheet = controller.sheetPresentationController else { return }
-            let glass = plain ? nil : UIGlassEffect(style: GlassFlags.sheetStyle)
-            for detent in sheet.detents where detent.identifier != .large { detent.backgroundEffect = glass }
-            sheet.animateChanges { sheet.detents = sheet.detents }
+            for detent in sheet.detents where detent.identifier != .large {
+                if plain { if detent.backgroundEffect is UIGlassEffect { detent.backgroundEffect = nil } }
+                else if !(detent.backgroundEffect is UIGlassEffect) { detent.backgroundEffect = UIGlassEffect(style: GlassFlags.sheetStyle) }
+            }
         }
     }
 }
