@@ -14,8 +14,11 @@ final class OwnRouteProvider: CustomRouteProvider, @unchecked Sendable {
     let preferCalmer: Bool
     /// Called with every route handed to Ferrostar, so the UI can read the plan behind it.
     private let onRoute: @Sendable (AdaptedRoute) -> Void
+    /// Whether the detailed log is on: only then is the route kept in full for it.
+    private let recordRoutes: Bool
 
-    init(router: any RouteComputing, destination: Place, mode: TravelMode, extraMinutes: Int, preferences: RoutePreferences, preferCalmer: Bool, onRoute: @escaping @Sendable (AdaptedRoute) -> Void) {
+    init(router: any RouteComputing, destination: Place, mode: TravelMode, extraMinutes: Int, preferences: RoutePreferences, preferCalmer: Bool, recordRoutes: Bool = false, onRoute: @escaping @Sendable (AdaptedRoute) -> Void) {
+        self.recordRoutes = recordRoutes
         self.router = router; self.destination = destination; self.mode = mode
         self.extraMinutes = extraMinutes; self.preferences = preferences; self.preferCalmer = preferCalmer; self.onRoute = onRoute
     }
@@ -25,7 +28,11 @@ final class OwnRouteProvider: CustomRouteProvider, @unchecked Sendable {
         // Throws `RoutingError.noConnection` when no street is within 400 m, so Ferrostar keeps the old route.
         let comparison = try await router.compare(RouteRequest(origin: here, destination: destination, mode: mode, extraMinutes: extraMinutes, preferences: preferences))
         let chosen = (preferCalmer ? comparison.calmer : nil) ?? comparison.fastest
-        let adapted = try FerrostarAdapter.convert(chosen.navigationPlan(mode: mode), destination: destination)
+        var adapted = try FerrostarAdapter.convert(chosen.navigationPlan(mode: mode), destination: destination)
+        if recordRoutes {
+            let calm = CalmScore(stress: chosen.metrics.stress, tripSeconds: comparison.fastest.metrics.seconds, mode: mode)
+            adapted.record = DriveLog.RouteRecord(label: chosen.id == comparison.calmer?.id ? "calmer" : "fastest", route: chosen, plan: adapted.plan, calm: calm)
+        }
         onRoute(adapted)
         return [adapted.route]
     }

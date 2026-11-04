@@ -3,6 +3,11 @@
 <plist version="1.0">
 <dict>
 	<!-- Merged with the generated Info.plist. Only keys without an INFOPLIST_KEY build setting live here. -->
+	<!-- Manual recording (App/Reports/ManualRecorder.swift) keeps running after a start in the foreground. When-In-Use is enough; there is no Always. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<!-- The map's land colour (UIColor.mapLand), so launch flows into the map without a white or black flash. -->

@@ -16,11 +16,11 @@ private enum Stop { case fit, medium, raised, large }
 
 /// Why location can't do what was just asked of it.
 private enum LocationNotice: String, Identifiable {
-    case startGuidance, locate, outside, noFix
+    case startGuidance, locate, outside, noFix, record
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .startGuidance, .locate: "Location is off for PeopleMaps"
+        case .startGuidance, .locate, .record: "Location is off for PeopleMaps"
         case .outside: "You\u{2019}re outside the area we cover"
         case .noFix: "Can\u{2019}t find you right now"
         }
@@ -29,11 +29,12 @@ private enum LocationNotice: String, Identifiable {
         switch self {
         case .startGuidance: "Turn on location in Settings to start guidance. You can still compare routes without it."
         case .locate: "Turn on location in Settings to see where you are and start routes from there. You can still choose a start yourself."
+        case .record: "Turn on location in Settings to record. A recording keeps running in the background until you stop it."
         case .outside: "The map covers Seattle for now, so it can\u{2019}t show where you are. You can still choose a start inside it."
         case .noFix: "Your iPhone hasn\u{2019}t given a location yet. Try again in a moment, or choose a start yourself."
         }
     }
-    var offersSettings: Bool { self == .startGuidance || self == .locate }
+    var offersSettings: Bool { self == .startGuidance || self == .locate || self == .record }
 }
 
 extension TravelMode {
@@ -92,6 +93,8 @@ struct ExploreView: View {
     @State private var camera = GuidanceCamera()
     @State private var guidanceInset = UIEdgeInsets.zero
     @State private var permission = LocationPermission()
+    @State private var recorder = ManualRecorder.shared
+    @AppStorage(DriveLogger.enabledKey, store: ExploreView.voiceStore) private var detailedLogOn = false
     @State private var asking = false
     @State private var notice: LocationNotice?
     @State private var saved = SavedPlacesStore()
@@ -272,6 +275,14 @@ struct ExploreView: View {
         screen = next
     }
 
+    /// What the detailed log's app-use file watches (`App/Reports/DriveLogHooks.swift`).
+    private var driveLogSnapshot: DriveLogSnapshot {
+        DriveLogSnapshot(screen: String(String(describing: screen).prefix { $0 != "(" }), place: selectedPlace, query: query, mode: mode, budget: budget,
+                         sheet: sheet?.rawValue, calmer: selectedCalmer,
+                         request: previewRequest.map { "\($0.destination.id) \($0.mode) \($0.extraMinutes)" }, destination: previewRequest?.destination,
+                         routeReady: session.comparison != nil)
+    }
+
     private func open(_ place: Place) {
         let place = search.withAddress(place)
         query = ""
@@ -280,6 +291,8 @@ struct ExploreView: View {
     }
     /// A search result: its place card, or a new favourite when Add opened the search.
     private func picked(_ place: Place) {
+        DriveLogger.use("search_pick", ["query": .string(query), "id": .string(place.id), "name": .string(place.name),
+                                        "rank": .num(results.firstIndex { $0.id == place.id } ?? -1), "results": .num(results.count), "addingFavourite": .bool(addingFavourite)])
         guard addingFavourite else { open(place); return }
         let place = search.withAddress(place)
         if !saved.isFavourite(place) { saved.toggleFavourite(place) }
@@ -374,6 +387,7 @@ struct ExploreView: View {
                 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("--ui-testing") { NavigationDebugProbe(navigator: navigator) }
                 #endif
+                if let startedAt = recorder.startedAt { recordingPill(startedAt, geo) }
             }
             .animation(Motion.panel(reduceMotion), value: screen)
             .onGeometryChange(for: CGFloat.self) { $0.size.height + $0.safeAreaInsets.top + $0.safeAreaInsets.bottom } action: { screenHeight = $0 }
@@ -384,10 +398,13 @@ struct ExploreView: View {
         .task(id: previewRequest) {
             if let previewRequest { selectedCalmer = true; session.start(previewRequest) } else { session.cancel() }
         }
+        .task { DriveLogger.resetForUITests(); recorder.closeLeftOpen() }
+        .onChange(of: detailedLogOn) { if !detailedLogOn { recorder.stop(reason: "log_off") } }
         .task { await locate(prompting: true) }
         .task { if !Self.markersOff { markerFeed = await PlaceMarkerFeed.load(search) } }
         .onDisappear { session.cancel(); navigator.stop() }
         .onChange(of: voiceMuted) { navigator.setMuted(voiceMuted) }
+        .driveLogUse(driveLogSnapshot)
         .reportContext(screen: String(String(describing: screen).prefix { $0 != "(" }), mode: mode, extraMinutes: budget, comparison: session.comparison, navigator: navigator, dataVersion: search.dataVersion)
         .onChange(of: userLocation) { followUser() }
         .onChange(of: wantsCompass, initial: true) { permission.onHeading = { userHeading = $0 }; permission.compass(on: wantsCompass) }
@@ -571,10 +588,32 @@ struct ExploreView: View {
             Button { recenter += 1; centred = false } label: { Image(systemName: "viewfinder").frame(width: 44, height: 44) }
                 .accessibilityLabel(screen == .preview && request != nil ? "Fit routes on map" : selectedPlace != nil ? "Centre on this place" : "Fit map to Seattle")
                 .accessibilityIdentifier("recenter")
+            if detailedLogOn && !recorder.isRecording {
+                Divider().frame(width: 44)
+                Button(action: startRecording) { Image(systemName: "record.circle").frame(width: 44, height: 44) }
+                    .accessibilityLabel("Start recording")
+                    .accessibilityHint("Records your location in the detailed log until you stop it")
+                    .accessibilityIdentifier("record-start")
+            }
         }
         .buttonStyle(.plain)
         .font(.system(size: 19)).foregroundStyle(.primary)
         .floatingSurface(in: Capsule(), interactive: true)
+    }
+
+    private func startRecording() {
+        Task { if !(await recorder.start()), detailedLogOn, permission.access != .granted { notice = .record } }
+    }
+
+    /// Over every screen but the map's own controls: top leading in portrait (under the guidance banner while guiding), and left of
+    /// the map buttons in landscape.
+    private func recordingPill(_ startedAt: Date, _ geo: GeometryProxy) -> some View {
+        let guidingPortrait = screen == .navigating && !landscape
+        return RecordingPill(startedAt: startedAt) { recorder.stop() }
+            .padding(.top, 8 + (guidingPortrait ? guidanceInset.top : 0))
+            .padding(landscape ? .trailing : .leading, landscape ? 16 + 44 + 8 : 16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: landscape ? .topTrailing : .topLeading)
+            .transition(.opacity)
     }
 
     private var attribution: some View {

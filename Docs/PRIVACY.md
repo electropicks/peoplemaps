@@ -35,6 +35,24 @@ one is wrong and gets fixed.
   route (rounded to about 100 m unless you choose exact places). It stays on the phone unless you share the file, and
   **Clear** deletes it.
 
+- A detailed log, only if you turn on "Keep a detailed log" in About (off by default, and separate from the usage log). It
+  is for testing a build on your own phone. While you are guided on a walk, cycle or drive, it records the trip in a file on
+  the phone: your start and destination (names and exact coordinates), both routes the app found with the app's time
+  estimates, every location fix the phone gave the app (position, accuracy, speed, direction, about once a second), and what
+  the app did (which turn you reached, leaving the route, rerouting, the lines the voice was given, muting, going to the
+  background, the phone's temperature state and Low Power Mode). It also keeps, one file a day, what you searched for and
+  which result you chose, the places you opened, the routes you previewed and the settings you changed. A trip shorter than
+  3 minutes is deleted when it ends. It is not sent anywhere: it stays on the phone, left out of backups, unless you share
+  the files from About, and **Clear** deletes them. It keeps at most 500 MB and then removes the oldest trips. It does not
+  record altitude.
+- A manual recording, only if "Keep a detailed log" is on and you tap **Start recording** (the record button on the map,
+  or in About). It saves your location (position, accuracy, speed and direction, about once a second) in a file on the
+  phone, with no route, until you tap **Stop**. It keeps going while PeopleMaps is in the background or the phone is
+  locked, and iOS shows its blue location indicator for as long as it runs. It asks for the same "While Using the App"
+  location permission as the rest of the app, never "Always", and cannot be started from the background. If the app is
+  closed by the system, the recording ends and does not restart on its own. A recording shorter than 3 minutes is deleted
+  when you stop it. Like the rest of the detailed log it stays on the phone, left out of backups, unless you share the
+  files from About, and **Clear** deletes them.
 - Recent app events, in memory only. The last 200 things the app did, or the last 10 minutes, whichever is fewer:
   that a route comparison started and how long it took, that guidance started or rerouted, that the map finished
   loading or moved the camera, how long a search took and how many results it found, and errors by type. Never a
@@ -54,7 +72,9 @@ one is wrong and gets fixed.
 The app asks for your location once, the first time the home map shows.
 While the app is open it uses your location to start routes and time
 estimates from where you are, and, while guiding, to show where you are on
-the map and say the next turn. It stops when the app leaves the screen. We get
+the map and say the next turn. It stops when the app leaves the screen, except
+for a manual recording you started yourself (described above), which runs in the
+background until you stop it and shows iOS's blue location indicator. We get
 location information only inside a report you send. Every report shows the
 corners near your start and destination and where along the route you flagged;
 **Exact locations** adds the exact points and your GPS position.

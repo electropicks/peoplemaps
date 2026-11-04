@@ -29,6 +29,7 @@ summary() { echo; echo "verify summary ($(uname -s)):"; printf '  %s\n' "${resul
 
 step "importer tests" python3 Scripts/test_importer.py
 step "data tool tests" python3 Scripts/test_data.py
+step "drive log report tests" python3 Scripts/test_drive_log_report.py
 
 # The shipped data must be exactly what the importer produces from the archived snapshots.
 reproduce() {

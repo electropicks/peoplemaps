@@ -33,6 +33,7 @@ final class ReportCenter {
     /// A new report from what is on screen, or the saved one with `id`. `from` names the place the button was.
     func open(from: String? = nil, editing id: String? = nil) {
         guard let top = topController(), !isShowingComposer(top) else { return }
+        DriveLogger.use("report_opened", ["from": .string(from ?? (id == nil ? "shake" : "saved list")), "guiding": .bool(context?.navigator?.isActive ?? false)])
         let report: ProblemReport
         if let id, let saved = library[id] { report = saved } else { report = makeReport(from: from) }
         let host = ReportHost(rootView: ReportComposerView(report: report))
