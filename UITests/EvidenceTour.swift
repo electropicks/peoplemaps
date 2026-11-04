@@ -41,7 +41,11 @@ final class EvidenceTour: XCTestCase {
     @MainActor func testLargeTextScreens() throws {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")
         let text = ProcessInfo.processInfo.environment["PEOPLEMAPS_TEXT"].flatMap { $0.isEmpty ? nil : ["-UIPreferredContentSizeCategoryName", $0] } ?? []
-        var app = launch(["--location-granted", "47.6698,-122.3843"] + text)
+        var app = launch(text)
+        Thread.sleep(forTimeInterval: 3)
+        shot("first-launch")
+        app.terminate()
+        app = launch(["--location-granted", "47.6698,-122.3843"] + text)
         app.buttons["search-field"].tap()
         XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 5))
         shot("search-empty")
