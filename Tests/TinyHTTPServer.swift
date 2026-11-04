@@ -8,7 +8,7 @@ import Glibc
 /// A small HTTP/1.1 file server on 127.0.0.1 for tests: GET only, `Range: bytes=N-`, an ETag so downloads can resume, and an optional
 /// stall that holds a response part-way until the test opens its gate. UITests/TinyHTTPServer.swift is the same file for the UI tests.
 final class TinyHTTPServer: @unchecked Sendable {
-    struct Request: Equatable { let path: String; let range: String? }
+    struct Request: Equatable { let path: String; let range: String?; var auth: String? = nil }
 #if canImport(Glibc)
     private static let streamType = Int32(SOCK_STREAM.rawValue)
 #else
@@ -21,6 +21,8 @@ final class TinyHTTPServer: @unchecked Sendable {
     private var gates: [String: DispatchSemaphore] = [:]
     private var stalledPaths: Set<String> = []
     private var log: [Request] = []
+    /// When set, a GET whose `Authorization` is not in the set gets a 401 and no body.
+    private var accepted: Set<String>?
     private let listener: Int32
     private(set) var port: UInt16 = 0
 
@@ -68,6 +70,8 @@ final class TinyHTTPServer: @unchecked Sendable {
     /// Whether a response is being held right now.
     func isStalled(_ path: String) -> Bool { lock.lock(); defer { lock.unlock() }; return stalledPaths.contains(path) }
 
+    func requireAuthorization(_ accepted: Set<String>?) { lock.lock(); self.accepted = accepted; lock.unlock() }
+
     func replace(_ path: String, with data: Data) { lock.lock(); files[path] = data; lock.unlock() }
 
     private func serve(_ client: Int32) {
@@ -85,12 +89,15 @@ final class TinyHTTPServer: @unchecked Sendable {
         guard parts.count >= 2, parts[0] == "GET" else { return send(client, status: "405 Method Not Allowed", headers: [], body: Data()) }
         let path = String(parts[1].dropFirst())
         let range = lines.first { $0.lowercased().hasPrefix("range:") }.map { $0.dropFirst(6).trimmingCharacters(in: .whitespaces) }
+        let auth = lines.first { $0.lowercased().hasPrefix("authorization:") }.map { $0.dropFirst(14).trimmingCharacters(in: .whitespaces) }
         lock.lock()
-        log.append(Request(path: path, range: range))
+        log.append(Request(path: path, range: range, auth: auth))
+        let denied = accepted.map { !$0.contains(auth ?? "") } ?? false
         let file = files[path]
         let stall = stalls[path]
         if let stall { stalls[path] = nil; gates[path] = stall.gate }
         lock.unlock()
+        if denied { return send(client, status: "401 Unauthorized", headers: [], body: Data(#"{"error":"unauthorized"}"#.utf8)) }
         guard let file else { return send(client, status: "404 Not Found", headers: [], body: Data("not found".utf8)) }
 
         let etag = "\"\(file.count)-\(path.hashValue & 0xffff)\""

@@ -40,7 +40,7 @@ final class RegionModel {
     }
 
     /// The model the app uses. Debug builds can point it at a local test server (`--region-server URL`) and a made-up manifest
-    /// (`--region-manifest-json JSON`); release builds use the Worker, which is not built yet, so their Download reports that.
+    /// (`--region-manifest-json JSON`); everything else uses the Worker with App Attest (`WorkerSource`), which needs a real device.
     static func make() -> RegionModel {
         var manifest = RegionManifest.bundled()
         var source: any RegionSource = WorkerSource()

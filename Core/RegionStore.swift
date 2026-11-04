@@ -37,12 +37,23 @@ public enum RegionError: Error, LocalizedError, Equatable, Sendable {
     case checksumMismatch(String)
     case notEnoughSpace(needed: Int64)
     case unpackFailed
+    /// App Attest isn't available here (the Simulator, some devices).
+    case deviceCannotAttest
+    /// The server or Apple's check didn't give a download pass this time.
+    case attestFailed
+    case attestUnavailable
+    /// A 429 from the attest routes.
+    case serverBusy
 
     public var errorDescription: String? {
         switch self {
         case .unknownRegion: "This version of PeopleMaps doesn\u{2019}t know that map area."
         case .notPublished: "That map area isn\u{2019}t published yet."
-        case .sourceUnavailable: "Map downloads aren\u{2019}t switched on in this version yet."
+        case .sourceUnavailable: "The map server isn\u{2019}t available."
+        case .deviceCannotAttest: "This device can\u{2019}t prove it\u{2019}s a genuine copy of the app, so map downloads aren\u{2019}t available."
+        case .attestFailed: "The server couldn\u{2019}t confirm this copy of PeopleMaps just now. Try again in a moment."
+        case .attestUnavailable: "Apple\u{2019}s check for this app didn\u{2019}t answer. Try again in a moment."
+        case .serverBusy: "The map server is busy right now. Try again in a little while."
         case let .badStatus(code): code == 401 || code == 403 ? "The server wouldn\u{2019}t send the map to this app." : "The server answered with an error (\(code))."
         case .wrongSize, .checksumMismatch: "A downloaded file didn\u{2019}t match what the app expected, so nothing was installed."
         case let .notEnoughSpace(needed): "There isn\u{2019}t enough free space. About \(RegionManifest.roughSizeLabel(needed)) is needed while it installs."
@@ -51,12 +62,18 @@ public enum RegionError: Error, LocalizedError, Equatable, Sendable {
     }
 }
 
-/// Where a region's files come from. The app's real source is `WorkerSource`; tests and development use `DirectSource`.
+/// Where a region's files come from. The released app uses `WorkerSource`; tests and development use `DirectSource`.
 public protocol RegionSource: Sendable {
     /// The address of one file. `file` is the manifest's path (`expected/seattle-graph.bin`).
     func url(for file: String, in region: String, release: String) async throws -> URL
     /// The `Authorization` header value, or nil to send none. A bare token gets "Bearer " put in front.
     func authorization() async throws -> String?
+    /// The server answered a download with a 401 for this `Authorization` value: forget it so the next `authorization()` is a new one.
+    func authorizationRejected(_ authorization: String?) async
+}
+
+extension RegionSource {
+    public func authorizationRejected(_ authorization: String?) async {}
 }
 
 /// A plain GET of `<base>/<region>--<path with / as __>`, with no authorization: what `Scripts/fetch_data` does without credentials.
@@ -69,13 +86,31 @@ public struct DirectSource: RegionSource {
     public func authorization() async throws -> String? { nil }
 }
 
-/// The server the released app uses. Not built yet: the Worker is a separate piece of work.
+/// The server the released app uses: `GET /v1/regions/<release>/<region>--<file>` with `Authorization: Bearer <token>` (Docs/REPORTS.md 4.7).
+/// The token comes from the App Attest exchange (`DownloadAuthorizer`, 4.5) and is kept in the Keychain for its 24 hours.
 public struct WorkerSource: RegionSource {
-    public init() {}
-    // TODO(worker): the endpoint is `GET /v1/regions/<release>/<region>--<file>` (file as the manifest path with / as __) with
-    // `Authorization: Bearer <token>`, the token coming from the App Attest exchange. Until then the app can't download from a release build.
-    public func url(for file: String, in region: String, release: String) async throws -> URL { throw RegionError.sourceUnavailable }
-    public func authorization() async throws -> String? { throw RegionError.sourceUnavailable }
+    /// The Worker's documented address (Docs/REPORTS.md 7.5): the one place the app names it.
+    public static let defaultBase = URL(string: "https://peoplemaps-reports.peoplemaps.workers.dev")!
+
+    public let base: URL
+    private let authorizer: DownloadAuthorizer
+
+    public init(base: URL = WorkerSource.defaultBase, authorizer: DownloadAuthorizer) { self.base = base; self.authorizer = authorizer }
+
+    #if canImport(DeviceCheck) && canImport(Security)
+    public init(base: URL = WorkerSource.defaultBase) {
+        self.init(base: base, authorizer: DownloadAuthorizer(client: AttestClient(baseURL: base, service: DeviceCheckAttestService()), store: KeychainDownloadTokenStore()))
+    }
+    #endif
+
+    public func url(for file: String, in region: String, release: String) async throws -> URL {
+        base.appendingPathComponent("v1/regions/\(release)/\(RegionManifest.objectName(region: region, file: file))")
+    }
+    public func authorization() async throws -> String? { "Bearer " + (try await authorizer.token()) }
+    public func authorizationRejected(_ authorization: String?) async {
+        guard let authorization, authorization.hasPrefix("Bearer ") else { return }
+        await authorizer.rejected(String(authorization.dropFirst(7)))
+    }
 }
 
 public actor RegionStore {
@@ -92,6 +127,8 @@ public actor RegionStore {
         var received: [String: Int64]
         var allowCellular: Bool
         var lastPublish = Date.distantPast
+        /// Files that already got one fresh token after a 401.
+        var retried: Set<String> = []
     }
     private var states: [RegionID: RegionState] = [:]
     private var runs: [RegionID: Run] = [:]
@@ -312,7 +349,7 @@ public actor RegionStore {
         publish(key.region, .waitingForWiFi)
     }
 
-    fileprivate func completed(_ key: Key, error: Error?, status: Int?) async {
+    fileprivate func completed(_ key: Key, error: Error?, status: Int?, authorization: String? = nil) async {
         guard var run = runs[key.region] else { return }   // paused, removed or failed already
         if let error {
             if (error as NSError).code == NSURLErrorCancelled { return }
@@ -320,6 +357,12 @@ public actor RegionStore {
                 try? data.write(to: stagingFolder(for: key.region).appendingPathComponent(Self.name(key.path) + ".resume"))
             }
             return await failAndStop(key.region, error)
+        }
+        if status == 401, !run.retried.contains(key.path), let entry = manifest.regions[key.region] {
+            run.retried.insert(key.path)
+            runs[key.region] = run
+            await source.authorizationRejected(authorization)
+            do { return try await startTask(region: key.region, path: key.path, entry: entry, allowCellular: run.allowCellular) } catch { return await failAndStop(key.region, error) }
         }
         let file = stagingFolder(for: key.region).appendingPathComponent(Self.name(key.path))
         guard FileManager.default.fileExists(atPath: file.path) else { return await failAndStop(key.region, RegionError.badStatus(status ?? 0)) }
@@ -509,7 +552,8 @@ public actor RegionStore {
         func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
             guard let key = Key(task.taskDescription), let store else { return }
             let status = (task.response as? HTTPURLResponse)?.statusCode
-            Task { await store.completed(key, error: error, status: status) }
+            let authorization = task.originalRequest?.value(forHTTPHeaderField: "Authorization")
+            Task { await store.completed(key, error: error, status: status, authorization: authorization) }
         }
 
         #if canImport(Darwin)
