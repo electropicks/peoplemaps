@@ -197,7 +197,8 @@ trip is best-effort.
 Base URL per build (7.5). JSON in and out. Every response carries `Cache-Control: no-store`. No cookies, no CORS. TLS
 only; `http://` is only for `wrangler dev`.
 
-**What needs no token.** Only `POST /v1/installs` (4.1). There is no health route. An unknown path or method is a 404 and
+**What needs no token.** `POST /v1/installs` (4.1), and the App Attest routes `POST /v1/attest/challenge` and `POST
+/v1/attest` (4.5), which hand out the download token of 4.7. There is no health route. An unknown path or method is a 404 and
 the other routes are a 401 without a token, and neither carries data. So the backend is not closed to strangers today:
 anyone on the internet can mint a token, then send up to the caps of 4.2 and read or delete only what that token sent. They
 never reach another install's reports. What holds against this is 4.6's limits, and App Attest (4.5) is what would close it.
@@ -306,18 +307,65 @@ know.
 
 A hand-filed issue (6) is not reached by these; see question 26.
 
-### 4.5 Before App Store release
+### 4.5 App Attest
 
-App Attest on `POST /v1/installs`, so a token can only be minted by a genuine copy of the app. It is not needed for
-TestFlight, and it budgets Workers Paid at $5 a month for the CPU it needs (question 19). Not built.
+**Built, used by region downloads (4.7); `POST /v1/installs` can adopt it.** The Worker side is in `Backend/src/attest.ts`
+(routes and verifier), `x509.ts` and `cbor.ts` (just enough DER, X.509 and CBOR, WebCrypto only, no dependency) and
+`apple-root.ts` (Apple's App Attestation Root CA, pinned). Requiring it on `POST /v1/installs` as well, so a report token
+can only be minted by a genuine copy of the app, is still planned before App Store release and not needed for TestFlight;
+it budgets Workers Paid at $5 a month for the CPU it needs (question 19).
 
-**Size, as an estimate:** 500 to 800 lines with tests, and two to three working days, most of the risk being on a real phone.
+```
+POST /v1/attest/challenge
+201 { "challenge": "<base64, 68 bytes>", "expiresAt": "2026-10-31T21:39:00Z" }
 
-- **Worker,** 350 to 550 lines with tests. A one-time challenge route, which needs no token either (mint would stay
-  tokenless, since it creates the token), with its own short-lived D1 rows. A verifier for the attestation object: CBOR,
-  the certificate chain to Apple's App Attest root, the nonce, the app ID hash, the counter and the key ID. It is either
-  hand-written or a new dependency. Its tests need a recorded attestation from a real phone, checked with a fixed clock
-  because the certificates expire.
+POST /v1/attest
+Body: { "keyId": "<base64>", "attestation": "<base64>", "challenge": "<the challenge as received>" }
+200 { "token": "pmd_…", "expiresAt": "2026-11-01T21:34:00Z" }
+401 unauthorized                  // challenge unknown or expired; key already attested; or the attestation failed
+429 rate_limited                  // RL_ATTEST, or the ATTESTS_PER_HOUR ceiling
+400 invalid_report with field     // not base64, wrong length, unknown key
+```
+
+- **The challenge** is stateless, so issuing one writes nothing: 32 random bytes, a 4-byte expiry 5 minutes ahead, and
+  an HMAC-SHA256 over both keyed with `DOWNLOAD_TOKEN_SECRET` under its own context string, so a challenge never passes
+  as a download token or the other way round. 68 bytes in all, opaque to the app, which passes SHA-256 of the decoded
+  bytes as `clientDataHash` to `DCAppAttestService.attestKey`. Base64 in requests may be standard or URL-safe, padded or
+  not; responses use standard base64.
+- **Single use** is per key: `attest_keys.key_id` is the primary key and the insert is `ON CONFLICT DO NOTHING`, so a
+  replayed or repeated attestation of a key already stored is a 401 and leaves the row as it was.
+- **The checks**, per Apple's "Validating apps that connect to your server": the object is CBOR with `fmt`
+  `apple-appattest`; `x5c` is a leaf and an intermediate that chain to the pinned root, each certificate inside its
+  validity and each issuer a CA; the leaf's `1.2.840.113635.100.8.2` extension holds SHA-256(authData ||
+  SHA-256(challenge)); SHA-256 of the leaf's public key is `keyId`; authData's rpIdHash is SHA-256 of the `APP_ID` secret
+  (`<team id>.<bundle id>`), its counter is 0, its aaguid is `appattest` (or `appattestdevelop`, accepted only when the
+  `ATTEST_ENV` var is `development`), and its credential ID is `keyId`. The receipt is not stored or sent to Apple.
+- **On success** the key's public key, counter 0, environment and hour go in `attest_keys` by key ID, and the answer is a
+  download token (4.7). Retention drops keys `RETENTION_DAYS` after they were attested (5.3).
+- **Not set up.** Until `APP_ID` and `DOWNLOAD_TOKEN_SECRET` are set (`Backend/README.md`), both routes answer `500
+  internal` and store nothing.
+- **Limits.** `RL_ATTEST`, 10 per minute per IP or /64, on both routes, checked before the body is read (4.6). Behind it,
+  `ATTESTS_PER_HOUR` (60), counted from `attest_keys.created_at` in the current hour like the mint ceiling, caps the D1
+  writes attesting can cause. Only a verified attestation writes, and the challenge route writes nothing.
+- **Assertions are not built.** Today the app attests a fresh key whenever it needs a token and holds none unexpired, at
+  most once a day and only around a region download. To renew without attesting again, add `POST /v1/attest/assert` with
+  `{ keyId, assertion, challenge }`: check the ECDSA signature over SHA-256(authenticatorData || SHA-256(challenge)) with
+  the stored public key, the rpIdHash and a counter above the stored one, store the counter and issue a token. The table
+  already holds what it needs.
+- **What is kept.** Per attested key, which identifies one install of the app and not a person: the key ID, its public
+  key, the environment and the hour, for `RETENTION_DAYS` (90 days). `Docs/PRIVACY.md` says the same.
+- **Tested** against a synthetic chain built in the test in Apple's shape (a self-signed P-384 root standing in for
+  Apple's, a P-384 intermediate it signs with SHA-384, and a P-256 leaf with the nonce extension that the intermediate
+  signs with SHA-256), with the root injected through `AttestConfig.rootPEM`. Apple's real root is the
+  production default; the tests parse it and check its self-signature, but **no attestation from Apple's real chain has
+  been verified**. That needs a recorded attestation from a real phone, checked with a fixed clock.
+
+What remains from the original estimate (500 to 800 lines, two to three working days, most of the risk on a real phone)
+is the app side and the step to `POST /v1/installs`:
+
+- **Worker, for installs.** The challenge route, the verifier and the key table above are what the estimate's Worker part
+  described. What is left is requiring a verified attestation (or an assertion) in `mintInstall`, its tests, and a test
+  against a recorded attestation from a real phone, checked with a fixed clock because the certificates expire.
 - **App,** 150 to 250 lines with tests, and the App Attest entitlement through `generate_project.py` and the App ID. An
   attestor protocol in Core, and `DCAppAttestService` in `App/`, since Core also builds on Linux.
 - **Simulator and tests.** `DCAppAttestService` is not available in the Simulator, so no simulator can mint from the
@@ -339,9 +387,12 @@ TestFlight, and it budgets Workers Paid at $5 a month for the CPU it needs (ques
   authenticated route; `RL_INSTALLS`, 2 per minute, and `RL_REPORTS`, 10 per minute, keyed on `cf-connecting-ip`, or its /64
   for IPv6, since one home or phone usually holds a whole /64. `POST /v1/reports` checks `RL_REPORTS` before it looks up
   the token, so a flood of made-up tokens meets the IP limit first. It is read only in `src/ratelimit.ts`, passed straight to the
-  binding and never stored. Over a limit is `429 rate_limited` with `Retry-After`.
+  binding and never stored. Over a limit is `429 rate_limited` with `Retry-After`. Two more serve 4.5 and 4.7:
+  `RL_ATTEST`, 10 per minute per IP or /64, on both App Attest routes, and `RL_DOWNLOADS`, 60 per minute keyed on the
+  download token's key ID.
 - The bindings are approximate and count per Cloudflare location, so a flood spread across locations gets more. The
-  strict backstop is `INSTALLS_PER_HOUR` (60), counted from `installs.created_at` in the current hour.
+  strict backstop is `INSTALLS_PER_HOUR` (60), counted from `installs.created_at` in the current hour, and for App Attest
+  `ATTESTS_PER_HOUR` (60), counted from `attest_keys.created_at` (4.5).
 - **D1's Free daily limits** (5 million rows read, 100,000 rows written, enforced since 2026-09-01). Once spent, every
   query fails until 00:00 UTC with D1's documented "free tier daily row read limit" or "write limit" error. The Worker
   answers `503 storage_unavailable` with `Retry-After` set to 00:00 UTC, and the app keeps the report flagged with "The
@@ -357,7 +408,8 @@ TestFlight, and it budgets Workers Paid at $5 a month for the CPU it needs (ques
   bill on a no-card account, so these are outages, not costs: a flood filling the free D1 database; one IP spending the
   global mint ceiling; and unknown-token 401s counting against the daily requests. Fix them when there are users to lose.
 - Errors are `{ "error": code, "message": text, "field"?: path }`. Codes: `unauthorized` 401, `not_found` 404,
-  `invalid_report` 400, `too_large` 413, `conflict` 409, `rate_limited` 429, `storage_unavailable` 503, `internal` 500.
+  `invalid_report` 400, `too_large` 413, `conflict` 409, `rate_limited` 429, `storage_unavailable` 503, `internal` 500,
+  and for downloads (4.7) `precondition_failed` 412 and `range_not_satisfiable` 416.
 - The Worker never logs a request object, a header, an IP, a user agent or a body. `observability.enabled` and
   `observability.logs.invocation_logs` are false in `wrangler.jsonc`, and `console.*` is allowed only with a constant
   string plus a count or status. A test checks both.
@@ -365,6 +417,39 @@ TestFlight, and it budgets Workers Paid at $5 a month for the CPU it needs (ques
   dashboard's request views record. `Docs/PRIVACY.md` says only what that check showed. Recheck after Workers Logs pricing
   changes on 2026-12-01, since changed defaults can come with it.
 - Bodies over 64 KB are refused before parsing (`content-length` first, then a streaming count).
+
+### 4.7 Region downloads
+
+The generated data for a region lives in the private R2 bucket `peoplemaps-data`, bound as `DATA`. The Worker serves it
+to a genuine copy of the app (4.5), so no key ships in the app. Code: `Backend/src/regions.ts` and `download-token.ts`.
+
+```
+GET /v1/regions/{release}/{region}--expected__{file}
+Authorization: Bearer pmd_…                          // from POST /v1/attest (4.5)
+Range, If-Range, If-None-Match, If-Match              // optional
+200 the file | 206 a range | 304 | 401 | 404 | 412 | 416 | 429
+```
+
+- **What is served.** Objects are keyed `<release>/<region>--expected__<file>`, for example
+  `data-seattle-all-2026-11d/king-county--expected__seattle-graph.bin`. The files per region are the `expected/*`
+  outputs listed in `Data/regions.json`. The release must match `^data-[a-z-]+-\d{4}-\d{2}[a-z]?$` and the object
+  `^[a-z]+(-[a-z]+)*--expected__[A-Za-z0-9.-]+$`, so importer inputs and `source/` objects are never served. Anything else is a
+  404 that never reaches R2.
+- **The token** is `pmd_` and 92 base64url characters: a version byte, the expiry, the 32-byte App Attest key ID and an
+  HMAC-SHA256 over them keyed with the `DOWNLOAD_TOKEN_SECRET` secret. It lasts 24 hours. It is stateless, so a download
+  reads nothing from D1; changing the secret revokes every token. Without a valid, unexpired token every download is a
+  401, checked before the name or the bucket.
+- **Ranges.** A single `bytes=` range (`a-b`, `a-`, `-n`) gets 206 with `Content-Range`; a range past the end is 416 with
+  `Content-Range: bytes */size`; a multi-range or malformed header is ignored and the whole file sent. `If-Range` with the
+  current ETag resumes; with another ETag the whole file comes back. `If-None-Match` and `If-Match` go to R2's `onlyIf`,
+  for 304 and 412. Answers carry `ETag`, `Accept-Ranges: bytes`, `Content-Length`, `Last-Modified` and `Cache-Control:
+  no-store`. A ranged request costs an R2 `head` and a `get`, a whole file one `get`. The body is R2's stream, never
+  buffered.
+- **Limits.** `RL_DOWNLOADS`, 60 per minute keyed on the token's key ID: a region is 5 files, which leaves room for
+  resumed ranges and retries.
+- **What is kept and logged.** Nothing beyond the attested key (4.5: key ID, public key, environment and hour, for
+  `RETENTION_DAYS`): no download row and no log line. The request carries only the token and the file name.
+- **Tested** against an in-memory R2 stand-in (`test/helpers.ts`). Real R2 is not exercised, and nothing is deployed.
 
 ## 5. D1 schema, retention
 
@@ -397,6 +482,10 @@ CREATE INDEX reports_install ON reports(install_id);
 CREATE INDEX reports_expires ON reports(expires_at);
 ```
 
+`Backend/migrations/0002_attest.sql` adds App Attest (4.5): `attest_keys (key_id, public_key, counter, environment,
+created_at)`, each attested key by its base64 key ID, `created_at` to the hour. Challenges are stateless and have no
+table.
+
 Anything else a maintainer wants is in `public_json`: `json_extract(public_json, '$.request.mode')`.
 
 ### 5.2 The cell grid
@@ -410,8 +499,8 @@ rebuilt from any rows still held; rows deleted before then are not counted.
 
 ### 5.3 Retention
 
-One cron, `17 3 * * *`: `DELETE FROM reports WHERE expires_at < now()`, and delete installs not seen for 365 days that
-have no reports. It logs one count, and the handler awaits the job so a failure fails the invocation rather than vanishing.
+One cron, `17 3 * * *`: `DELETE FROM reports WHERE expires_at < now()`, delete installs not seen for 365 days that
+have no reports, and attest keys attested more than `RETENTION_DAYS` ago. It logs one count, and the handler awaits the job so a failure fails the invocation rather than vanishing.
 
 **Time Travel.** D1 keeps a restorable copy of the database for 7 days on the Workers Free plan and 30 on Paid. It cannot
 be shortened or turned off, and only the maintainers' Cloudflare account can restore from it. So a row deleted by the
@@ -466,7 +555,7 @@ Backend/
   README.md               run, test, deploy
   package.json            wrangler, typescript, vitest, @cloudflare/workers-types
   wrangler.jsonc          see 7.2
-  migrations/0001_init.sql
+  migrations/0001_init.sql, 0002_attest.sql
   scripts/file-issue.ts   the hand-filing tool (6); never deployed
   src/index.ts            the only Cloudflare-specific entry: builds Deps from env, routes, runs the cron
   src/deps.ts             Deps { store, limits, clock, vars }; the interfaces handlers take
@@ -478,6 +567,12 @@ Backend/
   src/issue.ts            title, body and labels (6), pure functions; only the script imports it
   src/ratelimit.ts        the bindings and the mint ceiling (4.6); the only module that reads cf-connecting-ip
   src/cells.ts            the grid (5.2)
+  src/attest.ts           POST /v1/attest/challenge, POST /v1/attest and the attestation verifier (4.5)
+  src/x509.ts, cbor.ts    just enough DER, X.509 and CBOR for App Attest
+  src/apple-root.ts       Apple's App Attestation Root CA
+  src/download-token.ts   the HMAC download token (4.7)
+  src/regions.ts          GET /v1/regions/{release}/{object} (4.7)
+  src/bytes.ts            base64, hashing and comparison helpers
   src/retention.ts        the cron job
   src/errors.ts, time.ts  the error envelope; hour-precision timestamps
   test/*.test.ts          one file per module, plus fixtures
@@ -497,12 +592,15 @@ Handlers are plain functions, `(request, deps) => Response`. None imports anythi
   "workers_dev": true,
   "preview_urls": false,
   "observability": { "enabled": false, "logs": { "invocation_logs": false } },
-  "vars": { "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "5", "INSTALLS_PER_HOUR": "60" },
+  "vars": { "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "5", "INSTALLS_PER_HOUR": "60", "ATTESTS_PER_HOUR": "60", "ATTEST_ENV": "production" },
   "d1_databases": [{ "binding": "DB", "database_name": "peoplemaps-reports", "database_id": "22e78664-ede8-40dd-80bf-7e2b0e7ec41f", "migrations_dir": "migrations" }],
+  "r2_buckets": [{ "binding": "DATA", "bucket_name": "peoplemaps-data" }],
   "ratelimits": [
     { "name": "RL_AUTH", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
     { "name": "RL_INSTALLS", "namespace_id": "1002", "simple": { "limit": 2, "period": 60 } },
-    { "name": "RL_REPORTS", "namespace_id": "1003", "simple": { "limit": 10, "period": 60 } }
+    { "name": "RL_REPORTS", "namespace_id": "1003", "simple": { "limit": 10, "period": 60 } },
+    { "name": "RL_ATTEST", "namespace_id": "1004", "simple": { "limit": 10, "period": 60 } },
+    { "name": "RL_DOWNLOADS", "namespace_id": "1005", "simple": { "limit": 60, "period": 60 } }
   ],
   "triggers": { "crons": ["17 3 * * *"] }
 }
@@ -512,7 +610,12 @@ The database ID is not a secret. `preview_urls` stays explicit, because since wr
 `workers_dev`, and each version's URL would be public. `invocation_logs` stays false even if `observability` is later
 turned on for debugging.
 
-**Secrets.** The Worker has none. `CLOUDFLARE_API_TOKEN` is an account-owned token, from the Account API Tokens page, with
+**Worker secrets and vars.** The Worker has two secrets, set by the owner with `wrangler secret put` and never written in
+this file: `DOWNLOAD_TOKEN_SECRET` (4.7) and `APP_ID` (4.5), which holds the team ID and so is never committed. Until both
+are set, the attest routes answer 500 and store nothing. `ATTEST_ENV` stays a `production` var here, and a test checks
+it and that neither secret appears.
+
+**Deploy secrets.** `CLOUDFLARE_API_TOKEN` is an account-owned token, from the Account API Tokens page, with
 Workers: Editor and D1: Edit, and is narrowed to the `peoplemaps-reports` Worker once that exists. "Workers Scripts: Edit" is
 the legacy name for Editor. Editor can deploy but cannot create or delete a Worker, and creating one needs product-level
 Admin ([Workers roles](https://developers.cloudflare.com/workers/authorization/workers/)), so the first deploy runs by hand
@@ -524,7 +627,9 @@ cannot read them. A workflow merged to `main` can, and that token has D1 edit ri
 
 - `npm test` runs vitest under node 22.13 or later against `test/store-sqlite.ts`, an in-memory SQLite database with the
   migrations applied: no account, no login, no Miniflare. `npx tsc --noEmit` checks the types. The tests cover the API,
-  validation, the exact split, retention, the rate limits, the D1 limit error, the issue builder and the parity fixtures.
+  validation, the exact split, retention, the rate limits, the D1 limit error, the issue builder and the parity fixtures,
+  plus App Attest against a synthetic chain (4.5), the download token, and region downloads against an in-memory R2
+  stand-in (4.7).
 - `npm run dev` is `wrangler dev --ip 0.0.0.0 --port 8787` with a local D1, so a phone on the same network can reach it.
   A tester who needs a higher cap sets `REPORTS_PER_DAY=50` in `.dev.vars` (gitignored).
 - `.github/workflows/ci.yml` has a `backend` job that runs both on every PR. `.github/workflows/backend.yml` runs on a

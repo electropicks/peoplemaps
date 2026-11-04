@@ -22,7 +22,12 @@ one is wrong and gets fixed.
   you flagged, which can place you to within metres.
 - You can see, export and delete everything on the phone, and delete what you
   sent from our server (see Deleting for the limits). The app contacts the
-  server only when you tap Send, Check status, Delete my reports or Download.
+  server only when you tap Send, Check status or Delete my reports, or when it
+  downloads map data for a region. A region download sends only Apple's check
+  that this is a genuine copy of the app and the name of the file it wants.
+  For 90 days the server keeps that check's key ID and public key, whether the
+  build was a development one, and the hour; they identify this install of the
+  app, not you.
 
 > **Alpha builds.** No server is deployed yet, so nothing below about sending to our server happens: a report is a
 > `.json` file you share yourself from the share sheet (for example to iCloud Drive), after seeing what is in it. The app
@@ -84,7 +89,7 @@ corners near your start and destination and where along the route you flagged;
 Nothing is sent automatically. Flagging is silent and offline. Sending a
 report needs a connection and happens only from the **Flagged moments**
 list, after you have picked a category, optionally written one sentence, and
-looked at every field. The app contacts our server at exactly three moments,
+looked at every field. For reports, the app contacts our server at exactly three moments,
 each one a button you tap: **Send**, **Check status** (which asks the server
 which of your reports it still holds, and until when) and **Delete my
 reports**. Opening the list, launching the app and guiding never contact it.
@@ -137,9 +142,9 @@ your routes or your report ID. Like any web server, ours and our host's network 
 for the moment of the download; `Docs/REPORTS.md` says what the server keeps. The app then checks every file against a
 checksum it already has before using it. Downloads go over Wi-Fi unless you tap **Use cellular**.
 
-> **Not built yet.** The app side is in this version: the screen, the download and the checks. The server that answers
-> the requests, and the App Attest check, are separate work and are not deployed, so a release build cannot download a
-> map yet and contacts no server.
+> **Not switched on yet.** The app side is in this version: the screen, the download and the checks. The server that
+> answers the requests, with its App Attest check, is built but not deployed, and this version of the app does not call
+> it, so a release build cannot download a map yet and contacts no server.
 
 ## Your report ID
 

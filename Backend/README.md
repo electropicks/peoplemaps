@@ -68,6 +68,24 @@ Once, by hand, in this order, for the first deploy:
 5. Before the privacy policy is published, send the deployed Worker some requests and read what Workers Logs and the
    dashboard record (4.6).
 
+## Region downloads: secret and vars
+
+`GET /v1/regions/…` serves the private R2 bucket `peoplemaps-data` (binding `DATA`) to copies of the app that passed App
+Attest (`Docs/REPORTS.md` 4.5 and 4.7). It needs two secrets and two vars. Until both `APP_ID` and
+`DOWNLOAD_TOKEN_SECRET` are set, the attest routes answer 500 and every download 401; the reports API is unaffected.
+
+- `DOWNLOAD_TOKEN_SECRET` (secret): the HMAC key for download tokens, at least 32 characters. The owner sets it once,
+  never in a file or a var: `openssl rand -base64 48 | npx wrangler secret put DOWNLOAD_TOKEN_SECRET`. Changing it
+  revokes every token, and the app attests again.
+- `APP_ID` (secret): `<team id>.<bundle id>` of the app, as App Attest hashes it into `rpIdHash`. It holds the team ID,
+  which is never committed, so it is a secret and not a var: `npx wrangler secret put APP_ID`, which prompts for the value.
+- `ATTESTS_PER_HOUR` (var, 60): the hourly ceiling on successful attestations, counted from `attest_keys`.
+- `ATTEST_ENV` (var): `production`, and a test keeps it so. Only a local `.dev.vars` may say `development`, which also
+  accepts keys from development-signed builds (`appattestdevelop`).
+
+The bucket must exist before a deploy with the `DATA` binding. Migration `0002_attest.sql` is applied by the deploy job
+like any other. Not yet exercised: a real attestation from Apple's chain, real R2, and a deployed Worker.
+
 ## Reading reports and filing an issue
 
 Reports stay in D1. Nothing reaches GitHub unless a maintainer files it (`Docs/REPORTS.md` 6). Exact locations are in

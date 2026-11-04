@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Deps, RateLimiter, Vars } from "../src/deps";
+import { APPLE_APP_ATTEST_ROOT } from "../src/apple-root";
+import type { AttestConfig, Bucket, BucketObject, BucketObjectBody, Deps, RateLimiter, Vars } from "../src/deps";
 import { handle } from "../src/index";
 import { Store } from "../src/store";
 import type { Report } from "../src/validate";
@@ -22,31 +23,69 @@ export class FakeLimiter implements RateLimiter {
   }
 }
 
+/** Test values only: a made-up team and bundle ID, and an HMAC key used nowhere else. */
+export const TEST_APP_ID = "ABCDE12345.org.example.peoplemaps";
+export const TEST_TOKEN_SECRET = "test-only-download-token-secret-0123456789";
+
+/** An in-memory R2 stand-in: ETags, conditional gets and ranges, and a streamed body, like the binding. */
+export class MemoryBucket implements Bucket {
+  objects = new Map<string, { bytes: Uint8Array; etag: string; uploaded: Date; contentType?: string }>();
+  gets: { key: string; range?: { offset: number; length: number } }[] = [];
+  private n = 0;
+  put(key: string, bytes: Uint8Array, contentType?: string) {
+    this.objects.set(key, { bytes, etag: `"etag${++this.n}"`, uploaded: new Date("2026-11-01T12:00:00Z"), contentType });
+  }
+  private meta(key: string): BucketObject | null {
+    const o = this.objects.get(key);
+    if (!o) return null;
+    return {
+      size: o.bytes.length, httpEtag: o.etag, uploaded: o.uploaded,
+      writeHttpMetadata(h: Headers) { if (o.contentType) h.set("Content-Type", o.contentType); },
+    };
+  }
+  async head(key: string) { return this.meta(key); }
+  async get(key: string, options: { range?: { offset: number; length: number }; onlyIf?: Headers }): Promise<BucketObjectBody | BucketObject | null> {
+    this.gets.push({ key, range: options.range });
+    const meta = this.meta(key);
+    if (!meta) return null;
+    const ifMatch = options.onlyIf?.get("if-match"), ifNoneMatch = options.onlyIf?.get("if-none-match");
+    if ((ifMatch && ifMatch !== meta.httpEtag) || (ifNoneMatch && ifNoneMatch === meta.httpEtag)) return meta;
+    const bytes = this.objects.get(key)!.bytes;
+    const part = options.range ? bytes.slice(options.range.offset, options.range.offset + options.range.length) : bytes.slice();
+    const body = new ReadableStream<Uint8Array>({ start(c) { c.enqueue(part); c.close(); } });
+    return { ...meta, body };
+  }
+}
+
 export interface World {
   deps: Deps;
   sql: ReturnType<typeof sqliteSql>;
-  limits: { auth: FakeLimiter; installs: FakeLimiter; reports: FakeLimiter };
+  limits: { auth: FakeLimiter; installs: FakeLimiter; reports: FakeLimiter; attest: FakeLimiter; downloads: FakeLimiter };
+  data: MemoryBucket;
   clock: { t: Date; now(): Date };
-  call(method: string, path: string, opts?: { token?: string; body?: unknown; raw?: string; ip?: string }): Promise<Response>;
+  call(method: string, path: string, opts?: { token?: string; body?: unknown; raw?: string; ip?: string; headers?: Record<string, string> }): Promise<Response>;
   mint(): Promise<{ installID: string; token: string }>;
   send(token: string, report?: unknown): Promise<Response>;
   rows(table: string): Record<string, unknown>[];
 }
 
-export function world(vars: Partial<Vars> = {}, now = "2026-10-31T21:34:00Z"): World {
+export function world(vars: Partial<Vars> = {}, now = "2026-10-31T21:34:00Z", attest: Partial<AttestConfig> = {}): World {
   const sql = sqliteSql();
-  const limits = { auth: new FakeLimiter(), installs: new FakeLimiter(), reports: new FakeLimiter() };
+  const limits = { auth: new FakeLimiter(), installs: new FakeLimiter(), reports: new FakeLimiter(), attest: new FakeLimiter(), downloads: new FakeLimiter() };
+  const data = new MemoryBucket();
   const clock = { t: new Date(now), now() { return new Date(this.t); } };
   const deps: Deps = {
     store: new Store(sql),
     limits,
     clock,
-    vars: { retentionDays: 90, reportsPerDay: 5, installsPerHour: 60, ...vars },
+    vars: { retentionDays: 90, reportsPerDay: 5, installsPerHour: 60, attestsPerHour: 60, ...vars },
+    data,
+    attest: { appId: TEST_APP_ID, allowDevelopment: false, rootPEM: APPLE_APP_ATTEST_ROOT, tokenSecret: TEST_TOKEN_SECRET, ...attest },
   };
   const w: World = {
-    deps, sql, limits, clock,
+    deps, sql, limits, data, clock,
     call(method, path, opts = {}) {
-      const headers: Record<string, string> = { "cf-connecting-ip": opts.ip ?? IP };
+      const headers: Record<string, string> = { "cf-connecting-ip": opts.ip ?? IP, ...opts.headers };
       if (opts.token) headers.authorization = `Bearer ${opts.token}`;
       const body = opts.raw ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined);
       if (body !== undefined) headers["content-type"] = "application/json";
