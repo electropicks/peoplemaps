@@ -58,7 +58,7 @@ final class BinaryGraphTests: XCTestCase {
             guard x.id == y.id, x.from == y.from, x.to == y.to, x.wayID == y.wayID, x.coordinates == y.coordinates, x.meters == y.meters,
                   x.modes == y.modes, x.highway == y.highway, x.name == y.name, x.surface == y.surface, x.maxspeed == y.maxspeed,
                   x.lanes == y.lanes, x.sidewalk == y.sidewalk, x.parkedBothSides == y.parkedBothSides, x.movableBridge == y.movableBridge,
-                  x.footway == y.footway, x.steps == y.steps, x.crossing == y.crossing, x.besideRoad == y.besideRoad,
+                  x.footway == y.footway, x.ref == y.ref, x.steps == y.steps, x.crossing == y.crossing, x.besideRoad == y.besideRoad,
                   x.facility == y.facility, x.climb == y.climb, x.descent == y.descent, x.approachGrade == y.approachGrade,
                   x.control == y.control, x.leftTurnLane == y.leftTurnLane, x.twoWayForDriving == y.twoWayForDriving
             else { return XCTFail("edge \(x.id) (way \(x.wayID)) differs") }
@@ -83,7 +83,7 @@ private struct GraphFile: Decodable {
     struct Segment: Decodable {
         let way: Int64, a: Int, b: Int, g: [Double], m: Double, hw: String, n: Int, up: Double, down: Double
         let lanes: Int?, maxspeed: String?, surface: String?, sidewalk: String?, parkedBothSides: Bool?
-        let movableBridge: Bool?, footway: String?, steps: Int?, crossing: Crossing?, besideRoad: RoadClass?
+        let movableBridge: Bool?, ref: String?, footway: String?, steps: Int?, crossing: Crossing?, besideRoad: RoadClass?
         let f: Direction?, r: Direction?
     }
     let schemaVersion: Int
@@ -105,7 +105,7 @@ private struct GraphFile: Decodable {
                 var e = GraphEdge(id: edges.count, from: forward ? s.a : s.b, to: forward ? s.b : s.a, wayID: s.way,
                                   coordinates: forward ? points : points.reversed(), meters: s.m, modes: direction.modes,
                                   highway: s.hw, name: names[s.n], surface: s.surface, maxspeed: s.maxspeed, lanes: s.lanes)
-                e.sidewalk = s.sidewalk; e.parkedBothSides = s.parkedBothSides; e.movableBridge = s.movableBridge ?? false
+                e.ref = s.ref; e.sidewalk = s.sidewalk; e.parkedBothSides = s.parkedBothSides; e.movableBridge = s.movableBridge ?? false
                 e.footway = s.footway; e.steps = s.steps; e.crossing = s.crossing; e.besideRoad = s.besideRoad
                 e.facility = direction.facility ?? "none"; e.control = direction.control
                 e.approachGrade = direction.approachGrade; e.leftTurnLane = direction.leftTurnLane

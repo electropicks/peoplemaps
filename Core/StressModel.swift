@@ -38,8 +38,8 @@ public enum Factor: String, CaseIterable, Sendable, Comparable {
         case .stopAndGo: "Stop-and-go stops"
         case .complexJunction: "5+ way intersections"
         case .hillStop: "Stops on steep hills"
-        case .freewayEntry: "Freeway entries"
-        case .shortFreewayHop: "Short freeway hops"
+        case .freewayEntry: "Highway merges"
+        case .shortFreewayHop: "Short highway hops"
         case .movableBridge: "Drawbridges"
         case .cutThrough: "Side-street shortcuts"
         case .bikeRouteGap: "Bike route gaps"
@@ -106,8 +106,8 @@ public enum Factor: String, CaseIterable, Sendable, Comparable {
         case .stopAndGo: ("stop-and-go stop", "stop-and-go stops")
         case .complexJunction: ("intersection of five or more streets", "intersections of five or more streets")
         case .hillStop: ("stop on a steep hill", "stops on steep hills")
-        case .freewayEntry: ("freeway entry", "freeway entries")
-        case .shortFreewayHop: ("short freeway hop with quick lane changes", "short freeway hops with quick lane changes")
+        case .freewayEntry: ("highway merge", "highway merges")
+        case .shortFreewayHop: ("short highway hop with quick lane changes", "short highway hops with quick lane changes")
         case .movableBridge: ("drawbridge", "drawbridges")
         case .cutThrough: ("side-street shortcut", "side-street shortcuts")
         case .bikeRouteGap: ("place where the bike route drops you into traffic", "places where the bike route drops you into traffic")
@@ -172,6 +172,8 @@ public enum StressModel {
     static let driveTopMph = 60.0
     /// Ramps (`*_link`) inherit the freeway's tagged limit but are driven slower.
     static let driveRampMph = 40.0
+    /// Stress seconds for getting onto a freeway, or from one freeway to another. A starting guess, like the other weights.
+    static let freewaySwitchSeconds = 30.0
 
     static func seconds(_ e: GraphEdge, mode: TravelMode) -> Double {
         switch mode {
@@ -325,7 +327,7 @@ public enum StressModel {
             if turned { add(.turn, 8) }
             if j.legs >= 5 { add(.complexJunction, 40) }
             if waits, let g = p.approachGrade, g > 8 { add(.hillStop, g > 12 ? 60 : 30) }
-            if !p.isHighway && n.isHighway { add(.freewayEntry, 30) }
+            if !p.isHighway && n.isHighway { add(.freewayEntry, freewaySwitchSeconds) }
             if n.movableBridge && !p.movableBridge { add(.movableBridge, 30) }
         case .bike:
             // A signal costs more than a stop sign: waiting at a red beside traffic, versus a quick stop and go.
@@ -369,6 +371,17 @@ public enum StressModel {
         }
         guard mode == .drive else { return }
         var run = 0.0, entered: Double?
+        // Changing freeways at an interchange (I-90 to I-405) is weaving and merging again, charged like an entry: the freeway's
+        // `ref` changes with a ramp between. Freeways are mostly unnamed in OSM, so identity is the ref, never the name. An edge
+        // with no ref leaves the state alone, so a gap in the tagging neither starts nor hides a switch.
+        var freeway: String?, onRamp = false
+        for e in edges {
+            guard e.isHighway else { freeway = nil; onRamp = false; continue }
+            if e.highway.hasSuffix("_link") { onRamp = true; continue }
+            guard let ref = e.ref else { continue }
+            if let was = freeway, onRamp, was != ref { r.add(.freewayEntry, amount: 1, cost: freewaySwitchSeconds) }
+            freeway = ref; onRamp = false
+        }
         for (i, e) in edges.enumerated() {
             let wasHighway = i > 0 && edges[i - 1].isHighway
             if e.isHighway && !wasHighway { entered = run }

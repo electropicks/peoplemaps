@@ -11,19 +11,19 @@
       "files": {
         "expected/provenance.json": {
           "bytes": 4430,
-          "sha256": "0185dc6564619070e257741cd7788371178ab8eadf3083323d5f4ef2b0a915a1"
+          "sha256": "eb5ebfa9d2afaaeedd08c5d7c822e646e821d91f9d2b37f71e0a6f70fc33b4bd"
         },
         "expected/seattle-graph.bin": {
-          "bytes": 61694008,
-          "sha256": "dfc29a68052488e80d6317848084913b9d5492aa365d6873d811cbce7733e16b"
+          "bytes": 61711736,
+          "sha256": "a9b63f64c908866006cc4fc864f4332b887efedfb8235379e10701b69dcc8a95"
         },
         "expected/seattle-map.pmtiles": {
           "bytes": 3159741,
           "sha256": "268851fc094f2f655da97b324a5025c1375de6a33cff5845657aad64d86c399e"
         },
         "expected/seattle-search.sqlite.gz": {
-          "bytes": 16407568,
-          "sha256": "b5f7cbe22b58a3a4a9d610d794a5e8ca94d976b972987506fd2969dc5c3291ef"
+          "bytes": 16407569,
+          "sha256": "f1211e5e91d4b7b41ef1d0bfb93f0b18b9c6cd2a07eba0dd3b36b4d5e3bb79f4"
         },
         "seattle-coast.json.gz": {
           "bytes": 213646,

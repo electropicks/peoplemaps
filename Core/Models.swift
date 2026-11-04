@@ -112,6 +112,8 @@ public struct GraphEdge: Sendable {
     public var sidewalk: String?
     public var parkedBothSides: Bool?
     public var movableBridge = false
+    /// Which freeway a motorway or trunk edge is, from OSM `ref` ("I 5", "SR 520"); nil elsewhere and in graphs imported without it.
+    public var ref: String?
     /// OSM footway kind (sidewalk, crossing, ...) for footway edges.
     public var footway: String?
     public var steps: Int?
@@ -135,6 +137,8 @@ public struct GraphEdge: Sendable {
     }
 
     public var isHighway: Bool { highway.hasPrefix("motorway") || highway.hasPrefix("trunk") }
+    /// A true freeway: OSM motorway and its ramps. Trunk roads such as Aurora are highways but not freeways.
+    public var isFreeway: Bool { highway.hasPrefix("motorway") }
     public var isArterial: Bool { ["primary", "secondary", "tertiary"].contains(highway.replacingOccurrences(of: "_link", with: "")) }
     public var isResidential: Bool { ["residential", "living_street"].contains(highway) }
     public var isRoad: Bool { isHighway || isArterial || ["residential", "unclassified", "living_street", "service"].contains(highway) }

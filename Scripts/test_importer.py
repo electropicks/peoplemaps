@@ -1,6 +1,6 @@
 import array, collections, gzip, json, pathlib, sqlite3, struct, tempfile, unittest
 import build_search, build_tiles
-from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,load_dem,compile_restrictions,ring_rows,in_rows
+from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,load_dem,compile_restrictions,ring_rows,in_rows,freeway_ref
 
 class ImportPolicyTests(unittest.TestCase):
     def test_private_road_excluded(self):
@@ -529,6 +529,16 @@ class ElevationTests(unittest.TestCase):
         at = self.sample([[1, 2, 3, 4], None, [9, 10, 11, 12], [13, 14, 15, 16]])
         self.assertEqual([at(0, 0), at(1, 1), at(2, 0), at(3, 0), at(3, 1)], [1, 4, 0, 0, 0])  # the gap reads as 0 m
         self.assertEqual([at(0, 2), at(1, 3), at(2, 2), at(3, 3)], [9, 12, 13, 16])
+
+class FreewayRefTests(unittest.TestCase):
+    def test_refs_as_tagged_in_king_county(self):
+        for tags, want in [({'highway': 'motorway', 'ref': 'I 5'}, 'I 5'),
+                           ({'highway': 'motorway', 'ref': 'I 90', 'name': 'Lacey V. Murrow Memorial Bridge'}, 'I 90'),
+                           ({'highway': 'trunk', 'ref': 'SR 161;SR 512'}, 'SR 161'),
+                           ({'highway': 'motorway', 'ref': ' US 2 ;SR 522'}, 'US 2'),
+                           ({'highway': 'motorway'}, None), ({'highway': 'motorway_link', 'ref': 'I 5'}, None),
+                           ({'highway': 'primary', 'ref': 'SR 99'}, None)]:
+            self.assertEqual(freeway_ref(tags), want, tags)
 
 class CoveragePolygonTests(unittest.TestCase):
     # An L: the box 0..2 by 0..2 less its top right quarter.

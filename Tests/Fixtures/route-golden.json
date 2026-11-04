@@ -1593,7 +1593,7 @@
     "key" : "node\/1630958088>node\/10861762926 drive 5 default",
     "reasons" : [
       "1 fewer left turn across traffic without a signal",
-      "1 fewer short freeway hop with quick lane changes",
+      "1 fewer short highway hop with quick lane changes",
       "1 fewer intersection of five or more streets",
       "Tradeoff: 3 more traffic signals",
       "Tradeoff: 2 more stop-and-go stops"
@@ -1708,7 +1708,7 @@
       "3 fewer stop-and-go stops",
       "1 fewer traffic signal",
       "Tradeoff: 1 more intersection of five or more streets",
-      "Tradeoff: 1 more freeway entry"
+      "Tradeoff: 1 more highway merge"
     ]
   },
   {
@@ -2172,7 +2172,7 @@
       "1 fewer traffic signal",
       "3 fewer stop-and-go stops",
       "Tradeoff: 1 more intersection of five or more streets",
-      "Tradeoff: 1 more freeway entry"
+      "Tradeoff: 1 more highway merge"
     ]
   }
 ]

@@ -38,11 +38,18 @@ public struct CalmScore: Hashable, Sendable {
 
     /// `tripSeconds` is the same for every route in a comparison: the fastest route's time, so a slower route can't
     /// look calmer only because it takes longer. Very short trips count as 5 minutes, so one junction doesn't swamp them.
-    public init(stress: Double, tripSeconds: Double, mode: TravelMode) {
-        let perMinute = max(0, stress) / max(tripSeconds / 60, 5)
+    /// Driving `freewaySeconds` of that trip on a freeway counts half: freeway minutes carry almost no stress, so a long
+    /// freeway run would otherwise dilute the rate and make a trip with busy ends read calmer than it is. Display only:
+    /// the router never reads the score.
+    public init(stress: Double, tripSeconds: Double, freewaySeconds: Double = 0, mode: TravelMode) {
+        let counted = tripSeconds - Self.freewayWeight * min(max(0, freewaySeconds), tripSeconds)
+        let perMinute = max(0, stress) / max(counted / 60, 5)
         let relative = perMinute / Self.scale(mode)
         self.init(value: Int((100 / (1 + relative * relative)).rounded()))
     }
+
+    /// How much of a freeway minute leaves the denominator.
+    static let freewayWeight = 0.5
 
     /// Stress per minute that scores 50. Each mode has its own stress factors and its own scale.
     static func scale(_ mode: TravelMode) -> Double {
@@ -75,7 +82,7 @@ extension RouteComparison {
     public var fastestCalm: CalmScore { calm(fastest) }
     public var calmerCalm: CalmScore? { calmer.map(calm) }
     private func calm(_ route: Route) -> CalmScore {
-        CalmScore(stress: route.metrics.stress, tripSeconds: fastest.metrics.seconds, mode: request.mode)
+        CalmScore(stress: route.metrics.stress, tripSeconds: fastest.metrics.seconds, freewaySeconds: fastestFreewaySeconds, mode: request.mode)
     }
 
     /// Fastest to calmer: "Yikes → Chill", with the scores when the word doesn't change: "Chill, 62 → 71". One word with no calmer route.
@@ -159,8 +166,8 @@ extension Factor {
         case .stopAndGo: "less stop-and-go"
         case .complexJunction: "fewer 5-way junctions"
         case .hillStop: "fewer hill stops"
-        case .freewayEntry: "fewer freeway entries"
-        case .shortFreewayHop: "fewer short freeway hops"
+        case .freewayEntry: "fewer highway merges"
+        case .shortFreewayHop: "fewer short highway hops"
         case .movableBridge: "fewer drawbridges"
         case .cutThrough: "fewer side-street shortcuts"
         case .bikeRouteGap: "fewer bike route gaps"

@@ -84,11 +84,15 @@ public struct RouteComparison: Sendable {
     public let snappedDestination: Coordinate
     /// Meaningful only when `calmer` is nil.
     public let noCalmer: NoCalmerFinding
+    /// Drive time on the fastest route's freeway edges, worked out once here: the calm score reads it on every view update.
+    /// The same for both routes, like the trip time. Zero for walk and bike.
+    let fastestFreewaySeconds: Double
     public init(request: RouteRequest, fastest: Route, calmer: Route?, candidateCount: Int, originSnapMeters: Double,
                 destinationSnapMeters: Double, snappedOrigin: Coordinate, snappedDestination: Coordinate, noCalmer: NoCalmerFinding = .notChecked) {
         self.request = request; self.fastest = fastest; self.calmer = calmer; self.candidateCount = candidateCount
         self.originSnapMeters = originSnapMeters; self.destinationSnapMeters = destinationSnapMeters
         self.snappedOrigin = snappedOrigin; self.snappedDestination = snappedDestination; self.noCalmer = noCalmer
+        fastestFreewaySeconds = request.mode == .drive ? fastest.edges.filter(\.isFreeway).reduce(0) { $0 + StressModel.seconds($1, mode: .drive) } : 0
     }
 
     public var extraSeconds: Double { max(0, (calmer?.metrics.seconds ?? fastest.metrics.seconds) - fastest.metrics.seconds) }
@@ -117,10 +121,17 @@ public struct RouteComparison: Sendable {
         [fastest, calmer].compactMap { $0 }.flatMap { route in
             [Factor.unknownSurface, .unknownSidewalk].compactMap { factor -> String? in
                 let meters = route.metrics.breakdown[factor].amount
-                return meters > route.metrics.meters * 0.1 ? factor.describe(meters) : nil
+                guard meters > route.metrics.meters * 0.1 else { return nil }
+                // Sidewalk is reported once, as a share of the route: a distance reads as a lot on a long drive or walk.
+                return factor == .unknownSidewalk ? "sidewalk data is missing for about \(Self.roundedShare(meters / route.metrics.meters)) of it" : factor.describe(meters)
             }.map { "\(route.edgeIDs == fastest.edgeIDs ? "Fastest" : "Calmer") route: \($0)." }
         }
     }
+}
+
+extension RouteComparison {
+    /// "40%": to the nearest 5%.
+    static func roundedShare(_ share: Double) -> String { "\(min(100, Int((share * 20).rounded()) * 5))%" }
 }
 
 extension Factor {

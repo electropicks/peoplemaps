@@ -7,9 +7,9 @@
     "calmerStress" : null,
     "candidates" : 1,
     "caveats" : [
-      "Fastest route: 0.4 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 10% of it."
     ],
-    "computeSeconds" : 0.0049760341644287109,
+    "computeSeconds" : 0.0050829648971557617,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 0,
@@ -69,13 +69,13 @@
     "budgetMinutes" : 2,
     "calmerFactors" : [
       [
-        "unmarkedCrossing",
-        1,
+        "markedCrossing",
+        2,
         90
       ],
       [
-        "markedCrossing",
-        2,
+        "unmarkedCrossing",
+        1,
         90
       ],
       [
@@ -119,10 +119,10 @@
     "calmerStress" : 351.34949999999998,
     "candidates" : 6,
     "caveats" : [
-      "Fastest route: 0.4 mi where sidewalks aren't mapped.",
-      "Calmer route: 0.3 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 10% of it.",
+      "Calmer route: sidewalk data is missing for about 10% of it."
     ],
-    "computeSeconds" : 0.022076964378356934,
+    "computeSeconds" : 0.022207021713256836,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 45.871428571427714,
@@ -229,10 +229,10 @@
     "calmerStress" : 232.02509999999998,
     "candidates" : 6,
     "caveats" : [
-      "Fastest route: 0.4 mi where sidewalks aren't mapped.",
-      "Calmer route: 0.4 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 10% of it.",
+      "Calmer route: sidewalk data is missing for about 10% of it."
     ],
-    "computeSeconds" : 0.025008082389831543,
+    "computeSeconds" : 0.022443056106567383,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 276.56428571428523,
@@ -341,10 +341,10 @@
     "calmerStress" : 232.02509999999998,
     "candidates" : 6,
     "caveats" : [
-      "Fastest route: 0.4 mi where sidewalks aren't mapped.",
-      "Calmer route: 0.4 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 10% of it.",
+      "Calmer route: sidewalk data is missing for about 10% of it."
     ],
-    "computeSeconds" : 0.027280926704406738,
+    "computeSeconds" : 0.022598981857299805,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 276.56428571428523,
@@ -414,7 +414,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.0036230087280273438,
+    "computeSeconds" : 0.003538966178894043,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 0,
@@ -541,7 +541,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.017994046211242676,
+    "computeSeconds" : 0.015601992607116699,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 63.567999999999984,
@@ -672,7 +672,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.018174052238464355,
+    "computeSeconds" : 0.015069961547851562,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 63.567999999999984,
@@ -803,7 +803,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.018154025077819824,
+    "computeSeconds" : 0.01549994945526123,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 63.567999999999984,
@@ -883,7 +883,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.0077899694442749023,
+    "computeSeconds" : 0.0084049701690673828,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 0,
@@ -948,13 +948,13 @@
         120
       ],
       [
-        "stopAndGo",
-        4,
+        "allWayStop",
+        2,
         40
       ],
       [
-        "allWayStop",
-        2,
+        "stopAndGo",
+        4,
         40
       ],
       [
@@ -985,7 +985,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.022970080375671387,
+    "computeSeconds" : 0.020802974700927734,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 27.203650680028431,
@@ -1054,13 +1054,13 @@
         120
       ],
       [
-        "stopAndGo",
-        4,
+        "allWayStop",
+        2,
         40
       ],
       [
-        "allWayStop",
-        2,
+        "stopAndGo",
+        4,
         40
       ],
       [
@@ -1091,7 +1091,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.022980928421020508,
+    "computeSeconds" : 0.020949959754943848,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 27.203650680028431,
@@ -1160,13 +1160,13 @@
         120
       ],
       [
-        "stopAndGo",
-        4,
+        "allWayStop",
+        2,
         40
       ],
       [
-        "allWayStop",
-        2,
+        "stopAndGo",
+        4,
         40
       ],
       [
@@ -1197,7 +1197,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.020947933197021484,
+    "computeSeconds" : 0.020851969718933105,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 27.203650680028431,
@@ -1267,7 +1267,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.0066429376602172852,
+    "computeSeconds" : 0.006728053092956543,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 14.770704209858819,
     "extraSeconds" : 0,
@@ -1369,7 +1369,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.03805696964263916,
+    "computeSeconds" : 0.037284970283508301,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 14.770704209858819,
     "extraSeconds" : 51.778571428573287,
@@ -1473,7 +1473,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.037631988525390625,
+    "computeSeconds" : 0.03758394718170166,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 14.770704209858819,
     "extraSeconds" : 51.778571428573287,
@@ -1567,7 +1567,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.038195013999938965,
+    "computeSeconds" : 0.037510037422180176,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 14.770704209858819,
     "extraSeconds" : 461.23095238095357,
@@ -1635,7 +1635,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.0054540634155273438,
+    "computeSeconds" : 0.0058330297470092773,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 29.967064593337788,
     "extraSeconds" : 0,
@@ -1792,7 +1792,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.037567019462585449,
+    "computeSeconds" : 0.036736965179443359,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 29.967064593337788,
     "extraSeconds" : 29.663999999999987,
@@ -1953,7 +1953,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.037352085113525391,
+    "computeSeconds" : 0.037513971328735352,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 29.967064593337788,
     "extraSeconds" : 29.663999999999987,
@@ -2114,7 +2114,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.037389993667602539,
+    "computeSeconds" : 0.037478923797607422,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 29.967064593337788,
     "extraSeconds" : 29.663999999999987,
@@ -2214,7 +2214,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.0068910121917724609,
+    "computeSeconds" : 0.0091739892959594727,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 59.647793777290069,
     "extraSeconds" : 0,
@@ -2235,13 +2235,13 @@
         70
       ],
       [
-        "complexJunction",
-        1,
+        "allWayStop",
+        2,
         40
       ],
       [
-        "allWayStop",
-        2,
+        "complexJunction",
+        1,
         40
       ],
       [
@@ -2284,13 +2284,13 @@
         60
       ],
       [
-        "complexJunction",
-        1,
+        "allWayStop",
+        2,
         40
       ],
       [
-        "allWayStop",
-        2,
+        "complexJunction",
+        1,
         40
       ],
       [
@@ -2316,7 +2316,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.022737979888916016,
+    "computeSeconds" : 0.024428009986877441,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 59.647793777290069,
     "extraSeconds" : 6.6696045096634862,
@@ -2337,13 +2337,13 @@
         70
       ],
       [
-        "complexJunction",
-        1,
+        "allWayStop",
+        2,
         40
       ],
       [
-        "allWayStop",
-        2,
+        "complexJunction",
+        1,
         40
       ],
       [
@@ -2390,13 +2390,13 @@
         60
       ],
       [
-        "complexJunction",
-        1,
+        "allWayStop",
+        2,
         40
       ],
       [
-        "allWayStop",
-        2,
+        "complexJunction",
+        1,
         40
       ],
       [
@@ -2422,7 +2422,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.022712945938110352,
+    "computeSeconds" : 0.024057984352111816,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 59.647793777290069,
     "extraSeconds" : 6.6696045096634862,
@@ -2443,13 +2443,13 @@
         70
       ],
       [
-        "complexJunction",
-        1,
+        "allWayStop",
+        2,
         40
       ],
       [
-        "allWayStop",
-        2,
+        "complexJunction",
+        1,
         40
       ],
       [
@@ -2496,13 +2496,13 @@
         60
       ],
       [
-        "complexJunction",
-        1,
+        "allWayStop",
+        2,
         40
       ],
       [
-        "allWayStop",
-        2,
+        "complexJunction",
+        1,
         40
       ],
       [
@@ -2528,7 +2528,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.022647976875305176,
+    "computeSeconds" : 0.024056911468505859,
     "destination" : "Burke Museum of Natural History and Culture",
     "destinationSnapMeters" : 59.647793777290069,
     "extraSeconds" : 6.6696045096634862,
@@ -2549,13 +2549,13 @@
         70
       ],
       [
-        "complexJunction",
-        1,
+        "allWayStop",
+        2,
         40
       ],
       [
-        "allWayStop",
-        2,
+        "complexJunction",
+        1,
         40
       ],
       [
@@ -2596,9 +2596,9 @@
     "calmerStress" : null,
     "candidates" : 1,
     "caveats" : [
-      "Fastest route: 0.6 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 25% of it."
     ],
-    "computeSeconds" : 0.0076659917831420898,
+    "computeSeconds" : 0.0079649686813354492,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 0,
@@ -2708,10 +2708,10 @@
     "calmerStress" : 400.52470000000005,
     "candidates" : 6,
     "caveats" : [
-      "Fastest route: 0.6 mi where sidewalks aren't mapped.",
-      "Calmer route: 0.3 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 25% of it.",
+      "Calmer route: sidewalk data is missing for about 15% of it."
     ],
-    "computeSeconds" : 0.060436010360717773,
+    "computeSeconds" : 0.059617996215820312,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 119.11428571428678,
@@ -2814,9 +2814,9 @@
     "calmerStress" : 346.52960000000002,
     "candidates" : 6,
     "caveats" : [
-      "Fastest route: 0.6 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 25% of it."
     ],
-    "computeSeconds" : 0.060750961303710938,
+    "computeSeconds" : 0.059675931930541992,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 239.42380952380881,
@@ -2919,9 +2919,9 @@
     "calmerStress" : 346.52960000000002,
     "candidates" : 6,
     "caveats" : [
-      "Fastest route: 0.6 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 25% of it."
     ],
-    "computeSeconds" : 0.061735033988952637,
+    "computeSeconds" : 0.06062006950378418,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 42.832338807867949,
     "extraSeconds" : 239.42380952380881,
@@ -2995,7 +2995,7 @@
     "caveats" : [
       "Fastest route: 0.8 mi with unknown surface."
     ],
-    "computeSeconds" : 0.0052620172500610352,
+    "computeSeconds" : 0.0053160190582275391,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 0,
@@ -3051,12 +3051,12 @@
         20
       ],
       [
-        "movableBridge",
+        "leftAtSignal",
         1,
         15
       ],
       [
-        "leftAtSignal",
+        "movableBridge",
         1,
         15
       ],
@@ -3096,7 +3096,7 @@
     "caveats" : [
       "Fastest route: 0.8 mi with unknown surface."
     ],
-    "computeSeconds" : 0.027404069900512695,
+    "computeSeconds" : 0.027426004409790039,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 0,
@@ -3152,12 +3152,12 @@
         20
       ],
       [
-        "movableBridge",
+        "leftAtSignal",
         1,
         15
       ],
       [
-        "leftAtSignal",
+        "movableBridge",
         1,
         15
       ],
@@ -3197,7 +3197,7 @@
     "caveats" : [
       "Fastest route: 0.8 mi with unknown surface."
     ],
-    "computeSeconds" : 0.027171969413757324,
+    "computeSeconds" : 0.027224898338317871,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 0,
@@ -3253,12 +3253,12 @@
         20
       ],
       [
-        "movableBridge",
+        "leftAtSignal",
         1,
         15
       ],
       [
-        "leftAtSignal",
+        "movableBridge",
         1,
         15
       ],
@@ -3364,7 +3364,7 @@
     "caveats" : [
       "Fastest route: 0.8 mi with unknown surface."
     ],
-    "computeSeconds" : 0.027209997177124023,
+    "computeSeconds" : 0.026726007461547852,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 46.23022507267796,
     "extraSeconds" : 415.66785714285629,
@@ -3420,12 +3420,12 @@
         20
       ],
       [
-        "movableBridge",
+        "leftAtSignal",
         1,
         15
       ],
       [
-        "leftAtSignal",
+        "movableBridge",
         1,
         15
       ],
@@ -3469,7 +3469,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.0053240060806274414,
+    "computeSeconds" : 0.0061850547790527344,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 0,
@@ -3540,7 +3540,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.0167999267578125,
+    "computeSeconds" : 0.017650008201599121,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 0,
@@ -3652,7 +3652,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.016788005828857422,
+    "computeSeconds" : 0.017587065696716309,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 206.9365157480313,
@@ -3768,7 +3768,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.016723990440368652,
+    "computeSeconds" : 0.017742037773132324,
     "destination" : "Gas Works Park",
     "destinationSnapMeters" : 124.2113009563556,
     "extraSeconds" : 206.9365157480313,
@@ -3841,9 +3841,9 @@
     "calmerStress" : null,
     "candidates" : 1,
     "caveats" : [
-      "Fastest route: 1.0 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 30% of it."
     ],
-    "computeSeconds" : 0.013851046562194824,
+    "computeSeconds" : 0.014220952987670898,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
     "extraSeconds" : 0,
@@ -3933,9 +3933,9 @@
     "calmerStress" : 478.03179999999998,
     "candidates" : 6,
     "caveats" : [
-      "Fastest route: 1.0 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 30% of it."
     ],
-    "computeSeconds" : 0.12864196300506592,
+    "computeSeconds" : 0.12926304340362549,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
     "extraSeconds" : 36.028571428573741,
@@ -4027,9 +4027,9 @@
     "calmerStress" : 453.66460000000001,
     "candidates" : 6,
     "caveats" : [
-      "Fastest route: 1.0 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 30% of it."
     ],
-    "computeSeconds" : 0.12907397747039795,
+    "computeSeconds" : 0.12996208667755127,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
     "extraSeconds" : 120.08571428571668,
@@ -4121,9 +4121,9 @@
     "calmerStress" : 453.66460000000001,
     "candidates" : 6,
     "caveats" : [
-      "Fastest route: 1.0 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 30% of it."
     ],
-    "computeSeconds" : 0.12720394134521484,
+    "computeSeconds" : 0.12926197052001953,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
     "extraSeconds" : 120.08571428571668,
@@ -4186,7 +4186,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.013965010643005371,
+    "computeSeconds" : 0.014689087867736816,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
     "extraSeconds" : 0,
@@ -4326,13 +4326,13 @@
         22
       ],
       [
-        "allWayStop",
-        2,
+        "hillStop",
+        1,
         20
       ],
       [
-        "hillStop",
-        1,
+        "allWayStop",
+        2,
         20
       ],
       [
@@ -4358,7 +4358,7 @@
     "caveats" : [
       "Calmer route: 0.5 mi with unknown surface."
     ],
-    "computeSeconds" : 0.061308979988098145,
+    "computeSeconds" : 0.061440944671630859,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
     "extraSeconds" : 113.82264285714268,
@@ -4534,7 +4534,7 @@
     "caveats" : [
       "Calmer route: 0.5 mi with unknown surface."
     ],
-    "computeSeconds" : 0.07281196117401123,
+    "computeSeconds" : 0.060953021049499512,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
     "extraSeconds" : 113.82264285714268,
@@ -4678,13 +4678,13 @@
         22
       ],
       [
-        "allWayStop",
-        2,
+        "hillStop",
+        1,
         20
       ],
       [
-        "hillStop",
-        1,
+        "allWayStop",
+        2,
         20
       ],
       [
@@ -4710,7 +4710,7 @@
     "caveats" : [
       "Calmer route: 0.5 mi with unknown surface."
     ],
-    "computeSeconds" : 0.079100966453552246,
+    "computeSeconds" : 0.060900092124938965,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 2.9416978931114044,
     "extraSeconds" : 113.82264285714268,
@@ -4820,7 +4820,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.015131950378417969,
+    "computeSeconds" : 0.017136096954345703,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 20.411380538500193,
     "extraSeconds" : 0,
@@ -4937,7 +4937,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.051606059074401855,
+    "computeSeconds" : 0.052274107933044434,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 20.411380538500193,
     "extraSeconds" : 95.003347947983912,
@@ -5058,7 +5058,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.052641034126281738,
+    "computeSeconds" : 0.05186009407043457,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 20.411380538500193,
     "extraSeconds" : 95.003347947983912,
@@ -5179,7 +5179,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.051284074783325195,
+    "computeSeconds" : 0.052039027214050293,
     "destination" : "Capitol Hill Library",
     "destinationSnapMeters" : 20.411380538500193,
     "extraSeconds" : 95.003347947983912,
@@ -5257,9 +5257,9 @@
     "calmerStress" : null,
     "candidates" : 1,
     "caveats" : [
-      "Fastest route: 1.0 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 15% of it."
     ],
-    "computeSeconds" : 0.057319998741149902,
+    "computeSeconds" : 0.059557914733886719,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 7.6688128183663355,
     "extraSeconds" : 0,
@@ -5364,9 +5364,9 @@
     "calmerStress" : 966.15839999999969,
     "candidates" : 7,
     "caveats" : [
-      "Fastest route: 1.0 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 15% of it."
     ],
-    "computeSeconds" : 0.22513401508331299,
+    "computeSeconds" : 0.22398090362548828,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 7.6688128183663355,
     "extraSeconds" : 108.32857142856665,
@@ -5473,9 +5473,9 @@
     "calmerStress" : 966.15839999999969,
     "candidates" : 7,
     "caveats" : [
-      "Fastest route: 1.0 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 15% of it."
     ],
-    "computeSeconds" : 0.22536289691925049,
+    "computeSeconds" : 0.22309195995330811,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 7.6688128183663355,
     "extraSeconds" : 108.32857142856665,
@@ -5577,9 +5577,9 @@
     "calmerStress" : 800.93019999999979,
     "candidates" : 7,
     "caveats" : [
-      "Fastest route: 1.0 mi where sidewalks aren't mapped."
+      "Fastest route: sidewalk data is missing for about 15% of it."
     ],
-    "computeSeconds" : 0.24513900279998779,
+    "computeSeconds" : 0.2216109037399292,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 7.6688128183663355,
     "extraSeconds" : 432.11428571428041,
@@ -5648,7 +5648,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.023504018783569336,
+    "computeSeconds" : 0.020617008209228516,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 17.408750393960609,
     "extraSeconds" : 0,
@@ -5778,13 +5778,13 @@
         182
       ],
       [
-        "unsignalledCrossing",
-        3,
+        "unsignalledLeft",
+        2,
         180
       ],
       [
-        "unsignalledLeft",
-        2,
+        "unsignalledCrossing",
+        3,
         180
       ],
       [
@@ -5845,7 +5845,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.091717004776000977,
+    "computeSeconds" : 0.072224974632263184,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 17.408750393960609,
     "extraSeconds" : 45.204071428569932,
@@ -5979,13 +5979,13 @@
         182
       ],
       [
-        "unsignalledCrossing",
-        3,
+        "unsignalledLeft",
+        2,
         180
       ],
       [
-        "unsignalledLeft",
-        2,
+        "unsignalledCrossing",
+        3,
         180
       ],
       [
@@ -6046,7 +6046,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.073668956756591797,
+    "computeSeconds" : 0.071955084800720215,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 17.408750393960609,
     "extraSeconds" : 45.204071428569932,
@@ -6107,13 +6107,13 @@
         70
       ],
       [
-        "stopSign",
-        4,
+        "hillStop",
+        2,
         40
       ],
       [
-        "hillStop",
-        2,
+        "stopSign",
+        4,
         40
       ],
       [
@@ -6200,13 +6200,13 @@
         30
       ],
       [
-        "hillStop",
-        1,
+        "stopSign",
+        2,
         20
       ],
       [
-        "stopSign",
-        2,
+        "hillStop",
+        1,
         20
       ],
       [
@@ -6237,7 +6237,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.073494076728820801,
+    "computeSeconds" : 0.072292089462280273,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 17.408750393960609,
     "extraSeconds" : 413.96248214285424,
@@ -6298,13 +6298,13 @@
         70
       ],
       [
-        "stopSign",
-        4,
+        "hillStop",
+        2,
         40
       ],
       [
-        "hillStop",
-        2,
+        "stopSign",
+        4,
         40
       ],
       [
@@ -6352,7 +6352,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.021696925163269043,
+    "computeSeconds" : 0.023190975189208984,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 17.408750393960609,
     "extraSeconds" : 0,
@@ -6398,13 +6398,13 @@
         45
       ],
       [
-        "complexJunction",
-        1,
+        "leftAtSignal",
+        4,
         40
       ],
       [
-        "leftAtSignal",
-        4,
+        "complexJunction",
+        1,
         40
       ],
       [
@@ -6467,6 +6467,11 @@
         60
       ],
       [
+        "freewayEntry",
+        1,
+        30
+      ],
+      [
         "hillStop",
         1,
         30
@@ -6474,11 +6479,6 @@
       [
         "stopSign",
         2,
-        30
-      ],
-      [
-        "freewayEntry",
-        1,
         30
       ],
       [
@@ -6504,7 +6504,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.057494044303894043,
+    "computeSeconds" : 0.08080601692199707,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 17.408750393960609,
     "extraSeconds" : 28.92935009544226,
@@ -6550,13 +6550,13 @@
         45
       ],
       [
-        "complexJunction",
-        1,
+        "leftAtSignal",
+        4,
         40
       ],
       [
-        "leftAtSignal",
-        4,
+        "complexJunction",
+        1,
         40
       ],
       [
@@ -6599,162 +6599,6 @@
     "calmerFactors" : [
       [
         "signal",
-        23,
-        230
-      ],
-      [
-        "turn",
-        14,
-        112
-      ],
-      [
-        "stopAndGo",
-        10,
-        100
-      ],
-      [
-        "allWayStop",
-        4,
-        80
-      ],
-      [
-        "leftAtSignal",
-        6,
-        60
-      ],
-      [
-        "hillStop",
-        1,
-        30
-      ],
-      [
-        "stopSign",
-        2,
-        30
-      ],
-      [
-        "freewayEntry",
-        1,
-        30
-      ],
-      [
-        "unsignalledRight",
-        1,
-        15
-      ],
-      [
-        "residential",
-        332.10000000000002,
-        10
-      ],
-      [
-        "narrowWithParking",
-        101,
-        4
-      ]
-    ],
-    "calmerMeters" : 11571.950000000003,
-    "calmerSeconds" : 1397.6616410164631,
-    "calmerStress" : 701.00109999999995,
-    "candidates" : 4,
-    "caveats" : [
-
-    ],
-    "computeSeconds" : 0.057826995849609375,
-    "destination" : "Hyson Boba & Tea",
-    "destinationSnapMeters" : 17.408750393960609,
-    "extraSeconds" : 28.92935009544226,
-    "fastestFactors" : [
-      [
-        "signal",
-        24,
-        240
-      ],
-      [
-        "unsignalledLeft",
-        2,
-        240
-      ],
-      [
-        "stopAndGo",
-        15,
-        150
-      ],
-      [
-        "turn",
-        12,
-        96
-      ],
-      [
-        "unsignalledCrossing",
-        1,
-        90
-      ],
-      [
-        "allWayStop",
-        3,
-        60
-      ],
-      [
-        "hillStop",
-        2,
-        60
-      ],
-      [
-        "stopSign",
-        3,
-        45
-      ],
-      [
-        "complexJunction",
-        1,
-        40
-      ],
-      [
-        "leftAtSignal",
-        4,
-        40
-      ],
-      [
-        "freewayEntry",
-        1,
-        30
-      ],
-      [
-        "residential",
-        567.29999999999995,
-        17
-      ],
-      [
-        "unsignalledRight",
-        1,
-        15
-      ],
-      [
-        "narrowWithParking",
-        101,
-        4
-      ]
-    ],
-    "fastestMeters" : 11125.830000000004,
-    "fastestSeconds" : 1368.7322909210209,
-    "fastestStress" : 1127.0592000000001,
-    "mode" : "drive",
-    "origin" : "Ballard Library",
-    "originSnapMeters" : 43.868584351487677,
-    "reasons" : [
-      "2 fewer left turns across traffic without a signal",
-      "1 fewer crossing of a busy street without a signal",
-      "5 fewer stop-and-go stops",
-      "Tradeoff: 2 more left turns at signals",
-      "Tradeoff: 1 more all-way stop"
-    ]
-  },
-  {
-    "budgetMinutes" : 10,
-    "calmerFactors" : [
-      [
-        "signal",
         30,
         300
       ],
@@ -6762,6 +6606,11 @@
         "turn",
         9,
         72
+      ],
+      [
+        "freewayEntry",
+        2,
+        60
       ],
       [
         "stopAndGo",
@@ -6784,11 +6633,6 @@
         30
       ],
       [
-        "freewayEntry",
-        1,
-        30
-      ],
-      [
         "leftAtSignal",
         2,
         20
@@ -6805,16 +6649,16 @@
       ]
     ],
     "calmerMeters" : 13934.399999999996,
-    "calmerSeconds" : 1674.7885254132998,
-    "calmerStress" : 601.04219999999998,
+    "calmerSeconds" : 1657.0899472083029,
+    "calmerStress" : 631.04219999999998,
     "candidates" : 4,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.057193994522094727,
+    "computeSeconds" : 0.068501949310302734,
     "destination" : "Hyson Boba & Tea",
     "destinationSnapMeters" : 17.408750393960609,
-    "extraSeconds" : 306.05623449227892,
+    "extraSeconds" : 288.357656287282,
     "fastestFactors" : [
       [
         "signal",
@@ -6857,13 +6701,13 @@
         45
       ],
       [
-        "complexJunction",
-        1,
+        "leftAtSignal",
+        4,
         40
       ],
       [
-        "leftAtSignal",
-        4,
+        "complexJunction",
+        1,
         40
       ],
       [
@@ -6897,7 +6741,159 @@
       "2 fewer left turns across traffic without a signal",
       "10 fewer stop-and-go stops",
       "1 fewer crossing of a busy street without a signal",
-      "Tradeoff: 6 more traffic signals"
+      "Tradeoff: 6 more traffic signals",
+      "Tradeoff: 1 more highway merge"
+    ]
+  },
+  {
+    "budgetMinutes" : 10,
+    "calmerFactors" : [
+      [
+        "signal",
+        30,
+        300
+      ],
+      [
+        "turn",
+        9,
+        72
+      ],
+      [
+        "freewayEntry",
+        2,
+        60
+      ],
+      [
+        "stopAndGo",
+        5,
+        50
+      ],
+      [
+        "allWayStop",
+        2,
+        40
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "hillStop",
+        1,
+        30
+      ],
+      [
+        "leftAtSignal",
+        2,
+        20
+      ],
+      [
+        "stopSign",
+        1,
+        15
+      ],
+      [
+        "residential",
+        134.69999999999999,
+        4
+      ]
+    ],
+    "calmerMeters" : 13934.399999999996,
+    "calmerSeconds" : 1657.0899472083029,
+    "calmerStress" : 631.04219999999998,
+    "candidates" : 4,
+    "caveats" : [
+
+    ],
+    "computeSeconds" : 0.055907964706420898,
+    "destination" : "Hyson Boba & Tea",
+    "destinationSnapMeters" : 17.408750393960609,
+    "extraSeconds" : 288.357656287282,
+    "fastestFactors" : [
+      [
+        "signal",
+        24,
+        240
+      ],
+      [
+        "unsignalledLeft",
+        2,
+        240
+      ],
+      [
+        "stopAndGo",
+        15,
+        150
+      ],
+      [
+        "turn",
+        12,
+        96
+      ],
+      [
+        "unsignalledCrossing",
+        1,
+        90
+      ],
+      [
+        "allWayStop",
+        3,
+        60
+      ],
+      [
+        "hillStop",
+        2,
+        60
+      ],
+      [
+        "stopSign",
+        3,
+        45
+      ],
+      [
+        "leftAtSignal",
+        4,
+        40
+      ],
+      [
+        "complexJunction",
+        1,
+        40
+      ],
+      [
+        "freewayEntry",
+        1,
+        30
+      ],
+      [
+        "residential",
+        567.29999999999995,
+        17
+      ],
+      [
+        "unsignalledRight",
+        1,
+        15
+      ],
+      [
+        "narrowWithParking",
+        101,
+        4
+      ]
+    ],
+    "fastestMeters" : 11125.830000000004,
+    "fastestSeconds" : 1368.7322909210209,
+    "fastestStress" : 1127.0592000000001,
+    "mode" : "drive",
+    "origin" : "Ballard Library",
+    "originSnapMeters" : 43.868584351487677,
+    "reasons" : [
+      "2 fewer left turns across traffic without a signal",
+      "10 fewer stop-and-go stops",
+      "1 fewer crossing of a busy street without a signal",
+      "Tradeoff: 6 more traffic signals",
+      "Tradeoff: 1 more highway merge"
     ]
   },
   {
@@ -6910,7 +6906,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.0065259933471679688,
+    "computeSeconds" : 0.0066329240798950195,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 4.6714145625487928,
     "extraSeconds" : 0,
@@ -7027,7 +7023,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.056169986724853516,
+    "computeSeconds" : 0.055747032165527344,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 4.6714145625487928,
     "extraSeconds" : 73.55714285714248,
@@ -7136,9 +7132,9 @@
     "calmerStress" : 344.29660000000013,
     "candidates" : 6,
     "caveats" : [
-      "Calmer route: 0.5 mi where sidewalks aren't mapped."
+      "Calmer route: sidewalk data is missing for about 15% of it."
     ],
-    "computeSeconds" : 0.058210015296936035,
+    "computeSeconds" : 0.055527091026306152,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 4.6714145625487928,
     "extraSeconds" : 227.87380952380818,
@@ -7247,9 +7243,9 @@
     "calmerStress" : 344.29660000000013,
     "candidates" : 6,
     "caveats" : [
-      "Calmer route: 0.5 mi where sidewalks aren't mapped."
+      "Calmer route: sidewalk data is missing for about 15% of it."
     ],
-    "computeSeconds" : 0.056021928787231445,
+    "computeSeconds" : 0.056260943412780762,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 4.6714145625487928,
     "extraSeconds" : 227.87380952380818,
@@ -7324,7 +7320,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.0069639682769775391,
+    "computeSeconds" : 0.0071749687194824219,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 33.448348149784529,
     "extraSeconds" : 0,
@@ -7375,13 +7371,13 @@
         40
       ],
       [
-        "stopSign",
-        3,
+        "leftAtSignal",
+        2,
         30
       ],
       [
-        "leftAtSignal",
-        2,
+        "stopSign",
+        3,
         30
       ],
       [
@@ -7435,7 +7431,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.035691976547241211,
+    "computeSeconds" : 0.035748004913330078,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 33.448348149784529,
     "extraSeconds" : 0,
@@ -7486,13 +7482,13 @@
         40
       ],
       [
-        "stopSign",
-        3,
+        "leftAtSignal",
+        2,
         30
       ],
       [
-        "leftAtSignal",
-        2,
+        "stopSign",
+        3,
         30
       ],
       [
@@ -7592,7 +7588,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.035969972610473633,
+    "computeSeconds" : 0.03584599494934082,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 33.448348149784529,
     "extraSeconds" : 286.4011428571439,
@@ -7643,13 +7639,13 @@
         40
       ],
       [
-        "stopSign",
-        3,
+        "leftAtSignal",
+        2,
         30
       ],
       [
-        "leftAtSignal",
-        2,
+        "stopSign",
+        3,
         30
       ],
       [
@@ -7752,7 +7748,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.035748004913330078,
+    "computeSeconds" : 0.035850048065185547,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 33.448348149784529,
     "extraSeconds" : 324.51885714285822,
@@ -7803,13 +7799,13 @@
         40
       ],
       [
-        "stopSign",
-        3,
+        "leftAtSignal",
+        2,
         30
       ],
       [
-        "leftAtSignal",
-        2,
+        "stopSign",
+        3,
         30
       ],
       [
@@ -7866,7 +7862,7 @@
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.012022972106933594,
+    "computeSeconds" : 0.013488054275512695,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 33.448348149784529,
     "extraSeconds" : 0,
@@ -7882,13 +7878,13 @@
         100
       ],
       [
-        "stopAndGo",
-        8,
+        "complexJunction",
+        2,
         80
       ],
       [
-        "complexJunction",
-        2,
+        "stopAndGo",
+        8,
         80
       ],
       [
@@ -7912,18 +7908,18 @@
         30
       ],
       [
-        "stopSign",
+        "unsignalledRight",
         1,
         15
       ],
       [
-        "unsignalledRight",
+        "stopSign",
         1,
         15
       ]
     ],
     "fastestMeters" : 6961.3199999999997,
-    "fastestSeconds" : 736.64408413266494,
+    "fastestSeconds" : 689.24167220574691,
     "fastestStress" : 586,
     "mode" : "drive",
     "origin" : "Twilight",
@@ -7951,6 +7947,11 @@
         80
       ],
       [
+        "freewayEntry",
+        2,
+        60
+      ],
+      [
         "leftAtSignal",
         3,
         50
@@ -7959,11 +7960,6 @@
         "turn",
         6,
         48
-      ],
-      [
-        "freewayEntry",
-        1,
-        30
       ],
       [
         "unsignalledRight",
@@ -7977,16 +7973,16 @@
       ]
     ],
     "calmerMeters" : 7430.4300000000021,
-    "calmerSeconds" : 811.40506693595091,
-    "calmerStress" : 488,
-    "candidates" : 2,
+    "calmerSeconds" : 798.90302987694679,
+    "calmerStress" : 518,
+    "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.051459074020385742,
+    "computeSeconds" : 0.051911115646362305,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 33.448348149784529,
-    "extraSeconds" : 74.76098280328597,
+    "extraSeconds" : 109.66135767119988,
     "fastestFactors" : [
       [
         "unsignalledLeft",
@@ -8019,12 +8015,12 @@
         56
       ],
       [
-        "leftAtSignal",
+        "freewayEntry",
         1,
         30
       ],
       [
-        "freewayEntry",
+        "leftAtSignal",
         1,
         30
       ],
@@ -8040,7 +8036,7 @@
       ]
     ],
     "fastestMeters" : 6961.3199999999997,
-    "fastestSeconds" : 736.64408413266494,
+    "fastestSeconds" : 689.24167220574691,
     "fastestStress" : 586,
     "mode" : "drive",
     "origin" : "Twilight",
@@ -8050,7 +8046,7 @@
       "3 fewer all-way stops",
       "1 fewer stop sign",
       "Tradeoff: 4 more traffic signals",
-      "Tradeoff: 1 more drawbridge"
+      "Tradeoff: 1 more highway merge"
     ]
   },
   {
@@ -8062,14 +8058,19 @@
         140
       ],
       [
+        "complexJunction",
+        2,
+        80
+      ],
+      [
         "stopAndGo",
         8,
         80
       ],
       [
-        "complexJunction",
+        "freewayEntry",
         2,
-        80
+        60
       ],
       [
         "leftAtSignal",
@@ -8080,11 +8081,6 @@
         "turn",
         6,
         48
-      ],
-      [
-        "freewayEntry",
-        1,
-        30
       ],
       [
         "unsignalledRight",
@@ -8098,16 +8094,16 @@
       ]
     ],
     "calmerMeters" : 7430.4300000000021,
-    "calmerSeconds" : 811.40506693595091,
-    "calmerStress" : 488,
-    "candidates" : 2,
+    "calmerSeconds" : 798.90302987694679,
+    "calmerStress" : 518,
+    "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.051425933837890625,
+    "computeSeconds" : 0.051884055137634277,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 33.448348149784529,
-    "extraSeconds" : 74.76098280328597,
+    "extraSeconds" : 109.66135767119988,
     "fastestFactors" : [
       [
         "unsignalledLeft",
@@ -8140,12 +8136,12 @@
         56
       ],
       [
-        "leftAtSignal",
+        "freewayEntry",
         1,
         30
       ],
       [
-        "freewayEntry",
+        "leftAtSignal",
         1,
         30
       ],
@@ -8161,7 +8157,7 @@
       ]
     ],
     "fastestMeters" : 6961.3199999999997,
-    "fastestSeconds" : 736.64408413266494,
+    "fastestSeconds" : 689.24167220574691,
     "fastestStress" : 586,
     "mode" : "drive",
     "origin" : "Twilight",
@@ -8171,7 +8167,7 @@
       "3 fewer all-way stops",
       "1 fewer stop sign",
       "Tradeoff: 4 more traffic signals",
-      "Tradeoff: 1 more drawbridge"
+      "Tradeoff: 1 more highway merge"
     ]
   },
   {
@@ -8183,14 +8179,19 @@
         140
       ],
       [
+        "complexJunction",
+        2,
+        80
+      ],
+      [
         "stopAndGo",
         8,
         80
       ],
       [
-        "complexJunction",
+        "freewayEntry",
         2,
-        80
+        60
       ],
       [
         "leftAtSignal",
@@ -8201,11 +8202,6 @@
         "turn",
         6,
         48
-      ],
-      [
-        "freewayEntry",
-        1,
-        30
       ],
       [
         "unsignalledRight",
@@ -8219,16 +8215,16 @@
       ]
     ],
     "calmerMeters" : 7430.4300000000021,
-    "calmerSeconds" : 811.40506693595091,
-    "calmerStress" : 488,
-    "candidates" : 2,
+    "calmerSeconds" : 798.90302987694679,
+    "calmerStress" : 518,
+    "candidates" : 3,
     "caveats" : [
 
     ],
-    "computeSeconds" : 0.051607012748718262,
+    "computeSeconds" : 0.051453948020935059,
     "destination" : "Microsoft Café",
     "destinationSnapMeters" : 33.448348149784529,
-    "extraSeconds" : 74.76098280328597,
+    "extraSeconds" : 109.66135767119988,
     "fastestFactors" : [
       [
         "unsignalledLeft",
@@ -8261,12 +8257,12 @@
         56
       ],
       [
-        "leftAtSignal",
+        "freewayEntry",
         1,
         30
       ],
       [
-        "freewayEntry",
+        "leftAtSignal",
         1,
         30
       ],
@@ -8282,7 +8278,7 @@
       ]
     ],
     "fastestMeters" : 6961.3199999999997,
-    "fastestSeconds" : 736.64408413266494,
+    "fastestSeconds" : 689.24167220574691,
     "fastestStress" : 586,
     "mode" : "drive",
     "origin" : "Twilight",
@@ -8292,7 +8288,7 @@
       "3 fewer all-way stops",
       "1 fewer stop sign",
       "Tradeoff: 4 more traffic signals",
-      "Tradeoff: 1 more drawbridge"
+      "Tradeoff: 1 more highway merge"
     ]
   }
 ]
