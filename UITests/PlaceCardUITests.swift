@@ -35,6 +35,15 @@ final class PlaceCardUITests: PeoplemapsUITestCase {
         XCTAssertFalse(app.staticTexts["place-estimate"].exists)
         XCTAssertFalse(app.staticTexts["place-estimate-loading"].exists)
     }
+    /// The card already compared this request for its estimate, so Directions reuses it: no second "Comparing Seattle streets…".
+    @MainActor func testDirectionsReusesTheCardsComparison() {
+        let app = launchHome(location: Self.atBallardLibrary, extra: ["--slow-routing"])
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        waitForEstimate(app)
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 1.5), "Directions repeated the comparison the card ran")
+        XCTAssertFalse(app.buttons["cancel-route"].exists)
+    }
     @MainActor func testPlaceCardEstimatesFromCurrentLocationInTheLastMode() {
         let app = launchHome(location: Self.atBallardLibrary, extra: ["--slow-routing"])
         openPlace(app, "Gas Works", id: "relation/1047789")
