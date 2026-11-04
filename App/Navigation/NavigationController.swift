@@ -55,6 +55,8 @@ final class NavigationController {
     private(set) var tripMeters = 0.0
     private(set) var tripSeconds = 0.0
     private(set) var tripNotes: [String] = []
+    /// What the calmer route costs, said apart from the gains: time over the fastest.
+    private(set) var tripCost: String?
 
     /// The note for the step the card is showing.
     var calmNote: String? { currentStep?.calmNote }
@@ -190,6 +192,7 @@ final class NavigationController {
         mode = request.mode; calmerRoute = usingCalmer; destination = request.destination
         tripMeters = adapted.plan.meters; tripSeconds = adapted.plan.seconds
         tripNotes = Self.notes(comparison, calmer: usingCalmer)
+        tripCost = Self.cost(comparison, calmer: usingCalmer)
         hasArrived = false; isRerouting = false; isActive = true; rerouteCount = 0; blender = HeadingBlender(); refreshHeading()
         arrivalHandled = false; paused = false; lastSpoken = ""; spokenLog = []; tripID = UUID()
         tripDraft = UsageLogger.Draft(comparison: comparison, started: usingCalmer ? .calmer : .fastest)
@@ -204,15 +207,18 @@ final class NavigationController {
         do { try core.startNavigation(route: adapted.route) } catch { DriveLogger.event("start_failed"); stop() }
     }
 
-    /// Up to three facts for the arrival summary: what the calmer route avoided, then what it cost in time.
+    /// What the calmer route avoided (ticks on the arrival card); no extra time counts as a gain too.
     private static func notes(_ comparison: RouteComparison, calmer: Bool) -> [String] {
         guard calmer, comparison.calmer != nil else { return [] }
-        let gains = comparison.reasons.filter { !$0.hasPrefix("Tradeoff") }.prefix(2)
+        let gains = Array(comparison.reasons.filter { !$0.hasPrefix("Tradeoff") }.prefix(2))
+        return comparison.extraTimeLabel == "No extra time" ? gains + ["No extra time compared with the fastest route"] : gains
+    }
+    /// What it cost in time, shown apart from the gains with a neutral glyph.
+    private static func cost(_ comparison: RouteComparison, calmer: Bool) -> String? {
+        guard calmer, comparison.calmer != nil else { return nil }
         let extra = comparison.extraTimeLabel
-        let cost = extra == "No extra time" ? "No extra time compared with the fastest route"
-            : extra.hasPrefix("<1") ? "Under a minute longer than the fastest route"
-            : "\(extra.dropFirst()) longer than the fastest route"
-        return Array(gains) + [cost]
+        if extra == "No extra time" { return nil }
+        return extra.hasPrefix("<1") ? "Under a minute longer than the fastest route" : "\(extra.dropFirst()) longer than the fastest route"
     }
 
     /// Follows the stored preference; muting stops anything being said at once.
@@ -281,7 +287,7 @@ final class NavigationController {
         core = nil; location = nil; observer = nil; paused = false; arrivalHandled = false
         active = nil; known = [:]
         isActive = false; hasArrived = false; isRerouting = false
-        currentStep = nil; thenStep = nil; tripNotes = []; coordinate = nil; course = nil; speed = nil; heading = nil; isMoving = false; blender = HeadingBlender()
+        currentStep = nil; thenStep = nil; tripNotes = []; tripCost = nil; coordinate = nil; course = nil; speed = nil; heading = nil; isMoving = false; blender = HeadingBlender()
         routeGeometry = []; stepIndex = 0
         distanceToManeuver = 0; remainingMeters = 0; remainingSeconds = 0
     }

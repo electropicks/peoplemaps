@@ -467,13 +467,22 @@ struct GuidanceOverlay: View {
                 }
                 Spacer(minLength: 0)
             }
-            if !navigator.tripNotes.isEmpty {
+            if !navigator.tripNotes.isEmpty || navigator.tripCost != nil {
                 VStack(spacing: 0) {
                     ForEach(Array(navigator.tripNotes.enumerated()), id: \.offset) { index, note in
                         if index > 0 { Hairline().padding(.leading, 34) }
                         HStack(spacing: 12) {
                             Image(systemName: "checkmark").font(.body.weight(.bold)).foregroundStyle(.primary).frame(width: 22).accessibilityHidden(true)
                             Text(note).font(.subheadline).fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 0)
+                        }.padding(.vertical, 10).frame(minHeight: 44)
+                    }
+                    // A cost is not a gain: a neutral glyph, never a tick.
+                    if let cost = navigator.tripCost {
+                        if !navigator.tripNotes.isEmpty { Hairline().padding(.leading, 34) }
+                        HStack(spacing: 12) {
+                            Image(systemName: "minus.circle").font(.body.weight(.semibold)).foregroundStyle(Self.onGlass).frame(width: 22).accessibilityHidden(true)
+                            Text(cost).font(.subheadline).foregroundStyle(Self.onGlass).fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 0)
                         }.padding(.vertical, 10).frame(minHeight: 44)
                     }
