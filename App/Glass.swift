@@ -63,12 +63,14 @@ private struct FloatingSurface<S: Shape>: ViewModifier {
     let shape: S
     let interactive: Bool
     let veil: GlassVeil
+    let legible: Bool
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var contrast
 
     func body(content: Content) -> some View {
         let opaque = reduceTransparency || GlassFlags.reduceTransparency
-        let glass: Glass = opaque ? .identity : interactive ? GlassFlags.variant.interactive() : GlassFlags.variant
+        let base: Glass = legible ? .regular : GlassFlags.variant
+        let glass: Glass = opaque ? .identity : interactive ? base.interactive() : base
         content
             .background {
                 if opaque { shape.fill(Color.panel) }
@@ -102,9 +104,10 @@ struct SheetGlass: UIViewRepresentable {
 extension View {
     /// Draws the view on Liquid Glass in `shape`, responding to touch when `interactive`. With Reduce Transparency it switches glass
     /// off and fills `.panel`, which in dark mode is nearly the colour of the map's land, so the outline Increase Contrast adds comes
-    /// on there too. Increase Contrast also takes the dense veil.
-    func floatingSurface<S: Shape>(in shape: S, interactive: Bool = false, veil: GlassVeil = .none) -> some View {
-        modifier(FloatingSurface(shape: shape, interactive: interactive, veil: veil))
+    /// on there too. Increase Contrast also takes the dense veil. `legible` swaps `.clear` for `.regular` on surfaces read at a glance
+    /// over the route line (guidance banner, trip bar), so the line doesn't show through the text (Docs/DESIGN.md, principle 4).
+    func floatingSurface<S: Shape>(in shape: S, interactive: Bool = false, veil: GlassVeil = .none, legible: Bool = false) -> some View {
+        modifier(FloatingSurface(shape: shape, interactive: interactive, veil: veil, legible: legible))
     }
 
     /// The style of a primary action (Start, Directions, Done): a solid `primaryActionFill` button with dark text. Every one sits on a
