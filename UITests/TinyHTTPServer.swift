@@ -9,6 +9,11 @@ import Glibc
 /// stall that holds a response part-way until the test opens its gate. Tests/TinyHTTPServer.swift is the same file for the package tests.
 final class TinyHTTPServer: @unchecked Sendable {
     struct Request: Equatable { let path: String; let range: String? }
+#if canImport(Glibc)
+    private static let streamType = Int32(SOCK_STREAM.rawValue)
+#else
+    private static let streamType = SOCK_STREAM
+#endif
 
     private let lock = NSLock()
     private var files: [String: Data]
@@ -26,7 +31,7 @@ final class TinyHTTPServer: @unchecked Sendable {
     init(files: [String: Data]) throws {
         self.files = files
         signal(SIGPIPE, SIG_IGN)
-        listener = socket(AF_INET, SOCK_STREAM, 0)
+        listener = socket(AF_INET, Self.streamType, 0)
         guard listener >= 0 else { throw POSIXError(.EIO) }
         var yes: Int32 = 1
         setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, socklen_t(MemoryLayout<Int32>.size))
@@ -53,7 +58,7 @@ final class TinyHTTPServer: @unchecked Sendable {
     deinit { stop() }
 
     func stop() {
-        shutdown(listener, SHUT_RDWR)
+        shutdown(listener, Int32(SHUT_RDWR))
         close(listener)
     }
 
