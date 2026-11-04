@@ -360,7 +360,9 @@ struct ExploreView: View {
     }
     private var detents: Set<PresentationDetent> {
         switch screen {
-        case .home, .search: [.medium, .large]
+        // Home tops out at medium: at large it was a flat opaque page holding a search field and one row. Search is the screen that goes large.
+        case .home: [.medium]
+        case .search: [.medium, .large]
         case .place: [detent(.fit), .medium, .large]
         case .preview, .navigating: [detent(.fit), raisedDetent, .large]
         }
