@@ -142,9 +142,12 @@ your routes or your report ID. Like any web server, ours and our host's network 
 for the moment of the download; `Docs/REPORTS.md` says what the server keeps. The app then checks every file against a
 checksum it already has before using it. Downloads go over Wi-Fi unless you tap **Use cellular**.
 
-> **Not switched on yet.** The app side is in this version: the screen, the download and the checks. The server that
-> answers the requests, with its App Attest check, is built but not deployed, and this version of the app does not call
-> it, so a release build cannot download a map yet and contacts no server.
+> **Server deployed separately.** The app calls the server only when you tap Download. If the server is not deployed yet,
+> or your device cannot do App Attest (the Simulator, some devices), the download fails with a message and nothing else
+> is sent. To prove the app is genuine, the app makes a new App Attest key on your iPhone for each proof and sends the
+> server that key's ID and Apple's attestation of it. The server keeps the key ID, its public key and the hour for 90
+> days, which identifies one install of the app and not you. The download pass it returns is kept in your iPhone's
+> Keychain for 24 hours.
 
 ## Your report ID
 

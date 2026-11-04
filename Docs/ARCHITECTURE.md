@@ -163,8 +163,9 @@ The space it takes on the phone is an estimate, "about 350 MB": the search index
   inflated to a file in chunks (`GzipFile`, never in memory) and its gzip deleted, and the staging folder is renamed into
   place at once. A file that fails a check is deleted and nothing is installed.
 - Where files come from is a `RegionSource` (`url(for:in:release:)`, `authorization()`). `DirectSource(base:)` does a plain GET of
-  `<base>/<region>--<path with / as __>` for tests and development. `WorkerSource` is a stub until the Worker exists: its endpoint
-  is `GET /v1/regions/<release>/<region>--<file>` with `Authorization: Bearer <token>`.
+  `<base>/<region>--<path with / as __>` for tests and development. `WorkerSource` is what a release build uses: `GET /v1/regions/<release>/<region>--<file>` on the Worker with
+  `Authorization: Bearer <token>`. `DownloadAuthorizer` (`Core/AppAttest.swift`) supplies the token: the one in the Keychain
+  while it has a minute left, else a new App Attest exchange. A 401 on a file discards that token and retries the file once.
 - `Core/RegionSelection.swift` decides what the app loads. `Bundle.dataFile` asks it first, so the order is the downloaded region,
   then the app bundle, then the package fixture, and the graph, map, search index and coverage always come from the same one.
   The choice is read once per launch. A finished download selects itself and takes effect at the next launch, or on Switch now
