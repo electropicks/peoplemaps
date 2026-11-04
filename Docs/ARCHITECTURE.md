@@ -94,34 +94,63 @@ full import there would rewrite the index.
 ## Region data
 
 What is in git is a small test fixture: the Seattle box in `Data/` and `Core/Resources/`, reproduced byte for
-byte by `Scripts/verify.sh`. Larger regions are too big for git (GitHub rejects files over 100 MB, and this
-repo's history is permanent), so they live in assets on a GitHub release (Git LFS is not used). Map data comes
-from Geofabrik extracts. `Data/regions.json` is the committed manifest: the release tag, and per region its
-bounding box, every file's size and SHA-256, and which files are expected importer outputs. Nothing under
-`Data/region/` is committed. CI and `swift test` never need it.
+byte by `Scripts/verify.sh`. Full regions are too big for git (GitHub rejects files over 100 MB, and this
+repo's history is permanent), so they live in a private Cloudflare R2 bucket, `peoplemaps-data`, and are fetched
+at build time. Git LFS is not used. The derived database is available on request under ODbL 1.0 (see
+`Data/LICENSE.md`). Map data comes from Geofabrik extracts. `Data/regions.json` is the committed manifest: the
+release name, and per region its bounding box, every file's size and SHA-256, and which files are expected
+importer outputs. Nothing under `Data/region/` is committed. CI and `swift test` never need it.
 
 ```bash
 Scripts/fetch_data [region]      # downloads into Data/region/<region>/, checks pins, silent when present
 Scripts/verify.sh --region       # also re-imports each fetched region and compares with its expected outputs
+Scripts/upload_data [region]     # owner only: puts the manifest's files into the bucket
 ```
 
 Without fetched data `--region` prints `SKIPPED` lines and passes; plain `Scripts/verify.sh` does not look at regions.
+
+The bucket holds one object per file, keyed `<release>/<region>--<path with / replaced by __>`, for example
+`data-seattle-all-2026-11c/seattle-all--expected__seattle-graph.bin`. Both scripts are Python standard library
+only and sign requests with SigV4 (`Scripts/s3sig.py`, region `auto`, service `s3`). They read three variables:
+
+| Variable | Value |
+|---|---|
+| `PEOPLEMAPS_DATA_URL` | `https://<account id>.r2.cloudflarestorage.com/peoplemaps-data` |
+| `PEOPLEMAPS_DATA_KEY_ID` | the R2 API token's access key id |
+| `PEOPLEMAPS_DATA_SECRET` | the R2 API token's secret access key |
+
+With all three set, `fetch_data` signs its requests. With only `PEOPLEMAPS_DATA_URL` it does a plain GET of
+`<url>/<region>--<path>` (no release folder), which is what tests and mirrors use; a local `file://` folder works.
+With none set (or empty, as a fork's CI run sees the secrets) it downloads from the manifest's GitHub release. That
+last default is temporary: the public releases are deleted once the bucket is populated. The scripts never print
+the secret or a signed header, and their errors name the object, not the endpoint.
+
+### Secrets
+
+Three GitHub repository secrets feed the `region=true` CI run: `PEOPLEMAPS_DATA_URL`, `PEOPLEMAPS_DATA_KEY_ID`
+and `PEOPLEMAPS_DATA_SECRET`. The owner creates in the Cloudflare dashboard (R2, Manage API tokens):
+
+- a read-only token scoped to the `peoplemaps-data` bucket, whose key id and secret go into those secrets and
+  into the owner's shell for local `fetch_data`;
+- a separate read-and-write token, used only by `Scripts/upload_data` in the owner's own terminal, never stored
+  in GitHub.
+
+No token value is ever written in the repo, a doc, a commit or a chat.
 
 Add or update a region file:
 
 1. Make the files: the importer's input snapshots at the region folder's root (names as in `Data/`), and the
    outputs from importing them (`PEOPLEMAPS_DATA`, `PEOPLEMAPS_BBOX`, `PEOPLEMAPS_OUT`) under `expected/`.
-2. Upload each to a release as `<region>--<path with / replaced by __>`, for example
-   `king-county--expected__seattle-graph.bin`. Use a new tag for changed files rather than replacing assets.
-3. Put its size and `shasum -a 256` in `Data/regions.json` under `regions.<region>.files`, set `bbox`
-   (S,W,N,E), list the expected outputs under `outputs`, and set `release` to the tag.
-4. `Scripts/fetch_data <region>` then `Scripts/verify.sh --region`, and commit the manifest.
-
-`PEOPLEMAPS_DATA_URL` points the fetch at another directory URL (a local `file://` folder works) for testing.
+2. Put them in `Data/region/<region>/` and pick a new release name rather than replacing objects.
+3. Put each file's size and `shasum -a 256` in `Data/regions.json` under `regions.<region>.files`, set `bbox`
+   (S,W,N,E), list the expected outputs under `outputs`, and set `release` to the new name.
+4. `Scripts/upload_data <region>` with the read-and-write token (it checks the pins first and skips objects
+   already there), then in a clean checkout `Scripts/fetch_data <region>` and `Scripts/verify.sh --region`, and
+   commit the manifest.
 
 ### seattle-all
 
-All of Seattle (47.49, -122.44, 47.74, -122.24), release `data-seattle-all-2026-11c` (earlier releases `-11` and `-11b` are superseded; `-11` still holds the 365 MB source extract). The app bundle ships it when it is
+All of Seattle (47.49, -122.44, 47.74, -122.24), release `data-seattle-all-2026-11c` (earlier releases `-11` and `-11b` are superseded; `-11` still holds the 365 MB source extract, on GitHub only). The app bundle ships it when it is
 fetched and the fixture otherwise: a "Bundle fetched region" build phase (from `Scripts/generate_project.py`) copies
 `Data/region/seattle-all/expected/{seattle-graph.bin,seattle-map.pmtiles,seattle-search.sqlite.gz}` into the app,
 and `Bundle.dataFile` in Core prefers the app bundle's copy over the package's fixture. `swift test` and CI never see it.
@@ -130,7 +159,7 @@ Run `Scripts/fetch_data seattle-all` and rebuild the app to switch.
 Its inputs are made, not downloaded as Overpass JSON: `Scripts/pbf_to_snapshot.py` turns one dated Geofabrik Washington
 extract into `seattle-osm`, `seattle-parks`, `seattle-search` (and `seattle-coast`) snapshots in the importer's format, in about
 15 seconds with the standard library. The extract's URL, SHA-256 and date go into each snapshot and from there into
-`provenance.json`. The extract itself is the unpinned asset `seattle-all--source__washington-261031.osm.pbf` on release `data-seattle-all-2026-11`.
+`provenance.json`. The extract itself is the unpinned asset `seattle-all--source__washington-261031.osm.pbf` on GitHub release `data-seattle-all-2026-11`, not in the bucket.
 Elevation comes from `Scripts/fetch_dem_tiles.py 47.45 -122.45 47.75 -122.20 ...` (a 0.05 degree margin, so no 0 m fringe).
 The full import takes about 11 minutes and 3 GB.
 

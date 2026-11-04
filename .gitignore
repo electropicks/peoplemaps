@@ -16,5 +16,5 @@ Spikes/
 .claude/worktrees/
 .claude/settings.local.json
 
-# Region data: fetched by Scripts/fetch_data from a GitHub release
+# Region data: fetched by Scripts/fetch_data from the private R2 bucket
 Data/region/
