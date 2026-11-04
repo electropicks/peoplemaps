@@ -241,21 +241,22 @@ public enum RoutingError: Error, LocalizedError, Equatable, Sendable {
     case missingData, outsideCoverage, startOutsideCoverage, samePlace, noConnection, invalidBudget
     public var errorDescription: String? {
         switch self {
-        case .missingData: "The Seattle dataset could not be loaded. Rebuild the app with its bundled data."
-        case .outsideCoverage: "This place is outside the Seattle demo area. Choose a place from the offline list."
-        case .startOutsideCoverage: "Your start is outside the area PeopleMaps covers. Choose a start inside Seattle's offline map."
+        case .missingData: "The map data could not be loaded. Rebuild the app with its bundled data."
+        case .outsideCoverage: RegionSelection.usesCounty ? "This place is outside the area PeopleMaps covers. \(RegionSelection.coverageSentence)" : "This place is outside the Seattle demo area. Choose a place from the offline list."
+        case .startOutsideCoverage: RegionSelection.usesCounty ? "Your start is outside the area PeopleMaps covers. \(RegionSelection.coverageSentence)" : "Your start is outside the area PeopleMaps covers. Choose a start inside Seattle's offline map."
         case .samePlace: "Choose two different places to compare routes."
-        case .noConnection: "No connected route was found in this extract. Try another nearby place or travel mode."
+        case .noConnection: RegionSelection.usesCounty ? RegionSelection.noRoadRouteSentence : "No connected route was found in this extract. Try another nearby place or travel mode."
         case .invalidBudget: "Choose an extra-time budget from 0 to 20 minutes."
         }
     }
 }
 
 extension Bundle {
-    /// A bundled data file (graph, map layer, search index). A copy in the app's own bundle wins: the app's "Bundle fetched region"
-    /// build phase puts a fetched region's files there (`Data/region/<name>/expected/`). Without one, and always under `swift test`,
-    /// the Seattle test fixture in this package's resources is used.
+    /// A data file (graph, map layer, search index, coverage). The downloaded region the app launched with comes first (`RegionSelection`).
+    /// Then a copy in the app's own bundle: the app's "Bundle fetched region" build phase puts a fetched region's files there
+    /// (`Data/region/<name>/expected/`). Without one, and always under `swift test`, the Seattle test fixture in this package's resources is used.
     static func dataFile(_ name: String, _ ext: String) -> URL? {
-        Bundle.main.url(forResource: name, withExtension: ext) ?? Bundle.module.url(forResource: name, withExtension: ext)
+        RegionSelection.file(name + "." + ext)
+            ?? Bundle.main.url(forResource: name, withExtension: ext) ?? Bundle.module.url(forResource: name, withExtension: ext)
     }
 }
