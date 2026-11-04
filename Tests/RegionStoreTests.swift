@@ -184,6 +184,9 @@ final class RegionStoreTests: XCTestCase {
     // MARK: Pause and resume
 
     func testResumeContinuesAPausedDownload() async throws {
+        #if os(Linux)
+        throw XCTSkip("URLSession on Linux has no resume data; the app runs on iOS")
+        #endif
         let fake = FakeRegion(release: "data-test-6", graphBytes: 3_000_000)
         let server = try serve(fake)
         let graph = RegionManifest.objectName(region: "king-county", file: "expected/seattle-graph.bin")
