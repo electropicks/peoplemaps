@@ -13,13 +13,23 @@ describe("wrangler.jsonc", () => {
     expect(config.preview_urls).toBe(false);
     expect(config.observability).toEqual({ enabled: false, logs: { invocation_logs: false } });
   });
-  it("has the three rate limits under the ratelimits key, and no unsafe bindings", () => {
-    expect(config.ratelimits.map((b: any) => [b.name, b.simple.limit, b.simple.period])).toEqual([["RL_AUTH", 10, 60], ["RL_INSTALLS", 2, 60], ["RL_REPORTS", 10, 60]]);
+  it("has the five rate limits under the ratelimits key, and no unsafe bindings", () => {
+    expect(config.ratelimits.map((b: any) => [b.name, b.simple.limit, b.simple.period])).toEqual([
+      ["RL_AUTH", 10, 60], ["RL_INSTALLS", 2, 60], ["RL_REPORTS", 10, 60], ["RL_ATTEST", 10, 60], ["RL_DOWNLOADS", 60, 60],
+    ]);
+    expect(new Set(config.ratelimits.map((b: any) => b.namespace_id)).size).toBe(config.ratelimits.length);
     expect(config.unsafe).toBeUndefined();
   });
-  it("has only the retention cron and needs no secret", () => {
+  it("has only the retention cron, and no secret in the file", () => {
     expect(config.triggers.crons).toEqual(["17 3 * * *"]);
     expect(config.secrets).toBeUndefined();
+    expect(config.vars.DOWNLOAD_TOKEN_SECRET).toBeUndefined();
+    expect(text).not.toMatch(/DOWNLOAD_TOKEN_SECRET"\s*:/);
+  });
+  it("binds the data bucket as DATA and accepts production App Attest keys only (4.5)", () => {
+    expect(config.r2_buckets).toEqual([{ binding: "DATA", bucket_name: "peoplemaps-data" }]);
+    expect(config.vars.ATTEST_ENV).toBe("production");
+    expect(typeof config.vars.APP_ID).toBe("string");
   });
 });
 

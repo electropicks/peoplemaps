@@ -22,7 +22,7 @@ export function ipKey(ip: string): string {
   return groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, "")).join(":") + "::/64";
 }
 
-/** `RL_INSTALLS` or `RL_REPORTS`, keyed on the client IP or its /64. */
+/** `RL_INSTALLS`, `RL_REPORTS` or `RL_ATTEST`, keyed on the client IP or its /64. */
 export function limitByIP(request: Request, limiter: RateLimiter): Promise<void> {
   return check(limiter, ipKey(request.headers.get("cf-connecting-ip") ?? "local"));
 }
@@ -30,6 +30,11 @@ export function limitByIP(request: Request, limiter: RateLimiter): Promise<void>
 /** `RL_AUTH`, keyed on the token hash, for every authenticated route. */
 export function limitAuth(deps: Deps, tokenHash: string): Promise<void> {
   return check(deps.limits.auth, tokenHash);
+}
+
+/** `RL_DOWNLOADS`, keyed on the App Attest key ID the download token was issued for (4.7). */
+export function limitDownloads(deps: Deps, keyId: string): Promise<void> {
+  return check(deps.limits.downloads, keyId);
 }
 
 /** `INSTALLS_PER_HOUR`, counted from `installs.created_at` in the current hour. */

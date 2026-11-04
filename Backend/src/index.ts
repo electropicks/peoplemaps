@@ -1,7 +1,10 @@
+import { APPLE_APP_ATTEST_ROOT } from "./apple-root";
+import { attest, attestChallenge } from "./attest";
 import type { Deps, RateLimiter } from "./deps";
 import { parseVars } from "./deps";
 import { errorResponse, HttpError, StorageUnavailable } from "./errors";
 import { deleteInstall, mintInstall } from "./installs";
+import { downloadRegionFile } from "./regions";
 import { deleteReport, getReport, listReports, sendReport } from "./reports";
 import { retention } from "./retention";
 import { Store } from "./store";
@@ -12,30 +15,43 @@ import { secondsToMidnightUTC } from "./time";
 
 export interface Env {
   DB: D1Database;
+  DATA: R2Bucket;
   RL_AUTH: RateLimiter;
   RL_INSTALLS: RateLimiter;
   RL_REPORTS: RateLimiter;
+  RL_ATTEST: RateLimiter;
+  RL_DOWNLOADS: RateLimiter;
   [key: string]: unknown;
 }
 
 export function depsFromEnv(env: Env): Deps {
   return {
     store: new Store(d1Sql(env.DB)),
-    limits: { auth: env.RL_AUTH, installs: env.RL_INSTALLS, reports: env.RL_REPORTS },
+    limits: { auth: env.RL_AUTH, installs: env.RL_INSTALLS, reports: env.RL_REPORTS, attest: env.RL_ATTEST, downloads: env.RL_DOWNLOADS },
     clock: { now: () => new Date() },
     vars: parseVars(env),
+    data: env.DATA,
+    attest: {
+      appId: typeof env.APP_ID === "string" ? env.APP_ID : "",
+      allowDevelopment: env.ATTEST_ENV === "development",
+      rootPEM: APPLE_APP_ATTEST_ROOT,
+      tokenSecret: typeof env.DOWNLOAD_TOKEN_SECRET === "string" ? env.DOWNLOAD_TOKEN_SECRET : "",
+    },
   };
 }
 
-type Handler = (request: Request, deps: Deps, param: string) => Promise<Response> | Response;
+type Handler = (request: Request, deps: Deps, params: string[]) => Promise<Response> | Response;
 const ID = "([0-9A-Fa-f-]{36})";
 const routes: [string, RegExp, Handler][] = [
   ["POST", /^\/v1\/installs$/, (r, d) => mintInstall(r, d)],
   ["DELETE", /^\/v1\/installs\/me$/, (r, d) => deleteInstall(r, d)],
   ["POST", /^\/v1\/reports$/, (r, d) => sendReport(r, d)],
   ["GET", /^\/v1\/reports$/, (r, d) => listReports(r, d)],
-  ["GET", new RegExp(`^/v1/reports/${ID}$`), (r, d, id) => getReport(r, d, id)],
-  ["DELETE", new RegExp(`^/v1/reports/${ID}$`), (r, d, id) => deleteReport(r, d, id)],
+  ["GET", new RegExp(`^/v1/reports/${ID}$`), (r, d, [id]) => getReport(r, d, id)],
+  ["DELETE", new RegExp(`^/v1/reports/${ID}$`), (r, d, [id]) => deleteReport(r, d, id)],
+  ["POST", /^\/v1\/attest\/challenge$/, (r, d) => attestChallenge(r, d)],
+  ["POST", /^\/v1\/attest$/, (r, d) => attest(r, d)],
+  ["GET", /^\/v1\/regions\/([^/]+)\/([^/]+)$/, (r, d, [release, object]) => downloadRegionFile(r, d, release, object)],
 ];
 
 /** Routes a request to its handler and turns failures into the error envelope (4.6). Platform-free; tests call it. */
@@ -46,7 +62,7 @@ export async function handle(request: Request, deps: Deps): Promise<Response> {
     if (matches.length === 0) throw new HttpError("not_found", "No such route.");
     const route = matches.find(([method]) => method === request.method);
     if (!route) throw new HttpError("not_found", "No such route.");
-    return await route[2](request, deps, route[1].exec(path)![1]);
+    return await route[2](request, deps, route[1].exec(path)!.slice(1));
   } catch (e) {
     if (e instanceof HttpError) return errorResponse(e);
     if (e instanceof StorageUnavailable) {

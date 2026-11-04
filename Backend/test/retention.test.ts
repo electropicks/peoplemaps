@@ -14,9 +14,9 @@ describe("retention cron", () => {
     w.sql.db.exec(`UPDATE installs SET last_seen_at = '2025-11-01T00:00:00Z' WHERE id = '${idle.installID}'`);
 
     w.clock.t = new Date("2027-01-29T20:59:00Z");
-    expect(await retention(w.deps)).toEqual({ reports: 0, installs: 1 });
+    expect(await retention(w.deps)).toEqual({ reports: 0, installs: 1, challenges: 0, keys: 0 });
     w.clock.t = new Date("2027-01-29T21:00:01Z");
-    expect(await retention(w.deps)).toEqual({ reports: 1, installs: 0 });
+    expect(await retention(w.deps)).toEqual({ reports: 1, installs: 0, challenges: 0, keys: 0 });
     expect(w.rows("reports").map((r) => r.id)).toEqual(["00000000-0000-4000-8000-000000000002"]);
     expect(w.rows("installs").map((r) => r.id)).toEqual([keep.installID]);
   });
@@ -40,7 +40,8 @@ describe("the scheduled handler", () => {
     });
     return {
       DB: { prepare: (sql: string) => statement(sql) } as unknown as D1Database,
-      RL_AUTH: new FakeLimiter(), RL_INSTALLS: new FakeLimiter(), RL_REPORTS: new FakeLimiter(),
+      DATA: {} as R2Bucket,
+      RL_AUTH: new FakeLimiter(), RL_INSTALLS: new FakeLimiter(), RL_REPORTS: new FakeLimiter(), RL_ATTEST: new FakeLimiter(), RL_DOWNLOADS: new FakeLimiter(),
     };
   };
   const event = {} as ScheduledController;
