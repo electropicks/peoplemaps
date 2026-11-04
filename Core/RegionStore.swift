@@ -129,6 +129,7 @@ public actor RegionStore {
         var lastPublish = Date.distantPast
         /// Files that already got one fresh token after a 401.
         var retried: Set<String> = []
+        var reattested = false
     }
     private var states: [RegionID: RegionState] = [:]
     private var runs: [RegionID: Run] = [:]
@@ -359,9 +360,13 @@ public actor RegionStore {
             return await failAndStop(key.region, error)
         }
         if status == 401, !run.retried.contains(key.path), let entry = manifest.regions[key.region] {
+            // One fresh token per download: the first 401 forgets the token, the other files only retry with whatever
+            // token is current. Otherwise each file's retry could mint another token after a rejection.
             run.retried.insert(key.path)
+            let first = !run.reattested
+            run.reattested = true
             runs[key.region] = run
-            await source.authorizationRejected(authorization)
+            if first { await source.authorizationRejected(authorization) }
             do { return try await startTask(region: key.region, path: key.path, entry: entry, allowCellular: run.allowCellular) } catch { return await failAndStop(key.region, error) }
         }
         let file = stagingFolder(for: key.region).appendingPathComponent(Self.name(key.path))
