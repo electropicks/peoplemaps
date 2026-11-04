@@ -676,6 +676,22 @@ sender); a stateless Worker writing to R2 with a lifecycle rule (no idempotency 
 encryption of the exact fields to a maintainer key (worth revisiting if exact locations get common); an OHTTP relay so
 Cloudflare never sees client IPs (out of proportion at this volume).
 
+## 12. Region download
+
+A second thing the app asks our server for, next to reports: the files of a larger map region (King County), from About,
+under Map area. It is one tap on **Download**, with no account and no install token (4.1). Each request is
+`GET /v1/regions/<release>/<region>--<file>` with `Authorization: Bearer <token>`, the token being the App Attest
+exchange; the Worker streams the file from the private bucket. The request carries the file name and that check, and
+nothing about the person: no position, no search, no report ID, no install ID. What the Worker and Cloudflare keep of a
+request (the connecting address and time, as for any request) is settled with 4.6 on the deployed server and is not
+claimed here.
+
+What is built: the app side only (`Core/RegionStore.swift`, `App/RegionAboutSection.swift`). `WorkerSource` is a stub that
+throws, so a release build contacts nothing; debug builds can aim a plain, unauthenticated `DirectSource` at a test
+server. The Worker, App Attest and the token exchange are separate work. `Docs/PRIVACY.md` says the same in plain words;
+change them together. The files are checked against `Data/regions.json` (size, then SHA-256) before anything is installed,
+so a damaged or swapped file is refused, not used.
+
 ## 11. Alpha: reports by share sheet, and the usage log
 
 The backend is not deployed, so the app calls nothing and mints no IDs. `Core/ProblemReport.swift` is a small report
