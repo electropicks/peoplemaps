@@ -112,6 +112,8 @@ struct RouteDetails: View {
 
 struct AboutView: View {
     let graph: StreetGraph
+    /// No route is shown and the person is not navigating, so a downloaded map may replace this one now.
+    var canSwitchNow = false
     /// The launch graph holds only its bounds, so the count comes from the graph file.
     @State private var edgeCount: Int?
     @Environment(\.dismiss) private var dismiss
@@ -123,13 +125,15 @@ struct AboutView: View {
                     Text("These are transparent preferences, not safety ratings. Times and stress are estimates, with no live traffic.").font(.footnote).foregroundStyle(.secondary)
                 } header: { header("What calmer means") }
                 Section {
-                    Text("\(edgeCount.map { "\($0.formatted()) directed" } ?? "Directed") street and path segments are bundled, with USGS elevation. Routing runs entirely on this device. No account is needed. If you haven\u{2019}t answered yet, PeopleMaps asks to use your location when it opens. Your location stays on this iPhone.")
+                    Text("\(edgeCount.map { "\($0.formatted()) directed" } ?? "Directed") street and path segments are \(RegionSelection.usesCounty ? "downloaded" : "bundled"), with USGS elevation. Routing runs entirely on this device. No account is needed. If you haven\u{2019}t answered yet, PeopleMaps asks to use your location when it opens. Your location stays on this iPhone.")
                     Text("Snapshot: 11 October 2026.").foregroundStyle(.secondary)
                     externalLink("OpenStreetMap contributors · ODbL 1.0", "https://www.openstreetmap.org/copyright")
                     NavigationLink("Acknowledgements") { AcknowledgementsView() }.accessibilityIdentifier("acknowledgements")
                 } header: { header("Data") }
+                RegionAboutSection(canSwitchNow: canSwitchNow)
                 Section {
-                    Text("North of Denny Way through southern Green Lake, from east Ballard to the University District. Map detail stops at the extract boundary.")
+                    Text(RegionSelection.usesCounty ? "King County and a little beyond. Map detail stops at the edge of the extract. Places that need a ferry or a road outside the map, as Vashon and the Kitsap shore do, have no road route."
+                         : "North of Denny Way through southern Green Lake, from east Ballard to the University District. Map detail stops at the extract boundary.")
                     Text("Missing restrictions, conditional access, temporary closures, and entrances can affect feasibility. Unsupported turn-restriction forms are conservatively excluded. This prototype has not been field validated.").foregroundStyle(.secondary)
                 } header: { header("Coverage") }
                 ReportsAboutSection()

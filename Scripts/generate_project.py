@@ -23,10 +23,13 @@ def files(folder):
     group(root/folder)
     return builds,resources
 app_sources,app_resources=files('App'); test_sources,test_resources=files('UITests')
+# The region manifest ships in the app bundle, so the Map area section knows each region's release, files, sizes and checksums (Core/RegionManifest.swift).
+regions_manifest=obj('Data/regions.json','isa = PBXFileReference; lastKnownFileType = text.json; path = "Data/regions.json"; sourceTree = "<group>";')
+app_resources.append(obj('build:Data/regions.json',f'isa = PBXBuildFile; fileRef = {regions_manifest};'))
 app_product=obj('app-product','isa = PBXFileReference; explicitFileType = wrapper.application; path = Peoplemaps.app; sourceTree = BUILT_PRODUCTS_DIR;')
 test_product=obj('test-product','isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = PeoplemapsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR;')
 obj('products',f'isa = PBXGroup; children = ({app_product},{test_product}); name = Products; sourceTree = "<group>";')
-obj('root',f'isa = PBXGroup; children = ({ref("App")},{ref("UITests")},{ref("products")}); sourceTree = "<group>";')
+obj('root',f'isa = PBXGroup; children = ({ref("App")},{ref("UITests")},{regions_manifest},{ref("products")}); sourceTree = "<group>";')
 obj('core-package','isa = XCLocalSwiftPackageReference; relativePath = .;')
 obj('map-package','isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/maplibre/maplibre-gl-native-distribution"; requirement = {kind = exactVersion; version = 6.31.0;};')
 obj('ferrostar-package','isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/stadiamaps/ferrostar"; requirement = {kind = exactVersion; version = 0.59.0;};')
