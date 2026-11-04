@@ -28,6 +28,7 @@ step() { local name="$1"; shift; echo "==> $name"; if "$@"; then results+=("PASS
 summary() { echo; echo "verify summary ($(uname -s)):"; printf '  %s\n' "${results[@]}"; }
 
 step "importer tests" python3 Scripts/test_importer.py
+step "drive log report tests" python3 Scripts/test_drive_log_report.py
 
 # The shipped data must be exactly what the importer produces from the archived snapshots.
 reproduce() {
