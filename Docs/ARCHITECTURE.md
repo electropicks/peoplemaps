@@ -142,7 +142,7 @@ is relation 1153346 (King County) plus 4,828 m (3 miles), one ring.
 
 ### seattle-all
 
-All of Seattle (47.49, -122.44, 47.74, -122.24), release `data-seattle-all-2026-11c` (earlier releases `-11` and `-11b` are superseded; `-11` still holds the 365 MB source extract). The app bundle ships it when it is
+All of Seattle (47.49, -122.44, 47.74, -122.24), release `data-seattle-all-2026-11d` (earlier releases `-11` and `-11b` are superseded; `-11` still holds the 365 MB source extract). The app bundle ships it when it is
 fetched and the fixture otherwise: a "Bundle fetched region" build phase (from `Scripts/generate_project.py`) copies
 `Data/region/seattle-all/expected/{seattle-graph.bin,seattle-map.pmtiles,seattle-search.sqlite.gz}` into the app,
 and `Bundle.dataFile` in Core prefers the app bundle's copy over the package's fixture. `swift test` and CI never see it.
