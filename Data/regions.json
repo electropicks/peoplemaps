@@ -72,7 +72,56 @@
         "provenance.json",
         "seattle-coverage.json"
       ],
-      "files": {}
+      "files": {
+        "coverage.json": {
+          "bytes": 7440,
+          "sha256": "ae882a073433a9931035a032dfccb78c511daa4d59f5ef894821f1a787d7f414"
+        },
+        "expected/provenance.json": {
+          "bytes": 4533,
+          "sha256": "cea66b5ec116ba4d08205a4cea17a8585b1a0d864ace8e74e4c3f46bbe61c580"
+        },
+        "expected/seattle-coverage.json": {
+          "bytes": 7440,
+          "sha256": "ae882a073433a9931035a032dfccb78c511daa4d59f5ef894821f1a787d7f414"
+        },
+        "expected/seattle-graph.bin": {
+          "bytes": 167698560,
+          "sha256": "75c6addf3daa6f9e68731925f611a5156fb54d064fd9796bd0e795f29c5d68bd"
+        },
+        "expected/seattle-map.pmtiles": {
+          "bytes": 14693096,
+          "sha256": "07b0426af2139dc8b7010a23b66e454d6846cb6beb643a6f2a1c85cc0c17eae8"
+        },
+        "expected/seattle-search.sqlite.gz": {
+          "bytes": 49908391,
+          "sha256": "6ce0f5aac9c7a077ff38195b2fdcd6fb5b6c24d6c9fac5d4199d512e75fb654e"
+        },
+        "seattle-coast.json.gz": {
+          "bytes": 762116,
+          "sha256": "913aedb3dae46a994c9711628529d1759e14176e08baf4e9a7ebf071752f3a34"
+        },
+        "seattle-dem.tif.gz": {
+          "bytes": 746401840,
+          "sha256": "8f1cf114a49b77c3981557784fa4f302b71f98528cc033b744f685314142c0b9"
+        },
+        "seattle-osm.json.gz": {
+          "bytes": 64320277,
+          "sha256": "e3cf82e836aaee415d4d3703b00ec644f5d7bac5fd83762845f2ae0a989789dd"
+        },
+        "seattle-overture-places.json.gz": {
+          "bytes": 22827858,
+          "sha256": "d8720be1f4dcbfe6f7ea0863897789daf905ee2d3ba9fa5e69a09a04201c5d12"
+        },
+        "seattle-parks.json.gz": {
+          "bytes": 342510,
+          "sha256": "e2ffad0b60be96e97607badb8707e495804112171d568129bc60c37c5ac73676"
+        },
+        "seattle-search.json.gz": {
+          "bytes": 22156310,
+          "sha256": "7605363f81fb470774bb84139baee016518a6549f1af896d222612fd8838a7e0"
+        }
+      }
     }
   }
 }
