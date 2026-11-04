@@ -110,7 +110,7 @@ reads "Chill, 69 out of 100".
 |---|---|---|---|---|
 | Breezy | `#7FB2D6` | `#285A7E` | `#A3D0F0` | 6.0 / 6.8 |
 | Chill | `#6FAFA8` | `#1F5F5A` | `#93D8D0` | 6.1 / 6.8 |
-| Meh | `#B8AE9A` | `#5F5646` | `#D3CBB8` | 5.9 / 6.8 |
+| Mixed | `#B8AE9A` | `#5F5646` | `#D3CBB8` | 5.9 / 6.8 |
 | Spicy | `#D19A6B` | `#84491A` | `#F0BE8F` | 5.8 / 6.6 |
 | Yikes | `#CF8A88` | `#8C3B39` | `#F0AFAD` | 6.1 / 6.0 |
 
@@ -368,7 +368,7 @@ doesn't leave half of it empty; large at accessibility sizes.
 - Address line, or "Near 3400 Fremont Ave N".
 - **Directions**: full-width `.primaryAction()`, label `primaryActionText`, mode
   symbol leading. Two lines that describe what Start
-  would take: "Calmer: 12–14 min, 3.4 mi" and "Meh → Breezy, mostly fewer
+  would take: "Calmer: 12–14 min, 3.4 mi" and "Mixed → Breezy, mostly fewer
   unsignalled lefts", or "9–11 min, 2.9 mi" and "Chill, best balance we found"
   with no calmer route (`Docs/STRESS_MODEL.md`, Calm score). "Estimate, no live
   traffic" stays under it.
@@ -388,7 +388,7 @@ Top to bottom:
    calmer route. Then the rating bar, full width.
 3. **Reason line:** what it costs and its biggest gain, "1 min more than fastest, 2
    fewer unsignalled lefts" (`reasonLine`).
-4. **Fastest row:** "Fastest: Meh", its time, its own smaller bar; a checkmark when
+4. **Fastest row:** "Fastest: Mixed", its time, its own smaller bar; a checkmark when
    chosen. Selecting a route morphs the map line opacity.
 5. **Why this route** and **Calmer means** (`route-preferences`) as text buttons.
 6. **Pinned:** icon-only travel modes (Drive, Cycle, Walk, named for VoiceOver and
@@ -406,7 +406,7 @@ it also shows **swap** and the **Extra time** menu. Accessibility sizes open lar
 │ 1 min more than fastest,   │
 │ 2 fewer unsignalled lefts  │
 │ ────────────────────────── │
-│ Fastest: Meh      11–13 min│
+│ Fastest: Mixed    11–13 min│
 │ ▒▒▒▒▒▒▒▒░░░░░░░░░░░░░░░░░░ │
 │ ────────────────────────── │
 │ Why this route Calmer means│
