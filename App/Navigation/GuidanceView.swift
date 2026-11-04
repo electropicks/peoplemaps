@@ -39,6 +39,9 @@ struct GuidanceOverlay: View {
         }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { screen = $0; report() }
         .onChange(of: topEdge) { report() }
+        .onChange(of: navigator.hasArrived) { report() }
+        // The arrival card is near-opaque, so Done takes the solid fill: the glass fill is white and vanishes on it.
+        .environment(\.solidSurface, navigator.hasArrived)
         .onChange(of: bottomEdge) { report() }
         .onChange(of: leadingEdge) { report() }
         .onChange(of: landscape) { report() }
@@ -59,7 +62,7 @@ struct GuidanceOverlay: View {
         } else {
             let bottom = bottomEdge.isFinite ? max(0, screen.height - bottomEdge) : 0
             // The travel camera rides the puck low in what is left, so at accessibility sizes the map is inset further to keep it off the trip bar.
-            onInsets(UIEdgeInsets(top: topEdge + 8, left: 0, bottom: bottom + (compact ? 72 : 8), right: 0))
+            onInsets(UIEdgeInsets(top: topEdge + 8, left: 0, bottom: bottom + (compact ? 72 : navigator.hasArrived ? 44 : 8), right: 0))
         }
     }
 
@@ -458,7 +461,7 @@ struct GuidanceOverlay: View {
                     .frame(width: 48, height: 48).background(.glassWell, in: Circle())
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("You've arrived at \(name)").font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
+                    Text("You\u{2019}ve arrived at \(name)").font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("guidance-arrived")
                     Text(summary).font(.subheadline).foregroundStyle(Self.onGlass).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("arrival-summary")
                 }

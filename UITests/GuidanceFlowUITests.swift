@@ -108,7 +108,7 @@ final class GuidanceFlowUITests: PeoplemapsUITestCase {
         XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 10))
         let arrived = app.staticTexts["guidance-arrived"]
         XCTAssertTrue(arrived.waitForExistence(timeout: 150), "Never arrived")
-        XCTAssertTrue(arrived.label.contains("You've arrived at"), arrived.label)
+        XCTAssertTrue(arrived.label.contains("You\u{2019}ve arrived at"), arrived.label)
         XCTAssertTrue(app.staticTexts["arrival-summary"].exists)
         XCTAssertFalse(app.buttons["end-navigation"].exists)
         capture("08-arrived", app: app)
