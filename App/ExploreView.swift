@@ -272,6 +272,14 @@ struct ExploreView: View {
         screen = next
     }
 
+    /// What the detailed log's app-use file watches (`App/Reports/DriveLogHooks.swift`).
+    private var driveLogSnapshot: DriveLogSnapshot {
+        DriveLogSnapshot(screen: String(String(describing: screen).prefix { $0 != "(" }), place: selectedPlace, query: query, mode: mode, budget: budget,
+                         sheet: sheet?.rawValue, calmer: selectedCalmer,
+                         request: previewRequest.map { "\($0.destination.id) \($0.mode) \($0.extraMinutes)" }, destination: previewRequest?.destination,
+                         routeReady: session.comparison != nil)
+    }
+
     private func open(_ place: Place) {
         let place = search.withAddress(place)
         query = ""
@@ -280,6 +288,8 @@ struct ExploreView: View {
     }
     /// A search result: its place card, or a new favourite when Add opened the search.
     private func picked(_ place: Place) {
+        DriveLogger.use("search_pick", ["query": .string(query), "id": .string(place.id), "name": .string(place.name),
+                                        "rank": .num(results.firstIndex { $0.id == place.id } ?? -1), "results": .num(results.count), "addingFavourite": .bool(addingFavourite)])
         guard addingFavourite else { open(place); return }
         let place = search.withAddress(place)
         if !saved.isFavourite(place) { saved.toggleFavourite(place) }
@@ -388,6 +398,7 @@ struct ExploreView: View {
         .task { if !Self.markersOff { markerFeed = await PlaceMarkerFeed.load(search) } }
         .onDisappear { session.cancel(); navigator.stop() }
         .onChange(of: voiceMuted) { navigator.setMuted(voiceMuted) }
+        .driveLogUse(driveLogSnapshot)
         .reportContext(screen: String(String(describing: screen).prefix { $0 != "(" }), mode: mode, extraMinutes: budget, comparison: session.comparison, navigator: navigator, dataVersion: search.dataVersion)
         .onChange(of: userLocation) { followUser() }
         .onChange(of: wantsCompass, initial: true) { permission.onHeading = { userHeading = $0 }; permission.compass(on: wantsCompass) }

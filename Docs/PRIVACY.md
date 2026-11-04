@@ -35,6 +35,16 @@ one is wrong and gets fixed.
   route (rounded to about 100 m unless you choose exact places). It stays on the phone unless you share the file, and
   **Clear** deletes it.
 
+- A detailed log, only if you turn on "Keep a detailed log" in About (off by default, and separate from the usage log). It
+  is for testing a build on your own phone. While you are guided on a walk, cycle or drive, it records the trip in a file on
+  the phone: your start and destination (names and exact coordinates), both routes the app found with the app's time
+  estimates, every location fix the phone gave the app (position, accuracy, speed, direction, about once a second), and what
+  the app did (which turn you reached, leaving the route, rerouting, the lines the voice was given, muting, going to the
+  background, the phone's temperature state and Low Power Mode). It also keeps, one file a day, what you searched for and
+  which result you chose, the places you opened, the routes you previewed and the settings you changed. A trip shorter than
+  3 minutes is deleted when it ends. It is not sent anywhere: it stays on the phone, left out of backups, unless you share
+  the files from About, and **Clear** deletes them. It keeps at most 500 MB and then removes the oldest trips. It does not
+  record altitude.
 - Recent app events, in memory only. The last 200 things the app did, or the last 10 minutes, whichever is fewer:
   that a route comparison started and how long it took, that guidance started or rerouted, that the map finished
   loading or moved the camera, how long a search took and how many results it found, and errors by type. Never a

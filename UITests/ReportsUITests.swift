@@ -1,6 +1,6 @@
 import XCTest
 
-/// Problem reports and the usage log (Docs/REPORTS.md section 11). Reports are shared as a file; nothing is sent.
+/// Problem reports, the usage log and the detailed log (Docs/REPORTS.md section 11). Reports are shared as a file; nothing is sent.
 final class ReportsUITests: XCTestCase {
     private static let atKerryPark = "47.6295,-122.3599"
 
@@ -116,6 +116,76 @@ final class ReportsUITests: XCTestCase {
         XCTAssertTrue(confirm.waitForExistence(timeout: 5))
         confirm.tap()
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS '0 trips kept'")).firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(clear.exists)
+        app.buttons["close-about"].tap()
+    }
+
+    /// Runs a short simulated trip from Kerry Park to Gas Works and ends it from the guidance screen.
+    @MainActor private func driveBriefly(_ app: XCUIApplication) {
+        app.buttons["search-field"].tap()
+        let field = app.textFields["search-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("Gas Works")
+        app.buttons["result-relation/1047789"].tap()
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
+        app.buttons["start-navigation"].tap()
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 20))
+        sleep(5)   // a few simulated fixes
+        app.buttons["end-navigation"].tap()
+        XCTAssertTrue(app.buttons["close-preview"].waitForExistence(timeout: 10))
+        app.buttons["close-preview"].tap()
+    }
+
+    /// The detailed log is off on a fresh install, and with it off a whole trip leaves no file.
+    @MainActor func testDetailedLogIsOffByDefaultAndWritesNothingWhenOff() {
+        let app = launch(location: Self.atKerryPark, extra: ["--simulate-route", "--drive-log-keep-short"])
+        openAbout(app)
+        let toggle = app.switches["drive-log-toggle"]
+        scrollTo(toggle, in: app)
+        XCTAssertEqual(toggle.value as? String, "0", "Off by default")
+        XCTAssertFalse(app.buttons["drive-log-clear"].exists)
+        capture("drivelog-01-off")
+        app.buttons["close-about"].tap()
+
+        driveBriefly(app)
+
+        openAbout(app)
+        let footer = app.staticTexts["drive-log-footer"]
+        scrollTo(footer, in: app)
+        XCTAssertTrue(footer.label.contains("0 trips"), footer.label)
+        XCTAssertFalse(app.buttons["drive-log-share"].exists, "Nothing to share")
+        XCTAssertFalse(app.buttons["drive-log-clear"].exists)
+        app.buttons["close-about"].tap()
+    }
+
+    /// With it on, a simulated trip writes a file that About counts, shares and clears.
+    @MainActor func testDetailedLogOnKeepsASimulatedTripAndClears() {
+        let app = launch(location: Self.atKerryPark, extra: ["--simulate-route", "--drive-log-keep-short"])
+        openAbout(app)
+        let toggle = app.switches["drive-log-toggle"]
+        scrollTo(toggle, in: app)
+        toggle.switches.firstMatch.tap()
+        XCTAssertEqual(toggle.value as? String, "1")
+        app.buttons["close-about"].tap()
+
+        driveBriefly(app)
+
+        openAbout(app)
+        let footer = app.staticTexts["drive-log-footer"]
+        scrollTo(footer, in: app)
+        XCTAssertTrue(footer.label.contains("1 trip,"), footer.label)
+        XCTAssertFalse(footer.label.contains("Zero"), footer.label)
+        XCTAssertTrue(app.buttons["drive-log-share"].exists)
+        capture("drivelog-02-on-one-trip")
+        let clear = app.buttons["drive-log-clear"]
+        scrollTo(clear, in: app)
+        clear.tap()
+        let confirm = app.sheets.buttons["Clear"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        confirm.tap()
+        let cleared = NSPredicate { _, _ in footer.label.contains("0 trips") }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: cleared, object: nil)], timeout: 5), .completed, footer.label)
         XCTAssertFalse(clear.exists)
         app.buttons["close-about"].tap()
     }

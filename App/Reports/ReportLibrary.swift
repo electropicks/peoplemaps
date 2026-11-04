@@ -21,7 +21,7 @@ final class ReportLibrary {
     func remove(id: String) { store.remove(id: id); try? store.save(to: url) }
 }
 
-/// Files the reports and the usage log keep in Application Support. UI tests get their own, emptied at launch unless
+/// Files the reports, the usage log and the drive log keep in Application Support. UI tests get their own, emptied at launch unless
 /// a test checks that something survives a relaunch.
 enum AppFiles {
     static func url(_ name: String, ext: String = "json") -> URL {
@@ -36,6 +36,9 @@ enum AppFiles {
         #endif
         return folder.appendingPathComponent("\(file).\(ext)")
     }
+
+    /// A folder in Application Support; UI tests get their own, emptied at launch like the files.
+    static func folder(_ name: String) -> URL { url(name, ext: "d") }
 }
 
 /// The opt-in usage log (`Core/UsageLog.swift`). Off unless the user turns it on in About; nothing here touches the network.

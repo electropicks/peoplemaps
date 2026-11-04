@@ -7,6 +7,8 @@ struct AdaptedRoute: @unchecked Sendable {
     let route: FerrostarCoreFFI.Route
     let plan: NavigationPlan
     let destination: Place
+    /// The route in full for the detailed log; nil unless that is on.
+    var record: DriveLog.RouteRecord?
     /// Parallel to `plan.steps`: the calm note of the maneuver that begins each step.
     var calmNotes: [String?] { plan.steps.map(\.calmNote) }
 }

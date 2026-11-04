@@ -360,7 +360,7 @@ struct GuidanceOverlay: View {
     private var compassButton: some View {
         mapButton({
             withAnimation(Motion.content(reduceMotion)) {
-                if camera.mode == .overview { camera.toggleOverview() } else { camera.toggleHeading() }
+                if camera.mode == .overview { DriveLogger.event("overview", ["on": .bool(false)]); camera.toggleOverview() } else { camera.toggleHeading() }
             }
         }) {
             Image(systemName: "location.north.line.fill").rotationEffect(.degrees(shownAngle))
@@ -372,7 +372,7 @@ struct GuidanceOverlay: View {
 
     private var overviewButton: some View {
         let overview = camera.mode == .overview
-        return mapButton({ withAnimation(Motion.content(reduceMotion)) { camera.toggleOverview() } }) {
+        return mapButton({ DriveLogger.event("overview", ["on": .bool(!overview)]); withAnimation(Motion.content(reduceMotion)) { camera.toggleOverview() } }) {
             Image(systemName: overview ? "location.fill" : "arrow.up.left.and.arrow.down.right").contentTransition(.symbolEffect(.replace))
         }
         .accessibilityLabel(overview ? "Follow my position" : "Route overview").accessibilityIdentifier("guidance-overview")

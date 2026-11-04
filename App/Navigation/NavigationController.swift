@@ -98,6 +98,9 @@ final class NavigationController {
     /// Changes with every trip, so marked moments can be matched to the trip that ends.
     private(set) var tripID = UUID()
     @ObservationIgnored private var tripDraft: UsageLogger.Draft?
+    /// The step last written to the detailed log, so only a change is.
+    @ObservationIgnored private var loggedStep = -1
+    @ObservationIgnored private var loggedSpoken = ""
     var isPaused: Bool { paused }
 
     init(router: any RouteComputing) { self.router = router }
@@ -134,7 +137,8 @@ final class NavigationController {
         guard let adapted = try? FerrostarAdapter.convert(chosen.navigationPlan(mode: request.mode), destination: request.destination) else { return }
 
         let provider = OwnRouteProvider(router: router, destination: request.destination, mode: request.mode,
-                                        extraMinutes: request.extraMinutes, preferences: request.preferences, preferCalmer: usingCalmer) { [weak self] adapted in
+                                        extraMinutes: request.extraMinutes, preferences: request.preferences, preferCalmer: usingCalmer,
+                                        recordRoutes: DriveLogger.enabled) { [weak self] adapted in
             Task { @MainActor in self?.remember(adapted) }
         }
         let location: LocationProviding
@@ -169,13 +173,15 @@ final class NavigationController {
         hasArrived = false; isRerouting = false; isActive = true; rerouteCount = 0
         arrivalHandled = false; paused = false; lastSpoken = ""; spokenLog = []; tripID = UUID()
         tripDraft = UsageLogger.Draft(comparison: comparison, started: usingCalmer ? .calmer : .fastest)
+        loggedStep = -1; loggedSpoken = ""
+        DriveLogger.startTrip(comparison, calmer: usingCalmer)
         keepAwake(true)
         AppEvents.shared.log(.navigation, "guidance started", mode: request.mode, state: usingCalmer ? "calmer" : "fastest", ["steps": Double(adapted.plan.steps.count)])
         subscription = core.$state.receive(on: DispatchQueue.main).sink { [weak self] state in
             MainActor.assumeIsolated { self?.apply(state) }
         }
         install(adapted)
-        do { try core.startNavigation(route: adapted.route) } catch { stop() }
+        do { try core.startNavigation(route: adapted.route) } catch { DriveLogger.event("start_failed"); stop() }
     }
 
     /// Up to three facts for the arrival summary: what the calmer route avoided, then what it cost in time.
@@ -191,13 +197,14 @@ final class NavigationController {
 
     /// Follows the stored preference; muting stops anything being said at once.
     func setMuted(_ muted: Bool) {
-        if let observer, observer.isMuted != muted { observer.toggleMute() }
+        if let observer, observer.isMuted != muted { observer.toggleMute(); DriveLogger.event("mute", ["muted": .bool(muted)]) }
     }
 
     /// Version 1 guides in the foreground only: in the background nothing is said and location updates stop.
     func pause() {
         guard isActive, !paused else { return }
         paused = true
+        DriveLogger.event("background")
         observer?.stopAndClearQueue()
         location?.stopUpdating()
     }
@@ -205,6 +212,7 @@ final class NavigationController {
     func resume() {
         guard isActive, paused else { return }
         paused = false
+        DriveLogger.event("foreground")
         if !hasArrived { location?.startUpdating() }
     }
 
@@ -215,6 +223,7 @@ final class NavigationController {
         guard !arrivalHandled else { return }
         arrivalHandled = true
         AppEvents.shared.log(.navigation, "arrived", ["reroutes": Double(rerouteCount)])
+        DriveLogger.event("arrived", ["reroutes": .num(rerouteCount), "spoken": .text(destination.map { "You've arrived at \($0.shortName)" })])
         finishTrip(.arrived)
         location?.stopUpdating()
         keepAwake(false)
@@ -228,6 +237,7 @@ final class NavigationController {
     private func finishTrip(_ ended: UsageLog.Ended) {
         guard var draft = tripDraft else { return }
         tripDraft = nil
+        DriveLogger.endTrip(reason: ended.rawValue)
         draft.reroutes = rerouteCount
         UsageLogger.record(draft, ended: ended)
     }
@@ -278,7 +288,11 @@ final class NavigationController {
 
     private func install(_ adapted: AdaptedRoute) {
         remember(adapted)
-        if active != nil { rerouteCount += 1; AppEvents.shared.log(.navigation, "reroute", ["reroutes": Double(rerouteCount)]) }
+        if active != nil {
+            rerouteCount += 1; AppEvents.shared.log(.navigation, "reroute", ["reroutes": Double(rerouteCount)])
+            DriveLogger.event("reroute", ["route": adapted.record.flatMap { DriveLog.Value(encoding: $0) } ?? .string("unavailable"), "count": .num(rerouteCount)])
+        }
+        loggedStep = -1
         active = adapted
         gate.routeInstalled(at: Date())
         hasReachedRoute = false
@@ -316,12 +330,14 @@ final class NavigationController {
             // the step line, so its distance to the route is about zero. Not the engine's `.noDeviation` either: it also means
             // "fix too poor to judge", which says nothing about the route.
             rawCoordinate = Coordinate(lat: raw.coordinates.lat, lon: raw.coordinates.lng)
+            DriveLogger.fix(raw)
             gate.observe(distanceToRoute: rawCoordinate!.distance(toPolyline: routeGeometry), accuracy: raw.horizontalAccuracy)
             hasReachedRoute = gate.hasReachedRoute
             if let spoken, !spoken.text.isEmpty {
                 let text = SpokenText.normalize(spoken.text)
                 if text != lastSpoken { spokenLog = Array((spokenLog + [(text, Date())]).suffix(3)) }
                 lastSpoken = text
+                if text != loggedSpoken { loggedSpoken = text; DriveLogger.event("spoken", ["text": .string(text), "muted": .bool(observer?.isMuted ?? false)]) }
             }
             hasArrived = false
             distanceToManeuver = progress.distanceToNextManeuver
@@ -333,6 +349,11 @@ final class NavigationController {
             let heading = stepIndex == 0 && travelled < Self.setOffMeters && plan.steps.count > 1
             let shown = heading ? 0 : min(stepIndex + 1, plan.steps.count - 1)
             currentStep = plan.steps[shown]
+            if stepIndex != loggedStep {
+                loggedStep = stepIndex
+                DriveLogger.event("maneuver", ["stepIndex": .num(stepIndex), "upcoming": .num(shown), "route": .num(rerouteCount),
+                                               "instruction": .string(plan.steps[shown].instruction), "meters": .num(progress.distanceToNextManeuver)])
+            }
             thenStep = shown + 1 < plan.steps.count ? plan.steps[shown + 1] : nil
         }
     }
@@ -351,7 +372,9 @@ extension NavigationController: @preconcurrency FerrostarCoreDelegate {
         }
         let fix = RerouteGate.Fix(coordinate: Coordinate(lat: location.coordinates.lat, lon: location.coordinates.lng), metersOffRoute: meters,
                                   accuracy: location.horizontalAccuracy, speed: location.speed?.value, time: Date())
-        guard gate.shouldReroute(fix) else { return .doNothing }
+        let reroute = gate.shouldReroute(fix)
+        DriveLogger.event("off_route", ["meters": .num(meters), "accuracy": .num(fix.accuracy), "reroute": .bool(reroute)])
+        guard reroute else { return .doNothing }
         tripDraft?.departures.append(fix.coordinate)
         return .getNewRoutes(waypoints: waypoints)
     }

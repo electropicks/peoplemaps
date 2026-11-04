@@ -694,6 +694,42 @@ of the start and destination and a 550 m cell for a marked moment, as in 2.2. "W
   route was offered, reroute count, each point the user left the route (rounded to about 100 m unless "Exact places in the
   log" is on) and whether the trip arrived or ended early. The last 500 trips are kept. It is shared or cleared from About
   and has no network code. A trip the app is killed during is not logged.
+- **Detailed log** (`Core/DriveLog.swift`, `App/Reports/DriveLogger.swift`): for the owner's own use of a build on their own
+  phone, to answer where a drive waits (for example at a left turn because the street it turns onto is backed up), how real
+  speeds compare with the estimates, and how the app is used. Off by default; the "Keep a detailed log" switch in About is
+  separate from the usage log. With it off nothing is recorded or held in memory and guidance runs as before. Nothing
+  touches the network and it adds no location setting, background mode or permission: it records the fixes guidance
+  already receives. It holds exact places, so it is meant for a private build and is not part of what a report contains.
+  - **Folder** `drive-log.d` in Application Support (a separate `-uitests` copy under `--ui-testing`), excluded from
+    backup. About shows the trip count and size, shares every file, and clears them after a confirmation.
+  - **One file per guided trip**, `trip-<UTC time>-<mode>.jsonl` (walk, cycle or drive), JSON lines written as they happen,
+    so a crash keeps what was captured. A killed trip has no `end` line, and is kept even if short.
+    - `header`: start time, mode, app version and build, data version, the request (start and destination names and
+      coordinates, snapped points, extra-time budget, the Calmer means options that are not Normal), which route guidance
+      started with, whether a calmer route was offered, and both routes in full: edge IDs and OSM way IDs, street names,
+      coordinates, metres and estimated seconds per edge (and the junction time the edges leave out), maneuvers with their
+      places, the stress breakdown by factor (amount, cost), stress, and calm score and level.
+    - `fix`: one per location fix guidance received: time, latitude, longitude, horizontal accuracy, speed and its
+      accuracy, course and its accuracy. **Altitude is not recorded**: Ferrostar's fix has none and guidance asks for none.
+    - `event`, with a name and values: `device` (thermal state and low power, at the start and when either changes),
+      `maneuver` (step reached, with the instruction), `off_route` (metres, whether it started a reroute), `reroute` (the
+      new route in full), `spoken` (the line the voice was given, and whether muted), `mute`, `overview`, `background`,
+      `foreground`, `arrived`, `start_failed` and `end` (reason, length, fix count). Long stops are not detected live; the
+      report script finds them from the fixes.
+    - **Length rule**: a trip that ends in under `DriveLog.minimumTripSeconds` (3 minutes) is deleted when it ends. Route
+      switching does not happen in guidance, so it is logged only in app use (`route_selected`).
+  - **One file per day for app use**, `use-<local date>.jsonl`, same switch: `search_opened`, `search_pick` (query text,
+    chosen result and its rank), `search_abandoned` (query text), `place_card`, `preview` (destination, mode, extra-time
+    budget), `route_ready` (milliseconds the comparison took), `route_selected`, `mode_changed`, `budget_changed`,
+    `sheet_opened` (details, Calmer means and so on), `preview_abandoned` (left without Start), `navigation_started`
+    and `report_opened`. The hooks are one view modifier (`DriveLogHooks.swift`) and a few single lines that call
+    `DriveLogger`; removing the feature means deleting those calls and that type.
+  - **Size**: a one-hour drive at one fix a second is about 0.6 MB (`DriveLogTests`). A cap of 500 MB for the whole folder
+    (`DriveLog.capBytes`) drops the oldest trips first, never the one being written.
+  - **Reading it**: `python3 Scripts/drive_log_report.py FOLDER` on a Mac, standard library only. For each trip it compares
+    time on each edge with the estimate and lists each stop of 20 seconds or more (place, length, next maneuver, whether it
+    is a left, road names); then it groups stops by junction across trips, longest first. Real logs never go in the
+    repository, Evidence or tests; `Scripts/test_drive_log_report.py` uses a made-up track.
 - **Recent app events** (`Core/AppEvents.swift`, schema 3): a short list under `events` in the report file, so a report says
   what the app was doing and not only where the phone was. The buffer lives in memory, keeps the last 200 events or the
   last 10 minutes, whichever is fewer, and is never written to disk. A report copies it when it is created or a moment
