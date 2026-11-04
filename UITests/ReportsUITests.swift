@@ -82,6 +82,8 @@ final class ReportsUITests: XCTestCase {
         XCTAssertEqual(toggle.value as? String, "0", "Off by default")
         XCTAssertFalse(app.buttons["usage-log-clear"].exists)
         toggle.switches.firstMatch.tap()
+        XCTAssertEqual(toggle.value as? String, "1", "The switch turns on")
+        XCTAssertTrue(app.switches["usage-log-exact"].exists, "and the exact-places switch appears")
         capture("reports-02-about-usage-log")
         app.buttons["close-about"].tap()
 

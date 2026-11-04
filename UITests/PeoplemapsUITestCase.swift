@@ -114,6 +114,26 @@ class PeoplemapsUITestCase: XCTestCase {
         XCTAssertTrue(choice.waitForExistence(timeout: 15), "No system location alert with '\(button)'")
         choice.tap()
     }
+    /// Standard deviation of the screen's brightness (0 to 255) over `region`, given in fractions of the screen. Over the empty part
+    /// of a frosted sheet it is about 1 to 4; with the map showing sharply through it, 10 or more.
+    @MainActor func brightnessSpread(_ region: CGRect) -> Double {
+        guard let image = XCUIScreen.main.screenshot().image.cgImage else { return .nan }
+        let rect = CGRect(x: region.minX * CGFloat(image.width), y: region.minY * CGFloat(image.height),
+                          width: region.width * CGFloat(image.width), height: region.height * CGFloat(image.height)).integral
+        guard let crop = image.cropping(to: rect) else { return .nan }
+        var pixels = [UInt8](repeating: 0, count: crop.width * crop.height * 4)
+        guard let context = CGContext(data: &pixels, width: crop.width, height: crop.height, bitsPerComponent: 8, bytesPerRow: crop.width * 4,
+                                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return .nan }
+        context.draw(crop, in: CGRect(x: 0, y: 0, width: crop.width, height: crop.height))
+        var sum = 0.0, squares = 0.0
+        let count = Double(crop.width * crop.height)
+        for i in stride(from: 0, to: pixels.count, by: 4) {
+            let y = 0.299 * Double(pixels[i]) + 0.587 * Double(pixels[i + 1]) + 0.114 * Double(pixels[i + 2])
+            sum += y; squares += y * y
+        }
+        let mean = sum / count
+        return (squares / count - mean * mean).squareRoot()
+    }
     @MainActor func probe(_ app: XCUIApplication, _ id: String) -> String {
         (app.descendants(matching: .any)[id].value as? String) ?? "<missing>"
     }

@@ -18,6 +18,29 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         raiseHome(app)
         XCTAssertTrue(app.buttons["about"].waitForExistence(timeout: 5))
     }
+    /// The raised home sheet is frosted, and stays so after About opens over it and closes, and after the map is panned: the system's
+    /// own glass stops drawing in both cases, so the frost comes from the sheet's background (Docs/DESIGN.md, principle 4).
+    @MainActor func testHomeSheetStaysFrostedAfterAboutAndAPan() {
+        let app = launchHome(location: Self.atKerryPark)
+        raiseHome(app)
+        XCTAssertTrue(app.buttons["about"].waitForExistence(timeout: 5))
+        // The empty body of the sheet, below its last row, over a part of the map with streets and water.
+        let body = CGRect(x: 0.1, y: 0.70, width: 0.8, height: 0.22)
+        Thread.sleep(forTimeInterval: 2)
+        XCTAssertLessThan(brightnessSpread(body), 5, "Raised home is frosted")
+        app.buttons["about"].tap()
+        XCTAssertTrue(app.buttons["close-about"].waitForExistence(timeout: 5))
+        app.buttons["close-about"].tap()
+        XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 2)
+        capture("home-after-about", app: app)
+        XCTAssertLessThan(brightnessSpread(body), 5, "Still frosted after About closes")
+        let window = app.windows.firstMatch
+        window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
+            .press(forDuration: 0.1, thenDragTo: window.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.4)))
+        Thread.sleep(forTimeInterval: 2)
+        XCTAssertLessThan(brightnessSpread(body), 5, "Still frosted after the map is panned")
+    }
     @MainActor func testHomeSaysWhereToWithAHintAndNoRoutes() {
         let app = launchHome()
         XCTAssertEqual(app.buttons["search-field"].label, "Where to?")
