@@ -115,6 +115,18 @@ final class LayoutUITests: PeoplemapsUITestCase {
         if chip.exists { XCTAssertGreaterThanOrEqual(chip.frame.minY, card.maxY + 4, "The signal chip touches the banner") }
         capture("guidance-ax5", app: app)
     }
+    /// At AX5 the details sheet's close button is on screen and closes it.
+    @MainActor func testDetailsSheetClosesAtAX5() {
+        let app = launchHome(location: Self.atBallardLibrary, extra: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
+        showGasWorksRoutes(app)
+        app.buttons["route-details"].tap()
+        let close = app.buttons["close-details"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5), "No close button on the details sheet at AX5")
+        XCTAssertTrue(close.isHittable, "The details sheet's close button is covered or off screen at AX5")
+        capture("details-ax5", app: app)
+        close.tap()
+        XCTAssertTrue(app.buttons["start-navigation"].waitForExistence(timeout: 5), "The details sheet did not close")
+    }
     @MainActor func testFavouritesAndDroppedPinInLandscape() {
         let app = launchHome()
         openPlace(app, "Fremont Branch", id: "way/37058377")
