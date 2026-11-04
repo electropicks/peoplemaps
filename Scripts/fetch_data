@@ -3,13 +3,13 @@
 Each file's SHA-256 is pinned in the manifest. Files already present and matching are left alone, quietly.
   Scripts/fetch_data [region ...]    all regions in the manifest when none are named
 Where from:
-  PEOPLEMAPS_DATA_URL unset                    the manifest's GitHub release (public; temporary, until the releases are deleted)
   PEOPLEMAPS_DATA_URL, no keys                 plain GET of <url>/<region>--<path with / as __> (a directory URL; file:// works),
                                                for tests and mirrors
   PEOPLEMAPS_DATA_URL + PEOPLEMAPS_DATA_KEY_ID + PEOPLEMAPS_DATA_SECRET
                                                SigV4-signed GET of <url>/<release>/<region>--<path with / as __>, for the
                                                private R2 bucket: https://<account id>.r2.cloudflarestorage.com/peoplemaps-data
-Empty variables count as unset, so a fork's CI run, which gets empty secrets, falls back to the public default.
+PEOPLEMAPS_DATA_URL is required: unset, it exits with a message (there is no public fallback). Empty variables count as
+unset, so a fork's CI run, which gets empty secrets, exits the same way.
 Nothing secret is ever printed."""
 import json, os, pathlib, shutil, sys, tempfile
 import s3sig
@@ -26,10 +26,8 @@ def main(names, manifest=MANIFEST, dest=DEST):
         sys.exit(str(e))
     base = (os.environ.get('PEOPLEMAPS_DATA_URL') or '').rstrip('/')
     if creds and not base: sys.exit('PEOPLEMAPS_DATA_KEY_ID is set but PEOPLEMAPS_DATA_URL is not')
-    if not base:
-        # Temporary: the public releases are deleted once the R2 bucket is populated; then this default goes too.
-        base = f"https://github.com/electropicks/peoplemaps/releases/download/{m['release']}"
-    elif creds:
+    if not base: sys.exit('PEOPLEMAPS_DATA_URL, PEOPLEMAPS_DATA_KEY_ID and PEOPLEMAPS_DATA_SECRET are needed; see Docs/ARCHITECTURE.md, "Region data"')
+    if creds:
         base += '/' + m['release']  # the bucket holds one folder per release
     regions = m['regions']
     for n in names:
