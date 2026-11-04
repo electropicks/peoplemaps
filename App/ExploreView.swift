@@ -382,7 +382,11 @@ struct ExploreView: View {
         .ignoresSafeArea(.keyboard)
         .sheet(isPresented: sheetUp) { portraitSheet }
         .task(id: previewRequest) {
-            if let previewRequest { selectedCalmer = true; session.start(previewRequest) } else { session.cancel() }
+            if let previewRequest {
+                selectedCalmer = true
+                // The place card already ran this compare for its estimate.
+                if let estimate, estimate.request == previewRequest, let seed = estimate.comparison { session.start(previewRequest, seed: seed) } else { session.start(previewRequest) }
+            } else { session.cancel() }
         }
         .task { await locate(prompting: true) }
         .task { if !Self.markersOff { markerFeed = await PlaceMarkerFeed.load(search) } }
@@ -773,7 +777,7 @@ struct ExploreView: View {
     /// From where Directions would start, in the last-used mode, when both ends are inside the area we cover.
     private func estimateRequest(for place: Place) -> RouteRequest? {
         guard graph.contains(place.coordinate), let from = start(for: place), graph.contains(from.coordinate) else { return nil }
-        return .init(origin: from, destination: place, mode: mode, extraMinutes: budget)
+        return .init(origin: from, destination: place, mode: mode, extraMinutes: budget, preferences: preferences[mode])
     }
 
     /// Runs off the main thread; SwiftUI cancels it when the card closes or shows another place.
