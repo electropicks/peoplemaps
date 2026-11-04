@@ -191,4 +191,82 @@ final class DriveLogTests: XCTestCase {
         XCTAssertEqual(record.extraMinutes, 8)
         XCTAssertEqual(record.destinationID, "node/9")
     }
+
+    // MARK: Manual recordings
+
+    private func recordingHeader(_ start: Date? = nil) -> DriveLog.RecordingHeader {
+        DriveLog.RecordingHeader(start: start ?? t0, appVersion: "0.1.0", appBuild: "7", dataVersion: "osm-test")
+    }
+
+    func testRecordingOffCreatesNothing() throws {
+        XCTAssertNil(try log.startRecording(recordingHeader(), enabled: false))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.path))
+    }
+
+    func testRecordingFileIsNamedByUTCStartAndHoldsHeaderStartFixesAndEnd() throws {
+        let rec = try XCTUnwrap(try log.startRecording(recordingHeader(), enabled: true))
+        XCTAssertEqual(rec.url.lastPathComponent, "rec-20231114T221320Z.jsonl")
+        for i in 0..<3 { rec.fix(fix(i)) }
+        rec.event("background", at: t0.addingTimeInterval(4))
+        rec.event("authorization", at: t0.addingTimeInterval(5), ["status": .string("whenInUse")])
+        XCTAssertTrue(rec.finish(reason: "user", at: t0.addingTimeInterval(200)))
+        let rows = try lines(rec.url)
+        XCTAssertEqual(rows.map { ($0["kind"] as! String) + ":" + (($0["name"] as? String) ?? "") },
+                       ["header:", "event:start", "fix:", "fix:", "fix:", "event:background", "event:authorization", "event:end"])
+        XCTAssertEqual(rows[0]["recording"] as? String, "manual")
+        XCTAssertEqual(rows[0]["appBuild"] as? String, "7")
+        XCTAssertEqual(rows[0]["dataVersion"] as? String, "osm-test")
+        XCTAssertEqual(rows[0]["start"] as? Double, 1_700_000_000)
+        XCTAssertNil(rows[0]["routes"], "No route in a recording")
+        let end = try XCTUnwrap(rows.last?["data"] as? [String: Any])
+        XCTAssertEqual(end["reason"] as? String, "user")
+        XCTAssertEqual(end["fixes"] as? Double, 3)
+        XCTAssertEqual(log.summary().recordings, 1)
+        XCTAssertEqual(log.summary().trips, 0)
+    }
+
+    func testRecordingUnderThreeMinutesIsDeletedOnStopAndThreeIsKept() throws {
+        let short = try XCTUnwrap(try log.startRecording(recordingHeader(), enabled: true))
+        XCTAssertFalse(short.finish(reason: "user", at: t0.addingTimeInterval(179.9)))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: short.url.path))
+        let long = try XCTUnwrap(try log.startRecording(recordingHeader(t0.addingTimeInterval(1000)), enabled: true))
+        XCTAssertTrue(long.finish(reason: "user", at: t0.addingTimeInterval(1180)))
+        XCTAssertEqual(log.summary().recordings, 1)
+    }
+
+    func testRecordingLeftOpenGetsATerminatedEndAtItsLastLine() throws {
+        let rec = try XCTUnwrap(try log.startRecording(recordingHeader(), enabled: true))
+        for i in 0..<300 { rec.fix(fix(i)) }
+        let name = rec.url.lastPathComponent
+        // The app was killed: nothing finished the writer. The next launch closes the file.
+        XCTAssertTrue(log.closeOrphan(named: name, reason: "terminated"))
+        let rows = try lines(rec.url)
+        let end = try XCTUnwrap(rows.last)
+        XCTAssertEqual(end["name"] as? String, "end")
+        XCTAssertEqual((end["data"] as? [String: Any])?["reason"] as? String, "terminated")
+        XCTAssertEqual(end["t"] as? Double, t0.timeIntervalSince1970 + 299, "At the last fix, not at launch")
+        XCTAssertEqual((end["data"] as? [String: Any])?["fixes"] as? Double, 300)
+        XCTAssertTrue(log.closeOrphan(named: name, reason: "terminated"), "Closing twice adds nothing")
+        XCTAssertEqual(try lines(rec.url).filter { $0["name"] as? String == "end" }.count, 1)
+    }
+
+    func testShortRecordingLeftOpenIsDeletedAndMissingFileIsIgnored() throws {
+        let rec = try XCTUnwrap(try log.startRecording(recordingHeader(), enabled: true))
+        for i in 0..<60 { rec.fix(fix(i)) }
+        XCTAssertFalse(log.closeOrphan(named: rec.url.lastPathComponent, reason: "terminated"))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: rec.url.path))
+        XCTAssertFalse(log.closeOrphan(named: "rec-nothing.jsonl", reason: "terminated"))
+    }
+
+    func testCapDropsOldestAcrossTripsAndRecordings() throws {
+        let trip = try XCTUnwrap(try log.startTrip(header(t0), enabled: true))
+        for i in 0..<20 { trip.fix(fix(i)) }
+        trip.finish(reason: "arrived", at: t0.addingTimeInterval(600))
+        let rec = try XCTUnwrap(try log.startRecording(recordingHeader(t0.addingTimeInterval(5000)), enabled: true))
+        for i in 0..<20 { rec.fix(fix(i)) }
+        rec.finish(reason: "user", at: t0.addingTimeInterval(5600))
+        let size = try XCTUnwrap(try rec.url.resourceValues(forKeys: [.fileSizeKey]).fileSize)
+        XCTAssertEqual(log.enforceCap(maxBytes: size + 200), 1)
+        XCTAssertEqual(log.allFiles().map(\.lastPathComponent), [rec.url.lastPathComponent], "The older trip went, though recordings sort first by name")
+    }
 }

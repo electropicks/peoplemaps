@@ -141,6 +141,20 @@ public struct DriveLog: Sendable {
         public var startDate: Date { Date(timeIntervalSince1970: start) }
     }
 
+    /// The first line of a manual recording: no route, only when it began and what built it. `recording` says which kind of file this is.
+    public struct RecordingHeader: Codable, Equatable, Sendable {
+        public var kind = "header"
+        public var schema = DriveLog.schema
+        public var recording = "manual"
+        public var start: Double
+        public var appVersion: String, appBuild: String
+        public var dataVersion: String
+        public init(start: Date, appVersion: String, appBuild: String, dataVersion: String) {
+            self.start = Fix.ms(start); self.appVersion = appVersion; self.appBuild = appBuild; self.dataVersion = dataVersion
+        }
+        public var startDate: Date { Date(timeIntervalSince1970: start) }
+    }
+
     // MARK: Names
 
     private static func stamp(_ date: Date, _ format: String, _ zone: TimeZone) -> String {
@@ -151,6 +165,10 @@ public struct DriveLog: Sendable {
     /// `trip-20231114T221320Z-drive.jsonl`: UTC, so names sort oldest first.
     public static func tripFileName(start: Date, mode: TravelMode) -> String {
         "trip-\(stamp(start, "yyyyMMdd'T'HHmmss'Z'", TimeZone(identifier: "UTC")!))-\(mode.rawValue).jsonl"
+    }
+    /// `rec-20231114T221320Z.jsonl`: a manual recording, UTC like trips.
+    public static func recordingFileName(start: Date) -> String {
+        "rec-\(stamp(start, "yyyyMMdd'T'HHmmss'Z'", TimeZone(identifier: "UTC")!)).jsonl"
     }
     /// `use-2023-11-14.jsonl`: the day in the phone's time zone.
     public static func useFileName(day: Date, timeZone: TimeZone = .current) -> String { "use-\(stamp(day, "yyyy-MM-dd", timeZone)).jsonl" }
@@ -185,6 +203,40 @@ public struct DriveLog: Sendable {
         return writer
     }
 
+    /// Starts a manual recording (`rec-<UTC start>.jsonl`) with its header line, then a `start` event. Nil, and nothing created, when `enabled` is false.
+    public func startRecording(_ header: RecordingHeader, enabled: Bool) throws -> TripWriter? {
+        guard enabled else { return nil }
+        try prepare()
+        let url = folder.appendingPathComponent(Self.recordingFileName(start: header.startDate))
+        let writer = try TripWriter(url: url, start: header.startDate, header: header)
+        writer.event("start", at: header.startDate)
+        enforceCap(keeping: url)
+        return writer
+    }
+
+    /// Closes a recording the app left open (it was killed): adds an `end` line at the time of the last line written, and deletes
+    /// the file when it is shorter than `minimumSeconds`. Returns whether the file is still there.
+    @discardableResult
+    public func closeOrphan(named name: String, reason: String, minimumSeconds: TimeInterval = DriveLog.minimumTripSeconds) -> Bool {
+        let url = folder.appendingPathComponent(name)
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return false }
+        let rows = text.split(separator: "\n").compactMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) as? [String: Any] }
+        guard let start = rows.first?["start"] as? Double else { return false }
+        if rows.last?["name"] as? String == "end" { return true }
+        let last = rows.reversed().compactMap { $0["t"] as? Double }.first ?? start
+        let fixes = rows.filter { $0["kind"] as? String == "fix" }.count
+        let seconds = max(0, last - start)
+        var line = (try? Self.encoder.encode(Event(at: Date(timeIntervalSince1970: last), name: "end",
+                                                    data: ["reason": .string(reason), "seconds": .number(Fix.round(seconds, 1)), "fixes": .number(Double(fixes))]))) ?? Data()
+        line.append(0x0A)
+        if !text.hasSuffix("\n") { line.insert(0x0A, at: 0) }
+        if let handle = try? FileHandle(forWritingTo: url) {
+            _ = try? handle.seekToEnd(); try? handle.write(contentsOf: line); try? handle.close()
+        }
+        if seconds < minimumSeconds { try? FileManager.default.removeItem(at: url); return false }
+        return true
+    }
+
     /// Appends one line to today's app-use file. Does nothing, and creates no file, when `enabled` is false.
     public func appendUse(_ name: String, _ data: [String: Value] = [:], at: Date = Date(), enabled: Bool, timeZone: TimeZone = .current) {
         guard enabled, var line = try? Self.encoder.encode(Event(at: at, name: name, data: data)) else { return }
@@ -198,7 +250,7 @@ public struct DriveLog: Sendable {
         try? handle.write(contentsOf: line)
     }
 
-    /// Writes one trip, a line at a time.
+    /// Writes one trip or recording, a line at a time.
     public final class TripWriter {
         public let url: URL
         public let start: Date
@@ -206,7 +258,7 @@ public struct DriveLog: Sendable {
         private var handle: FileHandle?
         private var finished = false
 
-        init(url: URL, start: Date, header: Header) throws {
+        init<H: Encodable>(url: URL, start: Date, header: H) throws {
             self.url = url; self.start = start
             FileManager.default.createFile(atPath: url.path, contents: nil)
             handle = try FileHandle(forWritingTo: url)
@@ -239,7 +291,9 @@ public struct DriveLog: Sendable {
 
     public struct Summary: Equatable, Sendable {
         public var trips: Int, bytes: Int
-        public init(trips: Int, bytes: Int) { self.trips = trips; self.bytes = bytes }
+        /// Manual recordings (`rec-*`), counted apart from trips.
+        public var recordings: Int
+        public init(trips: Int, bytes: Int, recordings: Int = 0) { self.trips = trips; self.bytes = bytes; self.recordings = recordings }
     }
 
     private func files() -> [(url: URL, bytes: Int)] {
@@ -247,20 +301,24 @@ public struct DriveLog: Sendable {
         let urls = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: keys)) ?? []
         return urls.filter { $0.pathExtension == "jsonl" }.map { ($0, (try? $0.resourceValues(forKeys: Set(keys)).fileSize) ?? 0) }
     }
-    /// Every file in the folder, oldest trips first, then the daily files.
+    /// The part of a trip or recording name that sorts by time: `20231114T221320Z-drive` or `20231114T221320Z`.
+    private static func timeKey(_ name: String) -> String { String(name.drop { $0 != "-" }.dropFirst()) }
+    /// Every file in the folder, recordings and trips by name, then the daily files.
     public func allFiles() -> [URL] { files().map(\.url).sorted { $0.lastPathComponent < $1.lastPathComponent } }
     public func summary() -> Summary {
         let all = files()
-        return Summary(trips: all.filter { $0.url.lastPathComponent.hasPrefix("trip-") }.count, bytes: all.reduce(0) { $0 + $1.bytes })
+        return Summary(trips: all.filter { $0.url.lastPathComponent.hasPrefix("trip-") }.count, bytes: all.reduce(0) { $0 + $1.bytes },
+                       recordings: all.filter { $0.url.lastPathComponent.hasPrefix("rec-") }.count)
     }
 
-    /// Deletes the oldest trips until the folder fits `maxBytes`. The trip being written (`keeping`) is never deleted. Returns how many went.
+    /// Deletes the oldest trips and recordings until the folder fits `maxBytes`. The one being written (`keeping`) is never deleted. Returns how many went.
     @discardableResult
     public func enforceCap(maxBytes: Int = DriveLog.capBytes, keeping: URL? = nil) -> Int {
         let all = files()
         var total = all.reduce(0) { $0 + $1.bytes }
         var dropped = 0
-        for file in all.filter({ $0.url.lastPathComponent.hasPrefix("trip-") }).sorted(by: { $0.url.lastPathComponent < $1.url.lastPathComponent }) {
+        let droppable = all.filter { $0.url.lastPathComponent.hasPrefix("trip-") || $0.url.lastPathComponent.hasPrefix("rec-") }
+        for file in droppable.sorted(by: { Self.timeKey($0.url.lastPathComponent) < Self.timeKey($1.url.lastPathComponent) }) {
             if total <= maxBytes { break }
             if file.url.lastPathComponent == keeping?.lastPathComponent { continue }
             if (try? FileManager.default.removeItem(at: file.url)) != nil { total -= file.bytes; dropped += 1 }
