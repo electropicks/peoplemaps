@@ -28,6 +28,7 @@ step() { local name="$1"; shift; echo "==> $name"; if "$@"; then results+=("PASS
 summary() { echo; echo "verify summary ($(uname -s)):"; printf '  %s\n' "${results[@]}"; }
 
 step "importer tests" python3 Scripts/test_importer.py
+step "data tool tests" python3 Scripts/test_data.py
 
 # The shipped data must be exactly what the importer produces from the archived snapshots.
 reproduce() {
@@ -57,7 +58,7 @@ reproduce() {
 }
 [[ $fast == 0 ]] && step "data reproduces byte for byte" reproduce
 
-# Full regions live in release assets, not git, so this is opt-in; CI and the Swift tests never need them.
+# Full regions live in a private R2 bucket, not git, so this is opt-in; CI and the Swift tests never need them.
 if [[ $region == 1 ]]; then step "regions reproduce byte for byte" python3 Scripts/reproduce_regions.py
 else echo "regions not checked (pass --region after Scripts/fetch_data); the shipped fixture is checked above"; fi
 
