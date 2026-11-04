@@ -9,6 +9,10 @@ public final class DeferredRouter: RouteComputing, Sendable {
     public func compare(_ request: RouteRequest) async throws -> RouteComparison {
         try await task.value.compare(request)
     }
+    public func canSnap(_ place: Place, mode: TravelMode) async -> Bool {
+        guard let router = try? await task.value else { return true }
+        return await router.canSnap(place, mode: mode)
+    }
 }
 
 extension StreetGraph {
@@ -18,7 +22,7 @@ extension StreetGraph {
         public let nodes: Int
         public let segments: Int
         /// A graph with this header's bounds and nothing else.
-        public var boundsOnly: StreetGraph { StreetGraph(bounds: bounds, nodes: [], edges: [], restrictions: [], places: []) }
+        public var boundsOnly: StreetGraph { StreetGraph(bounds: bounds, nodes: [], edges: [], restrictions: [], places: [], coverage: .bundled(bounds: bounds)) }
     }
 
     static var bundledURL: URL? {

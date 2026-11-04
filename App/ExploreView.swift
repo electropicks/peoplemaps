@@ -139,7 +139,7 @@ struct ExploreView: View {
     /// Where the device is, as a start; nil without location.
     private var here: Place? { userLocation.map(Place.currentLocation(at:)) }
     /// The user's location when the map can show it: inside the area we cover.
-    private var userInCoverage: Coordinate? { userLocation.flatMap { graph.contains($0) ? $0 : nil } }
+    private var userInCoverage: Coordinate? { userLocation.flatMap { graph.coverage.contains($0) ? $0 : nil } }
     /// The selected place, or the destination of a preview that has no route yet.
     private var mapSelection: Place? { selectedPlace ?? (screen == .preview && request == nil ? destination : nil) }
     /// Stays set while guiding, so the comparison survives and End returns to the same routes.
@@ -192,7 +192,7 @@ struct ExploreView: View {
     private func centreOnUser() async {
         if userLocation == nil { await locate(prompting: false) }
         guard let userLocation else { notice = .noFix; return }
-        guard graph.contains(userLocation) else { notice = .outside; return }
+        guard graph.coverage.contains(userLocation) else { notice = .outside; return }
         locateCount += 1; centred = true
     }
 
@@ -318,7 +318,7 @@ struct ExploreView: View {
     }
 
     private var request: RouteRequest? {
-        guard let origin, let destination, graph.contains(origin.coordinate) else { return nil }
+        guard let origin, let destination, graph.coverage.contains(origin.coordinate) else { return nil }
         return .init(origin: origin, destination: destination, mode: mode, extraMinutes: budget, preferences: preferences[mode])
     }
     /// Landscape on a phone: the panel becomes a floating card at the leading edge.
@@ -780,7 +780,7 @@ struct ExploreView: View {
                     closeButton(label: "Close", id: "close-place") { show(.home) }
                 }
             }
-            if graph.contains(place.coordinate) {
+            if graph.coverage.contains(place.coordinate) {
                 directionsButton(place).dynamicTypeSize(...DynamicTypeSize.accessibility1)
                 estimateNotes(place)
             } else {
@@ -814,7 +814,7 @@ struct ExploreView: View {
 
     /// From where Directions would start, in the last-used mode, when both ends are inside the area we cover.
     private func estimateRequest(for place: Place) -> RouteRequest? {
-        guard graph.contains(place.coordinate), let from = start(for: place), graph.contains(from.coordinate) else { return nil }
+        guard graph.coverage.contains(place.coordinate), let from = start(for: place), graph.coverage.contains(from.coordinate) else { return nil }
         return .init(origin: from, destination: place, mode: mode, extraMinutes: budget, preferences: preferences[mode])
     }
 
@@ -1033,7 +1033,7 @@ struct ExploreView: View {
 
     /// No start (location off or unavailable), a start outside the area we cover, or no destination yet: say what to do, and show no route.
     private var needsPlace: some View {
-        let outside = origin.map { !graph.contains($0.coordinate) } ?? false
+        let outside = origin.map { !graph.coverage.contains($0.coordinate) } ?? false
         return VStack(alignment: .leading, spacing: 6) {
             Text(outside ? "Your start is outside the area we cover" : origin == nil ? "Choose a start to compare routes." : "Choose a destination to compare routes.")
                 .font(outside ? .headline : .subheadline).foregroundStyle(outside ? .primary : GuidanceOverlay.onGlass).fixedSize(horizontal: false, vertical: true)

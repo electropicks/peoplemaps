@@ -180,9 +180,12 @@ public struct StreetGraph: Sendable {
     public let edges: [GraphEdge]
     public let restrictions: [TurnRestriction]
     public let places: [Place]
+    /// Where the map applies: the polygon the data ships with, else the bounding box.
+    public let coverage: Coverage
 
-    public init(bounds: [Double], nodes: [GraphNode], edges: [GraphEdge], restrictions: [TurnRestriction], places: [Place]) {
+    public init(bounds: [Double], nodes: [GraphNode], edges: [GraphEdge], restrictions: [TurnRestriction], places: [Place], coverage: Coverage? = nil) {
         self.bounds = bounds; self.nodes = nodes; self.edges = edges; self.restrictions = restrictions; self.places = places
+        self.coverage = coverage ?? .box(bounds)
     }
 
     public static func bundled() throws -> StreetGraph {
@@ -219,7 +222,6 @@ public struct StreetGraph: Sendable {
         ranked.sort { ($0.rank, $0.name, $0.place.id) < ($1.rank, $1.name, $1.place.id) }
         return ranked.map(\.place)
     }
-    public func contains(_ c: Coordinate) -> Bool { c.lat >= bounds[0] && c.lat <= bounds[2] && c.lon >= bounds[1] && c.lon <= bounds[3] }
 }
 
 public struct RouteRequest: Hashable, Sendable {

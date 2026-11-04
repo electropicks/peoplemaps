@@ -110,7 +110,7 @@ Scripts/upload_data [region]     # owner only: puts the manifest's files into th
 Without fetched data `--region` prints `SKIPPED` lines and passes; plain `Scripts/verify.sh` does not look at regions.
 
 The bucket holds one object per file, keyed `<release>/<region>--<path with / replaced by __>`, for example
-`data-seattle-all-2026-11c/seattle-all--expected__seattle-graph.bin`. Both scripts are Python standard library
+`data-seattle-all-2026-11d/seattle-all--expected__seattle-graph.bin`. Both scripts are Python standard library
 only and sign requests with SigV4 (`Scripts/s3sig.py`, region `auto`, service `s3`). They read three variables:
 
 | Variable | Value |
@@ -161,11 +161,17 @@ is relation 1153346 (King County) plus 4,828 m (3 miles), one ring.
 - `Scripts/fetch_dem_tiles.py` takes the polygon as its last argument and fetches only the elevation tiles that touch it, and `Scripts/fetch_overture.py` takes `--bbox S,W,N,E`.
 - The importer reads `Data/seattle-city.json` (OSM relation 237385, made with `region_polygon.py` and no buffer) to decide where its
   estimated drive speeds apply; they are stored on segments outside Seattle only (`Docs/STRESS_MODEL.md`, Speed estimates).
+- In the app, `Coverage` (`Core/Coverage.swift`) answers "is this point covered": the polygon when the data ships
+  `seattle-coverage.json` (the same file format as `Data/king-county-coverage.json`), else the graph's box, which is all the
+  bundled Seattle data has. `ExploreView` and `NativeRouter` ask `graph.coverage`, not the box, so a point in the box but outside
+  the polygon is outside coverage. `RouteComputing.canSnap(_:mode:)` says whether a covered place has a road node within 400 m
+  to leave from and arrive at (false for Vashon, the Kitsap shore, a spot on the water), so the app can say "no road route"
+  before a search. The messages that use it are a later step.
 - The `king-county` entry in `regions.json` has no pinned files yet, so fetching and reproduction skip it. The data is built and hosted in a later step.
 
 ### seattle-all
 
-All of Seattle (47.49, -122.44, 47.74, -122.24), release `data-seattle-all-2026-11c`. The app bundle ships it when it is
+All of Seattle (47.49, -122.44, 47.74, -122.24), release `data-seattle-all-2026-11d`. The app bundle ships it when it is
 fetched and the fixture otherwise: a "Bundle fetched region" build phase (from `Scripts/generate_project.py`) copies
 `Data/region/seattle-all/expected/{seattle-graph.bin,seattle-map.pmtiles,seattle-search.sqlite.gz}` into the app,
 and `Bundle.dataFile` in Core prefers the app bundle's copy over the package's fixture. `swift test` and CI never see it.

@@ -81,7 +81,7 @@ final class GraphHeaderTests: XCTestCase {
         let header = try StreetGraph.bundledHeader().boundsOnly
         let full = try StreetGraph.bundled()
         for c in [Coordinate(lat: 47.65, lon: -122.35), Coordinate(lat: 47.61, lon: -122.33), Coordinate(lat: 47.9, lon: -122.35), Coordinate(lat: 47.65, lon: -122.0)] {
-            XCTAssertEqual(header.contains(c), full.contains(c))
+            XCTAssertEqual(header.coverage.contains(c), full.coverage.contains(c))
         }
     }
 
