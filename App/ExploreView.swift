@@ -30,7 +30,8 @@ private enum LocationNotice: String, Identifiable {
         case .startGuidance: "Turn on location in Settings to start guidance. You can still compare routes without it."
         case .locate: "Turn on location in Settings to see where you are and start routes from there. You can still choose a start yourself."
         case .record: "Turn on location in Settings to record. A recording keeps running in the background until you stop it."
-        case .outside: "The map covers Seattle for now, so it can\u{2019}t show where you are. You can still choose a start inside it."
+        case .outside: RegionSelection.usesCounty ? "\(RegionSelection.coverageSentence) It can\u{2019}t show where you are from here. You can still choose a start inside it."
+            : "The map covers Seattle for now, so it can\u{2019}t show where you are. You can still choose a start inside it."
         case .noFix: "Your iPhone hasn\u{2019}t given a location yet. Try again in a moment, or choose a start yourself."
         }
     }
@@ -384,7 +385,7 @@ struct ExploreView: View {
                            markerFeed: markerFeed, showsPlaces: showsPlaces, onPlaceTap: openMarker, reportsPlaces: reportsPlaces, onVisiblePlaces: { visiblePlaces = $0 })
                     .ignoresSafeArea()
                     .accessibilityElement(children: .contain)
-                    .accessibilityLabel(screen == .preview ? "Seattle offline map. Routes are also described in the panel." : "Seattle offline map")
+                    .accessibilityLabel(screen == .preview ? "\(RegionSelection.areaName) offline map. Routes are also described in the panel." : "\(RegionSelection.areaName) offline map")
                 if reportsPlaces && showsPlaces { placeElements }
                 if screen == .navigating {
                     GuidanceOverlay(navigator: navigator, landscape: landscape, cardWidth: cardWidth, attribution: AnyView(attribution), camera: $camera, muted: $voiceMuted,
@@ -453,7 +454,7 @@ struct ExploreView: View {
                 case .details:
                     if let comparison = session.comparison { RouteDetails(comparison: comparison) }
                 case .about:
-                    AboutView(graph: graph)
+                    AboutView(graph: graph, canSwitchNow: screen != .preview && screen != .navigating)
                 case .favourites:
                     FavouritesEditor(saved: saved)
                 case .preferences:
@@ -598,7 +599,7 @@ struct ExploreView: View {
             .accessibilityIdentifier("locate")
             Divider().frame(width: 44)
             Button { recenter += 1; centred = false } label: { Image(systemName: "viewfinder").frame(width: 44, height: 44) }
-                .accessibilityLabel(screen == .preview && request != nil ? "Fit routes on map" : selectedPlace != nil ? "Centre on this place" : "Fit map to Seattle")
+                .accessibilityLabel(screen == .preview && request != nil ? "Fit routes on map" : selectedPlace != nil ? "Centre on this place" : "Fit map to \(RegionSelection.areaName)")
                 .accessibilityIdentifier("recenter")
             if detailedLogOn && !recorder.isRecording {
                 Divider().frame(width: 44)
@@ -794,7 +795,7 @@ struct ExploreView: View {
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Outside the area we cover yet").font(.headline)
-                    Text("PeopleMaps can route only inside its offline Seattle area for now.").font(.footnote).foregroundStyle(GuidanceOverlay.onGlass)
+                    Text(RegionSelection.usesCounty ? RegionSelection.coverageSentence : "PeopleMaps can route only inside its offline Seattle area for now.").font(.footnote).foregroundStyle(GuidanceOverlay.onGlass)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, 4).frame(maxWidth: .infinity, alignment: .leading)
@@ -1046,7 +1047,7 @@ struct ExploreView: View {
             Text(outside ? "Your start is outside the area we cover" : origin == nil ? "Choose a start to compare routes." : "Choose a destination to compare routes.")
                 .font(outside ? .headline : .subheadline).foregroundStyle(outside ? .primary : GuidanceOverlay.onGlass).fixedSize(horizontal: false, vertical: true)
             if outside {
-                Text("PeopleMaps can route only inside its offline Seattle area for now. Choose a start inside it.")
+                Text(RegionSelection.usesCounty ? "\(RegionSelection.coverageSentence) Choose a start inside it." : "PeopleMaps can route only inside its offline Seattle area for now. Choose a start inside it.")
                     .font(.footnote).foregroundStyle(GuidanceOverlay.onGlass).fixedSize(horizontal: false, vertical: true)
                 Button("Choose start") { sheet = .origin }.font(.subheadline.weight(.semibold)).padding(.top, 2)
             }
@@ -1061,7 +1062,7 @@ struct ExploreView: View {
         case .idle, .loading:
             HStack(spacing: 12) {
                 ProgressView()
-                Text("Comparing Seattle streets…").font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass).fixedSize(horizontal: false, vertical: true)
+                Text("Comparing \(RegionSelection.areaName) streets…").font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass).fixedSize(horizontal: false, vertical: true)
                 Spacer()
                 Button("Cancel") { session.cancel() }.font(.subheadline.weight(.semibold)).accessibilityIdentifier("cancel-route")
             }.frame(minHeight: stateHeight, alignment: .top)

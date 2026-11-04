@@ -23,10 +23,13 @@ def files(folder):
     group(root/folder)
     return builds,resources
 app_sources,app_resources=files('App'); test_sources,test_resources=files('UITests')
+# The region manifest ships in the app bundle, so the Map area section knows each region's release, files, sizes and checksums (Core/RegionManifest.swift).
+regions_manifest=obj('Data/regions.json','isa = PBXFileReference; lastKnownFileType = text.json; path = "Data/regions.json"; sourceTree = "<group>";')
+app_resources.append(obj('build:Data/regions.json',f'isa = PBXBuildFile; fileRef = {regions_manifest};'))
 app_product=obj('app-product','isa = PBXFileReference; explicitFileType = wrapper.application; path = Peoplemaps.app; sourceTree = BUILT_PRODUCTS_DIR;')
 test_product=obj('test-product','isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = PeoplemapsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR;')
 obj('products',f'isa = PBXGroup; children = ({app_product},{test_product}); name = Products; sourceTree = "<group>";')
-obj('root',f'isa = PBXGroup; children = ({ref("App")},{ref("UITests")},{ref("products")}); sourceTree = "<group>";')
+obj('root',f'isa = PBXGroup; children = ({ref("App")},{ref("UITests")},{regions_manifest},{ref("products")}); sourceTree = "<group>";')
 obj('core-package','isa = XCLocalSwiftPackageReference; relativePath = .;')
 obj('map-package','isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/maplibre/maplibre-gl-native-distribution"; requirement = {kind = exactVersion; version = 6.31.0;};')
 obj('ferrostar-package','isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/stadiamaps/ferrostar"; requirement = {kind = exactVersion; version = 0.59.0;};')
@@ -49,7 +52,7 @@ for name,sources,resources in [('app',app_sources,app_resources),('test',test_so
                   'SWIFT_ACTIVE_COMPILATION_CONDITIONS':'"DEBUG $(inherited)"' if config=='Debug' else '"$(inherited)"',
                   'PRODUCT_BUNDLE_IDENTIFIER':'electrocorp.peoplemaps' if name=='app' else 'electrocorp.peoplemaps.uitests',
                   'LD_RUNPATH_SEARCH_PATHS':'"$(inherited) @executable_path/Frameworks"'}
-        if name=='app':settings.update({'INFOPLIST_FILE':'App/Info.plist','INFOPLIST_KEY_UIApplicationSceneManifest_Generation':'YES','INFOPLIST_KEY_UISupportedInterfaceOrientations':'"UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"','INFOPLIST_KEY_CFBundleDisplayName':'Peoplemaps','INFOPLIST_KEY_ITSAppUsesNonExemptEncryption':'NO','INFOPLIST_KEY_NSLocationWhenInUseUsageDescription':'"PeopleMaps uses your location to start routes and time estimates from where you are, and while guiding you, to show where you are and announce the next turn."','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME':'AccentColor','MARKETING_VERSION':'0.1.0','CURRENT_PROJECT_VERSION':'1'})
+        if name=='app':settings.update({'INFOPLIST_FILE':'App/Info.plist','CODE_SIGN_ENTITLEMENTS':'App/Peoplemaps.entitlements','INFOPLIST_KEY_UIApplicationSceneManifest_Generation':'YES','INFOPLIST_KEY_UISupportedInterfaceOrientations':'"UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"','INFOPLIST_KEY_CFBundleDisplayName':'Peoplemaps','INFOPLIST_KEY_ITSAppUsesNonExemptEncryption':'NO','INFOPLIST_KEY_NSLocationWhenInUseUsageDescription':'"PeopleMaps uses your location to start routes and time estimates from where you are, and while guiding you, to show where you are and announce the next turn."','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME':'AccentColor','MARKETING_VERSION':'0.1.0','CURRENT_PROJECT_VERSION':'1'})
         else:settings['TEST_TARGET_NAME']='Peoplemaps'
         obj(name+'-'+config,f'isa = XCBuildConfiguration; name = {config}; buildSettings = {{'+''.join(f'{k} = {v};' for k,v in settings.items())+'};')
     obj(name+'-config',f'isa = XCConfigurationList; buildConfigurations = ({ref(name+"-Debug")},{ref(name+"-Release")}); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')

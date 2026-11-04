@@ -450,6 +450,16 @@ Range, If-Range, If-None-Match, If-Match              // optional
 - **What is kept and logged.** Nothing beyond the attested key (4.5: key ID, public key, environment and hour, for
   `RETENTION_DAYS`): no download row and no log line. The request carries only the token and the file name.
 - **Tested** against an in-memory R2 stand-in (`test/helpers.ts`). Real R2 is not exercised, and nothing is deployed.
+- **App side.** `WorkerSource` and `DownloadAuthorizer` (`Core/AppAttest.swift`, `Core/RegionStore.swift`) call this API in
+  release builds; Debug builds use `DirectSource` through `--region-server`. A download needing a token takes the Keychain's
+  if it has over a minute left, else runs the exchange of 4.5: a challenge, a **new** key (the server attests a key once, so
+  none is reused), `attestKey` over SHA-256 of the decoded challenge, then the token, saved with its expiry. A 401 on a file
+  discards that token (unless a newer one already replaced it), attests once more and retries that file once; a second 401
+  fails the download. Where `DCAppAttestService` is unsupported the download fails with "This device can't prove it's a
+  genuine copy of the app, so map downloads aren't available." and sends nothing. A 429 reads "busy, try again in a
+  little while"; other attest failures, or Apple's check not answering, read "try again in a moment". The entitlement
+  `com.apple.developer.devicecheck.appattest-environment` is `production` (`App/Peoplemaps.entitlements`), which is what
+  the Worker accepts unless `ATTEST_ENV` is `development`. The real exchange has only been run in tests with a fake device.
 
 ## 5. D1 schema, retention
 
@@ -780,6 +790,22 @@ Considered, not chosen: TestFlight feedback through the App Store Connect API (n
 sender); a stateless Worker writing to R2 with a lifecycle rule (no idempotency or per-install caps); client-side
 encryption of the exact fields to a maintainer key (worth revisiting if exact locations get common); an OHTTP relay so
 Cloudflare never sees client IPs (out of proportion at this volume).
+
+## 12. Region download
+
+A second thing the app asks our server for, next to reports: the files of a larger map region (King County), from About,
+under Map area. It is one tap on **Download**, with no account and no install token (4.1). Each request is
+`GET /v1/regions/<release>/<region>--<file>` with `Authorization: Bearer <token>`, the token being the App Attest
+exchange; the Worker streams the file from the private bucket. The request carries the file name and that check, and
+nothing about the person: no position, no search, no report ID, no install ID. What the Worker and Cloudflare keep of a
+request (the connecting address and time, as for any request) is settled with 4.6 on the deployed server and is not
+claimed here.
+
+What is built: the app side only (`Core/RegionStore.swift`, `App/RegionAboutSection.swift`). `WorkerSource` is a stub that
+throws, so a release build contacts nothing; debug builds can aim a plain, unauthenticated `DirectSource` at a test
+server. The Worker, App Attest and the token exchange are separate work. `Docs/PRIVACY.md` says the same in plain words;
+change them together. The files are checked against `Data/regions.json` (size, then SHA-256) before anything is installed,
+so a damaged or swapped file is refused, not used.
 
 ## 11. Alpha: reports by share sheet, and the usage log
 

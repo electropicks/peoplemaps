@@ -148,6 +148,34 @@ Add or update a region file:
    already there), then in a clean checkout `Scripts/fetch_data <region>` and `Scripts/verify.sh --region`, and
    commit the manifest.
 
+### Downloading a region on the phone
+
+The app ships `Data/regions.json` (through `Scripts/generate_project.py`, so the project is regenerated, not hand-edited) and offers
+King County from About, under Map area. Only a region's outputs (`expected/<output>`, five for king-county) are downloaded, never
+its inputs; the size on the offer card is the sum of their `bytes` in the manifest (232.3 MB for release `data-seattle-all-2026-11d`).
+The space it takes on the phone is an estimate, "about 350 MB": the search index arrives gzipped and is inflated, and its ratio
+(3.3) is measured on the bundled Seattle index, not on the county files. Nothing on a phone has measured it yet.
+
+- `Core/RegionStore.swift` (an actor) owns `Application Support/Regions/<release>/<region>/`, excluded from backup. One
+  `URLSession` download task per file; the released app uses a background session, so a download goes on while the app is
+  suspended or gone. Wi-Fi only unless the person taps Use cellular. Pause keeps resume data. Files land in
+  `Regions/.staging/<release>/<region>/`; after all five arrive each is checked for size and SHA-256, the search index is
+  inflated to a file in chunks (`GzipFile`, never in memory) and its gzip deleted, and the staging folder is renamed into
+  place at once. A file that fails a check is deleted and nothing is installed.
+- Where files come from is a `RegionSource` (`url(for:in:release:)`, `authorization()`). `DirectSource(base:)` does a plain GET of
+  `<base>/<region>--<path with / as __>` for tests and development. `WorkerSource` is what a release build uses: `GET /v1/regions/<release>/<region>--<file>` on the Worker with
+  `Authorization: Bearer <token>`. `DownloadAuthorizer` (`Core/AppAttest.swift`) supplies the token: the one in the Keychain
+  while it has a minute left, else a new App Attest exchange. A 401 on a file discards that token and retries the file once.
+- `Core/RegionSelection.swift` decides what the app loads. `Bundle.dataFile` asks it first, so the order is the downloaded region,
+  then the app bundle, then the package fixture, and the graph, map, search index and coverage always come from the same one.
+  The choice is read once per launch. A finished download selects itself and takes effect at the next launch, or on Switch now
+  when no route is shown and the person is not navigating; the map never changes under a route or guidance. If the downloaded
+  files fail to load, Seattle is used for that launch and About says so.
+- A new app build with a different `release` keeps the old folder in use until the new one is in; the old one is deleted after
+  that, at the next launch if the running app has it open. Remove marks an open folder and deletes it at the next launch.
+- UI tests keep regions in their own folder and aim the app at a local server: `--region-server URL` and
+  `--region-manifest-json JSON` (Debug only).
+
 ### Coverage polygons
 
 A region may be a polygon rather than a box. `Scripts/region_polygon.py` (needs `shapely`; run it with `uv run --with shapely`)
