@@ -1,6 +1,6 @@
 import array, collections, gzip, json, pathlib, sqlite3, struct, tempfile, unittest
 import build_search, build_tiles
-from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,load_dem,compile_restrictions
+from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,load_dem,compile_restrictions,ring_rows,in_rows
 
 class ImportPolicyTests(unittest.TestCase):
     def test_private_road_excluded(self):
@@ -529,5 +529,13 @@ class ElevationTests(unittest.TestCase):
         at = self.sample([[1, 2, 3, 4], None, [9, 10, 11, 12], [13, 14, 15, 16]])
         self.assertEqual([at(0, 0), at(1, 1), at(2, 0), at(3, 0), at(3, 1)], [1, 4, 0, 0, 0])  # the gap reads as 0 m
         self.assertEqual([at(0, 2), at(1, 3), at(2, 2), at(3, 3)], [9, 12, 13, 16])
+
+class CoveragePolygonTests(unittest.TestCase):
+    # An L: the box 0..2 by 0..2 less its top right quarter.
+    RING=[[0,0],[2,0],[2,1],[1,1],[1,2],[0,2],[0,0]]
+    def test_points_against_a_concave_ring(self):
+        rows,step=ring_rows([self.RING])
+        for lat,lon,want in [(0.5,0.5,True),(0.5,1.5,True),(1.5,0.5,True),(1.5,1.5,False),(-0.5,0.5,False),(0.5,2.5,False),(1.5,-0.5,False)]:
+            self.assertEqual(in_rows(lat,lon,rows,step),want,(lat,lon))
 
 if __name__=='__main__':unittest.main()

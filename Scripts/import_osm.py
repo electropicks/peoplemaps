@@ -5,13 +5,15 @@ import build_search, build_tiles
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 # PEOPLEMAPS_BBOX="S,W,N,E", PEOPLEMAPS_DATA and PEOPLEMAPS_OUT redirect an import (coverage spikes) without touching the shipped data.
+# PEOPLEMAPS_COVERAGE names a polygon from Scripts/region_polygon.py: the import keeps what is inside it, and BBOX is its bounding box unless set.
 OUT = pathlib.Path(os.environ.get('PEOPLEMAPS_OUT', ROOT / 'Core/Resources'))
 DATA = pathlib.Path(os.environ.get('PEOPLEMAPS_DATA', ROOT / 'Data'))
 def shown(path):
     # A fetched region's files are named alone, so provenance doesn't depend on where the checkout is or how the import was started.
     return str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) and not path.is_relative_to(ROOT / 'Data/region') else path.name
 REPORT = DATA  # provenance.json; --out redirects it with the outputs
-BBOX = [float(x) for x in os.environ['PEOPLEMAPS_BBOX'].split(',')] if os.environ.get('PEOPLEMAPS_BBOX') else [47.615, -122.390, 47.678, -122.300]  # S,W,N,E
+COVERAGE = json.loads(pathlib.Path(os.environ['PEOPLEMAPS_COVERAGE']).read_text()) if os.environ.get('PEOPLEMAPS_COVERAGE') else None
+BBOX = [float(x) for x in os.environ['PEOPLEMAPS_BBOX'].split(',')] if os.environ.get('PEOPLEMAPS_BBOX') else COVERAGE['bbox'] if COVERAGE else [47.615, -122.390, 47.678, -122.300]  # S,W,N,E
 WATER_MARGIN = 0.1  # degrees: water is drawn this far past BBOX, so it doesn't stop in a straight line at the routing edge
 MODES = ['drive', 'bike', 'walk']
 ROAD = {'motorway','motorway_link','trunk','trunk_link','primary','primary_link',
@@ -24,8 +26,25 @@ DENY = {'no','private','customers','delivery','destination','agricultural','fore
 STRUCTURE = {'yes','viaduct','movable','cantilever','trestle'}
 NOT_A_SIGNAL = {'emergency','blinker','ramp_meter','level_crossing'}
 
+def ring_rows(rings, step=0.01):
+    """Polygon edges bucketed by latitude row, so a point test looks at the few edges level with it."""
+    rows = collections.defaultdict(list)
+    for ring in rings:
+        for (x1, y1), (x2, y2) in zip(ring, ring[1:]):
+            for r in range(int(min(y1, y2) / step), int(max(y1, y2) / step) + 1): rows[r].append((x1, y1, x2, y2))
+    return rows, step
+
+COVERAGE_ROWS = ring_rows(COVERAGE['rings']) if COVERAGE else None
+
+def in_rows(lat, lon, rows, step):
+    hit = False
+    for x1, y1, x2, y2 in rows.get(int(lat / step), ()):
+        if (y1 > lat) != (y2 > lat) and lon < x1 + (lat - y1) * (x2 - x1) / (y2 - y1): hit = not hit
+    return hit
+
 def inside(n):
-    return BBOX[0] <= n['lat'] <= BBOX[2] and BBOX[1] <= n['lon'] <= BBOX[3]
+    if not (BBOX[0] <= n['lat'] <= BBOX[2] and BBOX[1] <= n['lon'] <= BBOX[3]): return False
+    return COVERAGE_ROWS is None or in_rows(n['lat'], n['lon'], *COVERAGE_ROWS)
 
 def access(tags, mode):
     keys = {'drive': ['motorcar','motor_vehicle','vehicle','access'],

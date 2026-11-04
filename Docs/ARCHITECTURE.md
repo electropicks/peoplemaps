@@ -148,6 +148,19 @@ Add or update a region file:
    already there), then in a clean checkout `Scripts/fetch_data <region>` and `Scripts/verify.sh --region`, and
    commit the manifest.
 
+### Coverage polygons
+
+A region may be a polygon rather than a box. `Scripts/region_polygon.py` (needs `shapely`; run it with `uv run --with shapely`)
+takes one OSM boundary relation from a Geofabrik extract, grows it by a buffer and simplifies it. It writes
+`{osmRelation, bufferMeters, bbox, rings}`. The result is small, so it is committed: `Data/king-county-coverage.json`
+is relation 1153346 (King County) plus 4,828 m (3 miles), one ring.
+
+- `PEOPLEMAPS_COVERAGE=<file>` makes the importer keep only nodes inside the polygon; `PEOPLEMAPS_BBOX` defaults to its box.
+- `coverage` in a `Data/regions.json` entry names the committed polygon; `Scripts/reproduce_regions.py` passes it to the importer.
+  Keep the entry's `bbox` equal to the polygon's.
+- `Scripts/fetch_dem_tiles.py` takes the polygon as its last argument and fetches only the elevation tiles that touch it, and `Scripts/fetch_overture.py` takes `--bbox S,W,N,E`.
+- The `king-county` entry in `regions.json` has no pinned files yet, so fetching and reproduction skip it. The data is built and hosted in a later step.
+
 ### seattle-all
 
 All of Seattle (47.49, -122.44, 47.74, -122.24), release `data-seattle-all-2026-11c`. The app bundle ships it when it is

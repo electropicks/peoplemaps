@@ -56,6 +56,22 @@
         "seattle-search.sqlite.gz",
         "provenance.json"
       ]
+    },
+    "king-county": {
+      "bbox": [
+        47.04048,
+        -122.60694,
+        47.82399,
+        -121.0019
+      ],
+      "coverage": "Data/king-county-coverage.json",
+      "outputs": [
+        "seattle-graph.bin",
+        "seattle-map.pmtiles",
+        "seattle-search.sqlite.gz",
+        "provenance.json"
+      ],
+      "files": {}
     }
   }
 }

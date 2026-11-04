@@ -1,14 +1,29 @@
 #!/usr/bin/env python3
 """Coverage-spike helper: fetch USGS 3DEP elevation for a bbox as 0.05-degree tiles (one request at a time),
 stitch them, and write the gzipped uncompressed float32 tiled GeoTIFF that import_osm.py's load_dem expects.
-usage: fetch_dem_tiles.py S W N E out.tif.gz tiledir   (bounds are multiples of 0.05)"""
-import array, gzip, pathlib, struct, subprocess, sys, time
+usage: fetch_dem_tiles.py S W N E out.tif.gz tiledir [coverage.json]   (bounds are multiples of 0.05)
+With a coverage polygon (Scripts/region_polygon.py), tiles that don't touch it are left at 0 m and not requested."""
+import array, gzip, json, pathlib, struct, subprocess, sys, time
 S, W, N, E = map(float, sys.argv[1:5]); out = pathlib.Path(sys.argv[5]); tiles = pathlib.Path(sys.argv[6]); tiles.mkdir(parents=True, exist_ok=True)
 URL = 'https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage'
 UA = 'peoplemaps-coverage-spike/0.1 (https://github.com/electropicks/peoplemaps)'
 PX = 750; STEP = 0.05  # 750 px per 0.05 deg = the shipped 6.667e-5 deg (~5 m) cell
 cols = round((E - W) / STEP); rows = round((N - S) / STEP); w, h = cols * PX, rows * PX
 grid = array.array('f', bytes(4 * w * h))
+RINGS = json.loads(pathlib.Path(sys.argv[7]).read_text())['rings'] if len(sys.argv) > 7 else None
+
+def in_ring(lon, lat, ring):
+    hit = False
+    for (x1, y1), (x2, y2) in zip(ring, ring[1:]):
+        if (y1 > lat) != (y2 > lat) and lon < x1 + (lat - y1) * (x2 - x1) / (y2 - y1): hit = not hit
+    return hit
+
+def wanted(s, west):
+    """Whether this tile, grown by a fifth of its size, touches the coverage: any polygon point in it, or a sample of it in the polygon."""
+    if RINGS is None: return True
+    m = STEP / 5; S0, W0, N0, E0 = s - m, west - m, s + STEP + m, west + STEP + m
+    if any(S0 <= la <= N0 and W0 <= lo <= E0 for r in RINGS for lo, la in r): return True
+    return any(in_ring(W0 + (E0 - W0) * i / 4, S0 + (N0 - S0) * j / 4, r) for r in RINGS for i in range(5) for j in range(5))
 
 def read_tiff(b):
     off = struct.unpack('<I', b[4:8])[0]; count = struct.unpack('<H', b[off:off+2])[0]; tags = {}
@@ -32,6 +47,7 @@ def read_tiff(b):
 for r in range(rows):
     for c in range(cols):
         s = N - (r + 1) * STEP; west = W + c * STEP; f = tiles / f'{r}_{c}.tif'
+        if not wanted(s, west): continue
         if not f.exists() or f.stat().st_size < 1_000_000:
             for attempt in range(4):
                 q = f'{URL}?bbox={west:.2f},{s:.2f},{west+STEP:.2f},{s+STEP:.2f}&bboxSR=4326&imageSR=4326&size={PX},{PX}&format=tiff&pixelType=F32&interpolation=RSP_BilinearInterpolation&f=image'

@@ -81,7 +81,9 @@ def main():
     ap.add_argument('--fetched', default=datetime.date.today().isoformat(), help='fetch date recorded in the archive header')
     ap.add_argument('--parts', type=int, help='only the first N part files (for testing)')
     ap.add_argument('--out', type=pathlib.Path, default=OUT)
+    ap.add_argument('--bbox', help='S,W,N,E instead of all of Seattle')
     args = ap.parse_args()
+    if args.bbox: BOX.update(zip(('south', 'west', 'north', 'east'), map(float, args.bbox.split(','))))
 
     s3 = fs.S3FileSystem(anonymous=True, region='us-west-2')
     base = BUCKET.format(release=args.release)
