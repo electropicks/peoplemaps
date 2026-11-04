@@ -88,7 +88,7 @@ final class LocationPermission: NSObject, CLLocationManagerDelegate {
             manager.stopUpdatingHeading(); onHeading?(nil); return
         }
         manager.delegate = self
-        manager.headingFilter = 3
+        manager.headingFilter = 8
         manager.startUpdatingHeading()
     }
 
