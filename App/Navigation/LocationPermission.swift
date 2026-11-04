@@ -77,9 +77,10 @@ final class LocationPermission: NSObject, CLLocationManagerDelegate {
     /// Called with the device's heading in degrees from north, or nil when it is unknown or the compass is stopped.
     var onHeading: ((Double?) -> Void)?
 
-    /// Starts or stops compass updates. The map asks for them only while location is allowed, the map is on screen and not
-    /// guiding (guidance has its own course), and the app is in the foreground. Invalid readings (negative accuracy) give nil.
-    func compass(on: Bool) {
+    /// Starts or stops compass updates. The map asks for them only while location is allowed, the map is on screen and
+    /// the app is in the foreground. Guiding asks for `precise` (finer steps) because the compass says which way the person
+    /// faces when GPS course cannot. Invalid readings (negative accuracy) give nil.
+    func compass(on: Bool, precise: Bool = false) {
         #if DEBUG
         if Self.fake != nil {
             let arguments = ProcessInfo.processInfo.arguments
@@ -91,7 +92,8 @@ final class LocationPermission: NSObject, CLLocationManagerDelegate {
             manager.stopUpdatingHeading(); onHeading?(nil); return
         }
         manager.delegate = self
-        manager.headingFilter = 8
+        // Guiding turns the marker and the map with it, so it gets every 2 degrees; browsing needs 8.
+        manager.headingFilter = precise ? 2 : 8
         manager.startUpdatingHeading()
     }
 

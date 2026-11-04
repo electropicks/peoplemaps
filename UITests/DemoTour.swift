@@ -37,7 +37,7 @@ final class DemoTour: XCTestCase {
         app.buttons["close-details"].tap(); pause(1.5)
         app.buttons["start-navigation"].tap()
         XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 10)); pause(22)
-        app.buttons["guidance-overview"].tap(); pause(3)
+        app.buttons["guidance-camera"].tap(); pause(2); app.buttons["guidance-camera"].tap(); pause(3)
         app.buttons["end-navigation"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 10)); pause(1.5)
 

@@ -27,6 +27,9 @@ final class NavigationController {
     /// The course smoothed over recent fixes, in degrees from north, kept while the user is stopped so the map does
     /// not swing back north at every light. Nil until the first known course.
     private(set) var heading: Double?
+    /// The phone's compass (true heading) while guiding; nil when unknown. Fed by `setCompass`.
+    private(set) var compass: Double?
+    @ObservationIgnored private var blender = HeadingBlender()
     /// Moving at 1 m/s or more (or at an unknown speed with a known course): the puck shows its heading only then.
     private(set) var isMoving = false
     /// The latest fix as the device reported it (the engine's `userLocation`), not snapped onto the route. The leader is drawn from it.
@@ -119,6 +122,20 @@ final class NavigationController {
         return (heading + delta / 2 + 360).truncatingRemainder(dividingBy: 360)
     }
 
+    /// Compass heading from Core Location; stopped or slow, it is what says which way the person faces.
+    func setCompass(_ degrees: Double?) {
+        guard degrees != compass else { return }
+        compass = degrees
+        if isActive { refreshHeading() }
+    }
+
+    /// Course above walking pace, compass below it or without a course, blended over a moment (`HeadingBlender`), then smoothed.
+    private func refreshHeading() {
+        if let target = blender.update(course: course, speed: speed, compass: compass, at: Date()) {
+            heading = Self.smoothed(heading, towards: target)
+        }
+    }
+
     #if DEBUG
     static var simulating: Bool {
         #if targetEnvironment(simulator)
@@ -149,7 +166,10 @@ final class NavigationController {
             sim.lastLocation = UserLocation(coordinates: first, horizontalAccuracy: 5, courseOverGround: nil, timestamp: Date(), speed: nil)
             // One tick a second at the route's own average speed is real time; replay four times faster.
             sim.warpFactor = ProcessInfo.processInfo.arguments.contains("--fast-simulation") ? 40 : 4
-            try? sim.setSimulatedRoute(adapted.route, resampleDistance: max(1, adapted.plan.meters / max(1, adapted.plan.seconds)))
+            // `--hold-simulation`: the device stays at the first fix, a stopped fix with no course.
+            if ProcessInfo.processInfo.arguments.contains("--hold-simulation") {
+                sim.lastLocation = UserLocation(coordinates: first, horizontalAccuracy: 5, courseOverGround: nil, timestamp: Date(), speed: Speed(value: 0, accuracy: 0.1))
+            } else { try? sim.setSimulatedRoute(adapted.route, resampleDistance: max(1, adapted.plan.meters / max(1, adapted.plan.seconds))) }
             location = sim
         } else {
             location = CoreLocationProvider(activityType: Self.activity(request.mode), allowBackgroundLocationUpdates: false)
@@ -170,7 +190,7 @@ final class NavigationController {
         mode = request.mode; calmerRoute = usingCalmer; destination = request.destination
         tripMeters = adapted.plan.meters; tripSeconds = adapted.plan.seconds
         tripNotes = Self.notes(comparison, calmer: usingCalmer)
-        hasArrived = false; isRerouting = false; isActive = true; rerouteCount = 0
+        hasArrived = false; isRerouting = false; isActive = true; rerouteCount = 0; blender = HeadingBlender(); refreshHeading()
         arrivalHandled = false; paused = false; lastSpoken = ""; spokenLog = []; tripID = UUID()
         tripDraft = UsageLogger.Draft(comparison: comparison, started: usingCalmer ? .calmer : .fastest)
         loggedStep = -1; loggedSpoken = ""
@@ -261,7 +281,7 @@ final class NavigationController {
         core = nil; location = nil; observer = nil; paused = false; arrivalHandled = false
         active = nil; known = [:]
         isActive = false; hasArrived = false; isRerouting = false
-        currentStep = nil; thenStep = nil; tripNotes = []; coordinate = nil; course = nil; speed = nil; heading = nil; isMoving = false
+        currentStep = nil; thenStep = nil; tripNotes = []; coordinate = nil; course = nil; speed = nil; heading = nil; isMoving = false; blender = HeadingBlender()
         routeGeometry = []; stepIndex = 0
         distanceToManeuver = 0; remainingMeters = 0; remainingSeconds = 0
     }
@@ -314,7 +334,7 @@ final class NavigationController {
             course = location.courseOverGround.map { Double($0.degrees) }
             speed = location.speed?.value
             isMoving = course != nil && (speed.map { $0 >= Self.movingSpeed } ?? true)
-            if isMoving, let course { heading = Self.smoothed(heading, towards: course) }
+            refreshHeading()
         }
         switch state.tripState {
         case .complete:

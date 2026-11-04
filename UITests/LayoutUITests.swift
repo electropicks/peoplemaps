@@ -37,12 +37,12 @@ final class LayoutUITests: PeoplemapsUITestCase {
         done.tap()
         XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 10))
     }
-    /// At AX3 the chrome still leaves the three map buttons, End and the map's own gestures reachable.
+    /// At AX3 the chrome still leaves the map buttons, End and the map's own gestures reachable.
     @MainActor func testGuidanceAtAX3KeepsButtonsReachableAndMapPannable() {
         let app = launchHome(location: Self.atKerryPark, extra: ["--simulate-route", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL"])
         showGasWorksRoutes(app)
         startSimulatedGuidance(app)
-        for id in ["guidance-mute", "guidance-compass", "guidance-overview", "end-navigation"] {
+        for id in ["guidance-mute", "guidance-camera", "end-navigation"] {
             XCTAssertTrue(app.buttons[id].waitForExistence(timeout: 5), id)
             XCTAssertTrue(app.buttons[id].isHittable, "\(id) is not hittable at AX3")
         }
