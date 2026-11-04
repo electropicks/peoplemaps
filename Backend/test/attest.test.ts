@@ -3,7 +3,7 @@ import { APPLE_APP_ATTEST_ROOT } from "../src/apple-root";
 import { verifyAttestation, type AttestationInput } from "../src/attest";
 import { base64, fromBase64 } from "../src/bytes";
 import { decodeCBOR } from "../src/cbor";
-import { verifyDownloadToken } from "../src/download-token";
+import { issueChallenge, verifyChallenge, verifyDownloadToken } from "../src/download-token";
 import { issuedBy, parseCertificate, pemToDER } from "../src/x509";
 import { makeAttestation, makeIntermediate, makeRoot, pem, type AttestationOptions, type CA } from "./attest-fixture";
 import { TEST_APP_ID, TEST_TOKEN_SECRET, world } from "./helpers";
@@ -33,6 +33,22 @@ describe("Apple's App Attest root", () => {
     expect(cert.hash).toBe("SHA-384");
     expect(cert.notAfter.toISOString()).toBe("2045-03-15T00:00:00.000Z");
     expect(await issuedBy(cert, cert)).toBe(true);
+  });
+
+  it("has the SHA-256 fingerprint in apple-root.ts", async () => {
+    const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", pemToDER(APPLE_APP_ATTEST_ROOT)));
+    const fingerprint = [...digest].map((b) => b.toString(16).padStart(2, "0").toUpperCase()).join(":");
+    expect(fingerprint).toBe("1C:B9:82:3B:A2:8B:A6:AD:2D:33:A0:06:94:1D:E2:AE:4F:51:3E:F1:D4:E8:31:B9:F7:E0:FA:7B:62:42:C9:32");
+  });
+});
+
+describe("the synthetic chain has Apple's shape", () => {
+  it("P-384 root and intermediate signed with SHA-384, P-256 leaf signed with SHA-256 by a P-384 key", async () => {
+    const { attestation } = await makeAttestation(ca, { appId: TEST_APP_ID, challenge: new Uint8Array(68) });
+    const x5c = ((decodeCBOR(attestation) as Map<unknown, unknown>).get("attStmt") as Map<unknown, unknown>).get("x5c") as Uint8Array[];
+    const [leaf, intermediate] = x5c.map(parseCertificate);
+    const r = parseCertificate(root.cert);
+    expect([r.curve.name, r.hash, intermediate.curve.name, intermediate.hash, leaf.curve.name, leaf.hash]).toEqual(["P-384", "SHA-384", "P-384", "SHA-384", "P-256", "SHA-256"]);
   });
 });
 
@@ -76,6 +92,7 @@ describe("verifyAttestation", () => {
     ["a key ID that is not the leaf's", {}, { keyId: new Uint8Array(32).fill(7) }, /key ID/],
     ["a clock before the leaf is valid", { leafValidity: { notBefore: new Date("2027-01-01T00:00:00Z"), notAfter: new Date("2028-01-01T00:00:00Z") } }, {}, /validity/],
     ["junk", {}, { attestation: new Uint8Array([1, 2, 3]) }, /CBOR/],
+    ["a P-384 leaf", { leafCurve: "P-384" }, {}, /leaf curve/],
   ];
   for (const [what, o, over, why] of refusals) {
     it(`refuses ${what}`, async () => {
@@ -99,7 +116,7 @@ describe("verifyAttestation", () => {
 });
 
 describe("POST /v1/attest/challenge and POST /v1/attest", () => {
-  const setup = () => world({}, "2026-10-31T21:34:00Z", { rootPEM });
+  const setup = (vars = {}) => world(vars, "2026-10-31T21:34:00Z", { rootPEM });
   async function challenge(w: ReturnType<typeof setup>) {
     const res = await w.call("POST", "/v1/attest/challenge");
     expect(res.status).toBe(201);
@@ -110,15 +127,16 @@ describe("POST /v1/attest/challenge and POST /v1/attest", () => {
     const { attestation, keyId } = await makeAttestation(ca, { appId: TEST_APP_ID, challenge: c, ...o });
     return { keyId: base64(keyId), attestation: base64(attestation), challenge: base64(c) };
   }
+  const tables = (w: ReturnType<typeof setup>) => (w.sql.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map((r) => r.name);
 
-  it("issues a 32-byte challenge for 5 minutes and stores only its hash", async () => {
+  it("issues a signed challenge for 5 minutes and writes nothing", async () => {
     const w = setup();
     const c = await challenge(w);
-    expect(c.bytes).toHaveLength(32);
+    expect(c.bytes).toHaveLength(68);
     expect(c.expiresAt).toBe("2026-10-31T21:39:00Z");
-    const [row] = w.rows("attest_challenges");
-    expect(row.expires_at).toBe("2026-10-31T21:39:00Z");
-    expect(JSON.stringify(row)).not.toContain(c.challenge);
+    expect(await verifyChallenge(TEST_TOKEN_SECRET, c.bytes, w.clock.now())).toBe(true);
+    expect(tables(w)).not.toContain("attest_challenges");
+    expect(w.rows("attest_keys")).toHaveLength(0);
   });
 
   it("verifies, stores the key at counter 0 and returns a 24-hour download token bound to the key", async () => {
@@ -131,24 +149,37 @@ describe("POST /v1/attest/challenge and POST /v1/attest", () => {
     expect(expiresAt).toBe("2026-11-01T21:34:00Z");
     expect(await verifyDownloadToken(TEST_TOKEN_SECRET, token, w.clock.now())).toEqual(fromBase64(body.keyId));
     expect(w.rows("attest_keys")).toEqual([expect.objectContaining({ key_id: body.keyId, counter: 0, environment: "production", created_at: "2026-10-31T21:00:00Z" })]);
-    expect(w.rows("attest_challenges")).toHaveLength(0);
   });
 
-  it("uses a challenge once, even when the first attempt fails", async () => {
+  it("attests a key once: a replay is refused and the stored row is left as it was", async () => {
     const w = setup();
-    const c = await challenge(w);
-    expect((await w.call("POST", "/v1/attest", { body: await attestBody(c.bytes, { counter: 1 }) })).status).toBe(401);
-    const res = await w.call("POST", "/v1/attest", { body: await attestBody(c.bytes) });
+    const body = await attestBody((await challenge(w)).bytes);
+    expect((await w.call("POST", "/v1/attest", { body })).status).toBe(200);
+    w.sql.db.exec("UPDATE attest_keys SET counter = 5");
+    const res = await w.call("POST", "/v1/attest", { body });
     expect(res.status).toBe(401);
     expect(await res.json()).toMatchObject({ error: "unauthorized" });
+    expect(w.rows("attest_keys")).toEqual([expect.objectContaining({ key_id: body.keyId, counter: 5 })]);
   });
 
-  it("refuses an expired or unknown challenge", async () => {
+  it("refuses an expired, made-up, tampered or foreign challenge", async () => {
     const w = setup();
     const c = await challenge(w);
+    const tampered = c.bytes.slice();
+    tampered[0] ^= 1;
+    const foreign = (await issueChallenge("another-secret-that-is-long-enough-000000", w.clock.now())).challenge;
+    for (const bytes of [crypto.getRandomValues(new Uint8Array(68)), crypto.getRandomValues(new Uint8Array(32)), tampered, foreign]) {
+      expect((await w.call("POST", "/v1/attest", { body: await attestBody(bytes) })).status).toBe(401);
+    }
     w.clock.t = new Date("2026-10-31T21:39:00Z");
     expect((await w.call("POST", "/v1/attest", { body: await attestBody(c.bytes) })).status).toBe(401);
-    expect((await w.call("POST", "/v1/attest", { body: await attestBody(crypto.getRandomValues(new Uint8Array(32))) })).status).toBe(401);
+    expect(w.rows("attest_keys")).toHaveLength(0);
+  });
+
+  it("refuses a failed attestation and stores nothing", async () => {
+    const w = setup();
+    const res = await w.call("POST", "/v1/attest", { body: await attestBody((await challenge(w)).bytes, { counter: 1 }) });
+    expect(res.status).toBe(401);
     expect(w.rows("attest_keys")).toHaveLength(0);
   });
 
@@ -172,25 +203,36 @@ describe("POST /v1/attest/challenge and POST /v1/attest", () => {
     expect((await w.call("POST", "/v1/attest", { raw: "{" })).status).toBe(429);
   });
 
+  it("holds the hourly attest ceiling, counted from stored keys", async () => {
+    const w = setup({ attestsPerHour: 1 });
+    expect((await w.call("POST", "/v1/attest", { body: await attestBody((await challenge(w)).bytes) })).status).toBe(200);
+    const res = await w.call("POST", "/v1/attest", { body: await attestBody((await challenge(w)).bytes) });
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe(String(26 * 60));
+    expect(w.rows("attest_keys")).toHaveLength(1);
+    w.clock.t = new Date("2026-10-31T22:00:01Z");
+    expect((await w.call("POST", "/v1/attest", { body: await attestBody((await challenge(w)).bytes) })).status).toBe(200);
+  });
+
   it("answers 500 when APP_ID or the token secret is not set, and stores nothing", async () => {
     for (const over of [{ appId: "" }, { tokenSecret: "" }]) {
       const w = world({}, undefined, { rootPEM, ...over });
       const res = await w.call("POST", "/v1/attest/challenge");
       expect(res.status).toBe(500);
       expect(await res.json()).toMatchObject({ error: "internal" });
-      expect(w.rows("attest_challenges")).toHaveLength(0);
+      const attested = await w.call("POST", "/v1/attest", { body: await attestBody(crypto.getRandomValues(new Uint8Array(68))) });
+      expect(attested.status).toBe(500);
+      expect(w.rows("attest_keys")).toHaveLength(0);
     }
   });
 
-  it("retention drops expired challenges and keys older than RETENTION_DAYS", async () => {
+  it("retention drops keys older than RETENTION_DAYS", async () => {
     const { retention } = await import("../src/retention");
     const w = setup();
-    await challenge(w);
-    const c = await challenge(w);
-    await w.call("POST", "/v1/attest", { body: await attestBody(c.bytes) });
-    w.clock.t = new Date("2026-10-31T21:40:00Z");
-    expect(await retention(w.deps)).toMatchObject({ challenges: 1, keys: 0 });
+    await w.call("POST", "/v1/attest", { body: await attestBody((await challenge(w)).bytes) });
+    w.clock.t = new Date("2027-01-28T00:00:00Z");
+    expect(await retention(w.deps)).toMatchObject({ keys: 0 });
     w.clock.t = new Date("2027-01-30T00:00:00Z");
-    expect(await retention(w.deps)).toMatchObject({ challenges: 0, keys: 1 });
+    expect(await retention(w.deps)).toMatchObject({ keys: 1 });
   });
 });

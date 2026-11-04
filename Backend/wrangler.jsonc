@@ -8,7 +8,7 @@
   "workers_dev": true,
   "preview_urls": false,
   "observability": { "enabled": false, "logs": { "invocation_logs": false } },
-  "vars": { "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "5", "INSTALLS_PER_HOUR": "60", "ATTEST_ENV": "production" },
+  "vars": { "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "5", "INSTALLS_PER_HOUR": "60", "ATTESTS_PER_HOUR": "60", "ATTEST_ENV": "production" },
   "d1_databases": [{ "binding": "DB", "database_name": "peoplemaps-reports", "database_id": "22e78664-ede8-40dd-80bf-7e2b0e7ec41f", "migrations_dir": "migrations" }],
   "r2_buckets": [{ "binding": "DATA", "bucket_name": "peoplemaps-data" }],
   "ratelimits": [

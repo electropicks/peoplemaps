@@ -78,7 +78,7 @@ export function world(vars: Partial<Vars> = {}, now = "2026-10-31T21:34:00Z", at
     store: new Store(sql),
     limits,
     clock,
-    vars: { retentionDays: 90, reportsPerDay: 5, installsPerHour: 60, ...vars },
+    vars: { retentionDays: 90, reportsPerDay: 5, installsPerHour: 60, attestsPerHour: 60, ...vars },
     data,
     attest: { appId: TEST_APP_ID, allowDevelopment: false, rootPEM: APPLE_APP_ATTEST_ROOT, tokenSecret: TEST_TOKEN_SECRET, ...attest },
   };

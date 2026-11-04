@@ -9,6 +9,7 @@ export interface Vars {
   retentionDays: number;
   reportsPerDay: number;
   installsPerHour: number;
+  attestsPerHour: number;
 }
 
 /** What the download route needs from an R2 bucket (4.7); the R2 binding and the test stub both fit. */
@@ -44,5 +45,6 @@ export function parseVars(env: Record<string, unknown>): Vars {
     retentionDays: n("RETENTION_DAYS", 90),
     reportsPerDay: n("REPORTS_PER_DAY", 5),
     installsPerHour: n("INSTALLS_PER_HOUR", 60),
+    attestsPerHour: n("ATTESTS_PER_HOUR", 60),
   };
 }

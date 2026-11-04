@@ -1,9 +1,9 @@
-import { base64, concat, equal, fromBase64, hex, sha256 } from "./bytes";
+import { base64, concat, equal, fromBase64, sha256 } from "./bytes";
 import { decodeCBOR, type CBOR } from "./cbor";
 import type { AttestConfig, Deps } from "./deps";
-import { issueDownloadToken } from "./download-token";
+import { issueChallenge, issueDownloadToken, verifyChallenge } from "./download-token";
 import { HttpError, invalid, json } from "./errors";
-import { limitByIP } from "./ratelimit";
+import { attestCeiling, limitByIP } from "./ratelimit";
 import { hour, iso } from "./time";
 import { readJSON } from "./validate";
 import { children, issuedBy, parseCertificate, pemToDER, readDER, validAt, type Certificate } from "./x509";
@@ -17,7 +17,6 @@ import { children, issuedBy, parseCertificate, pemToDER, readDER, validAt, type 
 // SHA-256(authenticatorData || SHA-256(challenge)) with `attest_keys.public_key`, the rpIdHash, and a counter above the
 // stored one, then store the new counter and issue a token. Until then the app attests a new key when its token expires.
 
-const CHALLENGE_TTL = 5 * 60_000;
 const NONCE_OID = "1.2.840.113635.100.8.2";
 const AAGUID_PRODUCTION = new TextEncoder().encode("appattest\0\0\0\0\0\0\0");
 const AAGUID_DEVELOPMENT = new TextEncoder().encode("appattestdevelop");
@@ -56,10 +55,11 @@ export async function verifyAttestation(a: AttestationInput): Promise<AttestedKe
   let leaf: Certificate, intermediate: Certificate, root: Certificate;
   try {
     [leaf, intermediate] = (x5c as Uint8Array[]).map(parseCertificate);
-    root = parseCertificate(pemToDER(a.rootPEM));
+    root = parsedRoot(a.rootPEM);
   } catch {
     return refuse("certificate");
   }
+  if (leaf.curve.name !== "P-256") refuse("leaf curve");
   for (const c of [leaf, intermediate, root]) if (!validAt(c, a.now)) refuse("certificate validity");
   if (!(await issuedBy(intermediate, root)) || !(await issuedBy(leaf, intermediate))) refuse("chain");
 
@@ -94,6 +94,17 @@ export async function verifyAttestation(a: AttestationInput): Promise<AttestedKe
   return { publicKey: leaf.spki.slice(), environment, receipt: receipt instanceof Uint8Array ? receipt : new Uint8Array() };
 }
 
+const roots = new Map<string, Certificate>();
+/** The pinned root, parsed once per isolate. */
+function parsedRoot(pem: string): Certificate {
+  let root = roots.get(pem);
+  if (!root) {
+    root = parseCertificate(pemToDER(pem));
+    roots.set(pem, root);
+  }
+  return root;
+}
+
 function configured(deps: Deps): AttestConfig {
   const c = deps.attest;
   if (!/^[A-Z0-9]{10}\.[A-Za-z0-9.-]+$/.test(c.appId) || c.tokenSecret.length < 32 || !c.rootPEM) {
@@ -102,14 +113,12 @@ function configured(deps: Deps): AttestConfig {
   return c;
 }
 
-/** `POST /v1/attest/challenge`: 32 random bytes, usable once within 5 minutes. Only their hash is stored. */
+/** `POST /v1/attest/challenge`: a signed challenge valid for 5 minutes. Stateless: nothing is stored. */
 export async function attestChallenge(request: Request, deps: Deps): Promise<Response> {
   await limitByIP(request, deps.limits.attest);
-  configured(deps);
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  const expiresAt = new Date(deps.clock.now().getTime() + CHALLENGE_TTL);
-  await deps.store.insertChallenge(hex(await sha256(bytes)), iso(expiresAt));
-  return json(201, { challenge: base64(bytes), expiresAt: iso(expiresAt) });
+  const cfg = configured(deps);
+  const { challenge, expiresAt } = await issueChallenge(cfg.tokenSecret, deps.clock.now());
+  return json(201, { challenge: base64(challenge), expiresAt: iso(expiresAt) });
 }
 
 const unverified = () => new HttpError("unauthorized", "This copy of the app could not be verified.");
@@ -126,19 +135,21 @@ export async function attest(request: Request, deps: Deps): Promise<Response> {
     if (!b || (length !== undefined && b.length !== length) || b.length === 0) throw invalid(k);
     return b;
   };
-  const keyId = bytes("keyId", 32), attestation = bytes("attestation"), challenge = bytes("challenge", 32);
+  const keyId = bytes("keyId", 32), attestation = bytes("attestation"), challenge = bytes("challenge");
   const now = deps.clock.now();
-  // Consumed before verifying, so a failed attempt spends the challenge too.
-  if (!(await deps.store.consumeChallenge(hex(await sha256(challenge)), iso(now)))) {
-    throw new HttpError("unauthorized", "The challenge is unknown, used or expired. Ask for a new one.");
+  if (!(await verifyChallenge(cfg.tokenSecret, challenge, now))) {
+    throw new HttpError("unauthorized", "The challenge is unknown or expired. Ask for a new one.");
   }
+  await attestCeiling(deps);
   let key: AttestedKey;
   try {
     key = await verifyAttestation({ attestation, challenge, keyId, appId: cfg.appId, allowDevelopment: cfg.allowDevelopment, rootPEM: cfg.rootPEM, now });
   } catch {
     throw unverified();
   }
-  await deps.store.upsertAttestKey({ key_id: base64(keyId), public_key: base64(key.publicKey), counter: 0, environment: key.environment, created_at: hour(now) });
+  // A key is attested once: the key ID is the primary key, so a replay or a second attestation of it stores nothing.
+  const row = { key_id: base64(keyId), public_key: base64(key.publicKey), counter: 0, environment: key.environment, created_at: hour(now) };
+  if (!(await deps.store.insertAttestKey(row))) throw new HttpError("unauthorized", "This key was already attested.");
   const { token, expiresAt } = await issueDownloadToken(cfg.tokenSecret, keyId, now);
   return json(200, { token, expiresAt: iso(expiresAt) });
 }

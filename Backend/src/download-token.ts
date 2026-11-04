@@ -25,6 +25,30 @@ export async function issueDownloadToken(secret: string, keyId: Uint8Array, now:
   return { token: "pmd_" + base64url(concat(payload, mac)), expiresAt: new Date(exp * 1000) };
 }
 
+// The App Attest challenge of 4.5, stateless too so issuing one writes nothing: 32 random bytes, the expiry, and an HMAC
+// under the same secret with its own context, so a challenge can never pass as a token or the other way round.
+const CHALLENGE_CONTEXT = new TextEncoder().encode("peoplemaps attest challenge v1");
+export const CHALLENGE_TTL = 5 * 60;
+const CHALLENGE_BODY = 32 + 4, CHALLENGE_LENGTH = CHALLENGE_BODY + MAC;
+
+/** A challenge valid for 5 minutes from `now`: 68 bytes the app hashes into `clientDataHash`. */
+export async function issueChallenge(secret: string, now: Date): Promise<{ challenge: Uint8Array; expiresAt: Date }> {
+  const exp = Math.floor(now.getTime() / 1000) + CHALLENGE_TTL;
+  const body = new Uint8Array(CHALLENGE_BODY);
+  crypto.getRandomValues(body.subarray(0, 32));
+  new DataView(body.buffer).setUint32(32, exp);
+  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", await hmacKey(secret), concat(CHALLENGE_CONTEXT, body)));
+  return { challenge: concat(body, mac), expiresAt: new Date(exp * 1000) };
+}
+
+/** Whether `challenge` was issued under `secret` and has not expired. Single use is up to the caller. */
+export async function verifyChallenge(secret: string, challenge: Uint8Array, now: Date): Promise<boolean> {
+  if (challenge.length !== CHALLENGE_LENGTH) return false;
+  const body = challenge.subarray(0, CHALLENGE_BODY), mac = challenge.subarray(CHALLENGE_BODY);
+  if (!(await crypto.subtle.verify("HMAC", await hmacKey(secret), mac, concat(CHALLENGE_CONTEXT, body)))) return false;
+  return now.getTime() < new DataView(body.buffer, body.byteOffset).getUint32(32) * 1000;
+}
+
 /** The key ID a token was issued for, or null when it is malformed, tampered with, signed with another secret or expired. */
 export async function verifyDownloadToken(secret: string, token: string, now: Date): Promise<Uint8Array | null> {
   if (!DOWNLOAD_TOKEN.test(token)) return null;

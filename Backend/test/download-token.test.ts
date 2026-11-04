@@ -1,10 +1,31 @@
 import { describe, expect, it } from "vitest";
 import { base64url, fromBase64 } from "../src/bytes";
-import { DOWNLOAD_TOKEN, issueDownloadToken, verifyDownloadToken } from "../src/download-token";
+import { DOWNLOAD_TOKEN, issueChallenge, issueDownloadToken, verifyChallenge, verifyDownloadToken } from "../src/download-token";
 import { TEST_TOKEN_SECRET } from "./helpers";
 
 const NOW = new Date("2026-10-31T21:34:00Z");
 const keyId = Uint8Array.from({ length: 32 }, (_, i) => i);
+
+describe("attest challenges", () => {
+  it("verify under the same secret for 5 minutes only", async () => {
+    const { challenge, expiresAt } = await issueChallenge(TEST_TOKEN_SECRET, NOW);
+    expect(challenge).toHaveLength(68);
+    expect(expiresAt.toISOString()).toBe("2026-10-31T21:39:00.000Z");
+    expect(await verifyChallenge(TEST_TOKEN_SECRET, challenge, new Date("2026-10-31T21:38:59Z"))).toBe(true);
+    expect(await verifyChallenge(TEST_TOKEN_SECRET, challenge, expiresAt)).toBe(false);
+    expect(await verifyChallenge("another-secret-that-is-long-enough-000000", challenge, NOW)).toBe(false);
+    for (const at of [0, 32, 35, 36, 67]) {
+      const t = challenge.slice();
+      t[at] ^= 1;
+      expect(await verifyChallenge(TEST_TOKEN_SECRET, t, NOW), `byte ${at}`).toBe(false);
+    }
+  });
+
+  it("are different each time", async () => {
+    const a = (await issueChallenge(TEST_TOKEN_SECRET, NOW)).challenge, b = (await issueChallenge(TEST_TOKEN_SECRET, NOW)).challenge;
+    expect(a).not.toEqual(b);
+  });
+});
 
 describe("download tokens", () => {
   it("round-trips the key ID and expires 24 hours after issue", async () => {

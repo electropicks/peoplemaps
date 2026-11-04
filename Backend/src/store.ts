@@ -19,7 +19,7 @@ export interface ReportRow {
 /** What the sender can see of a report (4.3). Never the body or its exact part. */
 export type ReportSummary = Pick<ReportRow, "id" | "received_at" | "expires_at" | "category">;
 export interface AttestKeyRow { key_id: string; public_key: string; counter: number; environment: "production" | "development"; created_at: string }
-export interface RetentionCounts { reports: number; installs: number; challenges: number; keys: number }
+export interface RetentionCounts { reports: number; installs: number; keys: number }
 
 const count = async (sql: Sql, q: string, ...p: unknown[]) => (await sql.all<{ n: number }>(q, ...p))[0]?.n ?? 0;
 
@@ -74,20 +74,15 @@ export class Store {
   }
   // App Attest (4.5)
 
-  async insertChallenge(id: string, expiresAt: string): Promise<void> {
-    await this.sql.run("INSERT INTO attest_challenges (id, expires_at) VALUES (?, ?)", id, expiresAt);
-  }
-  /** Deletes the challenge if it is unexpired and says whether it did, in one statement, so each is used at most once.
-   * An expired one stays until retention and can never be consumed. */
-  async consumeChallenge(id: string, now: string): Promise<boolean> {
-    return (await this.sql.run("DELETE FROM attest_challenges WHERE id = ? AND expires_at > ?", id, now)).changes === 1;
-  }
-  async upsertAttestKey(row: AttestKeyRow): Promise<void> {
-    await this.sql.run(
-      "INSERT INTO attest_keys (key_id, public_key, counter, environment, created_at) VALUES (?, ?, ?, ?, ?) " +
-      "ON CONFLICT (key_id) DO UPDATE SET public_key = excluded.public_key, counter = excluded.counter, environment = excluded.environment, created_at = excluded.created_at",
+  /** False when the key ID is already stored, which is left as it was: each key is attested once. */
+  async insertAttestKey(row: AttestKeyRow): Promise<boolean> {
+    return (await this.sql.run(
+      "INSERT INTO attest_keys (key_id, public_key, counter, environment, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT (key_id) DO NOTHING",
       row.key_id, row.public_key, row.counter, row.environment, row.created_at,
-    );
+    )).changes === 1;
+  }
+  countAttestKeysSince(since: string): Promise<number> {
+    return count(this.sql, "SELECT COUNT(*) AS n FROM attest_keys WHERE created_at >= ?", since);
   }
 
   // retention (5.3)
@@ -97,8 +92,7 @@ export class Store {
     const installs = (await this.sql.run(
       "DELETE FROM installs WHERE last_seen_at < ? AND NOT EXISTS (SELECT 1 FROM reports WHERE reports.install_id = installs.id)", idleBefore,
     )).changes;
-    const challenges = (await this.sql.run("DELETE FROM attest_challenges WHERE expires_at <= ?", now)).changes;
     const keys = (await this.sql.run("DELETE FROM attest_keys WHERE created_at < ?", keysBefore)).changes;
-    return { reports, installs, challenges, keys };
+    return { reports, installs, keys };
   }
 }

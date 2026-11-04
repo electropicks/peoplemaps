@@ -37,6 +37,12 @@ export function limitDownloads(deps: Deps, keyId: string): Promise<void> {
   return check(deps.limits.downloads, keyId);
 }
 
+/** `ATTESTS_PER_HOUR`, counted from `attest_keys.created_at` in the current hour: a backstop on D1 writes from attesting. */
+export async function attestCeiling(deps: Deps): Promise<void> {
+  const now = deps.clock.now();
+  if ((await deps.store.countAttestKeysSince(hour(now))) >= deps.vars.attestsPerHour) throw limited(secondsToNextHour(now));
+}
+
 /** `INSTALLS_PER_HOUR`, counted from `installs.created_at` in the current hour. */
 export async function mintCeiling(deps: Deps): Promise<void> {
   const now = deps.clock.now();

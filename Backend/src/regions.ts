@@ -8,7 +8,7 @@ import { limitDownloads } from "./ratelimit";
 // holder of a download token. Only `expected` outputs are served, never importer inputs or `source/`.
 
 export const RELEASE = /^data-[a-z-]+-\d{4}-\d{2}[a-z]?$/;
-export const OBJECT = /^[a-z-]+--expected__[A-Za-z0-9.-]+$/;
+export const OBJECT = /^[a-z]+(-[a-z]+)*--expected__[A-Za-z0-9.-]+$/;
 
 /** The key ID behind `Authorization: Bearer pmd_…`; 401 when the token is missing, bad or expired. */
 async function authorize(request: Request, deps: Deps): Promise<string> {

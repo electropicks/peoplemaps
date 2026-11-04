@@ -1,6 +1,6 @@
 import { base64, concat, sha256 } from "../src/bytes";
 
-// A synthetic App Attest chain made with WebCrypto: a self-signed P-256 root standing in for Apple's, an intermediate, and
+// A synthetic App Attest chain made with WebCrypto: a self-signed P-384 root standing in for Apple's, an intermediate, and
 // a leaf with the nonce extension, wrapped in a CBOR attestation object. Nothing here touches Apple's real chain.
 
 const u8 = (...b: number[]) => new Uint8Array(b);
@@ -33,38 +33,42 @@ function utc(d: Date): Uint8Array {
   return tlv(0x17, new TextEncoder().encode(s));
 }
 const name = (cn: string) => seq(set(seq(oid("2.5.4.3"), tlv(0x0c, new TextEncoder().encode(cn)))));
-const ECDSA_SHA256 = seq(oid("1.2.840.10045.4.3.2"));
+const SIG_ALG = { "SHA-256": seq(oid("1.2.840.10045.4.3.2")), "SHA-384": seq(oid("1.2.840.10045.4.3.3")) };
+type Hash = keyof typeof SIG_ALG;
 const CA_EXT = seq(oid("2.5.29.19"), bool(true), octets(seq(bool(true))));
 export const NONCE_OID = "1.2.840.113635.100.8.2";
 
-const P256 = { name: "ECDSA", namedCurve: "P-256" } as const;
-const newKey = () => crypto.subtle.generateKey(P256, true, ["sign", "verify"]) as Promise<CryptoKeyPair>;
+// Apple's shape: a P-384 root signs a P-384 intermediate with SHA-384, which signs the P-256 leaf with SHA-256.
+type Curve = "P-256" | "P-384";
+const newKey = (namedCurve: Curve) => crypto.subtle.generateKey({ name: "ECDSA", namedCurve }, true, ["sign", "verify"]) as Promise<CryptoKeyPair>;
 
 export interface Validity { notBefore: Date; notAfter: Date }
 const LONG: Validity = { notBefore: new Date("2020-01-01T00:00:00Z"), notAfter: new Date("2045-01-01T00:00:00Z") };
 
-async function certificate(o: { subject: string; issuer: string; key: CryptoKey; signer: CryptoKey; extensions: Uint8Array[]; validity?: Validity; serial: number }): Promise<Uint8Array> {
+async function certificate(o: { subject: string; issuer: string; key: CryptoKey; signer: CryptoKey; hash: Hash; extensions: Uint8Array[]; validity?: Validity; serial: number }): Promise<Uint8Array> {
   const v = o.validity ?? LONG;
+  const alg = SIG_ALG[o.hash], size = (o.signer.algorithm as { namedCurve?: string }).namedCurve === "P-384" ? 48 : 32;
   const spki = new Uint8Array((await crypto.subtle.exportKey("spki", o.key)) as ArrayBuffer);
   const tbs = seq(
-    explicit(0, int(u8(2))), int(u8(o.serial)), ECDSA_SHA256, name(o.issuer), seq(utc(v.notBefore), utc(v.notAfter)), name(o.subject), spki,
+    explicit(0, int(u8(2))), int(u8(o.serial)), alg, name(o.issuer), seq(utc(v.notBefore), utc(v.notAfter)), name(o.subject), spki,
     explicit(3, seq(...o.extensions)),
   );
-  const raw = new Uint8Array(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, o.signer, tbs));
-  return seq(tbs, ECDSA_SHA256, bits(seq(int(raw.subarray(0, 32)), int(raw.subarray(32)))));
+  const raw = new Uint8Array(await crypto.subtle.sign({ name: "ECDSA", hash: o.hash }, o.signer, tbs));
+  if (raw.length !== 2 * size) throw new Error("unexpected signature size");
+  return seq(tbs, alg, bits(seq(int(raw.subarray(0, size)), int(raw.subarray(size)))));
 }
 
 export interface CA { keys: CryptoKeyPair; cert: Uint8Array; name: string }
 
 export async function makeRoot(cn = "Test App Attestation Root CA"): Promise<CA> {
-  const keys = await newKey();
-  return { keys, name: cn, cert: await certificate({ subject: cn, issuer: cn, key: keys.publicKey, signer: keys.privateKey, extensions: [CA_EXT], serial: 1 }) };
+  const keys = await newKey("P-384");
+  return { keys, name: cn, cert: await certificate({ subject: cn, issuer: cn, key: keys.publicKey, signer: keys.privateKey, hash: "SHA-384", extensions: [CA_EXT], serial: 1 }) };
 }
 
 /** An intermediate issued by `root`; `signer` signs it with another key while still naming `root`, for a broken chain. */
 export async function makeIntermediate(root: CA, signer = root.keys.privateKey): Promise<CA> {
-  const keys = await newKey(), cn = "Test App Attestation CA 1";
-  return { keys, name: cn, cert: await certificate({ subject: cn, issuer: root.name, key: keys.publicKey, signer, extensions: [CA_EXT], serial: 2 }) };
+  const keys = await newKey("P-384"), cn = "Test App Attestation CA 1";
+  return { keys, name: cn, cert: await certificate({ subject: cn, issuer: root.name, key: keys.publicKey, signer, hash: "SHA-384", extensions: [CA_EXT], serial: 2 }) };
 }
 
 export function pem(der: Uint8Array): string {
@@ -99,11 +103,13 @@ export interface AttestationOptions {
   noNonce?: boolean;
   /** Flip a byte of the leaf's signature. */
   badLeafSignature?: boolean;
+  /** Default P-256, as Apple's leaf. */
+  leafCurve?: Curve;
 }
 
 /** An attestation object over a fresh leaf key, issued by `ca`, and the key ID the app would send. */
 export async function makeAttestation(ca: CA, o: AttestationOptions): Promise<{ attestation: Uint8Array; keyId: Uint8Array }> {
-  const leafKeys = await newKey();
+  const leafKeys = await newKey(o.leafCurve ?? "P-256");
   const point = new Uint8Array((await crypto.subtle.exportKey("raw", leafKeys.publicKey)) as ArrayBuffer);
   const keyId = await sha256(point);
   const aaguid = new TextEncoder().encode((o.aaguid ?? "appattest").padEnd(16, "\0"));
@@ -114,7 +120,7 @@ export async function makeAttestation(ca: CA, o: AttestationOptions): Promise<{ 
   const authData = concat(await sha256(new TextEncoder().encode(o.appId)), u8(0x40), counter, aaguid, u8(credId.length >> 8, credId.length & 0xff), credId, cose);
   const nonce = await sha256(concat(authData, await sha256(o.nonceChallenge ?? o.challenge)));
   const extensions = o.noNonce ? [] : [seq(oid(NONCE_OID), octets(seq(explicit(1, octets(nonce)))))];
-  const leaf = await certificate({ subject: "test leaf", issuer: ca.name, key: leafKeys.publicKey, signer: ca.keys.privateKey, extensions, validity: o.leafValidity, serial: 3 });
+  const leaf = await certificate({ subject: "test leaf", issuer: ca.name, key: leafKeys.publicKey, signer: ca.keys.privateKey, hash: "SHA-256", extensions, validity: o.leafValidity, serial: 3 });
   if (o.badLeafSignature) leaf[leaf.length - 5] ^= 0x01;
   const attestation = cbor({ fmt: o.fmt ?? "apple-appattest", attStmt: { x5c: [leaf, ca.cert], receipt: u8(1, 2, 3) }, authData });
   return { attestation, keyId };
