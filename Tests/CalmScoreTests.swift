@@ -14,8 +14,8 @@ final class CalmScoreTests: XCTestCase {
     }
 
     func testLevelsCoverEveryScoreAtTheirCutoffs() {
-        XCTAssertEqual(CalmLevel.allCases.map(\.title), ["Breezy", "Chill", "Meh", "Spicy", "Yikes"])
-        for (score, level) in [(100, CalmLevel.breezy), (80, .breezy), (79, .chill), (60, .chill), (59, .meh), (40, .meh), (39, .spicy), (20, .spicy), (19, .yikes), (0, .yikes)] {
+        XCTAssertEqual(CalmLevel.allCases.map(\.title), ["Breezy", "Chill", "Mixed", "Spicy", "Yikes"])
+        for (score, level) in [(100, CalmLevel.breezy), (80, .breezy), (79, .chill), (60, .chill), (59, .mixed), (40, .mixed), (39, .spicy), (20, .spicy), (19, .yikes), (0, .yikes)] {
             XCTAssertEqual(CalmLevel(score: score), level, "\(score)")
         }
     }
@@ -101,9 +101,9 @@ final class CalmScoreTests: XCTestCase {
 
     func testWithNoCalmerRouteTheSummarySaysWhatTheRouterFound() {
         let only = route(id: 0, seconds: 600, [(.turn, 30, 500)])
-        XCTAssertEqual(comparison(only, nil, noCalmer: .onlyRoute).calmSummary, "Meh, already the calmest we found")
-        XCTAssertEqual(comparison(only, nil, noCalmer: .tooLittleGain).calmSummary, "Meh, best balance we found")
-        XCTAssertEqual(comparison(only, nil, noCalmer: .notChecked).calmSummary, "Meh, fastest route only")
+        XCTAssertEqual(comparison(only, nil, noCalmer: .onlyRoute).calmSummary, "Mixed, already the calmest we found")
+        XCTAssertEqual(comparison(only, nil, noCalmer: .tooLittleGain).calmSummary, "Mixed, best balance we found")
+        XCTAssertEqual(comparison(only, nil, noCalmer: .notChecked).calmSummary, "Mixed, fastest route only")
         XCTAssertNil(comparison(only, nil).calmerCalm)
     }
 

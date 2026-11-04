@@ -63,12 +63,14 @@ private struct FloatingSurface<S: Shape>: ViewModifier {
     let shape: S
     let interactive: Bool
     let veil: GlassVeil
+    let legible: Bool
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var contrast
 
     func body(content: Content) -> some View {
         let opaque = reduceTransparency || GlassFlags.reduceTransparency
-        let glass: Glass = opaque ? .identity : interactive ? GlassFlags.variant.interactive() : GlassFlags.variant
+        let base: Glass = legible ? .regular : GlassFlags.variant
+        let glass: Glass = opaque ? .identity : interactive ? base.interactive() : base
         content
             .background {
                 if opaque { shape.fill(Color.panel) }
@@ -82,19 +84,24 @@ private struct FloatingSurface<S: Shape>: ViewModifier {
 /// Gives the UIKit sheet this view is in our glass at its partial stops, where the system floats it. SwiftUI has no modifier for a
 /// detent's effect, and the system's own glass draws under any `presentationBackground`. Large stays the system's: it's read at length.
 /// With Reduce Transparency the system's own effect stays too, since it frosts itself.
+/// `detents` and `screen` are inputs only so this runs again when SwiftUI swaps the sheet's detents, which come back with the system glass.
 struct SheetGlass: UIViewRepresentable {
+    let detents: Set<PresentationDetent>
+    let screen: String
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     func makeUIView(context: Context) -> UIView { let view = UIView(); view.isUserInteractionEnabled = false; return view }
     func updateUIView(_ view: UIView, context: Context) {
         let plain = reduceTransparency || GlassFlags.reduceTransparency
         // After this update, since SwiftUI may have just replaced the detents.
-        DispatchQueue.main.async {
-            guard let controller = sequence(first: view as UIResponder, next: \.next).lazy.compactMap({ $0 as? UIViewController }).first,
+        DispatchQueue.main.async { [weak view] in
+            guard let view,
+                  let controller = sequence(first: view as UIResponder, next: \.next).lazy.compactMap({ $0 as? UIViewController }).first,
                   let sheet = controller.sheetPresentationController else { return }
-            let glass = plain ? nil : UIGlassEffect(style: GlassFlags.sheetStyle)
-            for detent in sheet.detents where detent.identifier != .large { detent.backgroundEffect = glass }
-            sheet.animateChanges { sheet.detents = sheet.detents }
+            for detent in sheet.detents where detent.identifier != .large {
+                if plain { if detent.backgroundEffect is UIGlassEffect { detent.backgroundEffect = nil } }
+                else if !(detent.backgroundEffect is UIGlassEffect) { detent.backgroundEffect = UIGlassEffect(style: GlassFlags.sheetStyle) }
+            }
         }
     }
 }
@@ -102,12 +109,14 @@ struct SheetGlass: UIViewRepresentable {
 extension View {
     /// Draws the view on Liquid Glass in `shape`, responding to touch when `interactive`. With Reduce Transparency it switches glass
     /// off and fills `.panel`, which in dark mode is nearly the colour of the map's land, so the outline Increase Contrast adds comes
-    /// on there too. Increase Contrast also takes the dense veil.
-    func floatingSurface<S: Shape>(in shape: S, interactive: Bool = false, veil: GlassVeil = .none) -> some View {
-        modifier(FloatingSurface(shape: shape, interactive: interactive, veil: veil))
+    /// on there too. Increase Contrast also takes the dense veil. `legible` swaps `.clear` for `.regular` on surfaces read at a glance
+    /// over the route line (guidance banner, trip bar), so the line doesn't show through the text (Docs/DESIGN.md, principle 4).
+    func floatingSurface<S: Shape>(in shape: S, interactive: Bool = false, veil: GlassVeil = .none, legible: Bool = false) -> some View {
+        modifier(FloatingSurface(shape: shape, interactive: interactive, veil: veil, legible: legible))
     }
 
-    /// The style of a primary action (Start, Directions, Done): glass, brighter than the panel it sits on, with dark text.
+    /// The style of a primary action (Start, Directions, Done): a solid `primaryActionFill` button with dark text. Every one sits on a
+    /// glass panel, where a glass button would be glass on glass (Docs/DESIGN.md, principle 3).
     func primaryAction(shape: ButtonBorderShape = .capsule) -> some View { modifier(PrimaryAction(shape: shape)) }
 }
 
@@ -118,7 +127,7 @@ private struct PrimaryAction: ViewModifier {
     /// White on a solid white panel wouldn't show.
     private var fill: Color { solid || reduceTransparency || GlassFlags.reduceTransparency ? .primaryActionSolidFill : .primaryActionFill }
     func body(content: Content) -> some View {
-        content.buttonStyle(.glassProminent).buttonBorderShape(shape).tint(fill).controlSize(.large)
+        content.buttonStyle(.borderedProminent).buttonBorderShape(shape).tint(fill).controlSize(.large)
     }
 }
 

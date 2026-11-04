@@ -155,21 +155,17 @@ class DataToolTests(unittest.TestCase):
         self.assertEqual(list((self.dest / 'r').glob('*.part')), [])
 
     def test_unknown_region(self):
-        msg, _ = self.run_tool(fetch_data, 'nope', manifest=self.manifest, dest=self.dest)
+        with env(PEOPLEMAPS_DATA_URL=self.mirror()):
+            msg, _ = self.run_tool(fetch_data, 'nope', manifest=self.manifest, dest=self.dest)
         self.assertIn('no region "nope"', msg)
 
-    def urls_requested(self, **e):
-        seen = []
-        def fake(method, url, creds=None, **kw): seen.append((url, creds)); raise s3sig.DataError('stop')
-        with env(**e), mock.patch.object(s3sig, 'request', fake):
-            self.run_tool(fetch_data, 'r', manifest=self.manifest, dest=self.dest)
-        return seen
-
-    def test_default_is_the_public_release_with_no_credentials(self):
-        want = 'https://github.com/electropicks/peoplemaps/releases/download/data-test-1/r--b.json.gz'
-        self.assertEqual(self.urls_requested(), [(want, None)])
-        # A fork's CI run: the secrets exist but are empty.
-        self.assertEqual(self.urls_requested(PEOPLEMAPS_DATA_URL='', PEOPLEMAPS_DATA_KEY_ID='', PEOPLEMAPS_DATA_SECRET=''), [(want, None)])
+    def test_unset_or_empty_url_exits_with_the_variables_needed(self):
+        # Unset, and a fork's CI run where the secrets exist but are empty.
+        for e in ({}, dict(PEOPLEMAPS_DATA_URL='', PEOPLEMAPS_DATA_KEY_ID='', PEOPLEMAPS_DATA_SECRET='')):
+            with env(**e), mock.patch.object(s3sig, 'request', side_effect=AssertionError('no request expected')):
+                msg, _ = self.run_tool(fetch_data, 'r', manifest=self.manifest, dest=self.dest)
+            self.assertIn('PEOPLEMAPS_DATA_URL, PEOPLEMAPS_DATA_KEY_ID and PEOPLEMAPS_DATA_SECRET are needed', msg)
+            self.assertIn('Docs/ARCHITECTURE.md', msg)
 
     def test_credentials_without_a_url_are_refused(self):
         msg, _ = self.run_tool_env(fetch_data, PEOPLEMAPS_DATA_KEY_ID='k', PEOPLEMAPS_DATA_SECRET='s')

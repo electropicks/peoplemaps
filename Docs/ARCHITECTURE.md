@@ -121,8 +121,8 @@ only and sign requests with SigV4 (`Scripts/s3sig.py`, region `auto`, service `s
 
 With all three set, `fetch_data` signs its requests. With only `PEOPLEMAPS_DATA_URL` it does a plain GET of
 `<url>/<region>--<path>` (no release folder), which is what tests and mirrors use; a local `file://` folder works.
-With none set (or empty, as a fork's CI run sees the secrets) it downloads from the manifest's GitHub release. That
-last default is temporary: the public releases are deleted once the bucket is populated. The scripts never print
+With no URL (or an empty one, as a fork's CI run sees the secrets) it exits saying the three variables are needed;
+there is no public fallback. The scripts never print
 the secret or a signed header, and their errors name the object, not the endpoint.
 
 ### Secrets
