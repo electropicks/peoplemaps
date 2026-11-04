@@ -1,3 +1,4 @@
+import { base64url } from "./bytes";
 import type { Deps } from "./deps";
 import { HttpError, invalid, json } from "./errors";
 import type { InstallRow } from "./store";
@@ -10,12 +11,6 @@ import { readJSON } from "./validate";
 export async function sha256Hex(s: string): Promise<string> {
   const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
   return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-function base64url(bytes: Uint8Array): string {
-  let s = "";
-  for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 export const appVersion = (app: { version: string; build: string }) => `${app.version} (${app.build})`;
