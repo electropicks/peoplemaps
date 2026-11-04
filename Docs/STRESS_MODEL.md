@@ -66,6 +66,37 @@ what slow a Seattle driver down, and they are counted where they happen.
 | living_street, service | 10 | alleys, parking aisles |
 | anything else drivable | 15 | |
 
+**Speed estimates outside Seattle.** The table above is Seattle's. Outside the city the posted limits differ, and many roads carry no `maxspeed`.
+The importer therefore stores an estimated speed on a segment that has no usable `maxspeed` and lies outside the Seattle
+city boundary (OSM relation 237385, committed as `Data/seattle-city.json`): residential 25, unclassified 25 (15 when the
+surface is rough), tertiary 30, secondary 35, primary 35, trunk 55. Motorways, links and service roads get none and keep the
+table above. Inside Seattle nothing is stored, so the table above applies and Seattle's times are unchanged: the golden test
+passes untouched. The estimate is a graph field (`GraphEdge.estimatedMph`, the last byte of the segment record, 0 for none),
+never `speedLimitMph`, so nothing shows it as a posted limit. It feeds the drive time, the busy class (an untagged primary or
+secondary outside Seattle is busy at 35, as a posted 35 is) and the local-street LTS. A starting set of values, from the
+most common posted value per class in each area, like the other weights.
+
+Measured on a Mac, drive only, 200 seeded random trips per graph (`peoplemaps-bench --sample`), the 60 mph router with the
+freeway switch, before and after the estimates. "Seattle" is the all-Seattle box, which includes Shoreline and other places
+outside the city boundary, so a few routes change there too.
+
+| Drive | All-Seattle box | King County |
+|---|---:|---:|
+| Fastest route changes (distance or stress) | 11 of 196 | 48 of 191 |
+| Distance changes | 10 | 36 |
+| Time change | p50 0.0%, p5 -1.1% | p50 -0.8%, p5 -6.0% |
+| Fastest route's level (Breezy / Chill / Meh / Spicy / Yikes) | 10/62/81/38/5 to 10/62/81/39/4 | 59/80/39/13/0 to 53/80/46/12/0 |
+| Trips whose level changes | 4 | 21 |
+| Calmer route offered | 185 to 185 | 171 to 173 |
+| Router p95 (ms) | 255 to 250 | 1,290 to 1,271 |
+
+The bundled Seattle fixture is entirely inside the city, so no segment gets an estimate there and the golden test passes
+unchanged. In the fixture 30 segments carry `toll` (the SR 99 tunnel and its ramps, the Portage Bay Viaduct ramps).
+
+**Tolls.** `toll=yes` is stored on the segment (flag 16). It changes no time or stress. A drive route that uses a toll road
+says so in "Good to know" ("uses a toll road (Evergreen Point Floating Bridge). Tolls aren't in the estimate."), because the
+price isn't known offline.
+
 | Junction | Delay (s) | Reasoning |
 | --- | --- | --- |
 | Signal | 15 | Expected value: red about half the time, for an average wait near 30 s |

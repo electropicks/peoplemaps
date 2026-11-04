@@ -1,6 +1,6 @@
 import array, collections, gzip, json, pathlib, sqlite3, struct, tempfile, unittest
 import build_search, build_tiles
-from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,load_dem,compile_restrictions,ring_rows,in_rows,freeway_ref
+from import_osm import access,directions,facility,clip_ring,sidewalk,crossing_control,control,parked_both_sides,approach_grade,climb,node_blocks,load_dem,compile_restrictions,ring_rows,in_rows,freeway_ref,estimated_mph,road_class
 
 class ImportPolicyTests(unittest.TestCase):
     def test_private_road_excluded(self):
@@ -539,6 +539,25 @@ class FreewayRefTests(unittest.TestCase):
                            ({'highway': 'motorway'}, None), ({'highway': 'motorway_link', 'ref': 'I 5'}, None),
                            ({'highway': 'primary', 'ref': 'SR 99'}, None)]:
             self.assertEqual(freeway_ref(tags), want, tags)
+
+class SpeedEstimateTests(unittest.TestCase):
+    SEATTLE = (47.6205, -122.3493)  # the Space Needle
+    BELLEVUE = (47.6101, -122.2015)
+    def test_estimates_apply_to_untagged_roads_outside_seattle_only(self):
+        for tags, where, want in [
+            ({'highway': 'residential'}, self.BELLEVUE, 25), ({'highway': 'unclassified'}, self.BELLEVUE, 25),
+            ({'highway': 'unclassified', 'surface': 'gravel'}, self.BELLEVUE, 15), ({'highway': 'tertiary'}, self.BELLEVUE, 30),
+            ({'highway': 'secondary'}, self.BELLEVUE, 35), ({'highway': 'primary'}, self.BELLEVUE, 35), ({'highway': 'trunk'}, self.BELLEVUE, 55),
+            ({'highway': 'primary', 'maxspeed': '45 mph'}, self.BELLEVUE, None), ({'highway': 'primary', 'maxspeed': '50'}, self.BELLEVUE, None),
+            ({'highway': 'primary', 'maxspeed': 'signals'}, self.BELLEVUE, 35),
+            ({'highway': 'motorway'}, self.BELLEVUE, None), ({'highway': 'primary_link'}, self.BELLEVUE, None), ({'highway': 'service'}, self.BELLEVUE, None),
+            ({'highway': 'residential'}, self.SEATTLE, None), ({'highway': 'primary'}, self.SEATTLE, None), ({'highway': 'trunk'}, self.SEATTLE, None)]:
+            self.assertEqual(estimated_mph(tags, *where), want, (tags, where))
+    def test_an_untagged_arterial_outside_seattle_is_busy_by_its_estimate(self):
+        self.assertEqual(road_class({'highway': 'primary'}), 'arterial')
+        self.assertEqual(road_class({'highway': 'primary'}, 35), 'busy')
+        self.assertEqual(road_class({'highway': 'tertiary'}, 30), 'arterial')
+        self.assertEqual(road_class({'highway': 'primary', 'maxspeed': '25 mph'}, None), 'arterial')
 
 class CoveragePolygonTests(unittest.TestCase):
     # An L: the box 0..2 by 0..2 less its top right quarter.

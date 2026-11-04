@@ -159,6 +159,8 @@ is relation 1153346 (King County) plus 4,828 m (3 miles), one ring.
 - `coverage` in a `Data/regions.json` entry names the committed polygon; `Scripts/reproduce_regions.py` passes it to the importer.
   Keep the entry's `bbox` equal to the polygon's.
 - `Scripts/fetch_dem_tiles.py` takes the polygon as its last argument and fetches only the elevation tiles that touch it, and `Scripts/fetch_overture.py` takes `--bbox S,W,N,E`.
+- The importer reads `Data/seattle-city.json` (OSM relation 237385, made with `region_polygon.py` and no buffer) to decide where its
+  estimated drive speeds apply; they are stored on segments outside Seattle only (`Docs/STRESS_MODEL.md`, Speed estimates).
 - The `king-county` entry in `regions.json` has no pinned files yet, so fetching and reproduction skip it. The data is built and hosted in a later step.
 
 ### seattle-all

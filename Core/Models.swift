@@ -114,6 +114,11 @@ public struct GraphEdge: Sendable {
     public var movableBridge = false
     /// Which freeway a motorway or trunk edge is, from OSM `ref` ("I 5", "SR 520"); nil elsewhere and in graphs imported without it.
     public var ref: String?
+    /// Estimated free-flow mph for a road with no usable `maxspeed` outside Seattle, from the importer's per-class table; nil inside
+    /// Seattle, where the class defaults apply, and for roads with a limit. An estimate only: never shown as a posted limit.
+    public var estimatedMph: Double?
+    /// OSM `toll=yes`. Tolls are not priced, only mentioned.
+    public var toll = false
     /// OSM footway kind (sidewalk, crossing, ...) for footway edges.
     public var footway: String?
     public var steps: Int?
@@ -152,7 +157,7 @@ public struct GraphEdge: Sendable {
     /// Road class for stress purposes; nil for paths and service roads.
     public var roadClass: RoadClass? {
         if isHighway { return .busy }
-        if isArterial { return (lanes ?? 2) >= 4 || (speedLimitMph ?? 0) >= 35 ? .busy : .arterial }
+        if isArterial { return (lanes ?? 2) >= 4 || (speedLimitMph ?? estimatedMph ?? 0) >= 35 ? .busy : .arterial }
         return ["residential", "unclassified"].contains(highway) ? .local : nil
     }
 }
