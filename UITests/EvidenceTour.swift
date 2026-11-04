@@ -150,6 +150,25 @@ final class EvidenceTour: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
     }
 
+    /// The camera button's three states while guiding. Run once per appearance.
+    @MainActor func testGuidanceCameraStates() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")
+        let app = launch(["--location-granted", "47.6295,-122.3599", "--simulate-route", "--fake-heading", "70"])
+        open(app, "Gas Works", id: "relation/1047789")
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
+        app.buttons["start-navigation"].tap()
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 4)
+        shot("camera-travel")
+        app.buttons["guidance-camera"].tap()
+        Thread.sleep(forTimeInterval: 1.5)
+        shot("camera-compass")
+        app.buttons["guidance-camera"].tap()
+        Thread.sleep(forTimeInterval: 1.5)
+        shot("camera-route")
+    }
+
     /// Place markers and each screen around them. Run once per appearance.
     @MainActor func testMapPlaces() throws {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")

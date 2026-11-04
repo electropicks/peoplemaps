@@ -28,10 +28,6 @@ struct GuidanceOverlay: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @Namespace private var glassNS
-    /// Heading the map was turned to when a free look began; the map stays there, so the compass does too.
-    @State private var frozenHeading: Double?
-    /// The compass angle on screen, unwrapped so it always turns the short way round.
-    @State private var shownAngle = 0.0
     /// Cards slide in from their edges once the overlay is on screen.
     @State private var shown = false
 
@@ -48,24 +44,10 @@ struct GuidanceOverlay: View {
         .animation(Motion.content(reduceMotion), value: navigator.calmNote)
         .animation(Motion.panel(reduceMotion), value: navigator.hasArrived)
         .animation(Motion.content(reduceMotion), value: camera)
-        .animation(Motion.content(reduceMotion), value: shownAngle)
-        .onChange(of: camera.mode) { _, mode in frozenHeading = mode == .free ? navigator.heading : nil }
-        .onChange(of: compassTarget) { _, target in
-            var delta = (target - shownAngle).truncatingRemainder(dividingBy: 360)
-            if delta > 180 { delta -= 360 } else if delta < -180 { delta += 360 }
-            shownAngle += delta
-        }
-        .onAppear { shownAngle = compassTarget; withAnimation(Motion.panel(reduceMotion)) { shown = true } }
+        .onAppear { withAnimation(Motion.panel(reduceMotion)) { shown = true } }
         .sensoryFeedback(.success, trigger: navigator.hasArrived) { _, arrived in arrived }
         // Banner and trip bar stacked are taller than the screen past this size, so the chrome stops growing here.
         .dynamicTypeSize(...DynamicTypeSize.accessibility2)
-    }
-
-    /// Where the compass should point: against the map's heading while the map is turned, upright otherwise. A free look
-    /// that began heading-up keeps the heading the map was left at.
-    private var compassTarget: Double {
-        guard camera.isTurned else { return 0 }
-        return -((camera.mode == .free ? frozenHeading : nil) ?? navigator.heading ?? 0)
     }
 
     private func report() {
@@ -109,7 +91,7 @@ struct GuidanceOverlay: View {
             }
             Spacer(minLength: 0)
             if camera.mode == .free, !navigator.hasArrived { recenterPill.padding(.bottom, 8).transition(.opacity.combined(with: .scale(scale: 0.9))) }
-            HStack { attribution; Spacer() }.padding(.horizontal, 12)
+            HStack(alignment: .bottom) { attribution; Spacer(); cameraButton }.padding(.horizontal, 12)
             ZStack(alignment: .bottom) {
                 if navigator.hasArrived { arrivalSheet.transition(Motion.edge(.bottom, reduce: reduceMotion)) }
                 else if shown { tripBar.transition(Motion.edge(.bottom, reduce: reduceMotion)) }
@@ -154,6 +136,7 @@ struct GuidanceOverlay: View {
                         mapButtons
                         if camera.mode == .free, !navigator.hasArrived { recenterPill.padding(.top, 8).transition(.opacity.combined(with: .scale(scale: 0.9))) }
                         Spacer()
+                        cameraButton
                         attribution
                     }.padding(.vertical, 12).padding(.trailing, 16)
                 }
@@ -324,15 +307,11 @@ struct GuidanceOverlay: View {
 
     // MARK: Map buttons
 
-    /// Mute, compass and overview in one glass capsule (vertical in landscape), 44 pt plain buttons with dividers.
+    /// Mute and the report flag in one glass capsule (vertical in landscape), 44 pt plain buttons with a divider.
     private var mapButtons: some View {
         let layout = landscape ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
         return layout {
             muteButton
-            mapDivider
-            compassButton
-            mapDivider
-            overviewButton
             mapDivider
             markButton
         }
@@ -355,27 +334,58 @@ struct GuidanceOverlay: View {
         .accessibilityLabel(muted ? "Unmute voice" : "Mute voice").accessibilityIdentifier("guidance-mute")
     }
 
-    /// A compass that points north on screen, so it reads upright when the map is north-up and turns with it heading-up.
-    /// In the overview the tap only leaves the overview; it doesn't also flip the orientation.
-    private var compassButton: some View {
-        mapButton({
-            withAnimation(Motion.content(reduceMotion)) {
-                if camera.mode == .overview { DriveLogger.event("overview", ["on": .bool(false)]); camera.toggleOverview() } else { camera.toggleHeading() }
-            }
-        }) {
-            Image(systemName: "location.north.line.fill").rotationEffect(.degrees(shownAngle))
+    /// The one camera button, alone on its own glass in a bottom corner: clear of the turn banner and the recording pill at the
+    /// top, and beside the attribution above the trip bar. It shows the state the map is in and a tap moves to the next:
+    /// travel direction, compass direction, whole route. After a free look a tap returns to the state before the pan.
+    private var cameraButton: some View {
+        let state = camera.shown
+        let symbol = Self.cameraSymbol(state)
+        return Button {
+            DriveLogger.event("camera", ["mode": .string(Self.cameraName(camera.shown))])
+            withAnimation(Motion.content(reduceMotion)) { camera.cycle() }
+        } label: {
+            Image(systemName: symbol).font(.system(size: 21)).foregroundStyle(.primary)
+                .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
+                .frame(width: 52, height: 52).contentShape(Circle())
         }
-        .accessibilityLabel(camera.courseUp ? "Heading up" : "North up")
-        .accessibilityHint(camera.mode == .overview ? "Leaves the route overview" : camera.courseUp ? "Turns the map north up" : "Turns the map to face your heading")
-        .accessibilityIdentifier("guidance-compass")
+        .buttonStyle(.plain)
+        .floatingSurface(in: Circle(), interactive: true)
+        .accessibilityLabel(Self.cameraLabel(state))
+        .accessibilityHint(camera.mode == .free ? "Follows your position again" : Self.cameraHint(state))
+        .accessibilityValue(Self.exposesArrow ? symbol : "")
+        .accessibilityIdentifier("guidance-camera")
     }
 
-    private var overviewButton: some View {
-        let overview = camera.mode == .overview
-        return mapButton({ DriveLogger.event("overview", ["on": .bool(!overview)]); withAnimation(Motion.content(reduceMotion)) { camera.toggleOverview() } }) {
-            Image(systemName: overview ? "location.fill" : "arrow.up.left.and.arrow.down.right").contentTransition(.symbolEffect(.replace))
+    static func cameraSymbol(_ mode: GuidanceCamera.Mode) -> String {
+        switch mode {
+        case .followCourseUp, .free: "location.north.line.fill"
+        case .followCompass: "safari"
+        case .overview: "map"
         }
-        .accessibilityLabel(overview ? "Follow my position" : "Route overview").accessibilityIdentifier("guidance-overview")
+    }
+
+    static func cameraLabel(_ mode: GuidanceCamera.Mode) -> String {
+        switch mode {
+        case .followCourseUp, .free: "Travel direction up"
+        case .followCompass: "Compass direction up"
+        case .overview: "Whole route"
+        }
+    }
+
+    private static func cameraHint(_ mode: GuidanceCamera.Mode) -> String {
+        switch mode {
+        case .followCourseUp, .free: "Turns the map to follow your phone's compass"
+        case .followCompass: "Shows the whole route"
+        case .overview: "Follows your direction of travel"
+        }
+    }
+
+    private static func cameraName(_ mode: GuidanceCamera.Mode) -> String {
+        switch mode {
+        case .followCourseUp, .free: "travel"
+        case .followCompass: "compass"
+        case .overview: "route"
+        }
     }
 
     /// One tap saves the moment on this phone, with a light confirmation and no sheet; the user describes it after the trip.

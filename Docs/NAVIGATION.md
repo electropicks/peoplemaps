@@ -59,21 +59,31 @@ sense of direction.
   new fix along the shorter arc (changes under 2° are ignored). It fades out below
   1 m/s or when the course is unknown; an unknown speed with a known course (the
   simulated provider) counts as moving.
-- **Four camera modes** (`GuidanceCamera` in `App/SeattleMap.swift`):
-  `followCourseUp` is the default: the map turns to the heading and the puck sits
-  a third of the way up the free map area. `followNorthUp` keeps north at the top
-  with the puck centred. `overview` fits the whole route, north-up. `free` begins
-  when the user pans, pinches or double-taps: following stops and the map stays
-  where they left it. The map keeps the last heading while the user is stopped,
-  so it never swings back north at a light.
-- **Controls.** Mute, compass and overview are one glass capsule. The compass
-  button (`guidance-compass`) flips heading-up and north-up and resumes
-  following; its glyph points north on screen and stays put during a free look.
-  In the overview a tap only leaves the overview and does not flip the
-  orientation. The overview button toggles the fitted view. In `free`, a "Re-centre" pill
-  (`guidance-recenter`) returns to the follow mode the user left, as Apple Maps
-  does. Camera turns animate with `Motion.camera`: a cut under Reduce Motion and
-  `--ui-testing`.
+- **Three states on one button** (`GuidanceCamera` in `App/SeattleMap.swift`, button
+  `guidance-camera`). A tap cycles travel direction, compass direction, whole route, and
+  round again. *Travel direction* (`followCourseUp`, the default) turns the map to the
+  heading below and puts the puck a third of the way up the free map area, zoomed.
+  *Compass direction* (`followCompass`) turns the map to the phone's compass
+  (`CLHeading.trueHeading`) at the same zoom and puck position, whatever the speed.
+  *Whole route* (`overview`) fits the route, north-up. `free` begins when the user pans,
+  pinches or double-taps: following stops and the map stays where they left it. A tap on
+  the button, or on the "Re-centre" pill (`guidance-recenter`), returns to the state before
+  the pan. North-up following no longer exists. Camera turns animate with `Motion.camera`:
+  a cut under Reduce Motion and `--ui-testing`.
+- **Heading when stopped.** GPS course says nothing at a light or before the first metre,
+  so the marker's point and the travel-direction camera use `HeadingBlender`
+  (`Core/HeadingBlender.swift`): the compass when speed is under 2 m/s (hand-over back
+  below 1.5, so it does not flicker at the edge) or the course is invalid, the course
+  above that. A change of source fades over 0.6 s along the shorter arc, then the usual
+  halfway smoothing applies (changes under 2 degrees are ignored). With no compass the
+  course is used only while moving; with neither the last heading stays. Walking and
+  cycling are mostly under 2 m/s, so they follow the compass. `NavigationController`
+  holds the blended `heading`; `ExploreView` feeds it from the existing heading flow
+  (`LocationPermission.compass`), which asks for a 2 degree filter while guiding and 8
+  otherwise. Not verified on a real device yet: the compass calibration prompt and
+  magnetic interference in a car.
+- **Controls.** Mute and the report flag are one glass capsule; the camera button stands
+  alone in a bottom corner (`DESIGN.md` 4.7).
 
 ## Stages
 

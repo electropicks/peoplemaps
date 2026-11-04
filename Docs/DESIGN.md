@@ -515,11 +515,21 @@ The turn banner, rerouting card, trip bar and landscape card are `.regular` unde
   (no glass on glass, no opaque strip).
 - **Calm chip** below the banner, leading: glass capsule, `octagon` /
   `light.beacon.max` + text in `.primary` semibold (see 2, "On glass").
-- **Mute, compass + overview**: one horizontal glass capsule (vertical in
-  landscape), trailing, same row as the chip: three 44×44 plain buttons with
-  dividers. The compass turns with the map's heading and, in the overview,
-  only leaves the overview. Banner, chip and buttons share one
-  `GlassEffectContainer` so they merge/morph as the chip appears.
+- **Mute + report flag**: one horizontal glass capsule (vertical in
+  landscape), trailing, same row as the chip: two 44×44 plain buttons with a
+  divider. Banner, chip and buttons share one `GlassEffectContainer` so they
+  merge/morph as the chip appears.
+- **Camera button** (`guidance-camera`): one 52 pt round button on its own
+  glass, alone in the bottom trailing corner, beside the attribution and above
+  the trip bar (above the attribution in landscape). That keeps it clear of the
+  banner, the recording pill (top leading) and the mute/flag cluster. One tap
+  moves to the next state, and the glyph shows the current one with the symbol
+  replace transition (a cross-fade under Reduce Motion):
+  `location.north.line.fill` follows the direction of travel, `safari` follows
+  the phone's compass, `map` shows the whole route. Labels are "Travel direction
+  up", "Compass direction up" and "Whole route"; the hint names what a tap does.
+  After a free look the button keeps the glyph of the state before the pan and
+  a tap returns to it.
 - **Rerouting**: same banner, "Finding a calmer way…" with a spinner; copy
   unchanged.
 - **Trip bar**: glass, bottom. Arrival · min left · distance left, End as a
@@ -533,7 +543,7 @@ trailing, as today but glass. Width `min(cardWidth, 40% of width)`, where
 
 At accessibility sizes the chrome's type stops growing at `accessibility2`: the
 banner and the stacked trip bar together fill the screen at larger sizes, which
-would push mute, compass and overview off it. Secondary text on glass uses
+would push mute, the flag and the camera button off it. Secondary text on glass uses
 `.primary` at 75% opacity, because `.secondary` measures under 4.5:1 there.
 
 ```
@@ -561,8 +571,10 @@ would push mute, compass and overview off it. Secondary text on glass uses
   ring; no direction is invented. With a known course, outside guidance or in it,
   the same ring's outline grows into one rounded point in the direction of travel,
   like a teardrop, tip 24 pt from the centre; the white centre and outer ring
-  stay. There is no beam, rim tip or separate arrow. The view turns with the map,
-  and guidance keeps the last course while stopped. The two forms crossfade over
+  stay. There is no beam, rim tip or separate arrow. The view turns with the map.
+  While guiding the point is the GPS course above about 2 m/s and the phone's
+  compass below it, at a stop, or when the course is invalid, with a short blend
+  between the two so it never jumps; with neither it keeps the last heading. The two forms crossfade over
   0.2 s; with Reduce Motion there is no animation.
 - **Route line.** The line splits at progress: behind is `passedRoute`, 3.5 pt
   (casing 6), ahead keeps the route colour at 5.5 pt. Colour is not the only

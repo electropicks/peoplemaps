@@ -2,23 +2,30 @@ import SwiftUI
 import MapLibre
 import PeoplemapsCore
 
-/// How the map's camera behaves while guiding (`Docs/NAVIGATION.md`, "Camera modes").
+/// How the map's camera behaves while guiding (`Docs/NAVIGATION.md`, "Camera and heading while guiding"). One button cycles
+/// the three states a person picks (`cycle`); `free` is what a pan leaves behind.
 struct GuidanceCamera: Equatable {
-    enum Mode { case followCourseUp, followNorthUp, overview, free }
+    enum Mode { case followCourseUp, followCompass, overview, free }
     private(set) var mode = Mode.followCourseUp
-    /// The follow mode Re-centre and leaving the overview return to.
-    private(set) var follow = Mode.followCourseUp
-    private var turnedWhenFreed = false
-    var isFollowing: Bool { mode == .followCourseUp || mode == .followNorthUp }
-    var courseUp: Bool { follow == .followCourseUp }
-    /// Whether the map is turned to the heading right now: following heading-up, or a free look that began from it.
-    var isTurned: Bool { mode == .followCourseUp || (mode == .free && turnedWhenFreed) }
-    mutating func toggleOverview() { mode = mode == .overview ? follow : .overview }
-    /// Flips between heading-up and north-up and follows again, wherever the camera was.
-    mutating func toggleHeading() { follow = courseUp ? .followNorthUp : .followCourseUp; mode = follow }
-    /// The user panned or pinched: the map stays where they left it until Re-centre.
-    mutating func pan() { turnedWhenFreed = mode == .followCourseUp; mode = .free }
-    mutating func recenter() { mode = follow }
+    /// The state a pan interrupted; the button and Re-centre return to it.
+    private(set) var before = Mode.followCourseUp
+    /// Following, zoomed, with the map turned: to the direction of travel or to the phone's compass.
+    var isFollowing: Bool { mode == .followCourseUp || mode == .followCompass }
+    /// Taps move on: travel direction, compass direction, whole route, and round again. From a free look a tap returns to
+    /// the state before the pan.
+    mutating func cycle() {
+        switch mode {
+        case .followCourseUp: mode = .followCompass
+        case .followCompass: mode = .overview
+        case .overview: mode = .followCourseUp
+        case .free: mode = before
+        }
+    }
+    /// The user panned or pinched: the map stays where they left it until the button or Re-centre.
+    mutating func pan() { if mode != .free { before = mode }; mode = .free }
+    mutating func recenter() { mode = before }
+    /// The state the button shows: the current one, or the one a tap returns to from a free look.
+    var shown: Mode { mode == .free ? before : mode }
 }
 
 /// What the map shows while guiding: only the route being followed, its destination and the user's puck.
@@ -32,8 +39,10 @@ struct Guidance: Equatable {
     var rawUser: Coordinate?
     /// The reroute gate has seen a good fix on the route: the leader is gone for the rest of this route.
     var reachedRoute = false
-    /// Smoothed course in degrees from north, kept while stopped; nil until known.
+    /// Smoothed heading in degrees from north (GPS course when moving, compass when slow or stopped); nil until known.
     var heading: Double?
+    /// The phone's compass, which the follow-compass camera turns the map to; nil when unknown.
+    var compass: Double?
     /// The puck shows its heading wedge only while moving.
     var moving = false
     /// Metres of `coordinates` already driven, 0 on a fresh or rerouted line. The line is drawn in two parts at this point.
@@ -142,6 +151,7 @@ struct SeattleMap: UIViewRepresentable {
         private var lastRaw: Coordinate?
         private var lastReached = false
         private var lastHeading: Double?
+        private var lastAimed: Double?
         private var guidanceAnnotations: [MLNPointAnnotation] = []
         private var puck: MapPuck?
         /// Puck-to-route gap under which no leader is drawn.
@@ -550,7 +560,7 @@ struct SeattleMap: UIViewRepresentable {
                 clearRoutes(style)
                 guiding = true
                 map.removeAnnotations(endpoints + pinAnnotations + (userDot.map { [$0] } ?? []))
-                endpoints = []; pinAnnotations = []; pinKey = ""; userDot = nil; guidanceKey = ""; lastUser = nil; lastHeading = nil; lastRaw = nil; lastReached = false; cameraMode = nil
+                endpoints = []; pinAnnotations = []; pinKey = ""; userDot = nil; guidanceKey = ""; lastUser = nil; lastHeading = nil; lastAimed = nil; lastRaw = nil; lastReached = false; cameraMode = nil
                 followZoom = true
                 if g.user == nil { aim(at: g.coordinates[0], map: map, courseUp: false, heading: nil) }
             }
@@ -571,10 +581,10 @@ struct SeattleMap: UIViewRepresentable {
                     let northUp = map.camera; northUp.heading = 0
                     let camera = map.camera(northUp, fitting: MLNCoordinateBounds(sw: sw, ne: ne), edgePadding: fitted)
                     move(map, to: camera, duration: 0.5, padding: fitted)
-                case .followCourseUp, .followNorthUp:
-                    // Coming back from the overview or a free look zooms back in; flipping heading-up and north-up eases the
-                    // turn over `Motion.camera`; a reroute keeps the current zoom.
-                    if cameraMode != .followCourseUp && cameraMode != .followNorthUp { followZoom = true }
+                case .followCourseUp, .followCompass:
+                    // Coming back from the overview or a free look zooms back in; switching between travel and compass
+                    // eases the turn over `Motion.camera`; a reroute keeps the current zoom.
+                    if cameraMode != .followCourseUp && cameraMode != .followCompass { followZoom = true }
                     else if cameraMode != g.camera.mode { zoomUntil = Date().addingTimeInterval(Motion.camera(reduce)) }
                     setInset(map, followInset(g, in: map.bounds.size))
                 case .free:
@@ -608,13 +618,14 @@ struct SeattleMap: UIViewRepresentable {
             drawProgress(g, style: style)
             // The arrow keeps the last known course while stopped, as the map does; the dot never invents one.
             let heading = g.heading
-            if let user = g.user, user != lastUser || heading != lastHeading || g.rawUser != lastRaw || g.reachedRoute != lastReached {
+            let aimed = g.camera.mode == .followCompass ? (g.compass ?? g.heading) : g.heading
+            if let user = g.user, user != lastUser || heading != lastHeading || aimed != lastAimed || g.rawUser != lastRaw || g.reachedRoute != lastReached {
                 let tick = Motion.camera(reduce, min(1, max(0.1, Date().timeIntervalSince(lastFollow))))
                 lastFollow = Date()
                 placePuck(user, heading: heading, map: map, duration: tick)
-                if g.camera.isFollowing { aim(at: user, map: map, courseUp: g.camera.courseUp, heading: g.heading, tick: tick) }
+                if g.camera.isFollowing { aim(at: user, map: map, courseUp: true, heading: aimed, tick: tick) }
                 drawLeader(from: g.rawUser ?? user, g, style: style)
-                lastUser = user; lastHeading = heading; lastRaw = g.rawUser; lastReached = g.reachedRoute
+                lastUser = user; lastHeading = heading; lastAimed = aimed; lastRaw = g.rawUser; lastReached = g.reachedRoute
             }
         }
 
@@ -661,7 +672,7 @@ struct SeattleMap: UIViewRepresentable {
         /// Heading-up puts the puck a third of the way up the free map area, so most of the screen shows the road ahead.
         private func followInset(_ g: Guidance, in size: CGSize) -> UIEdgeInsets {
             var inset = g.inset
-            if g.camera.mode == .followCourseUp { inset.top += max(0, size.height - g.inset.top - g.inset.bottom) / 3 }
+            if g.camera.isFollowing { inset.top += max(0, size.height - g.inset.top - g.inset.bottom) / 3 }
             return inset
         }
 

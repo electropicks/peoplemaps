@@ -145,13 +145,20 @@ struct ExploreView: View {
     private var mapSelection: Place? { selectedPlace ?? (screen == .preview && request == nil ? destination : nil) }
     /// Stays set while guiding, so the comparison survives and End returns to the same routes.
     private var previewRequest: RouteRequest? { screen == .preview || screen == .navigating ? request : nil }
+    /// The map's own arrow: the user is on it and not guiding (guidance draws its marker from the navigator).
     private var wantsCompass: Bool { userInCoverage != nil && !guiding && scenePhase == .active }
+    /// Core Location's heading is wanted outside guidance for that arrow, and while guiding for the marker and camera at a stop.
+    private var runsCompass: Bool { (userInCoverage != nil || guiding) && scenePhase == .active }
+    private func updateCompass() {
+        permission.onHeading = { [compass, navigator] degrees in compass.degrees = degrees; navigator.setCompass(degrees) }
+        permission.compass(on: runsCompass, precise: guiding)
+    }
     private var guiding: Bool { screen == .navigating && navigator.isActive }
     private var guidance: Guidance? {
         guard guiding, !navigator.routeGeometry.isEmpty else { return nil }
         return Guidance(version: navigator.routeVersion, coordinates: navigator.routeGeometry, calmer: navigator.calmerRoute,
                         destination: navigator.routeGeometry.last!, user: navigator.coordinate, rawUser: navigator.rawCoordinate,
-                        reachedRoute: navigator.hasReachedRoute, heading: navigator.heading, moving: navigator.isMoving, travelled: navigator.travelledMeters,
+                        reachedRoute: navigator.hasReachedRoute, heading: navigator.heading, compass: navigator.compass, moving: navigator.isMoving, travelled: navigator.travelledMeters,
                         camera: camera, inset: guidanceInset)
     }
 
@@ -416,7 +423,8 @@ struct ExploreView: View {
         .driveLogUse(driveLogSnapshot)
         .reportContext(screen: String(String(describing: screen).prefix { $0 != "(" }), mode: mode, extraMinutes: budget, comparison: session.comparison, navigator: navigator, dataVersion: search.dataVersion)
         .onChange(of: userLocation) { followUser() }
-        .onChange(of: wantsCompass, initial: true) { permission.onHeading = { [compass] in compass.degrees = $0 }; permission.compass(on: wantsCompass) }
+        .onChange(of: runsCompass, initial: true) { updateCompass() }
+        .onChange(of: guiding) { updateCompass() }
         // Pulling the search sheet down is the same as Cancel, at wherever it was let go.
         .onChange(of: stop) { if screen == .search, stop != .large { homeStop = stop; query = ""; addingFavourite = false; screen = .home } }
         .onChange(of: scenePhase) {
