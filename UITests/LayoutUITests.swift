@@ -91,11 +91,29 @@ final class LayoutUITests: PeoplemapsUITestCase {
         XCTAssertTrue(app.buttons["start-navigation"].waitForExistence(timeout: 20))
         XCTAssertTrue(app.buttons["start-navigation"].isHittable)
         capture("21-preview-largest-text", app: app)
+        // The sheet is a card over the map at AX5, with the calm word and time on screen, not a full-screen page.
+        let window = app.windows.firstMatch.frame
+        XCTAssertGreaterThan(app.buttons["close-preview"].frame.minY, window.height * 0.25, "The preview covers the map at AX5")
+        XCTAssertTrue(app.buttons["route-calmer"].isHittable || app.buttons["route-fastest"].isHittable, "The route word and time are cut off by the footer")
         XCTAssertTrue(app.buttons["route-details"].isHittable, "Why this route is pinned with Start")
         let fastest = app.buttons["route-fastest"]
         for _ in 0..<8 where !fastest.isHittable { app.scrollViews.firstMatch.swipeUp() }
         XCTAssertTrue(fastest.isHittable, "The routes scroll into reach")
         XCTAssertTrue(app.buttons["start-navigation"].isHittable)
+    }
+    /// AX5 guidance: the banner and trip bar leave the middle of the map free, and the puck is not under either.
+    @MainActor func testGuidanceAtAX5LeavesRoomForTheMap() {
+        let app = launchHome(location: Self.atKerryPark, extra: ["--simulate-route", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
+        showGasWorksRoutes(app)
+        startSimulatedGuidance(app)
+        let window = app.windows.firstMatch.frame
+        let card = app.descendants(matching: .any)["guidance-card"].frame
+        let bar = app.descendants(matching: .any)["trip-bar"].frame
+        XCTAssertLessThan(card.height + bar.height, window.height * 0.7, "The banner and trip bar take too much of the screen at AX5")
+        XCTAssertGreaterThanOrEqual(bar.minY, card.maxY + 150, "No map between the banner and the trip bar")
+        let chip = app.descendants(matching: .any)["guidance-calm-note"]
+        if chip.exists { XCTAssertGreaterThanOrEqual(chip.frame.minY, card.maxY + 4, "The signal chip touches the banner") }
+        capture("guidance-ax5", app: app)
     }
     @MainActor func testFavouritesAndDroppedPinInLandscape() {
         let app = launchHome()

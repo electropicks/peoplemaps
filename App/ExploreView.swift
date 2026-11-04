@@ -755,6 +755,11 @@ struct ExploreView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     if query.isEmpty {
                         if !saved.recents.isEmpty { resultGroup("Recents", saved.recents, prefix: "recent-") }
+                        else {
+                            Text("Search a place, an address or a street").font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
+                                .fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4).padding(.top, 8)
+                                .accessibilityIdentifier("search-hint")
+                        }
                     } else if results.isEmpty {
                         EmptySearch(count: search.count).padding(.top, 48)
                         AppleMapsLookup(query: query)
