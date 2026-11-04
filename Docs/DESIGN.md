@@ -55,7 +55,8 @@ which lets the map show through; SwiftUI has no modifier for it. An empty
    (section 2, "On glass").
 3. **No glass on glass.** A glass button inside the glass sheet uses
    `.bordered`/plain styles, not `.glass`. One `GlassEffectContainer` per
-   cluster (map buttons; guidance top chrome; trip bar).
+   cluster (home's floating controls; guidance top chrome; trip bar). A single glass
+   shape, such as the map buttons on home, needs no container.
 4. **Clear, with a veil where it needs one.** `.clear` is what a person reads as
    glass over this pale map: `.regular` frosts it to off-white, which is what the
    owner couldn't see on the phone. Busy-map legibility comes from `glassVeil`
