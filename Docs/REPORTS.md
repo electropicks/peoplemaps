@@ -698,8 +698,9 @@ of the start and destination and a 550 m cell for a marked moment, as in 2.2. "W
   phone, to answer where a drive waits (for example at a left turn because the street it turns onto is backed up), how real
   speeds compare with the estimates, and how the app is used. Off by default; the "Keep a detailed log" switch in About is
   separate from the usage log. With it off nothing is recorded or held in memory and guidance runs as before. Nothing
-  touches the network and it adds no location setting, background mode or permission: it records the fixes guidance
-  already receives. It holds exact places, so it is meant for a private build and is not part of what a report contains.
+  touches the network. Trips record the fixes guidance already receives; only a manual recording (below) asks for more, and
+  only for the `location` background mode, with the same When-In-Use permission. It holds exact places, so it is meant for
+  a private build and is not part of what a report contains.
   - **Folder** `drive-log.d` in Application Support (a separate `-uitests` copy under `--ui-testing`), excluded from
     backup. About shows the trip count and size, shares every file, and clears them after a confirmation.
   - **One file per guided trip**, `trip-<UTC time>-<mode>.jsonl` (walk, cycle or drive), JSON lines written as they happen,
@@ -718,6 +719,28 @@ of the start and destination and a 550 m cell for a marked moment, as in 2.2. "W
       report script finds them from the fixes.
     - **Length rule**: a trip that ends in under `DriveLog.minimumTripSeconds` (3 minutes) is deleted when it ends. Route
       switching does not happen in guidance, so it is logged only in app use (`route_selected`).
+  - **Manual recording** (`App/Reports/ManualRecorder.swift`), for the owner's phone: record GPS with no route running.
+    Only offered while "Keep a detailed log" is on (turning the switch off stops a recording). Start is the record glyph
+    (`record.circle`) in the map-button capsule on Home, or "Start recording" under the switch in About; both show the
+    same state. While recording, a compact glass pill (red dot, elapsed time, Stop) sits top leading on Home, preview and
+    guidance (left of the map buttons in landscape). It uses the existing When-In-Use permission flow, never Always.
+    - **Background**: the recorder has its own `CLLocationManager` (best accuracy, no distance filter, `.otherNavigation`,
+      no automatic pausing, `allowsBackgroundLocationUpdates`, `showsBackgroundLocationIndicator`) and `App/Info.plist`
+      declares `UIBackgroundModes: location`. A recording started in the foreground keeps writing fixes after the app is
+      in the background, with iOS's blue location indicator showing, until the user stops it. If guidance starts too, both
+      write their own fixes; nothing is deduplicated. It cannot be started from the background and is not resumed.
+    - **File** `rec-<UTC start>.jsonl` in `drive-log.d`: `header` (start, app version and build, data version,
+      `"recording": "manual"`, no route), `event start`, `fix` lines as for trips (no altitude), and events `background`,
+      `foreground`, `device`, `authorization` (status, at the start and when it changes), `location_error`, and `end`
+      (`reason`: `user`, `log_off` when the switch is turned off, or `terminated`).
+    - **Length rule**: under 3 minutes it is deleted when it stops. The 500 MB cap drops the oldest trips and recordings
+      together. About counts recordings next to trips ("2 trips, 1 recording, 4 MB kept"), shares and clears them with the rest.
+    - **Killed mid-recording**: the open file's name is kept in `UserDefaults` (`manualRecordingOpenFile`). On the next
+      launch the file gets an `end` line with reason `terminated` at the time of its last line (and is deleted if that is
+      under 3 minutes). Recording never restarts by itself.
+    - **Tests**: `DriveLogTests` (format, 3-minute rule, terminated close, cap), `ReportsUITests` (control follows the switch,
+      start and stop write a file; a DEBUG recorder emits one simulated fix a second at the `--location-granted` spot, and
+      `--drive-log-keep-short` keeps short ones). Background behaviour and the blue indicator need a phone.
   - **One file per day for app use**, `use-<local date>.jsonl`, same switch: `search_opened`, `search_pick` (query text,
     chosen result and its rank), `search_abandoned` (query text), `place_card`, `preview` (destination, mode, extra-time
     budget), `route_ready` (milliseconds the comparison took), `route_selected`, `mode_changed`, `budget_changed`,
@@ -725,11 +748,13 @@ of the start and destination and a 550 m cell for a marked moment, as in 2.2. "W
     and `report_opened`. The hooks are one view modifier (`DriveLogHooks.swift`) and a few single lines that call
     `DriveLogger`; removing the feature means deleting those calls and that type.
   - **Size**: a one-hour drive at one fix a second is about 0.6 MB (`DriveLogTests`). A cap of 500 MB for the whole folder
-    (`DriveLog.capBytes`) drops the oldest trips first, never the one being written.
+    (`DriveLog.capBytes`) drops the oldest trips and recordings first, never the one being written.
   - **Reading it**: `python3 Scripts/drive_log_report.py FOLDER` on a Mac, standard library only. For each trip it compares
     time on each edge with the estimate and lists each stop of 20 seconds or more (place, length, next maneuver, whether it
     is a left, road names); then it groups stops by junction across trips, longest first. Real logs never go in the
-    repository, Evidence or tests; `Scripts/test_drive_log_report.py` uses a made-up track.
+    repository, Evidence or tests; `Scripts/test_drive_log_report.py` uses a made-up track. `rec-*` files are read like
+    trips for totals and stops. They have no route, so there is no edge-time comparison, no road name or next maneuver, and
+    no "before a left" flag: the script does not look at the road graph. Their stops are grouped by place with the trips'.
 - **Recent app events** (`Core/AppEvents.swift`, schema 3): a short list under `events` in the report file, so a report says
   what the app was doing and not only where the phone was. The buffer lives in memory, keeps the last 200 events or the
   last 10 minutes, whichever is fewer, and is never written to disk. A report copies it when it is created or a moment

@@ -144,6 +144,35 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(len(data["junctions"]), 1)
         self.assertEqual(report.main(["/no/such/folder"]), 2)
 
+    def test_manual_recording_gets_stops_but_no_route_comparison(self):
+        rows = [{"kind": "header", "schema": 1, "recording": "manual", "start": T0, "appBuild": "7", "dataVersion": "x"},
+                {"kind": "event", "t": T0, "name": "start"}]
+        for i in range(120):
+            standing = 30 <= i < 80
+            rows.append({"kind": "fix", "t": T0 + i, "lat": at(0 if standing else i * 10)[0], "lon": at(0)[1], "accuracy": 5, "speed": 0.0 if standing else 10.0})
+        rows.append({"kind": "event", "t": T0 + 120, "name": "end", "data": {"reason": "terminated"}})
+        name = os.path.join(self.dir.name, "rec-20270105T000000Z.jsonl")
+        with open(name, "w") as f:
+            f.write("\n".join(json.dumps(r) for r in rows) + "\n")
+        rec = report.analyse(name, 20)
+        self.assertEqual(rec["kind"], "recording")
+        self.assertEqual(rec["end_reason"], "terminated")
+        self.assertEqual(rec["edges"], [])
+        self.assertEqual(len(rec["stops"]), 1)
+        stop = rec["stops"][0]
+        self.assertAlmostEqual(stop["seconds"], 50, delta=2)
+        self.assertEqual((stop["road"], stop["next_maneuver"], stop["next_is_left"], stop["at_destination"]), ("", None, False, False))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            report.main([self.dir.name])
+        self.assertIn("manual recording, no route", out.getvalue())
+        with redirect_stdout(io.StringIO()) as _:
+            pass
+        out = io.StringIO()
+        with redirect_stdout(out):
+            report.main([self.dir.name, "--json", "--mode", "drive"])
+        self.assertNotIn("recording", [t["kind"] for t in json.loads(out.getvalue())["trips"]])
+
 
 if __name__ == "__main__":
     unittest.main()

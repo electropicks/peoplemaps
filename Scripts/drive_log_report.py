@@ -3,10 +3,14 @@
 
     python3 Scripts/drive_log_report.py FOLDER [--min-stop 20] [--radius 40] [--mode drive] [--json]
 
-FOLDER holds the `trip-*.jsonl` files (and, optionally, `use-*.jsonl`) from "Share detailed log". For each trip it
+FOLDER holds the `trip-*.jsonl` files (and, optionally, `rec-*.jsonl` and `use-*.jsonl`) from "Share detailed log". For each trip it
 compares the time spent on each edge with the router's estimate, and lists every stop of at least --min-stop seconds
 with where it was, how long, the next maneuver (and whether it is a left) and the road names. Then it groups stops
 across trips by junction (within --radius metres), longest total first.
+
+A manual recording (`rec-*`) has no route, so it gets totals and stops only: no edge-time comparison, no road name, no next
+maneuver and so no "before a left" flag, because this script reads the route in the log and does not look at the road graph.
+Its stops are still grouped by place with those of the trips.
 
 Standard library only. Real logs hold exact places: keep them out of the repository, Evidence and tests.
 """
@@ -43,6 +47,10 @@ def load(path):
     fixes.sort(key=lambda r: r["t"])
     events.sort(key=lambda r: r["t"])
     return header, fixes, events
+
+
+def is_recording(header):
+    return (header or {}).get("recording") == "manual"
 
 
 def metres(lat1, lon1, lat2, lon2):
@@ -141,14 +149,16 @@ def analyse(path, min_stop):
     header, fixes, events = load(path)
     if header is None or len(fixes) < 2:
         return None
-    routes = routes_of(header, events)
+    recording = is_recording(header)
+    routes = [] if recording else routes_of(header, events)
     end = next((e for e in reversed(events) if e["name"] == "end"), None)
     first_route = routes[0].r if routes else {}
     out = {
         "file": os.path.basename(path),
+        "kind": "recording" if recording else "trip",
         "mode": header.get("mode"),
         "start": header["start"],
-        "destination": header["request"].get("destinationName"),
+        "destination": (header.get("request") or {}).get("destinationName"),
         "started_with": header.get("startedWith"),
         "complete": end is not None,
         "end_reason": (end or {}).get("data", {}).get("reason"),
@@ -295,12 +305,17 @@ def fmt_time(seconds):
 def render(trips, groups, uses, min_stop):
     lines = []
     for t in trips:
-        lines.append(f"== {t['file']}  {t['mode']} to {t['destination']}  (started with {t['started_with']}"
-                     f"{'' if t['complete'] else ', INCOMPLETE: no end line'}{', ' + t['end_reason'] if t['end_reason'] else ''})")
-        est = t["estimate_seconds"]
-        lines.append(f"   actual {fmt_time(t['actual_seconds'])} (moving {fmt_time(t['moving_seconds'])}, stopped {fmt_time(t['stopped_seconds'])})"
-                     f" vs estimate {fmt_time(est) if est else '?'};  GPS distance {t['gps_meters']:.0f} m vs {t['estimate_meters'] or 0:.0f} m;"
-                     f" moving speed {t['average_moving_mps']} m/s vs estimated {t['estimated_mps']} m/s;  reroutes {t['reroutes']}")
+        status = ("" if t["complete"] else ", INCOMPLETE: no end line") + (", " + t["end_reason"] if t["end_reason"] else "")
+        if t["kind"] == "recording":
+            lines.append(f"== {t['file']}  manual recording, no route ({status.lstrip(', ') or 'open'})")
+            lines.append(f"   {fmt_time(t['actual_seconds'])} (moving {fmt_time(t['moving_seconds'])}, stopped {fmt_time(t['stopped_seconds'])});"
+                         f"  GPS distance {t['gps_meters']:.0f} m;  moving speed {t['average_moving_mps']} m/s;  no estimate to compare with")
+        else:
+            lines.append(f"== {t['file']}  {t['mode']} to {t['destination']}  (started with {t['started_with']}{status})")
+            est = t["estimate_seconds"]
+            lines.append(f"   actual {fmt_time(t['actual_seconds'])} (moving {fmt_time(t['moving_seconds'])}, stopped {fmt_time(t['stopped_seconds'])})"
+                         f" vs estimate {fmt_time(est) if est else '?'};  GPS distance {t['gps_meters']:.0f} m vs {t['estimate_meters'] or 0:.0f} m;"
+                         f" moving speed {t['average_moving_mps']} m/s vs estimated {t['estimated_mps']} m/s;  reroutes {t['reroutes']}")
         slow = [e for e in t["edges"] if e["excess_seconds"] is not None and e["excess_seconds"] >= 5]
         slow.sort(key=lambda e: -e["excess_seconds"])
         if slow:
@@ -335,14 +350,14 @@ def main(argv=None):
     ap.add_argument("folder")
     ap.add_argument("--min-stop", type=float, default=20.0, help="shortest stop to report, seconds (20)")
     ap.add_argument("--radius", type=float, default=40.0, help="stops this close, metres, are one junction (40)")
-    ap.add_argument("--mode", choices=["drive", "bike", "walk"], help="only trips in this mode")
+    ap.add_argument("--mode", choices=["drive", "bike", "walk"], help="only trips in this mode (recordings have none and are left out)")
     ap.add_argument("--json", action="store_true", help="print JSON instead of text")
     args = ap.parse_args(argv)
     if not os.path.isdir(args.folder):
         print(f"not a folder: {args.folder}", file=sys.stderr)
         return 2
     trips = []
-    for path in sorted(glob.glob(os.path.join(args.folder, "trip-*.jsonl"))):
+    for path in sorted(glob.glob(os.path.join(args.folder, "trip-*.jsonl")) + glob.glob(os.path.join(args.folder, "rec-*.jsonl"))):
         trip = analyse(path, args.min_stop)
         if trip and (not args.mode or trip["mode"] == args.mode):
             trips.append(trip)
