@@ -317,19 +317,23 @@ it budgets Workers Paid at $5 a month for the CPU it needs (question 19).
 
 ```
 POST /v1/attest/challenge
-201 { "challenge": "<base64, 32 bytes>", "expiresAt": "2026-10-31T21:39:00Z" }
+201 { "challenge": "<base64, 68 bytes>", "expiresAt": "2026-10-31T21:39:00Z" }
 
 POST /v1/attest
 Body: { "keyId": "<base64>", "attestation": "<base64>", "challenge": "<the challenge as received>" }
 200 { "token": "pmd_…", "expiresAt": "2026-11-01T21:34:00Z" }
-401 unauthorized                  // challenge unknown, used or expired; or the attestation failed
+401 unauthorized                  // challenge unknown or expired; key already attested; or the attestation failed
+429 rate_limited                  // RL_ATTEST, or the ATTESTS_PER_HOUR ceiling
 400 invalid_report with field     // not base64, wrong length, unknown key
 ```
 
-- **The challenge** is 32 random bytes, usable once, for 5 minutes. D1 holds only its SHA-256 (`attest_challenges`, 5.1),
-  and `POST /v1/attest` deletes it before verifying, so a failed attempt spends it too. The app passes SHA-256 of the
-  decoded 32 bytes as `clientDataHash` to `DCAppAttestService.attestKey`. Base64 in requests may be standard or URL-safe,
-  padded or not; responses use standard base64.
+- **The challenge** is stateless, so issuing one writes nothing: 32 random bytes, a 4-byte expiry 5 minutes ahead, and
+  an HMAC-SHA256 over both keyed with `DOWNLOAD_TOKEN_SECRET` under its own context string, so a challenge never passes
+  as a download token or the other way round. 68 bytes in all, opaque to the app, which passes SHA-256 of the decoded
+  bytes as `clientDataHash` to `DCAppAttestService.attestKey`. Base64 in requests may be standard or URL-safe, padded or
+  not; responses use standard base64.
+- **Single use** is per key: `attest_keys.key_id` is the primary key and the insert is `ON CONFLICT DO NOTHING`, so a
+  replayed or repeated attestation of a key already stored is a 401 and leaves the row as it was.
 - **The checks**, per Apple's "Validating apps that connect to your server": the object is CBOR with `fmt`
   `apple-appattest`; `x5c` is a leaf and an intermediate that chain to the pinned root, each certificate inside its
   validity and each issuer a CA; the leaf's `1.2.840.113635.100.8.2` extension holds SHA-256(authData ||
@@ -340,14 +344,19 @@ Body: { "keyId": "<base64>", "attestation": "<base64>", "challenge": "<the chall
   download token (4.7). Retention drops keys `RETENTION_DAYS` after they were attested (5.3).
 - **Not set up.** Until `APP_ID` and `DOWNLOAD_TOKEN_SECRET` are set (`Backend/README.md`), both routes answer `500
   internal` and store nothing.
-- **Limits.** `RL_ATTEST`, 10 per minute per IP or /64, on both routes, checked before the body is read (4.6).
+- **Limits.** `RL_ATTEST`, 10 per minute per IP or /64, on both routes, checked before the body is read (4.6). Behind it,
+  `ATTESTS_PER_HOUR` (60), counted from `attest_keys.created_at` in the current hour like the mint ceiling, caps the D1
+  writes attesting can cause. Only a verified attestation writes, and the challenge route writes nothing.
 - **Assertions are not built.** Today the app attests a fresh key whenever it needs a token and holds none unexpired, at
   most once a day and only around a region download. To renew without attesting again, add `POST /v1/attest/assert` with
   `{ keyId, assertion, challenge }`: check the ECDSA signature over SHA-256(authenticatorData || SHA-256(challenge)) with
   the stored public key, the rpIdHash and a counter above the stored one, store the counter and issue a token. The table
   already holds what it needs.
-- **Tested** against a synthetic chain built in the test (a self-signed P-256 root standing in for Apple's, an intermediate,
-  a leaf with the nonce extension), with the root injected through `AttestConfig.rootPEM`. Apple's real root is the
+- **What is kept.** Per attested key, which identifies one install of the app and not a person: the key ID, its public
+  key, the environment and the hour, for `RETENTION_DAYS` (90 days). `Docs/PRIVACY.md` says the same.
+- **Tested** against a synthetic chain built in the test in Apple's shape (a self-signed P-384 root standing in for
+  Apple's, a P-384 intermediate it signs with SHA-384, and a P-256 leaf with the nonce extension that the intermediate
+  signs with SHA-256), with the root injected through `AttestConfig.rootPEM`. Apple's real root is the
   production default; the tests parse it and check its self-signature, but **no attestation from Apple's real chain has
   been verified**. That needs a recorded attestation from a real phone, checked with a fixed clock.
 
@@ -382,7 +391,8 @@ is the app side and the step to `POST /v1/installs`:
   `RL_ATTEST`, 10 per minute per IP or /64, on both App Attest routes, and `RL_DOWNLOADS`, 60 per minute keyed on the
   download token's key ID.
 - The bindings are approximate and count per Cloudflare location, so a flood spread across locations gets more. The
-  strict backstop is `INSTALLS_PER_HOUR` (60), counted from `installs.created_at` in the current hour.
+  strict backstop is `INSTALLS_PER_HOUR` (60), counted from `installs.created_at` in the current hour, and for App Attest
+  `ATTESTS_PER_HOUR` (60), counted from `attest_keys.created_at` (4.5).
 - **D1's Free daily limits** (5 million rows read, 100,000 rows written, enforced since 2026-09-01). Once spent, every
   query fails until 00:00 UTC with D1's documented "free tier daily row read limit" or "write limit" error. The Worker
   answers `503 storage_unavailable` with `Retry-After` set to 00:00 UTC, and the app keeps the report flagged with "The
@@ -423,7 +433,7 @@ Range, If-Range, If-None-Match, If-Match              // optional
 - **What is served.** Objects are keyed `<release>/<region>--expected__<file>`, for example
   `data-seattle-all-2026-11d/king-county--expected__seattle-graph.bin`. The files per region are the `expected/*`
   outputs listed in `Data/regions.json`. The release must match `^data-[a-z-]+-\d{4}-\d{2}[a-z]?$` and the object
-  `^[a-z-]+--expected__[A-Za-z0-9.-]+$`, so importer inputs and `source/` objects are never served. Anything else is a
+  `^[a-z]+(-[a-z]+)*--expected__[A-Za-z0-9.-]+$`, so importer inputs and `source/` objects are never served. Anything else is a
   404 that never reaches R2.
 - **The token** is `pmd_` and 92 base64url characters: a version byte, the expiry, the 32-byte App Attest key ID and an
   HMAC-SHA256 over them keyed with the `DOWNLOAD_TOKEN_SECRET` secret. It lasts 24 hours. It is stateless, so a download
@@ -437,8 +447,8 @@ Range, If-Range, If-None-Match, If-Match              // optional
   buffered.
 - **Limits.** `RL_DOWNLOADS`, 60 per minute keyed on the token's key ID: a region is 5 files, which leaves room for
   resumed ranges and retries.
-- **What is kept and logged.** Nothing beyond the attest key (4.5): no download row and no log line. The request carries
-  only the token and the file name.
+- **What is kept and logged.** Nothing beyond the attested key (4.5: key ID, public key, environment and hour, for
+  `RETENTION_DAYS`): no download row and no log line. The request carries only the token and the file name.
 - **Tested** against an in-memory R2 stand-in (`test/helpers.ts`). Real R2 is not exercised, and nothing is deployed.
 
 ## 5. D1 schema, retention
@@ -472,9 +482,9 @@ CREATE INDEX reports_install ON reports(install_id);
 CREATE INDEX reports_expires ON reports(expires_at);
 ```
 
-`Backend/migrations/0002_attest.sql` adds App Attest (4.5): `attest_challenges (id, expires_at)`, the SHA-256 of each
-challenge and its expiry to the second, and `attest_keys (key_id, public_key, counter, environment, created_at)`, each
-attested key by its base64 key ID, `created_at` to the hour.
+`Backend/migrations/0002_attest.sql` adds App Attest (4.5): `attest_keys (key_id, public_key, counter, environment,
+created_at)`, each attested key by its base64 key ID, `created_at` to the hour. Challenges are stateless and have no
+table.
 
 Anything else a maintainer wants is in `public_json`: `json_extract(public_json, '$.request.mode')`.
 
@@ -490,7 +500,7 @@ rebuilt from any rows still held; rows deleted before then are not counted.
 ### 5.3 Retention
 
 One cron, `17 3 * * *`: `DELETE FROM reports WHERE expires_at < now()`, delete installs not seen for 365 days that
-have no reports, expired attest challenges, and attest keys attested more than `RETENTION_DAYS` ago. It logs one count, and the handler awaits the job so a failure fails the invocation rather than vanishing.
+have no reports, and attest keys attested more than `RETENTION_DAYS` ago. It logs one count, and the handler awaits the job so a failure fails the invocation rather than vanishing.
 
 **Time Travel.** D1 keeps a restorable copy of the database for 7 days on the Workers Free plan and 30 on Paid. It cannot
 be shortened or turned off, and only the maintainers' Cloudflare account can restore from it. So a row deleted by the
@@ -582,7 +592,7 @@ Handlers are plain functions, `(request, deps) => Response`. None imports anythi
   "workers_dev": true,
   "preview_urls": false,
   "observability": { "enabled": false, "logs": { "invocation_logs": false } },
-  "vars": { "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "5", "INSTALLS_PER_HOUR": "60", "ATTEST_ENV": "production" },
+  "vars": { "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "5", "INSTALLS_PER_HOUR": "60", "ATTESTS_PER_HOUR": "60", "ATTEST_ENV": "production" },
   "d1_databases": [{ "binding": "DB", "database_name": "peoplemaps-reports", "database_id": "22e78664-ede8-40dd-80bf-7e2b0e7ec41f", "migrations_dir": "migrations" }],
   "r2_buckets": [{ "binding": "DATA", "bucket_name": "peoplemaps-data" }],
   "ratelimits": [

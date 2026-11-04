@@ -25,6 +25,9 @@ one is wrong and gets fixed.
   server only when you tap Send, Check status or Delete my reports, or when it
   downloads map data for a region. A region download sends only Apple's check
   that this is a genuine copy of the app and the name of the file it wants.
+  For 90 days the server keeps that check's key ID and public key, whether the
+  build was a development one, and the hour; they identify this install of the
+  app, not you.
 
 > **Alpha builds.** No server is deployed yet, so nothing below about sending to our server happens: a report is a
 > `.json` file you share yourself from the share sheet (for example to iCloud Drive), after seeing what is in it. The app
