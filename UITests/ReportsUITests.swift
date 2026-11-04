@@ -227,4 +227,76 @@ final class ReportsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["done-navigation"].isHittable, "Done stays pinned")
         capture("reports-04-add-words-ax5")
     }
+
+    // MARK: Manual recording
+
+    @MainActor private func turnDetailedLogOn(_ app: XCUIApplication) {
+        openAbout(app)
+        let toggle = app.switches["drive-log-toggle"]
+        scrollTo(toggle, in: app)
+        toggle.switches.firstMatch.tap()
+        XCTAssertEqual(toggle.value as? String, "1")
+        app.buttons["close-about"].tap()
+    }
+
+    /// With the detailed log off there is nothing to start; turning it on shows the record control.
+    @MainActor func testRecordControlFollowsTheDetailedLogSwitch() {
+        let app = launch(location: Self.atKerryPark)
+        XCTAssertTrue(app.buttons["locate"].exists)
+        XCTAssertFalse(app.buttons["record-start"].exists, "No control while the detailed log is off")
+        openAbout(app)
+        XCTAssertFalse(app.buttons["drive-record-toggle"].exists, "No Start in About while it is off")
+        app.buttons["close-about"].tap()
+        turnDetailedLogOn(app)
+        XCTAssertTrue(app.buttons["record-start"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["record-pill"].exists)
+    }
+
+    /// Start shows the pill with Stop on home; Stop writes a recording that About counts, and the control comes back.
+    @MainActor func testManualRecordingStartsShowsThePillAndStopsWritingAFile() {
+        let app = launch(location: Self.atKerryPark, extra: ["--drive-log-keep-short"])
+        turnDetailedLogOn(app)
+        app.buttons["record-start"].tap()
+        let pill = app.descendants(matching: .any)["record-pill"]
+        XCTAssertTrue(pill.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["record-start"].exists, "The pill takes the control\u{2019}s place")
+        sleep(3)
+        capture("recording-01-pill-on-home")
+
+        openAbout(app)
+        let record = app.buttons["drive-record-toggle"]
+        scrollTo(record, in: app)
+        XCTAssertEqual(record.label, "Stop recording", "About shows the same state")
+        app.buttons["close-about"].tap()
+
+        app.buttons["record-stop"].tap()
+        let gone = NSPredicate { _, _ in !pill.exists }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: gone, object: nil)], timeout: 5), .completed)
+        XCTAssertTrue(app.buttons["record-start"].waitForExistence(timeout: 5))
+
+        openAbout(app)
+        let footer = app.staticTexts["drive-log-footer"]
+        scrollTo(footer, in: app)
+        XCTAssertTrue(footer.label.contains("0 trips, 1 recording,"), footer.label)
+        XCTAssertTrue(app.buttons["drive-log-share"].exists)
+        XCTAssertEqual(app.buttons["drive-record-toggle"].label, "Start recording")
+        app.buttons["close-about"].tap()
+    }
+
+    /// Without --drive-log-keep-short, a recording under 3 minutes is deleted when it stops.
+    @MainActor func testShortManualRecordingIsDeletedOnStop() {
+        let app = launch(location: Self.atKerryPark)
+        turnDetailedLogOn(app)
+        app.buttons["record-start"].tap()
+        XCTAssertTrue(app.buttons["record-stop"].waitForExistence(timeout: 10))
+        sleep(2)
+        app.buttons["record-stop"].tap()
+        XCTAssertTrue(app.buttons["record-start"].waitForExistence(timeout: 5))
+        openAbout(app)
+        let footer = app.staticTexts["drive-log-footer"]
+        scrollTo(footer, in: app)
+        XCTAssertTrue(footer.label.contains("0 trips, "), footer.label)
+        XCTAssertFalse(footer.label.contains("recording,"), footer.label)
+        app.buttons["close-about"].tap()
+    }
 }

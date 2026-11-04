@@ -28,7 +28,7 @@ enum DriveLogger {
     }()
 
     /// The 3-minute rule, except that a UI test can keep a short simulated trip with `--drive-log-keep-short`.
-    private static var minimumTripSeconds: TimeInterval {
+    static var minimumTripSeconds: TimeInterval {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--drive-log-keep-short") { return 0 }
         #endif
@@ -65,7 +65,7 @@ enum DriveLogger {
         ]
     }
 
-    private static func systemState() -> [String: DriveLog.Value] {
+    static func systemState() -> [String: DriveLog.Value] {
         let thermal = switch ProcessInfo.processInfo.thermalState {
         case .nominal: "nominal"
         case .fair: "fair"
