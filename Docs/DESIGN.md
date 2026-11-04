@@ -402,7 +402,7 @@ list. Each row:
 ### 4.4 Place card
 
 Proposed (with `ux-round-1` content): sheet sized to fit the card, so medium
-doesn't leave half of it empty; large at accessibility sizes.
+doesn't leave half of it empty; at accessibility sizes the same fit stop, capped at 70% of the screen, the card scrolling and its type held at `accessibility3`.
 - Header: 44-pt category badge, name `.title2.bold()`, "Restaurant ·
   Fremont" `.subheadline`. Trailing: favourite (`star`/`star.fill`) and close
   (`xmark`) as small bordered circular buttons (not glass: they sit on
@@ -437,7 +437,7 @@ Top to bottom:
    in the large content viewer) beside **Start** (`.primaryAction()`).
 
 Raised (0.72 of the screen, or large, or in landscape and at accessibility sizes)
-it also shows **swap** and the **Extra time** menu. Accessibility sizes open large.
+it also shows **swap** and the **Extra time** menu. At accessibility sizes it opens raised, not large, so the map stays above it; the scrolling body holds its type at `accessibility2` and the calm word at 48 pt, with the footer pinned.
 
 ```
 ╭────────────────────────────╮

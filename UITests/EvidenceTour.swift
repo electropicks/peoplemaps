@@ -37,6 +37,31 @@ final class EvidenceTour: XCTestCase {
         _ = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: estimated, object: nil)], timeout: 20)
     }
 
+    /// Preview, place card, guidance, arrival and the empty search, for the large-text pass. `TEST_RUNNER_PEOPLEMAPS_TEXT` sets the size.
+    @MainActor func testLargeTextScreens() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")
+        let text = ProcessInfo.processInfo.environment["PEOPLEMAPS_TEXT"].flatMap { $0.isEmpty ? nil : ["-UIPreferredContentSizeCategoryName", $0] } ?? []
+        var app = launch(["--location-granted", "47.6698,-122.3843"] + text)
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 5))
+        shot("search-empty")
+        app.terminate()
+        app = launch(["--location-granted", "47.6698,-122.3843", "--simulate-route", "--fast-simulation"] + text)
+        open(app, "Gas Works", id: "relation/1047789")
+        waitForEstimate(app)
+        shot("place")
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["start-navigation"].waitForExistence(timeout: 20))
+        shot("preview")
+        app.buttons["start-navigation"].tap()
+        XCTAssertTrue(app.staticTexts["guidance-instruction"].waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 2)
+        shot("guidance")
+        XCTAssertTrue(app.staticTexts["guidance-arrived"].waitForExistence(timeout: 150))
+        Thread.sleep(forTimeInterval: 1)
+        shot("arrival")
+    }
+
     /// The home sheet, place card, preview and calm bar. Run once per appearance; `TEST_RUNNER_PEOPLEMAPS_TEXT` sets a text size.
     @MainActor func testHomeRedesign() throws {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")
