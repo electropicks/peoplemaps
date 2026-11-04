@@ -86,9 +86,9 @@ struct ExploreView: View {
     @State private var previewPinned: CGFloat = 110
     @State private var screenHeight: CGFloat = 852
     @State private var safeBottom: CGFloat = 0
-    /// Height the sheet covers now, and at its last rest short of large, which is what the map keeps clear of.
-    @State private var sheetCover: CGFloat = 0
-    @State private var mapCover: CGFloat = 0
+    /// Height the sheet covers now, and at its last rest short of large, which is what the map keeps clear of. Read only by the
+    /// attribution row and the map's padding (`CoverReader`), so a drag redraws those and not the screen.
+    @State private var cover = SheetCover()
     @State private var contentHeight: CGFloat = 0
     @State private var camera = GuidanceCamera()
     @State private var guidanceInset = UIEdgeInsets.zero
@@ -371,10 +371,12 @@ struct ExploreView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                SeattleMap(comparison: screen == .preview ? session.comparison : nil, selectedCalmer: selectedCalmer, recenter: recenter, locate: locateCount, selected: mapSelection,
-                           user: userInCoverage, compass: compass, showsHeading: wantsCompass, coverage: coverage, onLongPress: dropPin, guidance: guidance,
-                           onCameraGesture: { if guiding { camera.pan() } else if centred { centred = false } }, padding: mapPadding(geo),
-                           markerFeed: markerFeed, showsPlaces: showsPlaces, onPlaceTap: openMarker, reportsPlaces: reportsPlaces, onVisiblePlaces: { visiblePlaces = $0 })
+                CoverReader(cover) { cover in
+                    SeattleMap(comparison: screen == .preview ? session.comparison : nil, selectedCalmer: selectedCalmer, recenter: recenter, locate: locateCount, selected: mapSelection,
+                               user: userInCoverage, compass: compass, showsHeading: wantsCompass, coverage: coverage, onLongPress: dropPin, guidance: guidance,
+                               onCameraGesture: { if guiding { camera.pan() } else if centred { centred = false } }, padding: mapPadding(geo, cover.map),
+                               markerFeed: markerFeed, showsPlaces: showsPlaces, onPlaceTap: openMarker, reportsPlaces: reportsPlaces, onVisiblePlaces: { visiblePlaces = $0 })
+                }
                     .ignoresSafeArea()
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(screen == .preview ? "Seattle offline map. Routes are also described in the panel." : "Seattle offline map")
@@ -390,10 +392,12 @@ struct ExploreView: View {
                 if let startedAt = recorder.startedAt { recordingPill(startedAt, geo) }
             }
             .animation(Motion.panel(reduceMotion), value: screen)
-            .onGeometryChange(for: CGFloat.self) { $0.size.height + $0.safeAreaInsets.top + $0.safeAreaInsets.bottom } action: { screenHeight = $0 }
-            .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { safeBottom = $0 }
         }
         .ignoresSafeArea(.keyboard)
+        // On the GeometryReader, which takes what it is offered, and not on the ZStack in it: the chrome's bottom padding follows the
+        // sheet, and once that outgrew the screen the ZStack grew, which raised `screenHeight`, which raised the padding.
+        .onGeometryChange(for: CGFloat.self) { $0.size.height + $0.safeAreaInsets.top + $0.safeAreaInsets.bottom } action: { screenHeight = $0 }
+        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { safeBottom = $0 }
         .sheet(isPresented: sheetUp) { portraitSheet }
         .task(id: previewRequest) {
             if let previewRequest {
@@ -456,7 +460,7 @@ struct ExploreView: View {
 
     /// Keeps fitted routes clear of the panel, the map buttons and the attribution. Home keeps clear of the fit stop only,
     /// so pulling the sheet up never moves a map the user has panned.
-    private func mapPadding(_ geo: GeometryProxy) -> UIEdgeInsets {
+    private func mapPadding(_ geo: GeometryProxy, _ mapCover: CGFloat) -> UIEdgeInsets {
         let safe = geo.safeAreaInsets
         if screen == .home {
             // Home frames the user's neighbourhood or the area we cover: clear of the panel and the map buttons, 48 pt elsewhere.
@@ -476,8 +480,10 @@ struct ExploreView: View {
             HStack { Spacer(); mapButtons }.padding(.horizontal, 16).padding(.top, 8)
             Spacer(minLength: 0)
             if stop != .large {
-                HStack { attribution; Spacer() }.padding(.horizontal, 12)
-                    .padding(.bottom, floatingHome ? 8 : max(sheetCover - geo.safeAreaInsets.bottom, 0) + 8)
+                CoverReader(cover) { cover in
+                    HStack { attribution; Spacer() }.padding(.horizontal, 12)
+                        .padding(.bottom, floatingHome ? 8 : max(cover.sheet - geo.safeAreaInsets.bottom, 0) + 8)
+                }
             }
             if floatingHome { presenting(homeControls).padding(.horizontal, 14) }
         }
@@ -507,21 +513,20 @@ struct ExploreView: View {
             .interactiveDismissDisabled(screen != .home)
             // At its lower stops the system shrinks the sheet and floats it above the screen's edge, so its own height says nothing
             // about where its top is. The global frame includes that.
-            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { top in
-                let height = screenHeight - top
-                sheetCover = height
-                if stop != .large, screen != .search { mapCover = height }
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY.rounded() } action: { top in
+                cover.update(height: screenHeight - top, restsShortOfLarge: stop != .large && screen != .search)
             }
             #if DEBUG
             .onGeometryChange(for: String.self) { "\(Int($0.frame(in: .global).minY)) \(Int($0.frame(in: .global).maxY)) \(Int($0.safeAreaInsets.bottom))" } action: { MapDebug.shared.sheet = $0 }
             #endif
     }
 
-    /// What the sheet shows over its glass (`SheetGlass`): the tint that keeps text legible, or a solid panel when raised to read or when asked for.
+    /// What the sheet shows over its glass (`SheetGlass`): a frosted veil that keeps the map's labels from printing across the rows,
+    /// or a solid panel when raised to read or when asked for. The system's glass alone doesn't blur what is behind it here.
     @ViewBuilder private var sheetBackdrop: some View {
         if reduceTransparency || GlassFlags.reduceTransparency || stop == .large { Color.panel }
         else if contrast == .increased { Color(uiColor: .glassVeilDense) }
-        else { Color(uiColor: .glassSheetVeil) }
+        else { Rectangle().fill(.regularMaterial).overlay(Color(uiColor: .glassVeil)) }
     }
 
     private func landscapeLayout(_ geo: GeometryProxy) -> some View {
@@ -1226,4 +1231,28 @@ private struct FocusedSearchField: View {
     var body: some View {
         SearchField(text: $text, placeholder: placeholder, focused: $focused).task { focused = true }
     }
+}
+
+/// Where the sheet's top is, in whole points. A drag or a detent animation moves it every frame, so it lives outside `ExploreView`'s
+/// state: only a `CoverReader` that reads it redraws.
+@MainActor @Observable final class SheetCover {
+    /// Height the sheet covers now.
+    private(set) var sheet: CGFloat = 0
+    /// Height it covered at its last rest short of large (not search, which the keyboard moves).
+    private(set) var map: CGFloat = 0
+
+    /// Assigns only what changed, since an `@Observable` property notifies on every set.
+    func update(height: CGFloat, restsShortOfLarge: Bool) {
+        let height = height.rounded()
+        if sheet != height { sheet = height }
+        if restsShortOfLarge, map != height { map = height }
+    }
+}
+
+/// Reads `cover` in its own body, so a change redraws this view and not the one that made it.
+struct CoverReader<Content: View>: View {
+    let cover: SheetCover
+    let content: (SheetCover) -> Content
+    init(_ cover: SheetCover, @ViewBuilder content: @escaping (SheetCover) -> Content) { self.cover = cover; self.content = content }
+    var body: some View { content(cover) }
 }

@@ -226,4 +226,67 @@ final class EvidenceTour: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["needs-place"].waitForExistence(timeout: 10))
         shot("preview-empty-start")
     }
+
+    /// A screenshot with the frames (in points) of the texts and buttons on screen and the screen's size, so a script can leave the
+    /// text out when it measures the sheet's background.
+    @MainActor private func shotWithFrames(_ app: XCUIApplication, _ name: String) {
+        shot(name)
+        var lines = ["screen \(Int(app.frame.width)) \(Int(app.frame.height))"]
+        for type in [XCUIElement.ElementType.staticText, .button, .searchField, .textField] {
+            for element in app.descendants(matching: type).allElementsBoundByIndex {
+                let f = element.frame
+                guard f.width > 0, f.height > 0, f.height < 400 else { continue }
+                lines.append("\(type == .staticText ? "text" : "control") \(f.minX) \(f.minY) \(f.width) \(f.height) \(element.label.replacingOccurrences(of: "\n", with: " "))")
+            }
+        }
+        let attachment = XCTAttachment(string: lines.joined(separator: "\n"))
+        attachment.name = name + ".frames"; attachment.lifetime = .keepAlways; add(attachment)
+    }
+
+    /// The sheet on every screen it carries, over the map at the default view and zoomed into the labels, for the contrast
+    /// measurement in Docs/DESIGN.md. Run once per appearance.
+    @MainActor func testSheetLegibility() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")
+        let app = launch(["--location-granted", "47.6295,-122.3599"])
+        Thread.sleep(forTimeInterval: 3)
+        open(app, "Gas Works", id: "relation/1047789")
+        waitForEstimate(app)
+        shotWithFrames(app, "sheet-place")
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["start-navigation"].waitForExistence(timeout: 20))
+        shotWithFrames(app, "sheet-preview")
+        app.buttons["close-preview"].tap()
+        XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
+        shotWithFrames(app, "sheet-home-peek")
+        raise(app)
+        Thread.sleep(forTimeInterval: 1)
+        shotWithFrames(app, "sheet-home-recents")
+        // Pan the map so its labels (a neighbourhood's, then the lake's) pass under the sheet's body.
+        let window = app.windows.firstMatch
+        func pan(_ from: CGVector, _ to: CGVector) {
+            window.coordinate(withNormalizedOffset: from).press(forDuration: 0.1, thenDragTo: window.coordinate(withNormalizedOffset: to))
+            Thread.sleep(forTimeInterval: 2)
+        }
+        pan(CGVector(dx: 0.5, dy: 0.15), CGVector(dx: 0.5, dy: 0.45))
+        shotWithFrames(app, "sheet-home-recents-label")
+        pan(CGVector(dx: 0.85, dy: 0.1), CGVector(dx: 0.3, dy: 0.2))
+        shotWithFrames(app, "sheet-home-recents-label2")
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 1)
+        shotWithFrames(app, "sheet-search")
+    }
+
+    @MainActor func testAboutSwitches() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")
+        let app = launch([])
+        raise(app)
+        app.buttons["about"].tap()
+        let toggle = app.switches["usage-log-toggle"]
+        for _ in 0..<5 where !toggle.isHittable { app.collectionViews.firstMatch.swipeUp() }
+        shot("about-switches-off")
+        toggle.switches.firstMatch.tap()
+        Thread.sleep(forTimeInterval: 1)
+        shot("about-switches-on")
+    }
 }

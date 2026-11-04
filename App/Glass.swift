@@ -32,13 +32,9 @@ enum GlassFlags {
         #endif
         return .clear
     }()
-    /// The same choice for the sheet, whose glass is UIKit's.
-    static let sheetStyle: UIGlassEffect.Style = {
-        #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("--glass-regular") { return .regular }
-        #endif
-        return .clear
-    }()
+    /// The sheet's glass, which is UIKit's: always `.regular`, under `glassVeil`. The sheet is read at a glance with the map moving
+    /// behind it, and `.clear` let the map's labels print across its rows (Docs/DESIGN.md, principle 4).
+    static let sheetStyle: UIGlassEffect.Style = .regular
 }
 
 /// How much veil a surface carries over its glass.

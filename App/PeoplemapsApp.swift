@@ -59,8 +59,6 @@ extension UIColor {
     /// Laid over the glass of a panel, so text holds its contrast over a busy map. Neutral: glass is never tinted a hue.
     static let glassVeil = dynamic(light: 0xFFFFFF, lightAlpha: 0.34, dark: 0x101412, darkAlpha: 0.5)
     /// The heavier veil for a surface read at length, or at a glance while driving.
-    /// Over the sheet's glass, which lifts a dark map more than the controls' does.
-    static let glassSheetVeil = dynamic(light: 0xFFFFFF, lightAlpha: 0, dark: 0x101412, darkAlpha: 0.3)
     static let glassVeilDense = dynamic(light: 0xFFFFFF, lightAlpha: 0.72, dark: 0x101412, darkAlpha: 0.72)
     /// Hairlines between the rows of a panel, the track under a rating, the well behind the modes, and the chosen mode.
     static let glassHairline = dynamic(light: 0x142D23, lightAlpha: 0.14, dark: 0xFFFFFF, darkAlpha: 0.14)

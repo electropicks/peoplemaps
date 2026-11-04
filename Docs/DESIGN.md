@@ -60,17 +60,27 @@ which lets the map show through; SwiftUI has no modifier for it. An empty
 4. **Clear, with a veil where it needs one.** `.clear` is what a person reads as
    glass over this pale map: `.regular` frosts it to off-white, which is what the
    owner couldn't see on the phone. Busy-map legibility comes from `glassVeil`
-   (`.light`) on text surfaces such as guidance, as Apple asks for `.clear`, and
-   `glassSheetVeil` in the dark sheet. `--glass-regular` swaps it in Debug builds.
+   (`.light`) on text surfaces such as guidance, as Apple asks for `.clear`.
+   `--glass-regular` swaps it in Debug builds.
    **Deliberate deviation from Apple, who reserve `.clear` for media-rich
    backgrounds and recommend `.regular` for text:** the guidance turn banner,
    rerouting card, trip bar and landscape card (`legible: true` in
    `floatingSurface`) use `.regular` under the same `glassVeil`, because a route
    line behind the text showed through and these are read at a glance while
-   driving. Map buttons, chips, the home capsule and the sheet stay `.clear`.
+   driving. Map buttons, chips and the home capsule stay `.clear`.
+   **The sheet is `.regular` under `glassVeil` in both appearances** (home, search, place card,
+   preview), and its frost is a `.regularMaterial` in the sheet's presentation background, not
+   only the system glass. The owner's phone showed "QUEEN ANNE" and "Lake Union" printing across the
+   Recents rows through `.clear` glass with a 30% dark tint. The system's `UIGlassEffect` on a
+   detent also stops drawing, with the effect still set, once a sheet is presented over the sheet
+   (About) and closed, and once the map behind it is touched; setting a new effect or calling
+   `invalidateDetents()` does not bring it back. The material is not affected, so the legibility
+   never depends on the glass drawing. Large is the solid `panel`.
 5. **No accent on controls, plus category colour.** Controls and text use the
-   label colour; the app's tint is `.primary`. Dusk blue (`.calmer`) is a map
-   colour only: the route line, its leader and the selected pin. Green no longer
+   label colour; the app's tint is `.primary`. The one exception is a switch's
+   track when on (`switchTint()`, `calmer`): under `.primary` it is a white track
+   under a white knob in dark mode, with nothing to tell on from off. Dusk blue (`.calmer`) is a
+   colour on the map (the route line, its leader and the selected pin) and the on-state of a switch. Green no longer
    means calmer, and no fill anywhere is a saturated blue or green. Rating colour
    appears only on the rating word and bar. Category colours appear only on place
    badges (list rows, map markers, place card); they never tint glass, text or
@@ -95,14 +105,13 @@ rendered pixels (below).
 
 | Token | Light | Dark | Use | Contrast |
 |---|---|---|---|---|
-| `calmer` | `#4A6F97` | `#7FA3CC` | route line (white casing in light, black in dark), leader, selected pin, destination dot | vs land 4.6 / 6.1, vs water 3.4 / 3.9 (≥3:1 graphic) |
+| `calmer` | `#4A6F97` | `#7FA3CC` | route line (white casing in light, black in dark), leader, selected pin, destination dot, a switch track when on | vs land 4.6 / 6.1, vs water 3.4 / 3.9 (≥3:1 graphic) |
 | `fastest` | `#6B7872` | `#AEBAB3` | fastest line, dotted | vs land 4.1 / 7.9 |
 | `passedRoute` | `#A6B3C0` | `#53616F` | the part of the followed route already driven, drawn 3.5 pt (the route is 5.5) | vs land 1.9 / 2.5; vs the route ahead 2.5 / 2.4. Below 3:1 on purpose: it is a trail, not information, and the width, the puck at its end and the casing say "behind" without colour |
 | `primaryActionFill` | white 72% | white 86% | fill of the solid `.borderedProminent` primary actions: Directions, Start, Done | |
 | `primaryActionSolidFill` | `#DCE3EA` | white 86% | the same on a solid panel: the large stop, Reduce Transparency | |
 | `primaryActionText` | `#20384F` | `#20384F` | label on the above | 12.1 on white, 9.3 on the solid fill |
-| `glassVeil` | white 34% | `#101412` 50% | over `.clear` on text surfaces: guidance, landscape card, credit | |
-| `glassSheetVeil` | none | `#101412` 30% | over the sheet's glass, which lifts a dark map | |
+| `glassVeil` | white 34% | `#101412` 50% | over `.clear` on text surfaces: guidance, landscape card, credit; over `.regular` and a `.regularMaterial` on the sheet | |
 | `glassVeilDense` | white 72% | `#101412` 72% | Increase Contrast | |
 | `glassHairline` | `#142D23` 14% | white 14% | dividers on glass | decorative |
 | `glassTrack`, `glassWell`, `glassChosen` | `#142D23`/white, low alpha | same | rating track, close and mode wells, chosen mode | graphic only |
@@ -224,7 +233,7 @@ Worst case over the map under each surface, in contrast ratio:
 
 | Where | Background, light | Background, dark | Primary, L / D | `onGlass`, L / D |
 |---|---|---|---|---|
-| Sheet | `#F8F8F0` to `#D3EDF6` | `#2D3632` to `#2B464D` | 17.2 / 10.1 | 9.3 / 6.5 |
+| Sheet (`.regular`, `.regularMaterial` and `glassVeil`), 4 November 2026 | `#F7F7F7` | `#1F2322` | 17.3 / 12.1 | 9.3 / 7.6 |
 | Home capsule and chips (no veil) | white to `#CEECF7` | `#38423F` to `#3F626D` | 17.0 / 6.6 | none on them |
 | Guidance banner, route under the text (`.regular`) | `#E6F5FA` to `#FCFCF9` | `#202826` to `#203337` | 18.8 / 13.2 | 9.8 / 8.1 |
 | Trip bar | white to `#EBF8ED` | `#242B29` to `#293C35` | 19.2 / 11.7 | 9.9 / 7.4 |
@@ -236,6 +245,22 @@ and the same method gave 9.8 / 5.8 for primary text and 6.5 / 4.1 for `onGlass`:
 `.regular` the line no longer shows, and along its path the worst background is `#F2F6F5` / `#252E2F` (19.3 / 13.9 primary,
 9.9 / 8.5 `onGlass`). Method: every background pixel in the banner outside the text boxes, taking the worst against the
 text colour (black or white; `onGlass` is that at 75% over the pixel); WCAG ratios.
+
+The sheet row was re-measured on 4 November 2026, after it moved from `.clear` under a 30% dark tint (dark only) to `.regular` and
+a material under `glassVeil`. Same method, applied to the ring of 5 pt around every text box in the sheet, leaving out other texts and
+icons, over the map panned so that a neighbourhood label (Queen Anne), the lake and Fremont's label pass under the sheet's body, and
+over the preview and search screens. Worst case, primary / `onGlass`:
+
+| | Light | Dark |
+|---|---|---|
+| `.clear` (before) | 13.3 / 8.0 | 9.5 / 6.2 |
+| `.regular` + material + `glassVeil` | 17.3 / 9.3 | 12.1 / 7.6 |
+
+The place card's rating line sits in a solid white button and reads dark on it: 10.0 or more. How far the map shows through the
+empty body of the sheet, as the standard deviation of its brightness (0 to 255) with a label under it: 16.8 and 11.5 (dark),
+15.9 and 15.7 (light) before; 0.5, 0.6 and 0.3, 0.4 after. The labels are no longer readable through the body. Run
+`EvidenceTour.testSheetLegibility` (`TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1`, once per appearance); `HomeAndSearchUITests` fails if the
+raised sheet is not frosted at rest, after About closes, or after the map is panned.
 
 Rating words on the sheet are 5.9 or more in light and 6.1 or more in dark.
 Behind the routes is solid: its headers and footers measure 9.7 / 10.0, once they use
@@ -622,7 +647,7 @@ after the owner phone-tested `.regular` twice and couldn't see glass.
 
 | Surface | Glass | Finding |
 |---|---|---|
-| Sheet at its partial stops | `UIGlassEffect` per detent (`SheetGlass`), `glassSheetVeil` over it | Water and land colour clearly come through. `.regular` and `.clear` rendered the same here in the Simulator. |
+| Sheet at its partial stops | `UIGlassEffect(.regular)` per detent (`SheetGlass`) under a `.regularMaterial` and `glassVeil` | Fixed 4 November: `.clear` plus a dark tint let labels print through, and the system glass stops drawing after About closes or the map is touched. The material carries the frost. |
 | Sheet at large | solid `panel` | Long lists and the keyboard. |
 | Home at rest | no sheet; `.clear` chips, capsule and More | Refracts the map; the dark map's streets show through. |
 | Map buttons | `.clear`, `.interactive()` | |
