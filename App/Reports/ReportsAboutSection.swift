@@ -24,6 +24,13 @@ struct ReportsAboutSection: View {
         } header: { header("Feedback") } footer: {
             Text("You can also shake the phone on any screen. In guidance, the flag button marks a moment to describe later.")
         }
+        // Not on the Detailed log section: a dialog on the section holding a ShareLink stops that link from presenting.
+        .confirmationDialog("Clear the detailed log?", isPresented: $confirmClearDrive, titleVisibility: .visible) {
+            Button("Clear", role: .destructive) { DriveLogger.log.clear(); refresh() }
+        } message: { Text("This removes \(Self.summaryText(driveSummary)) from this phone.") }
+        .confirmationDialog("Clear the usage log?", isPresented: $confirmClear, titleVisibility: .visible) {
+            Button("Clear", role: .destructive) { UsageLogger.log.clear(); refresh() }
+        } message: { Text("This removes \(tripCount) \(tripCount == 1 ? "trip" : "trips") from this phone.") }
         if !library.reports.isEmpty {
             Section {
                 ForEach(library.reports) { report in
@@ -70,12 +77,6 @@ struct ReportsAboutSection: View {
             Text("Off by default, and separate from the usage log. When on, each guided walk, cycle or drive is recorded on this phone: your route and the places you chose, every location fix with its speed and accuracy, and what the app did (turns reached, leaving the route, rerouting, voice, mute, going to the background). It also keeps what you search for and open. Trips under 3 minutes are deleted when they end. A recording you start yourself keeps your location, with its speed and accuracy, until you stop it, also while the app is in the background, and iOS shows its blue location indicator meanwhile. Recordings under 3 minutes are deleted when they stop. It includes exact places and stays on this phone unless you share the files. \(Self.summaryText(driveSummary)).\(recordDenied ? " Location is off for PeopleMaps, so the recording did not start. Turn it on in Settings." : "")")
                 .accessibilityIdentifier("drive-log-footer")
         }
-        .confirmationDialog("Clear the detailed log?", isPresented: $confirmClearDrive, titleVisibility: .visible) {
-            Button("Clear", role: .destructive) { DriveLogger.log.clear(); refresh() }
-        } message: { Text("This removes \(Self.summaryText(driveSummary)) from this phone.") }
-        .confirmationDialog("Clear the usage log?", isPresented: $confirmClear, titleVisibility: .visible) {
-            Button("Clear", role: .destructive) { UsageLogger.log.clear(); refresh() }
-        } message: { Text("This removes \(tripCount) \(tripCount == 1 ? "trip" : "trips") from this phone.") }
         .task { refresh() }
         .onChange(of: logOn) { refresh() }
         .onChange(of: driveOn) { recordDenied = false; refresh() }

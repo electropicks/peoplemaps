@@ -192,6 +192,36 @@ final class ReportsUITests: XCTestCase {
         app.buttons["close-about"].tap()
     }
 
+    /// Shares both logs from About after one simulated trip; each tap must bring up the share sheet.
+    @MainActor private func shareLogsAfterATrip(_ id: String) {
+        let app = launch(location: Self.atKerryPark, extra: ["--simulate-route", "--drive-log-keep-short"])
+        openAbout(app)
+        for t in ["usage-log-toggle", "drive-log-toggle"] {
+            let toggle = app.switches[t]
+            scrollTo(toggle, in: app)
+            toggle.switches.firstMatch.tap()
+            XCTAssertEqual(toggle.value as? String, "1")
+        }
+        app.buttons["close-about"].tap()
+        driveBriefly(app)
+        openAbout(app)
+        let share = app.buttons[id]
+        scrollTo(share, in: app)
+        XCTAssertTrue(share.waitForExistence(timeout: 5))
+        // Clear of the home indicator, where a tap at the row's centre would not reach the button.
+        for _ in 0..<5 where share.frame.maxY > app.frame.height - 120 { app.collectionViews.firstMatch.swipeUp() }
+        share.tap()
+        let sheet = app.otherElements["ActivityListView"]
+        let copy = app.buttons["Copy"]
+        let deadline = Date().addingTimeInterval(5)
+        while Date() < deadline && !sheet.exists && !copy.exists { usleep(200_000) }
+        capture("share-\(id)")
+        XCTAssertTrue(sheet.exists || copy.exists, "\(id) brings up the share sheet\n\(app.debugDescription)")
+    }
+
+    @MainActor func testUsageLogShareOpensTheShareSheet() { shareLogsAfterATrip("usage-log-share") }
+    @MainActor func testDetailedLogShareOpensTheShareSheet() { shareLogsAfterATrip("drive-log-share") }
+
     /// A marked moment can get words after the trip, in the normal arrival card and in the scrolling one at AX5.
     @MainActor private func markThenArrive(extra: [String]) -> XCUIApplication {
         let app = launch(location: Self.atKerryPark, extra: ["--simulate-route", "--fast-simulation"] + extra)
