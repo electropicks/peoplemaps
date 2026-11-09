@@ -859,7 +859,7 @@ of the start and destination and a 550 m cell for a marked moment, as in 2.2. "W
   - **Manual recording** (`App/Reports/ManualRecorder.swift`), for the owner's phone: record GPS with no route running.
     Only offered while "Keep a detailed log" is on (turning the switch off stops a recording). Start is the record glyph
     (`record.circle`) in the map-button capsule on Home, or the "Start recording" row on Settings' root list, under Trip
-    logs, which has no glyph and reads "Stop recording" with the time so far while one runs; both show the same state. If
+    logs, which carries a trailing `play.circle` and reads "Stop recording" (`stop.circle`) with the time so far while one runs; both show the same state. If
     location is off, the row under it says the recording did not start. While recording, a compact glass pill (red dot, elapsed time, Stop) sits top leading on Home, preview and
     guidance (left of the map buttons in landscape). It uses the existing When-In-Use permission flow, never Always.
     - **Background**: the recorder has its own `CLLocationManager` (best accuracy, no distance filter, `.otherNavigation`,

@@ -152,7 +152,7 @@ Add or update a region file:
 
 The app ships `Data/regions.json` (through `Scripts/generate_project.py`, so the project is regenerated, not hand-edited) and offers
 King County from Settings, under Map. Only a region's outputs (`expected/<output>`, five for king-county) are downloaded, never
-its inputs; the size on the offer card is the sum of their `bytes` in the manifest (232.3 MB for release `data-seattle-all-2026-11d`).
+its inputs; the size on the offer card is the sum of their `bytes` in the manifest (232.3 MB for release `data-seattle-all-2026-11d`, shown on the row as whole megabytes, "232 MB").
 The space it takes on the phone is an estimate, "about 350 MB": the search index arrives gzipped and is inflated, and its ratio
 (3.3) is measured on the bundled Seattle index, not on the county files. Nothing on a phone has measured it yet.
 

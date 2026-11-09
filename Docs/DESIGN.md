@@ -624,9 +624,9 @@ sentence, two at most, and every explanation is a page behind a row. Sections, i
    ferry or a road outside the map, as Vashon, the Kitsap shore and Skykomish do."
 2. **Trip logs.** "Usage log" and "Detailed log", each with its state as its value ("Off", "On", "On · 3 trips",
    "On · 2 trips, 1.4 MB"; the size only from 1 MB up) and its own page. While the detailed log is on, "Start recording"
-   sits on the root, since it is the one log action people repeat: no glyph, and "Stop recording" with the time so far
-   while one runs. If location is off, a row under it says the recording did not start. Footer: "Off by default. They
-   stay on this phone unless you share them."
+   sits on the root, since it is the one log action people repeat: a trailing `play.circle` in the secondary grey, and "Stop recording" (`stop.circle`) with the time so far
+   while one runs. If location is off, a row under it says the recording did not start. Footer: "Off by default. Kept on
+   this phone unless shared."
 3. **Feedback.** "Report a problem", and "Saved reports" with its count once there is one. Footer: "Or shake the phone on
    any screen."
 4. **About.** "What calmer means", "Map data and coverage", "Acknowledgements". Under the list, centred: "PeopleMaps
