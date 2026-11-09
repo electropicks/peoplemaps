@@ -12,6 +12,8 @@ private struct SettingsPage: ViewModifier {
     func body(content: Content) -> some View {
         content
             .listStyle(.insetGrouped)
+            // 48 pt rows, not the system's 52: with them the root list and its version line fit one screen, clear of the home indicator.
+            .environment(\.defaultMinListRowHeight, 48)
             .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
             // A solid bar in the list's own colour: rows are cut off under the title, where the system's edge effect blurs
             // a section header into a ghost.

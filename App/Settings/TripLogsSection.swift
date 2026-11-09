@@ -17,7 +17,7 @@ struct TripLogsSection: View {
             }.accessibilityIdentifier("drive-log")
             if detailedOn { RecordingRow(logs: logs) }
         } header: { SettingsHeader("Trip logs") } footer: {
-            SettingsFooter("Off by default. They stay on this phone unless\u{00A0}you\u{00A0}share\u{00A0}them.")
+            SettingsFooter("Off by default. Kept on this phone unless\u{00A0}shared.")
         }
     }
 }

@@ -55,7 +55,8 @@ private struct AboutSection: View {
             NavigationLink("Acknowledgements", value: SettingsRoute.acknowledgements).accessibilityIdentifier("acknowledgements")
         } header: { SettingsHeader("About") } footer: {
             Text(AppVersion.line).font(.footnote).foregroundStyle(GuidanceOverlay.onGlass)
-                .multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.top, 16).accessibilityIdentifier("app-version")
+                .multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.top, 8).padding(.bottom, 16)
+                .accessibilityIdentifier("app-version")
         }
     }
 }
