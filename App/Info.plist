@@ -3,6 +3,9 @@
 <plist version="1.0">
 <dict>
 	<!-- Merged with the generated Info.plist. Only keys without an INFOPLIST_KEY build setting live here. -->
+	<!-- The commit a build was made from, shown under Settings: pass PM_BUILD_COMMIT to xcodebuild. Empty by default (Scripts/generate_project.py). -->
+	<key>PMBuildCommit</key>
+	<string>$(PM_BUILD_COMMIT)</string>
 	<!-- Manual recording (App/Reports/ManualRecorder.swift) keeps running after a start in the foreground. When-In-Use is enough; there is no Always. -->
 	<key>UIBackgroundModes</key>
 	<array>

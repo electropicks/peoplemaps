@@ -41,7 +41,7 @@ enum AppFiles {
     static func folder(_ name: String) -> URL { url(name, ext: "d") }
 }
 
-/// The opt-in usage log (`Core/UsageLog.swift`). Off unless the user turns it on in About; nothing here touches the network.
+/// The opt-in usage log (`Core/UsageLog.swift`). Off unless the user turns it on in Settings; nothing here touches the network.
 @MainActor
 enum UsageLogger {
     static let enabledKey = "usageLogEnabled", exactKey = "usageLogExact"

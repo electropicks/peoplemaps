@@ -33,11 +33,35 @@ class PeoplemapsUITestCase: XCTestCase {
         result.tap()
         XCTAssertTrue(app.buttons["close-place"].waitForExistence(timeout: 5))
     }
-    /// Pulls the home sheet up from the peek, to where Recents and About are.
+    /// Pulls the home sheet up from the peek, to where Recents and Settings are.
     @MainActor func raiseHome(_ app: XCUIApplication) {
         let start = app.buttons["search-field"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -300)))
     }
+    /// Settings sits below the fit stop, so the home sheet comes up first.
+    @MainActor func openSettings(_ app: XCUIApplication) {
+        let settings = app.buttons["settings"]
+        if !settings.isHittable { raiseHome(app) }
+        XCTAssertTrue(settings.waitForExistence(timeout: 5))
+        settings.tap()
+        XCTAssertTrue(app.buttons["close-settings"].waitForExistence(timeout: 5))
+    }
+    /// Opens a page of Settings from its row on the root list.
+    @MainActor func openSettingsPage(_ app: XCUIApplication, _ row: String) {
+        let link = app.buttons[row]
+        XCTAssertTrue(link.waitForExistence(timeout: 5), row)
+        for _ in 0..<3 where !link.isHittable { app.collectionViews.firstMatch.swipeUp() }
+        link.tap()
+        XCTAssertTrue(backButton(app).waitForExistence(timeout: 5), "\(row) opens a page")
+    }
+    /// Back from a page of Settings to its root list.
+    @MainActor func backToSettings(_ app: XCUIApplication) {
+        backButton(app).tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+    }
+    @MainActor private func backButton(_ app: XCUIApplication) -> XCUIElement { app.navigationBars.buttons["BackButton"] }
+    /// What a row with a trailing value says: "Usage log" and "Off" may be its label and value, or one label.
+    @MainActor func rowText(_ element: XCUIElement) -> String { (element.label + " " + (element.value as? String ?? "")).trimmingCharacters(in: .whitespaces) }
     /// Pulls the route preview up from where it opens, to where swap and the Extra time menu are.
     @MainActor func raisePreview(_ app: XCUIApplication) {
         guard !app.buttons["extra-time-menu"].exists else { return }
@@ -74,6 +98,16 @@ class PeoplemapsUITestCase: XCTestCase {
         let row = app.buttons["place-\(id)"]
         XCTAssertTrue(row.waitForExistence(timeout: 5), id)
         row.tap()
+    }
+    /// Saves the screen as `<name>.png` in the folder `TEST_RUNNER_PEOPLEMAPS_SHOTS` names, and in the results.
+    @MainActor func saveEvidence(_ name: String) {
+        Thread.sleep(forTimeInterval: 1)
+        let screenshot = XCUIScreen.main.screenshot()
+        let attachment = XCTAttachment(screenshot: screenshot)
+        attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+        guard let folder = ProcessInfo.processInfo.environment["PEOPLEMAPS_SHOTS"], !folder.isEmpty else { return }
+        try? FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
+        XCTAssertNoThrow(try screenshot.pngRepresentation.write(to: URL(fileURLWithPath: folder).appendingPathComponent("\(name).png")))
     }
     /// The screen, not the app: an app screenshot in landscape comes out rotated and cropped.
     @MainActor func capture(_ name: String, app: XCUIApplication) {

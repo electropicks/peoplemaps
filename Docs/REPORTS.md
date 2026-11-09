@@ -696,7 +696,7 @@ Not built yet, apart from the `Core` files.
   since nothing else holds the route's edges and hashes after a reroute.
 - `App/Navigation/NavigationController.swift`: the last three spoken texts with the destination's name replaced, the
   reroute count, and `snapshot(store:)`.
-- `App/ExploreView.swift`: a "Flagged moments" row in the home footer next to About, with an unsent count.
+- `App/ExploreView.swift`: a "Flagged moments" row in the home footer next to Settings, with an unsent count.
 - `App/PrivacyInfo.xcprivacy`: `NSPrivacyCollectedDataTypes` gains Coarse Location, Precise Location, Other User Content,
   Other Diagnostic Data and User ID, each not linked, not tracking, purpose `AppFunctionality`. App Store Connect's answers
   must say the same.
@@ -750,7 +750,8 @@ Numbers are stable, so code comments can cite them; gaps were resolved or remove
 2. **Loopback in Release.** `NSAllowsLocalNetworking` in the shared `Info.plist` also ships in Release. It only affects
    local addresses. Recommended: accept it.
 4. **Timestamp granularity.** Hour, UTC. Recommended: keep.
-5. **Where Flagged moments lives.** The home footer beside About. Recommended: there; no Settings screen exists yet.
+5. **Where Flagged moments lives.** The home footer beside Settings. Recommended: there. (Settings now exists, section 11:
+   the alpha keeps reports under Feedback, Saved reports.)
 6. **Backups.** Recommended: exclude `reports/`; a flagged moment is not worth restoring.
 7. **The note.** No scrubbing of names or addresses, a warning in the UI and 280 characters. Recommended: keep; scrubbing
    fails silently and over-promises. The maintainer reads it before any filing.
@@ -793,15 +794,15 @@ Cloudflare never sees client IPs (out of proportion at this volume).
 
 ## 12. Region download
 
-A second thing the app asks our server for, next to reports: the files of a larger map region (King County), from About,
-under Map area. It is one tap on **Download**, with no account and no install token (4.1). Each request is
+A second thing the app asks our server for, next to reports: the files of a larger map region (King County), from Settings,
+under Map. It is one tap on **Download King County**, with no account and no install token (4.1). Each request is
 `GET /v1/regions/<release>/<region>--<file>` with `Authorization: Bearer <token>`, the token being the App Attest
 exchange; the Worker streams the file from the private bucket. The request carries the file name and that check, and
 nothing about the person: no position, no search, no report ID, no install ID. What the Worker and Cloudflare keep of a
 request (the connecting address and time, as for any request) is settled with 4.6 on the deployed server and is not
 claimed here.
 
-What is built: the app side only (`Core/RegionStore.swift`, `App/RegionAboutSection.swift`). `WorkerSource` is a stub that
+What is built: the app side only (`Core/RegionStore.swift`, `App/Settings/MapSettingsSection.swift`). `WorkerSource` is a stub that
 throws, so a release build contacts nothing; debug builds can aim a plain, unauthenticated `DirectSource` at a test
 server. The Worker, App Attest and the token exchange are separate work. `Docs/PRIVACY.md` says the same in plain words;
 change them together. The files are checked against `Data/regions.json` (size, then SHA-256) before anything is installed,
@@ -815,25 +816,30 @@ free-form note, no category, and the screen, mode, extra-time limit, both routes
 lines, app and data version and device. Exact locations are off by default; with them off the file has the snapped corner
 of the start and destination and a 550 m cell for a marked moment, as in 2.2. "What's included" shows the file's text.
 
-- **Open** by shaking the phone, or "Report a problem" in About and Route details. `App/Reports/` holds the screens.
+- **Open** by shaking the phone, or "Report a problem" in Settings (under Feedback) and Route details. `App/Reports/` holds
+  the composer; the Settings rows and pages are in `App/Settings/`. A report started from Settings says `"screen":
+  "settings, over <screen>"`.
 - **Send** is a share sheet with one `peoplemaps-<date>-<words>.json` file; the owner saves it to iCloud Drive,
-  `PeopleMaps Reports`. Reports (up to 50) stay on the phone until swiped away in About, where they can be shared again.
+  `PeopleMaps Reports`. Reports (up to 50) stay on the phone until swiped away in Settings, Feedback, Saved reports (the row
+  shows only when there is one), where they can be shared again.
 - **Guidance**: the flag button saves the moment (time, step in the plan, spoken lines, position) with a light
-  confirmation and no sheet. After the trip, or from the About list, the user adds words and shares.
-- **Usage log** (`Core/UsageLog.swift`): off by default, a toggle in About. When on, one JSON line per trip in
+  confirmation and no sheet. After the trip, or from Saved reports, the user adds words and shares.
+- **Usage log** (`Core/UsageLog.swift`): off by default, a toggle on its own page in Settings (Trip logs, Usage log;
+  the root row shows "Off", "On" or "On · 3 trips"). When on, one JSON line per trip in
   `usage-log.jsonl`: date and time, mode, extra-time limit, which route was started, both estimates, whether a calmer
-  route was offered, reroute count, each point the user left the route (rounded to about 100 m unless "Exact places in the
-  log" is on) and whether the trip arrived or ended early. The last 500 trips are kept. It is shared or cleared from About
+  route was offered, reroute count, each point the user left the route (rounded to about 100 m unless "Exact places" is
+  on) and whether the trip arrived or ended early. The last 500 trips are kept. It is shared or cleared from that page
   and has no network code. A trip the app is killed during is not logged.
 - **Detailed log** (`Core/DriveLog.swift`, `App/Reports/DriveLogger.swift`): for the owner's own use of a build on their own
   phone, to answer where a drive waits (for example at a left turn because the street it turns onto is backed up), how real
-  speeds compare with the estimates, and how the app is used. Off by default; the "Keep a detailed log" switch in About is
-  separate from the usage log. With it off nothing is recorded or held in memory and guidance runs as before. Nothing
+  speeds compare with the estimates, and how the app is used. Off by default; the "Keep a detailed log" switch, on the
+  Detailed log page in Settings (Trip logs), is separate from the usage log. With it off nothing is recorded or held in memory and guidance runs as before. Nothing
   touches the network. Trips record the fixes guidance already receives; only a manual recording (below) asks for more, and
   only for the `location` background mode, with the same When-In-Use permission. It holds exact places, so it is meant for
   a private build and is not part of what a report contains.
   - **Folder** `drive-log.d` in Application Support (a separate `-uitests` copy under `--ui-testing`), excluded from
-    backup. About shows the trip count and size, shares every file, and clears them after a confirmation.
+    backup. The Detailed log page shows the trip count and size ("Kept on this phone"), shares every file, and clears them
+    after a confirmation; the root row in Settings shows "On · 2 trips, 1.4 MB" (the size from 1 MB up).
   - **One file per guided trip**, `trip-<UTC time>-<mode>.jsonl` (walk, cycle or drive), JSON lines written as they happen,
     so a crash keeps what was captured. A killed trip has no `end` line, and is kept even if short.
     - `header`: start time, mode, app version and build, data version, the request (start and destination names and
@@ -852,8 +858,9 @@ of the start and destination and a 550 m cell for a marked moment, as in 2.2. "W
       switching does not happen in guidance, so it is logged only in app use (`route_selected`).
   - **Manual recording** (`App/Reports/ManualRecorder.swift`), for the owner's phone: record GPS with no route running.
     Only offered while "Keep a detailed log" is on (turning the switch off stops a recording). Start is the record glyph
-    (`record.circle`) in the map-button capsule on Home, or "Start recording" under the switch in About; both show the
-    same state. While recording, a compact glass pill (red dot, elapsed time, Stop) sits top leading on Home, preview and
+    (`record.circle`) in the map-button capsule on Home, or the "Start recording" row on Settings' root list, under Trip
+    logs, which carries a trailing `play.circle` and reads "Stop recording" (`stop.circle`) with the time so far while one runs; both show the same state. If
+    location is off, the row under it says the recording did not start. While recording, a compact glass pill (red dot, elapsed time, Stop) sits top leading on Home, preview and
     guidance (left of the map buttons in landscape). It uses the existing When-In-Use permission flow, never Always.
     - **Background**: the recorder has its own `CLLocationManager` (best accuracy, no distance filter, `.otherNavigation`,
       no automatic pausing, `allowsBackgroundLocationUpdates`, `showsBackgroundLocationIndicator`) and `App/Info.plist`
@@ -865,7 +872,8 @@ of the start and destination and a 550 m cell for a marked moment, as in 2.2. "W
       `foreground`, `device`, `authorization` (status, at the start and when it changes), `location_error`, and `end`
       (`reason`: `user`, `log_off` when the switch is turned off, or `terminated`).
     - **Length rule**: under 3 minutes it is deleted when it stops. The 500 MB cap drops the oldest trips and recordings
-      together. About counts recordings next to trips ("2 trips, 1 recording, 4 MB kept"), shares and clears them with the rest.
+      together. The Detailed log page counts recordings next to trips ("2 trips, 1 recording, 4 MB"), and shares and clears
+      them with the rest.
     - **Killed mid-recording**: the open file's name is kept in `UserDefaults` (`manualRecordingOpenFile`). On the next
       launch the file gets an `end` line with reason `terminated` at the time of its last line (and is deleted if that is
       under 3 minutes). Recording never restarts by itself.

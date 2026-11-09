@@ -1,25 +1,19 @@
 import XCTest
 
 /// Problem reports, the usage log and the detailed log (Docs/REPORTS.md section 11). Reports are shared as a file; nothing is sent.
-final class ReportsUITests: XCTestCase {
-    private static let atKerryPark = "47.6295,-122.3599"
-
-    @MainActor private func launch(location: String? = nil, extra: [String] = []) -> XCUIApplication {
-        XCUIDevice.shared.orientation = .portrait
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing"] + (location.map { ["--location-granted", $0] } ?? []) + extra
-        app.launch()
-        XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 20))
-        return app
+final class ReportsUITests: PeoplemapsUITestCase {
+    /// Settings, then one of its log pages.
+    @MainActor private func openLog(_ app: XCUIApplication, _ row: String) {
+        openSettings(app)
+        openSettingsPage(app, row)
     }
-    /// About sits below the fit stop, so the home sheet comes up first.
-    @MainActor private func openAbout(_ app: XCUIApplication) {
-        let about = app.buttons["about"]
-        if !about.isHittable {
-            let start = app.buttons["search-field"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-            start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -300)))
-        }
-        about.tap()
+    /// What a log's page says is kept: "Kept on this phone, 1 trip".
+    @MainActor private func kept(_ app: XCUIApplication, _ id: String) -> XCUIElement { app.descendants(matching: .any)[id] }
+    /// The row says "Clear usage log"; the confirmation's button is the only plain "Clear".
+    @MainActor private func confirmClear(_ app: XCUIApplication) {
+        let confirm = app.buttons["Clear"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        confirm.tap()
     }
     @MainActor private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
@@ -30,10 +24,10 @@ final class ReportsUITests: XCTestCase {
         for _ in 0..<5 where !element.isHittable { app.collectionViews.firstMatch.swipeUp() }
     }
 
-    @MainActor func testReportFromAboutIsKeptAndShareable() {
-        let app = launch()
-        openAbout(app)
-        scrollTo(app.buttons["report-problem-about"], in: app)
+    @MainActor func testReportFromSettingsIsKeptAndShareable() {
+        let app = launchHome()
+        openSettings(app)
+        XCTAssertFalse(app.buttons["saved-reports"].exists, "No Saved reports row until there is one")
         app.buttons["report-problem-about"].tap()
         let note = app.textFields["report-note"]
         XCTAssertTrue(note.waitForExistence(timeout: 5))
@@ -43,10 +37,11 @@ final class ReportsUITests: XCTestCase {
         XCTAssertEqual(app.switches["report-exact"].value as? String, "0", "Exact locations start off")
         app.buttons["close-report"].tap()
         XCTAssertFalse(app.textFields["report-note"].waitForExistence(timeout: 1))
-        // The report waits in the About list until swiped away.
-        let saved = app.staticTexts["Wrong left on 45th"]
-        scrollTo(saved, in: app)
-        XCTAssertTrue(saved.exists)
+        // The report waits on its own page until swiped away.
+        XCTAssertTrue(rowText(app.buttons["saved-reports"]).contains("1"), rowText(app.buttons["saved-reports"]))
+        openSettingsPage(app, "saved-reports")
+        let saved = app.buttons.containing(NSPredicate(format: "label BEGINSWITH 'Wrong left on 45th'")).firstMatch
+        XCTAssertTrue(saved.waitForExistence(timeout: 5), app.debugDescription)
         saved.tap()
         XCTAssertTrue(app.textFields["report-note"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.textFields["report-note"].value as? String, "Wrong left on 45th")
@@ -54,9 +49,8 @@ final class ReportsUITests: XCTestCase {
     }
 
     @MainActor func testIncludedDetailsAreShownAndFollowTheToggle() {
-        let app = launch(location: Self.atKerryPark)
-        openAbout(app)
-        scrollTo(app.buttons["report-problem-about"], in: app)
+        let app = launchHome(location: Self.atKerryPark)
+        openSettings(app)
         app.buttons["report-problem-about"].tap()
         let included = app.buttons["What\u{2019}s included"]
         XCTAssertTrue(included.waitForExistence(timeout: 5))
@@ -64,7 +58,7 @@ final class ReportsUITests: XCTestCase {
         let json = app.descendants(matching: .any)["report-json"]
         XCTAssertTrue(json.waitForExistence(timeout: 5))
         XCTAssertTrue(json.label.contains("\"exactLocations\" : false"), json.label)
-        XCTAssertTrue(json.label.contains("\"screen\" : \"about, over home\""), json.label)
+        XCTAssertTrue(json.label.contains("\"screen\" : \"settings, over home\""), json.label)
         XCTAssertTrue(json.label.contains("\"events\""), "The recent app events are listed")
         XCTAssertTrue(json.label.contains("map style loaded"), json.label)
         capture("reports-01-composer")
@@ -75,17 +69,17 @@ final class ReportsUITests: XCTestCase {
     }
 
     @MainActor func testUsageLogIsOffUntilTurnedOnThenKeepsATripAndClears() {
-        let app = launch(location: Self.atKerryPark, extra: ["--simulate-route"])
-        openAbout(app)
+        let app = launchHome(location: Self.atKerryPark, extra: ["--simulate-route"])
+        openLog(app, "usage-log")
         let toggle = app.switches["usage-log-toggle"]
-        scrollTo(toggle, in: app)
+        XCTAssertTrue(toggle.isHittable)
         XCTAssertEqual(toggle.value as? String, "0", "Off by default")
         XCTAssertFalse(app.buttons["usage-log-clear"].exists)
         toggle.switches.firstMatch.tap()
         XCTAssertEqual(toggle.value as? String, "1", "The switch turns on")
         XCTAssertTrue(app.switches["usage-log-exact"].exists, "and the exact-places switch appears")
-        capture("reports-02-about-usage-log")
-        app.buttons["close-about"].tap()
+        capture("reports-02-usage-log")
+        app.buttons["close-settings"].tap()
 
         app.buttons["search-field"].tap()
         let field = app.textFields["search-input"]
@@ -106,20 +100,23 @@ final class ReportsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["close-preview"].waitForExistence(timeout: 10))
         app.buttons["close-preview"].tap()
 
-        openAbout(app)
-        let saved = app.staticTexts["Marked moment, no words yet"]
-        scrollTo(saved, in: app)
-        XCTAssertTrue(saved.exists, "The mark waits in the list")
+        openSettings(app)
+        XCTAssertTrue(rowText(app.buttons["usage-log"]).contains("On \u{00B7} 1 trip"), rowText(app.buttons["usage-log"]))
+        openSettingsPage(app, "saved-reports")
+        let saved = app.buttons.containing(NSPredicate(format: "label BEGINSWITH 'Marked moment, no words yet'")).firstMatch
+        XCTAssertTrue(saved.waitForExistence(timeout: 5), "The mark waits in the list")
+        backToSettings(app)
+        openSettingsPage(app, "usage-log")
+        let summary = kept(app, "usage-log-summary")
+        XCTAssertTrue(rowText(summary).contains("1 trip"), rowText(summary))
         let clear = app.buttons["usage-log-clear"]
         scrollTo(clear, in: app)
-        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS '1 trip kept'")).firstMatch.exists)
         clear.tap()
-        let confirm = app.sheets.buttons["Clear"]
-        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
-        confirm.tap()
-        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS '0 trips kept'")).firstMatch.waitForExistence(timeout: 5))
+        confirmClear(app)
+        let cleared = NSPredicate { _, _ in (summary.label + " " + (summary.value as? String ?? "")).contains("0 trips") }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: cleared, object: nil)], timeout: 5), .completed, rowText(summary))
         XCTAssertFalse(clear.exists)
-        app.buttons["close-about"].tap()
+        app.buttons["close-settings"].tap()
     }
 
     /// Runs a short simulated trip from Kerry Park to Gas Works and ends it from the guidance screen.
@@ -141,70 +138,68 @@ final class ReportsUITests: XCTestCase {
 
     /// The detailed log is off on a fresh install, and with it off a whole trip leaves no file.
     @MainActor func testDetailedLogIsOffByDefaultAndWritesNothingWhenOff() {
-        let app = launch(location: Self.atKerryPark, extra: ["--simulate-route", "--drive-log-keep-short"])
-        openAbout(app)
+        let app = launchHome(location: Self.atKerryPark, extra: ["--simulate-route", "--drive-log-keep-short"])
+        openLog(app, "drive-log")
         let toggle = app.switches["drive-log-toggle"]
-        scrollTo(toggle, in: app)
+        XCTAssertTrue(toggle.isHittable)
         XCTAssertEqual(toggle.value as? String, "0", "Off by default")
         XCTAssertFalse(app.buttons["drive-log-clear"].exists)
         capture("drivelog-01-off")
-        app.buttons["close-about"].tap()
+        app.buttons["close-settings"].tap()
 
         driveBriefly(app)
 
-        openAbout(app)
-        let footer = app.staticTexts["drive-log-footer"]
-        scrollTo(footer, in: app)
-        XCTAssertTrue(footer.label.contains("0 trips"), footer.label)
+        openSettings(app)
+        XCTAssertTrue(rowText(app.buttons["drive-log"]).hasSuffix("Off"), rowText(app.buttons["drive-log"]))
+        openSettingsPage(app, "drive-log")
+        let summary = rowText(kept(app, "drive-log-summary"))
+        XCTAssertTrue(summary.hasSuffix("0 trips"), summary)
         XCTAssertFalse(app.buttons["drive-log-share"].exists, "Nothing to share")
         XCTAssertFalse(app.buttons["drive-log-clear"].exists)
-        app.buttons["close-about"].tap()
+        app.buttons["close-settings"].tap()
     }
 
-    /// With it on, a simulated trip writes a file that About counts, shares and clears.
+    /// With it on, a simulated trip writes a file that Settings counts, shares and clears.
     @MainActor func testDetailedLogOnKeepsASimulatedTripAndClears() {
-        let app = launch(location: Self.atKerryPark, extra: ["--simulate-route", "--drive-log-keep-short"])
-        openAbout(app)
-        let toggle = app.switches["drive-log-toggle"]
-        scrollTo(toggle, in: app)
-        toggle.switches.firstMatch.tap()
-        XCTAssertEqual(toggle.value as? String, "1")
-        app.buttons["close-about"].tap()
+        let app = launchHome(location: Self.atKerryPark, extra: ["--simulate-route", "--drive-log-keep-short"])
+        turnDetailedLogOn(app)
 
         driveBriefly(app)
 
-        openAbout(app)
-        let footer = app.staticTexts["drive-log-footer"]
-        scrollTo(footer, in: app)
-        XCTAssertTrue(footer.label.contains("1 trip,"), footer.label)
-        XCTAssertFalse(footer.label.contains("Zero"), footer.label)
+        openSettings(app)
+        let row = rowText(app.buttons["drive-log"])
+        XCTAssertTrue(row.hasSuffix("On \u{00B7} 1 trip"), row)
+        XCTAssertFalse(row.contains("Zero"), row)
+        openSettingsPage(app, "drive-log")
+        let summary = kept(app, "drive-log-summary")
+        XCTAssertTrue(rowText(summary).contains("1 trip, "), rowText(summary))
+        XCTAssertFalse(rowText(summary).contains("Zero"), rowText(summary))
         XCTAssertTrue(app.buttons["drive-log-share"].exists)
         capture("drivelog-02-on-one-trip")
         let clear = app.buttons["drive-log-clear"]
         scrollTo(clear, in: app)
         clear.tap()
-        let confirm = app.sheets.buttons["Clear"]
-        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
-        confirm.tap()
-        let cleared = NSPredicate { _, _ in footer.label.contains("0 trips") }
-        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: cleared, object: nil)], timeout: 5), .completed, footer.label)
+        confirmClear(app)
+        let cleared = NSPredicate { _, _ in (summary.label + " " + (summary.value as? String ?? "")).contains("0 trips") }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: cleared, object: nil)], timeout: 5), .completed, rowText(summary))
         XCTAssertFalse(clear.exists)
-        app.buttons["close-about"].tap()
+        app.buttons["close-settings"].tap()
     }
 
-    /// Shares both logs from About after one simulated trip; each tap must bring up the share sheet.
-    @MainActor private func shareLogsAfterATrip(_ id: String) {
-        let app = launch(location: Self.atKerryPark, extra: ["--simulate-route", "--drive-log-keep-short"])
-        openAbout(app)
-        for t in ["usage-log-toggle", "drive-log-toggle"] {
-            let toggle = app.switches[t]
-            scrollTo(toggle, in: app)
+    /// Shares a log from its page in Settings after one simulated trip; the tap must bring up the share sheet.
+    @MainActor @discardableResult private func shareLogsAfterATrip(_ id: String) -> XCUIApplication {
+        let app = launchHome(location: Self.atKerryPark, extra: ["--simulate-route", "--drive-log-keep-short"])
+        openSettings(app)
+        for log in ["usage-log", "drive-log"] {
+            openSettingsPage(app, log)
+            let toggle = app.switches["\(log)-toggle"]
             toggle.switches.firstMatch.tap()
             XCTAssertEqual(toggle.value as? String, "1")
+            backToSettings(app)
         }
-        app.buttons["close-about"].tap()
+        app.buttons["close-settings"].tap()
         driveBriefly(app)
-        openAbout(app)
+        openLog(app, String(id.dropLast("-share".count)))
         let share = app.buttons[id]
         scrollTo(share, in: app)
         XCTAssertTrue(share.waitForExistence(timeout: 5))
@@ -217,14 +212,43 @@ final class ReportsUITests: XCTestCase {
         while Date() < deadline && !sheet.exists && !copy.exists { usleep(200_000) }
         capture("share-\(id)")
         XCTAssertTrue(sheet.exists || copy.exists, "\(id) brings up the share sheet\n\(app.debugDescription)")
+        return app
     }
 
     @MainActor func testUsageLogShareOpensTheShareSheet() { shareLogsAfterATrip("usage-log-share") }
     @MainActor func testDetailedLogShareOpensTheShareSheet() { shareLogsAfterATrip("drive-log-share") }
 
+    /// Shares a log, closes the share sheet, then clears the log: Clear must still ask, and confirming must empty the log.
+    @MainActor private func clearAfterSharing(_ log: String) {
+        let app = shareLogsAfterATrip("\(log)-share")
+        let sheet = app.otherElements["ActivityListView"]
+        let close = app.buttons["Close"]
+        if close.exists { close.tap() } else {
+            let top = sheet.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02))
+            top.press(forDuration: 0.05, thenDragTo: top.withOffset(CGVector(dx: 0, dy: 700)))
+        }
+        let gone = NSPredicate { _, _ in !sheet.exists && !app.buttons["Copy"].exists }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: gone, object: nil)], timeout: 10), .completed, "The share sheet closes")
+        let clear = app.buttons["\(log)-clear"]
+        scrollTo(clear, in: app)
+        XCTAssertTrue(clear.isHittable, app.debugDescription)
+        clear.tap()
+        let confirm = app.buttons["Clear"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "Clear asks first, also after a share\n\(app.debugDescription)")
+        capture("clear-after-share-\(log)")
+        confirm.tap()
+        let summary = kept(app, "\(log)-summary")
+        let cleared = NSPredicate { _, _ in (summary.label + " " + (summary.value as? String ?? "")).contains("0 trips") }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: cleared, object: nil)], timeout: 5), .completed, rowText(summary))
+        XCTAssertFalse(clear.exists, "Nothing left to clear")
+        XCTAssertFalse(app.buttons["\(log)-share"].exists, "or to share")
+    }
+    @MainActor func testUsageLogClearsAfterSharing() { clearAfterSharing("usage-log") }
+    @MainActor func testDetailedLogClearsAfterSharing() { clearAfterSharing("drive-log") }
+
     /// A marked moment can get words after the trip, in the normal arrival card and in the scrolling one at AX5.
     @MainActor private func markThenArrive(extra: [String]) -> XCUIApplication {
-        let app = launch(location: Self.atKerryPark, extra: ["--simulate-route", "--fast-simulation"] + extra)
+        let app = launchHome(location: Self.atKerryPark, extra: ["--simulate-route", "--fast-simulation"] + extra)
         app.buttons["search-field"].tap()
         let field = app.textFields["search-input"]
         XCTAssertTrue(field.waitForExistence(timeout: 5))
@@ -263,30 +287,29 @@ final class ReportsUITests: XCTestCase {
     // MARK: Manual recording
 
     @MainActor private func turnDetailedLogOn(_ app: XCUIApplication) {
-        openAbout(app)
+        openLog(app, "drive-log")
         let toggle = app.switches["drive-log-toggle"]
-        scrollTo(toggle, in: app)
         toggle.switches.firstMatch.tap()
         XCTAssertEqual(toggle.value as? String, "1")
-        app.buttons["close-about"].tap()
+        app.buttons["close-settings"].tap()
     }
 
     /// With the detailed log off there is nothing to start; turning it on shows the record control.
     @MainActor func testRecordControlFollowsTheDetailedLogSwitch() {
-        let app = launch(location: Self.atKerryPark)
+        let app = launchHome(location: Self.atKerryPark)
         XCTAssertTrue(app.buttons["locate"].exists)
         XCTAssertFalse(app.buttons["record-start"].exists, "No control while the detailed log is off")
-        openAbout(app)
-        XCTAssertFalse(app.buttons["drive-record-toggle"].exists, "No Start in About while it is off")
-        app.buttons["close-about"].tap()
+        openSettings(app)
+        XCTAssertFalse(app.buttons["drive-record-toggle"].exists, "No Start in Settings while it is off")
+        app.buttons["close-settings"].tap()
         turnDetailedLogOn(app)
         XCTAssertTrue(app.buttons["record-start"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.descendants(matching: .any)["record-pill"].exists)
     }
 
-    /// Start shows the pill with Stop on home; Stop writes a recording that About counts, and the control comes back.
+    /// Start shows the pill with Stop on home; Stop writes a recording that Settings counts, and the control comes back.
     @MainActor func testManualRecordingStartsShowsThePillAndStopsWritingAFile() {
-        let app = launch(location: Self.atKerryPark, extra: ["--drive-log-keep-short"])
+        let app = launchHome(location: Self.atKerryPark, extra: ["--drive-log-keep-short"])
         turnDetailedLogOn(app)
         app.buttons["record-start"].tap()
         let pill = app.descendants(matching: .any)["record-pill"]
@@ -295,40 +318,40 @@ final class ReportsUITests: XCTestCase {
         sleep(3)
         capture("recording-01-pill-on-home")
 
-        openAbout(app)
+        openSettings(app)
         let record = app.buttons["drive-record-toggle"]
-        scrollTo(record, in: app)
-        XCTAssertEqual(record.label, "Stop recording", "About shows the same state")
-        app.buttons["close-about"].tap()
+        XCTAssertTrue(record.isHittable, "On the root list, with no scrolling")
+        XCTAssertEqual(record.label, "Stop recording", "Settings shows the same state")
+        app.buttons["close-settings"].tap()
 
         app.buttons["record-stop"].tap()
         let gone = NSPredicate { _, _ in !pill.exists }
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: gone, object: nil)], timeout: 5), .completed)
         XCTAssertTrue(app.buttons["record-start"].waitForExistence(timeout: 5))
 
-        openAbout(app)
-        let footer = app.staticTexts["drive-log-footer"]
-        scrollTo(footer, in: app)
-        XCTAssertTrue(footer.label.contains("0 trips, 1 recording,"), footer.label)
-        XCTAssertTrue(app.buttons["drive-log-share"].exists)
+        openSettings(app)
         XCTAssertEqual(app.buttons["drive-record-toggle"].label, "Start recording")
-        app.buttons["close-about"].tap()
+        XCTAssertTrue(rowText(app.buttons["drive-log"]).hasSuffix("On \u{00B7} 1 recording"), rowText(app.buttons["drive-log"]))
+        openSettingsPage(app, "drive-log")
+        let summary = rowText(kept(app, "drive-log-summary"))
+        XCTAssertTrue(summary.contains("0 trips, 1 recording, "), summary)
+        XCTAssertTrue(app.buttons["drive-log-share"].exists)
+        app.buttons["close-settings"].tap()
     }
 
     /// Without --drive-log-keep-short, a recording under 3 minutes is deleted when it stops.
     @MainActor func testShortManualRecordingIsDeletedOnStop() {
-        let app = launch(location: Self.atKerryPark)
+        let app = launchHome(location: Self.atKerryPark)
         turnDetailedLogOn(app)
         app.buttons["record-start"].tap()
         XCTAssertTrue(app.buttons["record-stop"].waitForExistence(timeout: 10))
         sleep(2)
         app.buttons["record-stop"].tap()
         XCTAssertTrue(app.buttons["record-start"].waitForExistence(timeout: 5))
-        openAbout(app)
-        let footer = app.staticTexts["drive-log-footer"]
-        scrollTo(footer, in: app)
-        XCTAssertTrue(footer.label.contains("0 trips, "), footer.label)
-        XCTAssertFalse(footer.label.contains("recording,"), footer.label)
-        app.buttons["close-about"].tap()
+        openLog(app, "drive-log")
+        let summary = rowText(kept(app, "drive-log-summary"))
+        XCTAssertTrue(summary.contains("0 trips"), summary)
+        XCTAssertFalse(summary.contains("recording"), summary)
+        app.buttons["close-settings"].tap()
     }
 }

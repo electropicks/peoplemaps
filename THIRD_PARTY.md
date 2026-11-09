@@ -1,6 +1,6 @@
 # Third-party components
 
-The app shows the same credits under About › Acknowledgements, with the full
+The app shows the same credits under Settings › Acknowledgements, with the full
 MapLibre and Ferrostar licence texts bundled (`App/MapLibre-LICENSE.md`,
 `App/Ferrostar-LICENSE.md`).
 
