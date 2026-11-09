@@ -43,8 +43,8 @@ struct PlacePicker: View {
                                 .accessibilityIdentifier("place-hint")
                         }
                     } else if results.isEmpty {
-                        EmptySearch(count: search.count).padding(.top, 40)
                         AppleMapsLookup(query: query)
+                        EmptySearch(count: search.count).accessibilitySortPriority(1)
                     } else {
                         section("Matches", results, prefix: "place-")
                     }

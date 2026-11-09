@@ -320,9 +320,13 @@ public final class SearchIndex: @unchecked Sendable {
             let word = Array(token), budget = token.count <= 5 ? 1 : 2, last = index == tokens.count - 1
             var best: (distance: Int, docs: Int, term: String)?
             for (term, docs) in vocabulary where abs(term.count - word.count) <= budget || (last && term.count > word.count) {
-                // The last word may still be half typed: compare it with the start of longer words.
-                let chars = Array(term), candidate = last && chars.count > word.count ? Array(chars.prefix(word.count)) : chars
-                let d = Self.editDistance(word, candidate, limit: budget)
+                var candidate = Array(term), d = Self.editDistance(word, candidate, limit: budget)
+                // The last word may still be half typed: compare it with the start of longer words too. The whole word wins only
+                // when it is closer ("wrks" is one letter from "works", two from "work").
+                if last, candidate.count > word.count {
+                    let start = Array(candidate.prefix(word.count)), toStart = Self.editDistance(word, start, limit: budget)
+                    if toStart <= d { candidate = start; d = toStart }
+                }
                 guard d <= budget else { continue }
                 if best == nil || d < best!.distance || (d == best!.distance && docs > best!.docs) { best = (d, docs, String(candidate)) }
             }

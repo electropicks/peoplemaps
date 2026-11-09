@@ -109,10 +109,15 @@ class PeoplemapsUITestCase: XCTestCase {
         try? FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
         XCTAssertNoThrow(try screenshot.pngRepresentation.write(to: URL(fileURLWithPath: folder).appendingPathComponent("\(name).png")))
     }
-    /// The screen, not the app: an app screenshot in landscape comes out rotated and cropped.
+    /// The screen, not the app: an app screenshot in landscape comes out rotated and cropped. `TEST_RUNNER_PEOPLEMAPS_SHOTS`, a folder on
+    /// the Mac, also gets the PNG.
     @MainActor func capture(_ name: String, app: XCUIApplication) {
-        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        let screenshot = XCUIScreen.main.screenshot()
+        let attachment = XCTAttachment(screenshot: screenshot)
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+        if let folder = ProcessInfo.processInfo.environment["PEOPLEMAPS_SHOTS"] {
+            try? screenshot.pngRepresentation.write(to: URL(fileURLWithPath: folder).appendingPathComponent("\(name).png"))
+        }
     }
     // MARK: Real location (Simulator location injection and the system permission alert)
 
@@ -264,3 +269,55 @@ class PeoplemapsUITestCase: XCTestCase {
         XCTAssertFalse(app.buttons["start-navigation"].exists)
     }
 }
+
+/// The screen's brightness (0 to 255), read in points, for checks no accessibility value can make: a fill, an alignment.
+@MainActor struct ScreenLuma {
+    private var pixels: [UInt8] = []
+    private(set) var width = 0, height = 0
+    /// Pixels per point.
+    private(set) var scale: CGFloat = 1
+
+    init() {
+        guard let image = XCUIScreen.main.screenshot().image.cgImage else { return }
+        width = image.width; height = image.height
+        scale = CGFloat(image.width) / XCUIApplication().windows.firstMatch.frame.width
+        pixels = [UInt8](repeating: 0, count: width * height)
+        guard let context = CGContext(data: &pixels, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width,
+                                      space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue) else { pixels = []; return }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+    }
+    /// One pixel, by pixel coordinates.
+    func pixel(_ x: Int, _ y: Int) -> Double {
+        guard x >= 0, y >= 0, x < width, y < height, !pixels.isEmpty else { return .nan }
+        return Double(pixels[y * width + x])
+    }
+    /// Every pixel of `rect`, given in points.
+    func values(in rect: CGRect) -> [Double] {
+        let r = CGRect(x: rect.minX * scale, y: rect.minY * scale, width: rect.width * scale, height: rect.height * scale).integral
+        var out: [Double] = []
+        for y in Int(r.minY)..<Int(r.maxY) { for x in Int(r.minX)..<Int(r.maxX) { let v = pixel(x, y); if !v.isNaN { out.append(v) } } }
+        return out
+    }
+    /// The mean over 2 pt around `point`.
+    func mean(around point: CGPoint) -> Double {
+        let v = values(in: CGRect(x: point.x - 1, y: point.y - 1, width: 2, height: 2))
+        return v.isEmpty ? .nan : v.reduce(0, +) / Double(v.count)
+    }
+    /// The x, in points, of each run of columns in `rect` holding a pixel at least `contrast` away from the rect's median: the
+    /// start and end of every glyph or symbol on a plain fill. Runs closer than `gap` points count as one.
+    func inkRuns(in rect: CGRect, contrast: Double = 60, gap: CGFloat = 5) -> [ClosedRange<CGFloat>] {
+        let all = values(in: rect).sorted()
+        guard !all.isEmpty else { return [] }
+        let median = all[all.count / 2]
+        let r = CGRect(x: rect.minX * scale, y: rect.minY * scale, width: rect.width * scale, height: rect.height * scale).integral
+        var runs: [ClosedRange<CGFloat>] = []
+        for x in Int(r.minX)..<Int(r.maxX) {
+            let ink = (Int(r.minY)..<Int(r.maxY)).contains { abs(pixel(x, $0) - median) >= contrast }
+            guard ink else { continue }
+            let at = CGFloat(x) / scale
+            if let last = runs.last, at - last.upperBound <= gap { runs[runs.count - 1] = last.lowerBound...at } else { runs.append(at...at) }
+        }
+        return runs
+    }
+}
+

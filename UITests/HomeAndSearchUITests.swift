@@ -193,4 +193,45 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         XCTAssertTrue(result.staticTexts["Address \u{00B7} Fremont"].exists, result.debugDescription)
         XCTAssertTrue(result.staticTexts["OpenStreetMap, Oct 2026"].exists)
     }
+    /// On the raised sheet the first-launch hint is a caption under the field, with nothing behind it, so it can\u{2019}t pass for a
+    /// second field. Floating over the map it stays a chip above the capsule (Docs/DESIGN.md 4.2).
+    @MainActor func testRaisedHomeHintIsACaptionNotASecondField() {
+        let app = launchHome()
+        let hint = app.staticTexts["home-hint"], field = app.buttons["search-field"]
+        XCTAssertTrue(hint.exists)
+        XCTAssertLessThanOrEqual(hint.frame.maxY, field.frame.minY, "Floating, the hint chip sits above the capsule")
+        app.buttons["home-more"].tap()
+        XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
+        XCTAssertTrue(hint.exists, "The raised sheet still says what to do")
+        XCTAssertEqual(hint.label, "Search a place or address, or long-press the map")
+        XCTAssertGreaterThanOrEqual(hint.frame.minY, field.frame.maxY, "Raised, the hint is a caption under the field")
+        Thread.sleep(forTimeInterval: 1)
+        let screen = ScreenLuma()
+        // Just outside the words on the leading side, where a well would be, against the bare panel left of the field at the same height.
+        let beside = screen.mean(around: CGPoint(x: hint.frame.minX - 5, y: hint.frame.midY))
+        let panel = screen.mean(around: CGPoint(x: field.frame.minX - 5, y: hint.frame.midY))
+        XCTAssertLessThan(abs(beside - panel), 3, "The hint sits in a well like the field\u{2019}s: \(beside) against \(panel)")
+        capture("home-raised-hint", app: app)
+    }
+    /// With no match and the keyboard up, the Apple Maps hand-off is in full view: clear of the keyboard and of the credit above it.
+    /// At the largest standard text size, which on this phone is what a smaller phone shows at the default one.
+    @MainActor func testAppleMapsLookupIsInReachWithTheKeyboardUp() {
+        let app = launchHome(extra: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"])
+        app.buttons["search-field"].tap()
+        let field = app.textFields["search-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("unfindableXYZ")
+        let lookup = app.buttons["apple-maps-lookup"], keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(lookup.waitForExistence(timeout: 5))
+        XCTAssertTrue(keyboard.waitForExistence(timeout: 5), "The keyboard is up while typing")
+        Thread.sleep(forTimeInterval: 1)
+        capture("search-no-results-keyboard", app: app)
+        XCTAssertTrue(lookup.isHittable)
+        XCTAssertGreaterThanOrEqual(lookup.frame.height, 44)
+        XCTAssertLessThanOrEqual(lookup.frame.maxY, keyboard.frame.minY, "The row runs under the keyboard")
+        let credit = app.links["Map data © OpenStreetMap contributors"]
+        if credit.exists { XCTAssertLessThanOrEqual(lookup.frame.maxY, credit.frame.minY, "The row runs under the credit") }
+        XCTAssertGreaterThanOrEqual(lookup.frame.minY, field.frame.maxY)
+        XCTAssertTrue(app.descendants(matching: .any)["search-empty"].exists, "It still says that nothing matched")
+    }
 }
