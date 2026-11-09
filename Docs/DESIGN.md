@@ -360,11 +360,13 @@ floating controls over it, each on its own `.clear` glass. Favourite chips above
 First launch shows a one-line hint chip where the favourites go: "Search a place or
 address, or long-press the map" (D4). The chip is plain glass, not interactive: it is not a button.
 
-More, or dragging the capsule up, presents a system sheet at `.medium` only
-(`raiseHome`). Home has no large stop (decision, 4 November 2026): at large it was a flat,
+More, or dragging the capsule up, presents a system sheet with one stop, as tall as what it
+holds (`raiseHome`, `homeHeight`), up to 70% of the screen, past which it scrolls. At the system's medium a fresh install
+showed half a screen of empty panel under the field and one row (9 November 2026); the place card is sized the same way
+(4.4). Home has no large stop (decision, 4 November 2026): at large it was a flat,
 square-edged, opaque page with the map dimmed, holding a hint, the field and one row.
-Medium keeps the inset frosted card over a live map. Search is the screen that goes large,
-where results need the room. It holds the same chips and field, then Recents and the rows **Edit
+The fitted stop keeps the inset frosted card over a live map. Search is the screen that goes large,
+where results need the room. The sheet holds the same chips and field, then Recents and the rows **Edit
 favourites** and **Settings**. Pulling it down dismisses it back to the
 floating controls. On the sheet (and the landscape card) the first-launch hint is a `.footnote` caption in `onGlass`
 under the field, with nothing behind it: in a well of its own above the field it passed for a second field
@@ -420,6 +422,12 @@ list. Each row:
   VoiceOver still hears the empty state first. The start and destination pickers do the
   same. Nothing from Apple is shown in the app.
 - `scrollEdgeEffectStyle(.soft, for: .top)` under the pinned field.
+- **Before anything is typed** the sheet is never a blank page (9 November 2026): Recents, or on a fresh install the line
+  "Search a place, an address or a street", then six shortcuts in two columns (`SearchShortcuts`): Coffee, Food,
+  Groceries, Parks, Gas and Pharmacy. Each is set like a favourite chip, a 30-pt category badge and a word in a
+  `glassWell` capsule, and types its word into the field, so the results are the index's own category search
+  (`Docs/SEARCH.md`, Category words), nearest first. The header is "Nearby" when the map can show the user and
+  "In Seattle" otherwise. They are searches, not suggested places: nothing is featured. One column at accessibility sizes.
 
 ### 4.4 Place card
 
@@ -675,7 +683,7 @@ one to a row.
   traffic."
 - **Map data and coverage:** what stays on the phone; Sources ("Map data from" the date of the extract in use, read from
   the search index, the OpenStreetMap ODbL link, USGS elevation, and the count of street and path segments); Coverage
-  and what the map can miss, ending "This prototype has not been field validated."
+  and what the map doesn't know, ending "These routes haven't been checked on the road, so go by the signs in front of you."
 - **Acknowledgements:** OpenStreetMap, Overture, USGS, MapLibre and Ferrostar with their licences. Links in label colour
   with `arrow.up.forward`.
 
