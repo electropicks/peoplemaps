@@ -50,7 +50,7 @@ which lets the map show through; SwiftUI has no modifier for it. An empty
    chips and trip bar. Only the navigation layer is glass.
 2. **Glass holds what you glance at; solid holds what you read.** The route
    panel, place card, home and guidance sit straight on glass, split by hairlines,
-   with no opaque cards. Long reading (Behind the routes, About, the large stop)
+   with no opaque cards. Long reading (Behind the routes, Settings, the large stop)
    is on a solid `panel`. Text on glass is checked from rendered pixels
    (section 2, "On glass").
 3. **No glass on glass.** A glass button inside the glass sheet uses
@@ -73,7 +73,7 @@ which lets the map show through; SwiftUI has no modifier for it. An empty
    only the system glass. The owner's phone showed "QUEEN ANNE" and "Lake Union" printing across the
    Recents rows through `.clear` glass with a 30% dark tint. The system's `UIGlassEffect` on a
    detent also stops drawing, with the effect still set, once a sheet is presented over the sheet
-   (About) and closed, and once the map behind it is touched; setting a new effect or calling
+   (Settings) and closed, and once the map behind it is touched; setting a new effect or calling
    `invalidateDetents()` does not bring it back. The material is not affected, so the legibility
    never depends on the glass drawing. Large is the solid `panel`.
 5. **No accent on controls, plus category colour.** Controls and text use the
@@ -266,7 +266,7 @@ The place card's rating line sits in a solid white button and reads dark on it: 
 empty body of the sheet, as the standard deviation of its brightness (0 to 255) with a label under it: 16.8 and 11.5 (dark),
 15.9 and 15.7 (light) before; 0.5, 0.6 and 0.3, 0.4 after. The labels are no longer readable through the body. Run
 `EvidenceTour.testSheetLegibility` (`TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1`, once per appearance); `HomeAndSearchUITests` fails if the
-raised sheet is not frosted at rest, after About closes, or after the map is panned.
+raised sheet is not frosted at rest, after Settings closes, or after the map is panned.
 
 Rating words on the sheet are 5.9 or more in light and 6.1 or more in dark.
 Behind the routes is solid: its headers and footers measure 9.7 / 10.0, once they use
@@ -321,7 +321,7 @@ in light, dark, portrait and landscape.
   **Locate** (`location`; always shown; centres on the user, and explains itself
   in an alert when it can't: permission not asked or denied, outside the map, no
   fix yet) and **Fit** (`viewfinder`; "Fit routes on map" in preview, "Centre on
-  this place" on a place, "Fit map to Seattle" on home). About moves into the sheet (home footer "About PeopleMaps"), so
+  this place" on a place, "Fit map to Seattle" on home). Settings is a row on the home sheet (4.2), so
   the cluster stays at two buttons. Each button 44×44, `.clear` glass.
 - The cluster rides above the sheet's detent and fades out when the sheet is
   at the large detent (Apple Maps behaviour).
@@ -361,8 +361,12 @@ More, or dragging the capsule up, presents a system sheet at `.medium` only
 square-edged, opaque page with the map dimmed, holding a hint, the field and one row.
 Medium keeps the inset frosted card over a live map. Search is the screen that goes large,
 where results need the room. It holds the same chips and field, then Recents and the rows **Edit
-favourites** and **About PeopleMaps**. Pulling it down dismisses it back to the
+favourites** and **Settings**. Pulling it down dismisses it back to the
 floating controls.
+
+The two rows are set like the Recents rows above them (`HomeRow`), so they read as rows to tap and not as a footnote: a
+glyph (`star`, `gearshape`) on a 32-pt `glassWell` circle where a place's badge sits, the title in `.body` label colour,
+a trailing chevron, 52 pt tall (46 in landscape), with the hairline between them inset past the glyph.
 
 - **Favourite chips:** a horizontal row of capsules, a 30-pt category badge and the
   place's short name (`Place.shortName`). Tapping one opens the place card;
@@ -598,28 +602,65 @@ Check badge on `glassWell`, "You've arrived at Gas Works Park", summary line, tr
 notes split by hairlines, **Done** as `.primaryAction()`, "Times are estimates. No
 live traffic." and the voice tip. `.sensoryFeedback(.success)` fires on arrival.
 
-### 4.9 About and Acknowledgements
+### 4.9 Settings
 
-Current: `RouteDetails.swift` About sheet with stale copy ("route-comparison
-prototype, not turn-by-turn navigation", D12).
+Replaced "About PeopleMaps" (9 November 2026): one long list that opened on two cards of prose, with the controls people
+use three screens down. Reached from the home sheet's **Settings** row (4.2). A `.large` sheet on the solid `panel`
+(principle 2): `NavigationStack`, inline title, inset grouped `List`, and the close button on every page. Code:
+`App/Settings/`.
 
-Proposed: reached from the home footer row. Standard `NavigationStack` +
-inset grouped `List` in a `.large` sheet (system glass toolbar). Sections:
-"What calmer means" (one paragraph, the mode list), "Data" (OpenStreetMap
-ODbL link, snapshot date, USGS elevation, and "Overture Maps Foundation" once
-Overture Places lands on `search/overture-places`),
-"Coverage" (current copy), Acknowledgements (MapLibre, Ferrostar BSD-3, OSM,
-USGS). Remove "not turn-by-turn navigation". Links in `label` colour with
-`arrow.up.forward`.
+**The root list is rows only** and fits one screen at the default text size. It holds no paragraph: a footer is one
+sentence, two at most, and every explanation is a page behind a row. Sections, in order:
 
-**Map area (About).** A section between Data and Coverage, plain list rows (nothing on glass): the King County offer
-("King County: Seattle, Bellevue and the rest of the county, plus 3 miles", its download size and "About N MB on your phone",
-and which map is on the phone now), then one control row per state. Download; progress bar with "x MB of y MB" and Pause;
-Waiting for Wi-Fi with Use cellular; Paused with Resume; the plain reason with Retry; Verifying; Ready ("Ready. Switches at
-next launch", with Switch now only when no route is shown and the person is not navigating) and Remove, which asks first.
-Colour comes only from the system; the bar is the standard `ProgressView`. After the switch the place card says "PeopleMaps
-covers King County and a little beyond." outside coverage, and a place no road reaches inside it says "No road route to this
-place in PeopleMaps. It may need a ferry or a road outside the map, as Vashon, the Kitsap shore and Skykomish do."
+1. **Map.** "On this phone" with the map in use as its value (Seattle, King County), then the King County offer. At rest
+   the offer is one row, "Download King County" with the download size as its value ("Update King County" when an older
+   release is on the phone), over a footer that says what it covers, the space it takes and that it downloads over Wi-Fi.
+   Past that it is one row that says where King County stands and a row for each thing to do: "Downloading" (bar,
+   "x MB of y MB") with Pause; "Waiting for Wi-Fi" with Use cellular and Pause; "Paused" with Resume; the plain reason
+   with Retry; "Verifying"; and "Ready" ("Ready. Switches at next launch", with Switch now only when no route is shown and
+   the person is not navigating) with Remove King County, which asks first. Colour comes only from the system; the bar is
+   the standard `ProgressView`. After the switch the place card says "PeopleMaps covers King County and a little beyond."
+   outside coverage, and a place no road reaches inside it says "No road route to this place in PeopleMaps. It may need a
+   ferry or a road outside the map, as Vashon, the Kitsap shore and Skykomish do."
+2. **Trip logs.** "Usage log" and "Detailed log", each with its state as its value ("Off", "On", "On · 3 trips",
+   "On · 2 trips, 1.4 MB"; the size only from 1 MB up) and its own page. While the detailed log is on, "Start recording"
+   sits on the root, since it is the one log action people repeat: no glyph, and "Stop recording" with the time so far
+   while one runs. If location is off, a row under it says the recording did not start. Footer: "Off by default. They
+   stay on this phone unless you share them."
+3. **Feedback.** "Report a problem", and "Saved reports" with its count once there is one. Footer: "Or shake the phone on
+   any screen."
+4. **About.** "What calmer means", "Map data and coverage", "Acknowledgements". Under the list, centred: "PeopleMaps
+   0.1.0 · 793bdf6", the version and, when the build was given one, its commit (`PM_BUILD_COMMIT`, empty by default,
+   through `PMBuildCommit` in `App/Info.plist`; `Scripts/run-simulator.sh` passes it).
+
+**Pages.** The same list. An explanation is a `SettingsNote`: a `.body` semibold heading over a `.subheadline` paragraph,
+one to a row.
+
+- **Usage log:** "Keep a usage log", "Exact places" while it is on, and "Kept on this phone" with the count; "Share usage
+  log" and "Clear usage log" once there is a trip; then About this log (What it keeps, Where it stays).
+- **Detailed log:** "Keep a detailed log" and "Kept on this phone" ("2 trips, 1 recording, 1.4 MB"; an empty log is
+  "0 trips", never a zero size); "Share detailed log" and "Clear detailed log"; then About this log (What it keeps,
+  Recordings you start, Where it stays, Limits). It says everything `Docs/PRIVACY.md` says about the log in fewer words;
+  change them together.
+- **Clear asks first.** The dialog hangs off a view of its own behind the page. On a list or section that holds a
+  `ShareLink` it stops the share sheet presenting (PR 68).
+- **Saved reports:** tap one to add words or share it again, swipe to remove it.
+- **What calmer means:** one sentence, then Driving, Cycling and Walking, each a row with its mode symbol. Footer, kept
+  word for word: "These are transparent preferences, not safety ratings. Times and stress are estimates, with no live
+  traffic."
+- **Map data and coverage:** what stays on the phone; Sources ("Map data from" the date of the extract in use, read from
+  the search index, the OpenStreetMap ODbL link, USGS elevation, and the count of street and path segments); Coverage
+  and what the map can miss, ending "This prototype has not been field validated."
+- **Acknowledgements:** OpenStreetMap, Overture, USGS, MapLibre and Ferrostar with their licences. Links in label colour
+  with `arrow.up.forward`.
+
+**Type and colour.** Section headers are `.footnote` semibold. Headers, footers, row values and note paragraphs use
+`GuidanceOverlay.onGlass`, since the list's own grey is about 3:1 on its background. The root has no row icons, so every
+row starts on one line. Nothing takes an accent: rows and buttons are label colour, the two destructive rows the system's
+red, switches `switchTint()`. The navigation bar is solid, in the list's background colour, so a row is cut off under the
+title; the system's scroll edge effect blurred section headers into a ghost there. The last words of a footer are joined
+with no-break spaces where the line would otherwise end on one word. At accessibility sizes a row's value moves under
+its title.
 
 ## 5. Motion
 
@@ -657,7 +698,7 @@ All through `Motion` (`App/PeoplemapsApp.swift`); no new durations.
   scrolls horizontally at accessibility sizes, with names wrapping to two
   lines.
 - **VoiceOver order**: home: search field, favourites (each "Gas Works
-  Park, park"), the Add badge ("Add a favourite"), recents, About, then
+  Park, park"), the Add badge ("Add a favourite"), recents, Settings, then
   map controls (locate, fit), then the map. Preview: to, from, close, calmer
   route, fastest route, Why this route, Calmer means, modes, Start; swap and extra
   time when raised. Guidance: banner (distance + instruction + then), calm note, trip
@@ -677,14 +718,14 @@ after the owner phone-tested `.regular` twice and couldn't see glass.
 
 | Surface | Glass | Finding |
 |---|---|---|
-| Sheet at its partial stops | `UIGlassEffect(.regular)` per detent (`SheetGlass`) under a `.regularMaterial` and `glassVeil` | Fixed 4 November: `.clear` plus a dark tint let labels print through, and the system glass stops drawing after About closes or the map is touched. The material carries the frost. |
+| Sheet at its partial stops | `UIGlassEffect(.regular)` per detent (`SheetGlass`) under a `.regularMaterial` and `glassVeil` | Fixed 4 November: `.clear` plus a dark tint let labels print through, and the system glass stops drawing after Settings closes or the map is touched. The material carries the frost. |
 | Sheet at large | solid `panel` | Long lists and the keyboard. |
 | Home at rest | no sheet; `.clear` chips, capsule and More | Refracts the map; the dark map's streets show through. |
 | Map buttons | `.clear`, `.interactive()` | |
 | Credit, turn banner, calm chip, trip bar, landscape card, arrival card | `.clear` + `glassVeil` | |
 | Re-centre pill | `.glass` button | Over the map, not on the sheet. |
 | Directions, Start, Done | `.primaryAction()` | The one allowed glass-in-glass: the primary action (principle 6). |
-| Behind the routes, About, pickers | solid or system modal | Reading, not glance. |
+| Behind the routes, Settings, pickers | solid or system modal | Reading, not glance. |
 | Reduce Transparency | `floatingSurface`, `sheetBackdrop` | Solid `panel`, with an outline. |
 
 ## 7. Implementation plan
@@ -728,8 +769,8 @@ landscape unless noted). Base each on the latest `main` after `ux-round-1`.
 8. **Guidance on glass.** `App/Navigation/GuidanceView.swift`. Evidence:
    guidance, rerouting, arrival, landscape, Reduce Transparency, AX3; re-run
    `motion-frames-*` captures.
-9. **About and Acknowledgements.** `App/RouteDetails.swift` (`AboutView`),
-   `App/Acknowledgements.swift`. Evidence: About light/dark.
+9. **Settings and Acknowledgements.** `App/Settings/` (4.9). Evidence:
+   `EvidenceTour.testSettingsScreens` and `testSettingsLargeTextAndLandscape`.
 10. **Accessibility pass.** VoiceOver order, sort priorities, haptics, AX3
     screenshots of every screen, `ui-summary.json` refreshed.
 
@@ -741,7 +782,7 @@ Run `python3 Scripts/generate_project.py` in any PR that adds an `App/` file
 1. **Home at rest:** search field plus the favourite chips, floating with no sheet
    (4.2, changed November 2026).
 2. **Parks colour:** a muted green; green no longer means calmer (section 2).
-3. **About:** moves from the map buttons to the home sheet's footer.
+3. **About:** moves from the map buttons to the home sheet's footer. It became Settings in November 2026 (4.9).
 4. **Extra time:** a menu on the raised preview and in landscape, not on the panel
    as it opens (changed November 2026).
 5. **iPad:** iPhone only for now.
