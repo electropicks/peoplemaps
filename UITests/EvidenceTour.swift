@@ -337,4 +337,67 @@ final class EvidenceTour: XCTestCase {
         Thread.sleep(forTimeInterval: 1)
         shot("about-switches-on")
     }
+
+    /// The controls pass of November 2026: composer with the keyboard up, preview, raised home, the empty search and the place card,
+    /// in light then dark. `TEST_RUNNER_PEOPLEMAPS_SHOTS` is a folder on the Mac that also gets each PNG, named
+    /// `<PEOPLEMAPS_SHOT_PREFIX><screen>-<light|dark>.png`; `TEST_RUNNER_PEOPLEMAPS_TEXT` sets a text size.
+    @MainActor func testControls() throws {
+        let environment = ProcessInfo.processInfo.environment
+        try XCTSkipUnless(environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")
+        let text = environment["PEOPLEMAPS_TEXT"].flatMap { $0.isEmpty ? nil : ["-UIPreferredContentSizeCategoryName", $0] } ?? []
+        let folder = environment["PEOPLEMAPS_SHOTS"], prefix = environment["PEOPLEMAPS_SHOT_PREFIX"] ?? ""
+        addTeardownBlock { @MainActor in XCUIDevice.shared.appearance = .light }
+        for (appearance, name) in [(XCUIDevice.Appearance.light, "light"), (.dark, "dark")] {
+            XCUIDevice.shared.appearance = appearance
+            func save(_ screen: String) {
+                Thread.sleep(forTimeInterval: 1)
+                let screenshot = XCUIScreen.main.screenshot()
+                let attachment = XCTAttachment(screenshot: screenshot)
+                attachment.name = "\(screen)-\(name)"; attachment.lifetime = .keepAlways; add(attachment)
+                if let folder { try? screenshot.pngRepresentation.write(to: URL(fileURLWithPath: folder).appendingPathComponent("\(prefix)\(screen)-\(name).png")) }
+            }
+            var app = launch(text)
+            Thread.sleep(forTimeInterval: 2)
+            save("home-floating-hint")
+            raise(app)
+            XCTAssertTrue(app.buttons["about"].waitForExistence(timeout: 5))
+            save("home-raised-hint")
+            app.buttons["about"].tap()
+            let report = app.buttons["report-problem-about"]
+            XCTAssertTrue(app.collectionViews.firstMatch.waitForExistence(timeout: 10))
+            for _ in 0..<12 where !(report.exists && report.isHittable) { app.collectionViews.firstMatch.swipeUp() }
+            report.tap()
+            XCTAssertTrue(app.textFields["report-note"].waitForExistence(timeout: 5))
+            Thread.sleep(forTimeInterval: 1)
+            save("composer-keyboard")
+            app.terminate()
+            app = launch(text)
+            app.buttons["search-field"].tap()
+            XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 5))
+            app.textFields["search-input"].typeText("unfindableXYZ")
+            XCTAssertTrue(app.buttons["apple-maps-lookup"].waitForExistence(timeout: 5))
+            save("search-no-results")
+            app.terminate()
+            app = launch(["--location-granted", "47.6698,-122.3843"] + text)
+            open(app, "Gas Works", id: "relation/1047789")
+            waitForEstimate(app)
+            save("place-card")
+            app.buttons["directions"].tap()
+            XCTAssertTrue(app.buttons["start-navigation"].waitForExistence(timeout: 20))
+            save("preview")
+            app.buttons["route-fastest"].tap()
+            save("preview-fastest-chosen")
+            if !app.buttons["extra-time-menu"].exists {
+                let start = app.buttons["choose-destination"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -230)))
+            }
+            save("preview-raised")
+            XCUIDevice.shared.orientation = .landscapeLeft
+            XCTAssertTrue(app.buttons["start-navigation"].waitForExistence(timeout: 10))
+            save("preview-landscape")
+            XCUIDevice.shared.orientation = .portrait
+            XCTAssertTrue(app.buttons["close-preview"].waitForExistence(timeout: 10))
+            app.terminate()
+        }
+    }
 }
