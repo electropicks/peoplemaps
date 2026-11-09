@@ -148,6 +148,10 @@ final class SearchTests: XCTestCase {
         XCTAssertEqual(SearchIndex.editDistance(Array("wroks"), Array("works"), limit: 2), 1)
         XCTAssertEqual(SearchIndex.editDistance(Array("kitten"), Array("sitting"), limit: 3), 3)
     }
+    /// A dropped letter in a short word, as the scout typed it.
+    func testTypoFallbackFindsGasWorksFromGasWrks() {
+        XCTAssertTrue(index.search("Gas Wrks").contains { $0.name == "Gas Works Park" }, "\(index.search("Gas Wrks").map(\.name))")
+    }
     func testResultsCarrySnapNodesAndRoute() throws {
         let address = try XCTUnwrap(index.search("3400 Fremont Ave N").first)
         XCTAssertEqual(Set(address.snap.keys), Set(TravelMode.allCases))
