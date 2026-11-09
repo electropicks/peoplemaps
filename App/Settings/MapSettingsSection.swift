@@ -37,17 +37,17 @@ struct MapSettingsSection: View {
             download(offer)
         case let .downloading(progress):
             bar(progress, status: "Downloading")
-            Button("Pause") { regions.pause() }.accessibilityIdentifier("region-pause")
+            action("Pause", "pause.circle", id: "region-pause") { regions.pause() }
         case .waitingForWiFi:
             bar(regions.progress ?? .init(received: 0, total: offer.download), status: "Waiting for Wi-Fi")
-            Button("Use cellular") { regions.useCellular() }.accessibilityIdentifier("region-cellular")
-            Button("Pause") { regions.pause() }.accessibilityIdentifier("region-pause")
+            action("Use cellular", "antenna.radiowaves.left.and.right", id: "region-cellular") { regions.useCellular() }
+            action("Pause", "pause.circle", id: "region-pause") { regions.pause() }
         case .paused:
             bar(regions.progress ?? .init(received: 0, total: offer.download), status: "Paused")
-            Button("Resume") { regions.resume() }.accessibilityIdentifier("region-resume")
+            action("Resume", "arrow.down.circle", id: "region-resume") { regions.resume() }
         case let .failed(message):
             card { Text(message).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("region-status") }
-            Button("Retry") { regions.retry() }.accessibilityIdentifier("region-retry")
+            action("Retry", "arrow.clockwise.circle", id: "region-retry") { regions.retry() }
         case .verifying:
             LabeledContent {
                 HStack(spacing: 8) {
@@ -61,18 +61,28 @@ struct MapSettingsSection: View {
                     .accessibilityIdentifier("region-status")
             }
             if regions.switchPending && canSwitchNow {
-                Button("Switch now") { regions.switchNow() }.accessibilityIdentifier("region-switch")
+                action("Switch now", "arrow.triangle.2.circlepath.circle", id: "region-switch") { regions.switchNow() }
             }
-            Button("Remove King County", role: .destructive) { confirmRemove = true }.accessibilityIdentifier("region-remove")
+            Button(role: .destructive) { confirmRemove = true } label: { SettingsAction("Remove King County", symbol: "trash", destructive: true) }
+                .accessibilityIdentifier("region-remove")
         }
     }
 
     /// The offer at rest: what a tap gets, and how big the download is.
     private func download(_ offer: RegionModel.Offer) -> some View {
         Button { regions.download() } label: {
-            SettingsValueRow(title: regions.hasOlderRelease ? "Update King County" : "Download King County", value: offer.downloadLabel)
+            SettingsAction(regions.hasOlderRelease ? "Update King County" : "Download King County", value: Self.offerSize(offer), symbol: "arrow.down.circle")
         }
         .accessibilityIdentifier("region-download")
+    }
+
+    /// "232 MB": whole megabytes from 100 MB up, where the tenth says nothing. The progress line keeps the manifest's own figures.
+    static func offerSize(_ offer: RegionModel.Offer) -> String {
+        offer.download >= 100_000_000 && offer.download < 1_000_000_000 ? "\(Int((Double(offer.download) / 1_000_000).rounded())) MB" : offer.downloadLabel
+    }
+
+    private func action(_ title: String, _ symbol: String, id: String, perform: @escaping () -> Void) -> some View {
+        Button(action: perform) { SettingsAction(title, symbol: symbol) }.accessibilityIdentifier(id)
     }
 
     /// King County over one line that says where it stands.

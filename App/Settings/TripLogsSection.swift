@@ -30,12 +30,10 @@ private struct RecordingRow: View {
 
     var body: some View {
         Button(action: toggle) {
-            HStack {
-                Text(recorder.isRecording ? "Stop recording" : "Start recording")
-                Spacer(minLength: 8)
+            SettingsAction(title: recorder.isRecording ? "Stop recording" : "Start recording", symbol: recorder.isRecording ? "stop.circle" : "play.circle") {
                 if let startedAt = recorder.startedAt {
                     TimelineView(.periodic(from: startedAt, by: 1)) { context in
-                        Text(RecordingPill.elapsed(context.date.timeIntervalSince(startedAt))).monospacedDigit().foregroundStyle(GuidanceOverlay.onGlass)
+                        Text(RecordingPill.elapsed(context.date.timeIntervalSince(startedAt))).monospacedDigit()
                     }
                 }
             }

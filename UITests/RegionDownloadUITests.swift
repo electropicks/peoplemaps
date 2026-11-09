@@ -39,11 +39,11 @@ final class RegionDownloadUITests: PeoplemapsUITestCase {
     @MainActor func testTheOfferShowsTheManifestsDownloadSizeAndSpace() {
         let app = launchHome()
         openMapArea(app)
-        // Data/regions.json: the five king-county outputs add up to 232,312,020 bytes.
+        // Data/regions.json: the five king-county outputs add up to 232,312,020 bytes, shown in whole megabytes from 100 MB up.
         let download = app.buttons["region-download"]
         XCTAssertTrue(download.isHittable, app.debugDescription)
         XCTAssertTrue(rowText(download).contains("Download King County"), rowText(download))
-        XCTAssertTrue(rowText(download).contains("232.3 MB"), rowText(download))
+        XCTAssertTrue(rowText(download).contains("232 MB"), rowText(download))
         let footer = app.staticTexts["region-footer"].label
         XCTAssertTrue(footer.hasPrefix("The whole county and 3 miles beyond, about 350 MB on your phone."), footer)
         let current = rowText(app.descendants(matching: .any)["region-current"])
@@ -126,6 +126,47 @@ final class RegionDownloadUITests: PeoplemapsUITestCase {
         for _ in 0..<4 where !(fallback.exists && fallback.isHittable) { app.collectionViews.firstMatch.swipeUp() }
         XCTAssertTrue(app.staticTexts["region-fallback"].waitForExistence(timeout: 5))
         capture("region-fallback", app: app)
+    }
+
+    /// Every state of the King County rows, saved for a look. Skipped unless `TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1`. Waiting for Wi-Fi
+    /// and Verifying cannot happen on a simulator with a test region, so the app is held in them (`--region-state`).
+    @MainActor func testEveryDownloadStateForEvidence() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")
+        var arguments = try tinyRegionArguments()
+        let graph = "king-county--expected__seattle-graph.bin"
+        server?.stall(graph, after: 100_000)
+        var app = launchHome(extra: arguments)
+        openMapArea(app)
+        saveEvidence("settings-download-offer")
+        app.buttons["region-download"].tap()
+        XCTAssertTrue(app.buttons["region-pause"].waitForExistence(timeout: 10))
+        saveEvidence("settings-download-downloading")
+        app.buttons["region-pause"].tap()
+        XCTAssertTrue(app.buttons["region-resume"].waitForExistence(timeout: 10))
+        saveEvidence("settings-download-paused")
+        server?.release(graph)
+        app.buttons["region-resume"].tap()
+        XCTAssertTrue(app.buttons["region-remove"].waitForExistence(timeout: 40))
+        saveEvidence("settings-download-ready")
+        app.terminate()
+        server?.stop()
+
+        arguments = try tinyRegionArguments()
+        server?.replace("king-county--expected__seattle-map.pmtiles", with: Data(repeating: 1, count: 10_000))
+        app = launchHome(extra: arguments)
+        openMapArea(app)
+        app.buttons["region-download"].tap()
+        XCTAssertTrue(app.buttons["region-retry"].waitForExistence(timeout: 40))
+        saveEvidence("settings-download-failed")
+        app.terminate()
+
+        for (state, name) in [("waiting", "waiting-for-wifi"), ("verifying", "verifying")] {
+            app = launchHome(extra: ["--region-state", state])
+            openMapArea(app)
+            XCTAssertTrue(app.staticTexts["region-status"].waitForExistence(timeout: 5), state)
+            saveEvidence("settings-download-\(name)")
+            app.terminate()
+        }
     }
 
     /// One gzip member in stored blocks, so the app's unpacking runs on real gzip framing.

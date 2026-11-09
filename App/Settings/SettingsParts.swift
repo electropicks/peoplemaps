@@ -76,6 +76,52 @@ struct SettingsValueRow: View {
     }
 }
 
+/// The label of a row that does something when tapped. A row that leads to a page has its chevron and a row that only states a
+/// value has nothing, so an action carries a trailing symbol in the secondary grey: the title stays label colour, and nothing takes
+/// an accent. A destructive row's symbol takes the row's red. At accessibility sizes the value moves under the title.
+struct SettingsAction<Value: View>: View {
+    let title: String
+    let symbol: String
+    var destructive = false
+    @ViewBuilder var value: Value
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @ScaledMetric(relativeTo: .body) private var symbolWidth: CGFloat = 24
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                    value.foregroundStyle(GuidanceOverlay.onGlass)
+                }
+                Spacer(minLength: 8)
+            } else {
+                Text(title)
+                Spacer(minLength: 8)
+                value.foregroundStyle(GuidanceOverlay.onGlass)
+            }
+            glyph.frame(width: symbolWidth).accessibilityHidden(true)
+        }
+    }
+
+    @ViewBuilder private var glyph: some View {
+        let image = Image(systemName: symbol).font(.body)
+        if destructive { image } else { image.foregroundStyle(GuidanceOverlay.onGlass) }
+    }
+}
+
+extension SettingsAction where Value == EmptyView {
+    init(_ title: String, symbol: String, destructive: Bool = false) {
+        self.init(title: title, symbol: symbol, destructive: destructive) { EmptyView() }
+    }
+}
+
+extension SettingsAction where Value == Text {
+    init(_ title: String, value: String, symbol: String) {
+        self.init(title: title, symbol: symbol) { Text(value) }
+    }
+}
+
 /// An external link in label colour with the arrow-out glyph, not the global tint.
 struct ExternalLink: View {
     let title: String

@@ -7,7 +7,8 @@ struct FeedbackSection: View {
 
     var body: some View {
         Section {
-            Button("Report a problem") { ReportCenter.shared.open(from: "settings") }.accessibilityIdentifier("report-problem-about")
+            Button { ReportCenter.shared.open(from: "settings") } label: { SettingsAction("Report a problem", symbol: "exclamationmark.bubble") }
+                .accessibilityIdentifier("report-problem-about")
             if !library.reports.isEmpty {
                 NavigationLink(value: SettingsRoute.savedReports) {
                     SettingsValueRow(title: "Saved reports", value: "\(library.reports.count)")

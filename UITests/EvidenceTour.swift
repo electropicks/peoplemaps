@@ -437,5 +437,7 @@ final class EvidenceTour: XCTestCase {
         save("settings-root-landscape")
         app.collectionViews.firstMatch.swipeUp()
         save("settings-root-landscape-2")
+        for _ in 0..<3 { app.collectionViews.firstMatch.swipeUp() }
+        save("settings-root-landscape-end")
     }
 }

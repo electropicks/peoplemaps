@@ -21,9 +21,10 @@ struct UsageLogPage: View {
             if logs.usageTrips > 0 {
                 Section {
                     if let file = logs.usageFile {
-                        ShareLink(item: file) { Text("Share usage log") }.accessibilityIdentifier("usage-log-share")
+                        ShareLink(item: file) { SettingsAction("Share usage log", symbol: "square.and.arrow.up") }.accessibilityIdentifier("usage-log-share")
                     }
-                    Button("Clear usage log", role: .destructive) { confirmClear = true }.accessibilityIdentifier("usage-log-clear")
+                    Button(role: .destructive) { confirmClear = true } label: { SettingsAction("Clear usage log", symbol: "trash", destructive: true) }
+                        .accessibilityIdentifier("usage-log-clear")
                 }
             }
             Section {
@@ -56,9 +57,11 @@ struct DetailedLogPage: View {
             if logs.detailed.bytes > 0 {
                 Section {
                     if !logs.detailedFiles.isEmpty {
-                        ShareLink(items: logs.detailedFiles) { Text("Share detailed log") }.accessibilityIdentifier("drive-log-share")
+                        ShareLink(items: logs.detailedFiles) { SettingsAction("Share detailed log", symbol: "square.and.arrow.up") }
+                            .accessibilityIdentifier("drive-log-share")
                     }
-                    Button("Clear detailed log", role: .destructive) { confirmClear = true }.accessibilityIdentifier("drive-log-clear")
+                    Button(role: .destructive) { confirmClear = true } label: { SettingsAction("Clear detailed log", symbol: "trash", destructive: true) }
+                        .accessibilityIdentifier("drive-log-clear")
                 }
             }
             Section {

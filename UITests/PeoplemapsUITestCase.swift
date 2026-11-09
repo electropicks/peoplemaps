@@ -99,6 +99,16 @@ class PeoplemapsUITestCase: XCTestCase {
         XCTAssertTrue(row.waitForExistence(timeout: 5), id)
         row.tap()
     }
+    /// Saves the screen as `<name>.png` in the folder `TEST_RUNNER_PEOPLEMAPS_SHOTS` names, and in the results.
+    @MainActor func saveEvidence(_ name: String) {
+        Thread.sleep(forTimeInterval: 1)
+        let screenshot = XCUIScreen.main.screenshot()
+        let attachment = XCTAttachment(screenshot: screenshot)
+        attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+        guard let folder = ProcessInfo.processInfo.environment["PEOPLEMAPS_SHOTS"], !folder.isEmpty else { return }
+        try? FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
+        XCTAssertNoThrow(try screenshot.pngRepresentation.write(to: URL(fileURLWithPath: folder).appendingPathComponent("\(name).png")))
+    }
     /// The screen, not the app: an app screenshot in landscape comes out rotated and cropped.
     @MainActor func capture(_ name: String, app: XCUIApplication) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
