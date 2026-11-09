@@ -1002,8 +1002,9 @@ struct ExploreView: View {
                         estimateCaveat.lineLimit(1).fixedSize()
                     }
                     VStack(alignment: .leading, spacing: 2) {
-                        placeButton(place: origin, target: .origin).fixedSize(horizontal: false, vertical: true)
-                        estimateCaveat.fixedSize(horizontal: false, vertical: true)
+                        // Stacked, the start's target reaches down behind the caveat, so the two lines stay together.
+                        placeButton(place: origin, target: .origin).fixedSize(horizontal: false, vertical: true).padding(.bottom, -headerReach.stacked)
+                        estimateCaveat.fixedSize(horizontal: false, vertical: true).allowsHitTesting(false)
                     }
                 }
             }
@@ -1016,10 +1017,12 @@ struct ExploreView: View {
     /// The two lines stay close while each has a full-size target: the destination's reaches up into the margin above the header, the
     /// start's down into the gap before the rating. How far each reaches past its own line, held to the room there is. At
     /// accessibility sizes the lines wrap and are tall enough.
-    private var headerReach: (up: CGFloat, down: CGFloat) {
-        guard !typeSize.isAccessibilitySize else { return (0, 0) }
-        let above = landscape ? Layout.cardInset : Layout.sheetTop
-        return (min(above, max(Layout.target - Self.headerGap - destinationLine, 0)), min(10, max(Layout.target - Self.headerGap - originLine, 0)))
+    private var headerReach: (up: CGFloat, down: CGFloat, stacked: CGFloat) {
+        guard !typeSize.isAccessibilitySize else { return (0, 0, 0) }
+        // The landscape card has no height to spare: there the destination's target runs past the card's top inset and is cut off at
+        // its edge, so the fastest row and its meter stay in view.
+        let above = landscape ? CGFloat.infinity : Layout.sheetTop, below = max(Layout.target - Self.headerGap - originLine, 0)
+        return (min(above, max(Layout.target - Self.headerGap - destinationLine, 0)), min(10, below), below)
     }
     /// From each header line to the edge of its target that faces the other line.
     private static let headerGap: CGFloat = 3
