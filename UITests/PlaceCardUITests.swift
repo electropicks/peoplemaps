@@ -201,4 +201,46 @@ final class PlaceCardUITests: PeoplemapsUITestCase {
         XCTAssertTrue(app.buttons["favourite-relation/1047789"].waitForNonExistence(timeout: 5))
         XCTAssertFalse(app.buttons["add-favourite"].exists)
     }
+    /// The Directions button's words start where the place's name does, not centred under it.
+    @MainActor func testDirectionsWordsLineUpWithTheName() {
+        let app = launchHome(location: Self.atBallardLibrary)
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        waitForEstimate(app)
+        Thread.sleep(forTimeInterval: 1)
+        let button = app.buttons["directions"].frame, name = app.staticTexts["Gas Works Park"].firstMatch.frame
+        // The headline's row: the mode symbol, a gap, then the words.
+        let runs = ScreenLuma().inkRuns(in: CGRect(x: button.minX + 10, y: button.minY + 8, width: button.width - 20, height: 20))
+        XCTAssertGreaterThanOrEqual(runs.count, 2, "Expected a symbol and words: \(runs)")
+        guard runs.count >= 2 else { return }
+        XCTAssertEqual(runs[1].lowerBound, name.minX, accuracy: 3, "The words start at \(runs[1].lowerBound), the name at \(name.minX)")
+        XCTAssertLessThan(runs[0].upperBound, name.minX, "The mode symbol sits in the badge\u{2019}s column")
+    }
+    /// In dark mode the primary action is a quiet fill with light words, not a near-white slab, and still reads at 4.5:1.
+    @MainActor func testDirectionsIsNotABrightSlabInDarkMode() {
+        XCUIDevice.shared.appearance = .dark
+        addTeardownBlock { @MainActor in XCUIDevice.shared.appearance = .light }
+        let app = launchHome(location: Self.atBallardLibrary)
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        waitForEstimate(app)
+        Thread.sleep(forTimeInterval: 1)
+        capture("place-card-dark", app: app)
+        func check(_ id: String) {
+            let frame = app.buttons[id].frame
+            let values = ScreenLuma().values(in: frame.insetBy(dx: frame.height / 2, dy: 6)).sorted()
+            guard values.count > 100 else { return XCTFail("No pixels for \(id)") }
+            let fill = values[values.count / 2]
+            XCTAssertLessThan(fill, 140, "\(id) is a bright slab in dark mode: \(fill) of 255")
+            // The words are the pixels furthest from the fill.
+            let words = abs(values[values.count - 1] - fill) > abs(values[0] - fill) ? values[values.count - 1] : values[0]
+            func linear(_ v: Double) -> Double { let c = v / 255; return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4) }
+            let ratio = (max(linear(words), linear(fill)) + 0.05) / (min(linear(words), linear(fill)) + 0.05)
+            XCTAssertGreaterThanOrEqual(ratio, 4.5, "\(id): words \(words) on \(fill)")
+        }
+        check("directions")
+        app.buttons["directions"].tap()
+        XCTAssertTrue(app.buttons["start-navigation"].waitForExistence(timeout: 20))
+        Thread.sleep(forTimeInterval: 1)
+        capture("preview-dark", app: app)
+        check("start-navigation")
+    }
 }

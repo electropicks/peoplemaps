@@ -873,25 +873,34 @@ struct ExploreView: View {
     private func directionsButton(_ place: Place) -> some View {
         let ready = readyEstimate(for: place)
         return Button { startDirections(to: place) } label: {
-            Group {
-                if let ready {
-                    VStack(spacing: 2) {
-                        Label(ready.comparison.startHeadline, systemImage: ready.request.mode.symbol).font(.body.weight(.semibold))
-                        Text(ready.comparison.calmSummary).font(.subheadline)
-                    }
-                } else {
-                    Label("Directions", systemImage: "arrow.right").font(.body.weight(.semibold))
+            // The symbol under the badge and the words under the name, as the header above lays them out.
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Image(systemName: ready?.request.mode.symbol ?? "arrow.right").font(.body.weight(.semibold))
+                    .frame(width: badgeColumn).padding(.leading, badgeColumn == nil ? 0 : -Self.buttonMargin)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(ready?.comparison.startHeadline ?? "Directions").font(.body.weight(.semibold))
+                    if let ready { Text(ready.comparison.calmSummary).font(.subheadline) }
                 }
             }
-            .monospacedDigit().multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+            .monospacedDigit().multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
             .foregroundStyle(.primaryActionText)
-            .frame(maxWidth: .infinity, minHeight: 32).padding(.vertical, 2)
+            .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading).padding(.vertical, 2)
         }
         .primaryAction(shape: typeSize.isAccessibilitySize ? .roundedRectangle(radius: Layout.groupRadius) : .capsule)
         .accessibilityLabel("Directions")
         .accessibilityValue(ready.map { spokenEstimate($0.comparison, mode: $0.request.mode) } ?? "")
         .accessibilityIdentifier("directions")
     }
+
+    /// The badge's width, so the Directions button's symbol sits under the badge and its words start under the place's name. Nil at
+    /// accessibility sizes, where the name has the full width and the symbol takes its own.
+    private var badgeColumn: CGFloat? {
+        guard !typeSize.isAccessibilitySize else { return nil }
+        // `placeBadge` stops growing at xxLarge.
+        return min(badgeDiameter, UIFontMetrics.default.scaledValue(for: 44, compatibleWith: UITraitCollection(preferredContentSizeCategory: .extraExtraLarge)))
+    }
+    /// What a large bordered button keeps clear on each side of its label.
+    private static let buttonMargin: CGFloat = 20
 
     private func spokenEstimate(_ comparison: RouteComparison, mode: TravelMode) -> String {
         let route = comparison.calmer ?? comparison.fastest
