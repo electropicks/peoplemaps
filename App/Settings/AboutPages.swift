@@ -18,7 +18,7 @@ struct CalmerMeansPage: View {
     }
 }
 
-/// Where the map comes from, what it covers and what it can miss.
+/// Where the map comes from, what it covers and what it doesn't know.
 struct MapDataPage: View {
     let graph: StreetGraph
     /// `SearchIndex.dataVersion`: "osm-2026-10-31".
@@ -43,7 +43,7 @@ struct MapDataPage: View {
             } header: { SettingsHeader("Sources") }
             Section {
                 SettingsNote(title: RegionSelection.areaName, text: coverage)
-                SettingsNote(title: "What the map can miss", text: "Missing restrictions, conditional access, temporary closures, and entrances can affect feasibility. Unsupported turn-restriction forms are conservatively excluded. This prototype has not been field validated.")
+                SettingsNote(title: "What the map doesn\u{2019}t know", text: "The map is a snapshot, so it doesn\u{2019}t know about today\u{2019}s closures or road works. It follows ordinary turn restrictions, but not ones that apply only at certain hours, and it can\u{2019}t always tell where a building\u{2019}s entrance is. These routes haven\u{2019}t been checked on the road, so go by the signs in front of you.")
             } header: { SettingsHeader("Coverage") }
         }
         .settingsPage("Map data and coverage")
@@ -52,12 +52,12 @@ struct MapDataPage: View {
 
     private var coverage: String {
         if RegionSelection.usesCounty {
-            return "King County and a little beyond. Map detail stops at the edge of the extract. Places that need a ferry or a road outside the map, as Vashon and the Kitsap shore do, have no road route."
+            return "King County and a little beyond. The map ends at the edge of this area. Places that need a ferry or a road outside it, as Vashon and the Kitsap shore do, have no road route."
         }
         // The small extract in the repository, used when the full Seattle data has not been fetched for the build.
         let small = graph.bounds.count == 4 && graph.bounds[2] - graph.bounds[0] < 0.1
-        return small ? "North of Denny Way through southern Green Lake, from east Ballard to the University District. Map detail stops at the extract boundary."
-            : "All of Seattle. Map detail stops at the edge of the map."
+        return small ? "North of Denny Way through southern Green Lake, from east Ballard to the University District. The map ends at the edge of this area."
+            : "All of Seattle. The map ends at the edge of the city, and PeopleMaps can\u{2019}t route beyond it yet."
     }
 
     /// "31 October 2026" from "osm-2026-10-31"; nil when the index doesn't say.
