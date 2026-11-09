@@ -9,11 +9,9 @@ struct RoutePreferencesRow: View {
 
     var body: some View {
         Button(action: action) {
-            Text(isCustom ? "Calmer means: Custom" : "Calmer means").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
-                .multilineTextAlignment(.trailing).fixedSize(horizontal: false, vertical: true)
-                .frame(minHeight: 44).contentShape(Rectangle())
+            Text(isCustom ? "Calmer means: Custom" : "Calmer means").multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(WellButtonStyle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Calmer means, \(value)")
         .accessibilityHint("Choose what to avoid on calmer routes")

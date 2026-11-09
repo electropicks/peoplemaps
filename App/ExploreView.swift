@@ -114,6 +114,11 @@ struct ExploreView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     /// The calm word is `.largeTitle`, held to 48 pt so at accessibility sizes the time under it stays in view.
     @ScaledMetric(relativeTo: .largeTitle) private var scaledWord = 34.0
+    /// One line of the preview header's destination and start, to size their tap targets around.
+    @ScaledMetric(relativeTo: .subheadline) private var destinationLine = 20.0
+    @ScaledMetric(relativeTo: .footnote) private var originLine = 18.0
+    /// The place card's badge, as `CategoryBadge` scales it, for the Directions button's symbol column.
+    @ScaledMetric private var badgeDiameter = 44.0
 
     /// UI tests start muted and in their own defaults, so they never change the real preference.
     static let voiceStore: UserDefaults = {
@@ -968,16 +973,16 @@ struct ExploreView: View {
     /// Where to, how far, and from where; the two places open their pickers. Times stay estimates, so that's said here too.
     private var previewHeader: some View {
         HStack(alignment: .top, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 0) {
                 let line = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8))
                 line {
-                    placeButton(place: destination, target: .destination)
+                    placeButton(place: destination, target: .destination).padding(.top, -headerReach.up)
                     if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
                     if let chosenRoute { Text(chosenRoute.distance).font(.subheadline.weight(.medium)).monospacedDigit().accessibilityIdentifier("preview-distance") }
                 }
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        placeButton(place: origin, target: .origin).fixedSize()
+                        placeButton(place: origin, target: .origin).fixedSize().padding(.bottom, -headerReach.down)
                         Spacer(minLength: 0)
                         estimateCaveat.lineLimit(1).fixedSize()
                     }
@@ -992,6 +997,17 @@ struct ExploreView: View {
                 .padding(.top, -7).padding(.trailing, -7)
         }
     }
+
+    /// The two lines stay close while each has a full-size target: the destination's reaches up into the margin above the header, the
+    /// start's down into the gap before the rating. How far each reaches past its own line, held to the room there is. At
+    /// accessibility sizes the lines wrap and are tall enough.
+    private var headerReach: (up: CGFloat, down: CGFloat) {
+        guard !typeSize.isAccessibilitySize else { return (0, 0) }
+        let above = landscape ? Layout.cardInset : Layout.sheetTop
+        return (min(above, max(Layout.target - Self.headerGap - destinationLine, 0)), min(10, max(Layout.target - Self.headerGap - originLine, 0)))
+    }
+    /// From each header line to the edge of its target that faces the other line.
+    private static let headerGap: CGFloat = 3
 
     private var estimateCaveat: some View {
         Text("Estimate, no live traffic").font(.footnote).foregroundStyle(GuidanceOverlay.onGlass)
@@ -1011,7 +1027,9 @@ struct ExploreView: View {
                 .font(origin && place != nil ? .footnote : .subheadline.weight(place == nil ? .semibold : .medium))
                 .foregroundStyle(origin && place != nil ? GuidanceOverlay.onGlass : .primary)
                 .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
-                .contentShape(Rectangle().inset(by: -6))
+                .padding(origin ? .top : .bottom, Self.headerGap)
+                .frame(minWidth: Layout.target, minHeight: Layout.target, alignment: origin ? .topLeading : .bottomLeading)
+                .contentShape(Rectangle())
         }.buttonStyle(.plain)
             .accessibilityLabel(place.map { "\(origin ? "Starting from" : "Going to"), \($0.shortName)" } ?? empty)
             .accessibilityAddTraits(origin ? [] : .isHeader)
@@ -1095,13 +1113,13 @@ struct ExploreView: View {
             if let calmer = comparison.calmer, let score = comparison.calmerCalm {
                 routeButton(calmer, title: "Calmer", score: score, spoken: "\(comparison.extraTimeLabel), \(comparison.spokenCalmSummary)", selected: selectedCalmer, calmer: true) {
                     VStack(alignment: .leading, spacing: 10) {
-                        rating(score, route: calmer)
+                        rating(score, route: calmer, chosen: selectedCalmer)
                         Text(comparison.reasonLine).font(.subheadline.weight(.medium)).foregroundStyle(.primary)
                             .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 Hairline()
-                routeButton(comparison.fastest, title: "Fastest", score: comparison.fastestCalm, spoken: "Estimate, no live traffic", selected: !selectedCalmer, calmer: false) {
+                routeButton(comparison.fastest, title: "Fastest", score: comparison.fastestCalm, spoken: "Estimate, no live traffic", selected: !selectedCalmer, calmer: false, reach: 8) {
                     fastestRow(comparison, selected: !selectedCalmer)
                 }
             } else {
@@ -1122,14 +1140,17 @@ struct ExploreView: View {
         }
     }
 
-    /// The big word and time over the rating bar.
-    private func rating(_ score: CalmScore, route: Route) -> some View {
+    /// The big word and time over the rating bar. `chosen` adds the mark that pairs it with the fastest row; nil when it is the only route.
+    private func rating(_ score: CalmScore, route: Route, chosen: Bool? = nil) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             let line = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8))
             line {
                 Text(score.level.title).font(.system(size: min(scaledWord, 48), weight: .semibold)).tracking(-0.5).foregroundStyle(Color.calmWord(score.level))
                 if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
-                Text(route.timeRange).font(.title2.weight(.semibold)).monospacedDigit().foregroundStyle(.primary)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(route.timeRange).font(.title2.weight(.semibold)).monospacedDigit().foregroundStyle(.primary)
+                    if let chosen { ChoiceMark(chosen: chosen) }
+                }
             }
             CalmMeter(score: score)
         }
@@ -1143,10 +1164,8 @@ struct ExploreView: View {
                 Text("Fastest: \(Text(score.level.title).fontWeight(.semibold).foregroundStyle(Color.calmWord(score.level)))")
                     .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
-                if selected {
-                    Image(systemName: "checkmark").fontWeight(.semibold).transition(.opacity.combined(with: .scale(scale: 0.6)))
-                }
                 Text(comparison.fastest.timeRange).monospacedDigit()
+                ChoiceMark(chosen: selected)
             }
             .font(.subheadline.weight(.medium)).foregroundStyle(.primary)
             CalmMeter(score: score, height: 6)
@@ -1154,10 +1173,12 @@ struct ExploreView: View {
     }
 
     /// Picks which route the map shows and Start takes. VoiceOver hears the route, its time and distance, then the rating in words and score.
-    private func routeButton<Label: View>(_ route: Route, title: String, score: CalmScore, spoken: String, selected: Bool, calmer: Bool, @ViewBuilder label: () -> Label) -> some View {
+    /// `reach` grows a short row's target into the gaps above and below it without moving anything.
+    private func routeButton<Label: View>(_ route: Route, title: String, score: CalmScore, spoken: String, selected: Bool, calmer: Bool, reach: CGFloat = 0,
+                                          @ViewBuilder label: () -> Label) -> some View {
         Button { withAnimation(Motion.content(reduceMotion)) { selectedCalmer = calmer } } label: {
-            label().contentShape(Rectangle())
-        }.buttonStyle(.plain)
+            label().padding(.vertical, reach).frame(minHeight: Layout.target).contentShape(Rectangle())
+        }.buttonStyle(.plain).padding(.vertical, -reach)
             .accessibilityLabel("\(title) route, \(route.spokenTimeRange), \(DistanceFormat.distance(route.metrics.meters, spoken: true)). \(spoken)")
             .accessibilityValue(score.spoken)
             .accessibilityIdentifier(calmer ? "route-calmer" : "route-fastest")
@@ -1189,10 +1210,11 @@ struct ExploreView: View {
                     Spacer(minLength: 8)
                     RoutePreferencesRow(isCustom: !preferences[mode].isDefault(in: mode)) { sheet = .preferences }
                 }
-                VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: typeSize.isAccessibilitySize ? 6 : 0) {
                     whyButton(comparison)
                     RoutePreferencesRow(isCustom: !preferences[mode].isDefault(in: mode)) { sheet = .preferences }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             line {
                 modePicker(fullWidth: stacked)
@@ -1214,11 +1236,8 @@ struct ExploreView: View {
 
     @ViewBuilder private func whyButton(_ comparison: RouteComparison?) -> some View {
         if let comparison {
-            Button { sheet = .details } label: {
-                Text("Why this route").font(.subheadline.weight(.semibold)).foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true)
-                    .frame(minHeight: 44).contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+            Button { sheet = .details } label: { Text("Why this route").multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true) }
+            .buttonStyle(WellButtonStyle())
             .accessibilityHint(comparison.spokenCalmSummary)
             .accessibilityIdentifier("route-details")
         }

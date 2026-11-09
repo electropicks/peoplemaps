@@ -14,6 +14,9 @@ enum Layout {
     /// Space above and below the content of a portrait sheet.
     static let sheetTop: CGFloat = 20
     static let sheetBottom: CGFloat = 12
+    /// The least height of a tap target on the sheet. The system draws the sheet about 4% smaller at its partial stops
+    /// (it floats 8 pt in from each side), so 46 here is 44 on screen.
+    static let target: CGFloat = 46
 }
 
 enum GlassFlags {
@@ -128,6 +131,31 @@ private struct PrimaryAction: ViewModifier {
     private var fill: Color { solid || reduceTransparency || GlassFlags.reduceTransparency ? .primaryActionSolidFill : .primaryActionFill }
     func body(content: Content) -> some View {
         content.buttonStyle(.borderedProminent).buttonBorderShape(shape).tint(fill).controlSize(.large)
+    }
+}
+
+/// A secondary action on a glass panel ("Why this route", "Calmer means"): its words in a quiet well, since glass doesn't go on
+/// glass and no control takes an accent (Docs/DESIGN.md, principles 3 and 5). The well is 34 pt in a full-size target, and dims while pressed.
+struct WellButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+            .padding(.horizontal, 14).padding(.vertical, 6).frame(minHeight: 34)
+            .background(.glassWell, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+            .opacity(configuration.isPressed ? 0.5 : 1)
+            .frame(minHeight: Layout.target).contentShape(Rectangle())
+    }
+}
+
+/// Which of two routes is chosen: a radio mark in the label colour, there before it is tapped so the row reads as a choice.
+struct ChoiceMark: View {
+    let chosen: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        Image(systemName: chosen ? "checkmark.circle.fill" : "circle")
+            .font(.body.weight(.medium)).foregroundStyle(chosen ? Color.primary : GuidanceOverlay.onGlass)
+            .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
+            .accessibilityHidden(true)
     }
 }
 
