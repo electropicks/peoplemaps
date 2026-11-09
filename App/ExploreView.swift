@@ -666,7 +666,10 @@ struct ExploreView: View {
     /// Home at rest: no panel, only the controls, each on its own glass over the map. Raised, they sit on the panel's glass instead.
     private var floatingHome: Bool { screen == .home && stop == .fit && !landscape }
 
-    /// What home's panel and floating controls share: favourites, or the first-launch hint, over the search capsule.
+    private static let hint = "Search a place or address, or long-press the map"
+
+    /// What home's panel and floating controls share: favourites over the search capsule, and the first-launch hint: a chip above the
+    /// capsule while floating, a caption under the field on a panel.
     private var homeControls: some View {
         // One container for the whole cluster, so the chips, hint and search capsule sample and blend together.
         GlassEffectContainer(spacing: 2) {
@@ -677,15 +680,22 @@ struct ExploreView: View {
                                   onAdd: { addingFavourite = true; show(.search) })
                     .dynamicTypeSize(...DynamicTypeSize.accessibility1)
                 }
-                if saved.favourites.isEmpty && saved.recents.isEmpty {
-                    Text("Search a place or address, or long-press the map").font(.footnote).foregroundStyle(.primary)
+                let firstLaunch = saved.favourites.isEmpty && saved.recents.isEmpty
+                if firstLaunch && floatingHome {
+                    Text(Self.hint).font(.footnote).foregroundStyle(.primary)
                         .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 12).padding(.vertical, 6)
-                        .chip(floating: floatingHome, in: Capsule())
+                        .floatingSurface(in: Capsule())
                         .accessibilityIdentifier("home-hint")
                 }
                 HStack(spacing: 8) {
                     searchCapsule
                     if floatingHome { moreButton.transition(.opacity) }
+                }
+                if firstLaunch && !floatingHome {
+                    // On a panel the hint is the field's caption. In a well of its own it passed for a second field.
+                    Text(Self.hint).font(.footnote).foregroundStyle(GuidanceOverlay.onGlass)
+                        .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 18)
+                        .accessibilityIdentifier("home-hint")
                 }
             }
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fitContent = $0 }
@@ -768,8 +778,9 @@ struct ExploreView: View {
                                 .accessibilityIdentifier("search-hint")
                         }
                     } else if results.isEmpty {
-                        EmptySearch(count: search.count).padding(.top, 48)
+                        // The way out sits where a result would: under the empty state it fell behind the keyboard. VoiceOver still hears what happened first.
                         AppleMapsLookup(query: query)
+                        EmptySearch(count: search.count).accessibilitySortPriority(1)
                     } else {
                         resultGroup("Top match", Array(results.prefix(1)))
                         if results.count > 1 { resultGroup("Other matches", Array(results.dropFirst())) }
