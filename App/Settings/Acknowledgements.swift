@@ -5,32 +5,27 @@ struct AcknowledgementsView: View {
     var body: some View {
         List {
             Section {
-                credit("OpenStreetMap", "© OpenStreetMap contributors. Streets, paths and places, under the Open Database License 1.0.",
+                credit("OpenStreetMap", "© OpenStreetMap contributors. Streets, paths and places, under the Open Database License\u{00A0}1.0.",
                        link: "https://www.openstreetmap.org/copyright")
                 credit("Overture Maps Foundation", "Places: Overture Maps Foundation (release 2026-10-21), with data from Meta, Microsoft, BrightQuery, Foursquare, AllThePlaces, Uberall, Birdeye and DAC. Licences: CDLA Permissive 2.0, Apache 2.0, CC0 1.0. Foursquare data © Foursquare Labs, Inc. Combined with OpenStreetMap data in the search index, provided as is.",
                        link: "https://docs.overturemaps.org/attribution/")
                 credit("USGS 3D Elevation Program", "Elevation from the U.S. Geological Survey 3DEP ground model, public domain.",
                        link: "https://www.usgs.gov/3d-elevation-program")
-            } header: { header("Data") }
+            } header: { SettingsHeader("Data") }
             Section {
                 licence("MapLibre Native", "Map rendering · BSD 2-Clause", file: "MapLibre-LICENSE")
                 licence("Ferrostar", "Turn-by-turn navigation core · BSD 3-Clause, © Stadia Maps", file: "Ferrostar-LICENSE")
-            } header: { header("Software") } footer: {
-                Text("Ferrostar's navigation core includes open-source Rust libraries, each under the MIT, Apache 2.0 or MPL 2.0 licence. Apple frameworks and SF Symbols are used through the iOS SDK.")
+            } header: { SettingsHeader("Software") } footer: {
+                SettingsFooter("Ferrostar\u{2019}s navigation core includes open-source Rust libraries, each under the MIT, Apache 2.0 or MPL 2.0 licence. Apple frameworks and SF Symbols are used through the iOS SDK.")
             }
         }
-        .listStyle(.insetGrouped)
-        .navigationTitle("Acknowledgements").navigationBarTitleDisplayMode(.inline)
-    }
-
-    private func header(_ title: String) -> some View {
-        Text(title).font(.footnote.weight(.semibold)).textCase(nil).accessibilityAddTraits(.isHeader)
+        .settingsPage("Acknowledgements")
     }
 
     private func credit(_ name: String, _ detail: String, link: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(name).font(.body.weight(.semibold))
-            Text(detail).font(.subheadline).foregroundStyle(.secondary)
+            Text(detail).font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
             ExternalLink(title: "Licence and attribution", url: URL(string: link)!, font: .subheadline)
         }
     }
@@ -41,7 +36,7 @@ struct AcknowledgementsView: View {
         } label: {
             VStack(alignment: .leading, spacing: 4) {
                 Text(name).font(.body.weight(.semibold))
-                Text(detail).font(.subheadline).foregroundStyle(.secondary)
+                Text(detail).font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
             }
         }
         .accessibilityIdentifier("licence-\(file)")
@@ -57,7 +52,7 @@ private struct LicenceText: View {
             Text(text).font(.footnote.monospaced()).textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading).padding()
         }
-        .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+        .settingsPage(title)
     }
     private var text: String {
         Bundle.main.url(forResource: file, withExtension: "md").flatMap { try? String(contentsOf: $0, encoding: .utf8) }

@@ -14,7 +14,7 @@ struct ReportContext {
     var dataVersion = "osm-unknown"
 }
 
-/// Opens the report composer from anywhere (shake, About, Route details) and marks moments in guidance. The composer
+/// Opens the report composer from anywhere (shake, Settings, Route details) and marks moments in guidance. The composer
 /// is presented from the top view controller, so it works over any sheet. Nothing here uses the network.
 @MainActor @Observable
 final class ReportCenter {

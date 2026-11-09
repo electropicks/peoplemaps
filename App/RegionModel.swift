@@ -1,7 +1,7 @@
 import SwiftUI
 import PeoplemapsCore
 
-/// What the Map area section of About shows and does: the King County download, its state, and switching to it. Holds no map data itself;
+/// What the Map section of Settings shows and does: the King County download, its state, and switching to it. Holds no map data itself;
 /// `RegionStore` downloads and installs, `RegionSelection` decides what the app loads.
 @MainActor @Observable
 final class RegionModel {
@@ -58,8 +58,25 @@ final class RegionModel {
         return RegionModel(manifest: manifest, store: RegionStore(manifest: manifest, source: source, configuration: configuration))
     }
 
+    #if DEBUG
+    /// `--region-state waiting|verifying` holds the section in a state the simulator cannot reach (it has no cellular, and a test
+    /// region verifies in no time), so it can be looked at. Nothing is downloaded.
+    private static func shownState(total: Int64) -> (RegionState, RegionProgress?)? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let flag = arguments.firstIndex(of: "--region-state"), arguments.indices.contains(flag + 1) else { return nil }
+        switch arguments[flag + 1] {
+        case "waiting": return (.waitingForWiFi, RegionProgress(received: total * 2 / 5, total: total))
+        case "verifying": return (.verifying, nil)
+        default: return nil
+        }
+    }
+    #endif
+
     /// Picks up transfers that went on while the app was away, then follows the store's state for the life of the app.
     func start() async {
+        #if DEBUG
+        if let shown = Self.shownState(total: region?.downloadBytes ?? 0) { (state, progress) = shown; return }
+        #endif
         guard let store else { return }
         await store.restore()
         for await next in await store.updates(for: Self.regionID) {

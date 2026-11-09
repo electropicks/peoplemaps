@@ -13,7 +13,7 @@ one is wrong and gets fixed.
 
 - The app works offline. Maps, search and routes are on your phone.
 - Nothing leaves your phone unless you tap **Send** on a report you have
-  read, or **Download** on a bigger map (see Downloading a bigger map).
+  read, or **Download King County** in Settings (see Downloading a bigger map).
 - There are no accounts, no sign-in, no analytics, no ads, no tracking.
 - A report you send is stored on our server and read by a maintainer. Nothing
   is published automatically. A maintainer may file a useful report as a public
@@ -36,11 +36,14 @@ one is wrong and gets fixed.
 ## What the app keeps on your phone
 
 - Problem reports you start, until you swipe them away, and moments you mark during guidance.
-- A usage log, only if you turn it on in About: each trip's mode, route choice, time estimates and where you left the
-  route (rounded to about 100 m unless you choose exact places). It stays on the phone unless you share the file, and
-  **Clear** deletes it.
+- A usage log, only if you turn it on in Settings, under Trip logs, Usage log (off by default). One line per guided trip:
+  the date and time, mode, extra-time limit, which route you started, both time estimates, whether a calmer route was
+  offered, how many reroutes, where you left the route (rounded to about 100 m unless you turn on **Exact places**) and
+  whether you arrived or ended early. The last 500 trips are kept. It stays on the phone unless you share the file from
+  that page, and **Clear usage log** deletes it.
 
-- A detailed log, only if you turn on "Keep a detailed log" in About (off by default, and separate from the usage log). It
+- A detailed log, only if you turn on "Keep a detailed log" in Settings, under Trip logs, Detailed log (off by default, and
+  separate from the usage log). It
   is for testing a build on your own phone. While you are guided on a walk, cycle or drive, it records the trip in a file on
   the phone: your start and destination (names and exact coordinates), both routes the app found with the app's time
   estimates, every location fix the phone gave the app (position, accuracy, speed, direction, about once a second), and what
@@ -48,16 +51,17 @@ one is wrong and gets fixed.
   background, the phone's temperature state and Low Power Mode). It also keeps, one file a day, what you searched for and
   which result you chose, the places you opened, the routes you previewed and the settings you changed. A trip shorter than
   3 minutes is deleted when it ends. It is not sent anywhere: it stays on the phone, left out of backups, unless you share
-  the files from About, and **Clear** deletes them. It keeps at most 500 MB and then removes the oldest trips. It does not
+  the files from that page, and **Clear detailed log** deletes them. It keeps at most 500 MB and then removes the oldest
+  trips and recordings. It does not
   record altitude.
 - A manual recording, only if "Keep a detailed log" is on and you tap **Start recording** (the record button on the map,
-  or in About). It saves your location (position, accuracy, speed and direction, about once a second) in a file on the
+  or the row in Settings under Trip logs, which is there only while the detailed log is on). It saves your location (position, accuracy, speed and direction, about once a second) in a file on the
   phone, with no route, until you tap **Stop**. It keeps going while PeopleMaps is in the background or the phone is
   locked, and iOS shows its blue location indicator for as long as it runs. It asks for the same "While Using the App"
   location permission as the rest of the app, never "Always", and cannot be started from the background. If the app is
   closed by the system, the recording ends and does not restart on its own. A recording shorter than 3 minutes is deleted
   when you stop it. Like the rest of the detailed log it stays on the phone, left out of backups, unless you share the
-  files from About, and **Clear** deletes them.
+  files from the Detailed log page in Settings, and **Clear detailed log** deletes them.
 - Recent app events, in memory only. The last 200 things the app did, or the last 10 minutes, whichever is fewer:
   that a route comparison started and how long it took, that guidance started or rerouted, that the map finished
   loading or moved the camera, how long a search took and how many results it found, and errors by type. Never a
@@ -135,7 +139,7 @@ your language or time zone, or your IP address as stored data.
 
 ## Downloading a bigger map
 
-The King County map is an optional download from About, under Map area. Tapping **Download** sends requests to our
+The King County map is an optional download from Settings, under Map. Tapping **Download King County** sends requests to our
 server for the map files, and nothing else. There is no account. A request carries the name of the file and a check that
 the app is a genuine copy of PeopleMaps (Apple's App Attest), and nothing about you: not your location, your searches,
 your routes or your report ID. Like any web server, ours and our host's network see the address your phone connects from

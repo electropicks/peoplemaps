@@ -63,6 +63,6 @@ private struct DriveLogUseModifier: ViewModifier {
 }
 
 extension View {
-    /// One line in `ExploreView`: app use for the detailed log, off unless the switch in About is on.
+    /// One line in `ExploreView`: app use for the detailed log, off unless the switch in Settings is on.
     func driveLogUse(_ snapshot: DriveLogSnapshot) -> some View { modifier(DriveLogUseModifier(snapshot: snapshot)) }
 }

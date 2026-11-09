@@ -325,17 +325,120 @@ final class EvidenceTour: XCTestCase {
         shotWithFrames(app, "sheet-search")
     }
 
-    @MainActor func testAboutSwitches() throws {
-        try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")
-        let app = launch([])
-        raise(app)
-        app.buttons["about"].tap()
-        let toggle = app.switches["usage-log-toggle"]
-        for _ in 0..<5 where !toggle.isHittable { app.collectionViews.firstMatch.swipeUp() }
-        shot("about-switches-off")
-        toggle.switches.firstMatch.tap()
+    /// Saves the screen as `<name>.png` in the folder `TEST_RUNNER_PEOPLEMAPS_SHOTS` names, as well as in the results.
+    @MainActor private func save(_ name: String) {
         Thread.sleep(forTimeInterval: 1)
-        shot("about-switches-on")
+        let screenshot = XCUIScreen.main.screenshot()
+        let attachment = XCTAttachment(screenshot: screenshot)
+        attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+        guard let folder = ProcessInfo.processInfo.environment["PEOPLEMAPS_SHOTS"], !folder.isEmpty else { return }
+        try? FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
+        XCTAssertNoThrow(try screenshot.pngRepresentation.write(to: URL(fileURLWithPath: folder).appendingPathComponent("\(name).png")))
+    }
+
+    @MainActor private func openSettings(_ app: XCUIApplication) {
+        if !app.buttons["settings"].isHittable { raise(app) }
+        XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
+        app.buttons["settings"].tap()
+        XCTAssertTrue(app.buttons["close-settings"].waitForExistence(timeout: 5))
+    }
+    @MainActor private func page(_ app: XCUIApplication, _ row: String, _ body: () -> Void) {
+        let link = app.buttons[row]
+        for _ in 0..<6 where !link.isHittable { app.collectionViews.firstMatch.swipeUp() }
+        link.tap()
+        XCTAssertTrue(app.navigationBars.buttons["BackButton"].waitForExistence(timeout: 5), row)
+        body()
+        app.navigationBars.buttons["BackButton"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+    }
+
+    /// The raised home sheet, Settings and every page behind it, in light and dark: a fresh install, then with both logs on,
+    /// a recording on the phone and a saved report.
+    @MainActor func testSettingsScreens() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")
+        defer { XCUIDevice.shared.appearance = .light }
+        for (appearance, suffix) in [(XCUIDevice.Appearance.light, "light"), (.dark, "dark")] {
+            XCUIDevice.shared.appearance = appearance
+            let app = launch(["--location-granted", "47.6295,-122.3599", "--drive-log-keep-short"])
+            raise(app)
+            XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
+            save("home-raised-\(suffix)")
+            openSettings(app)
+            save("settings-root-\(suffix)")
+            app.buttons["report-problem-about"].tap()
+            let note = app.textFields["report-note"]
+            XCTAssertTrue(note.waitForExistence(timeout: 5))
+            note.tap(); note.typeText("Wrong left on 45th")
+            app.buttons["close-report"].tap()
+            page(app, "usage-log") {
+                save("settings-usage-log-off-\(suffix)")
+                app.switches["usage-log-toggle"].switches.firstMatch.tap()
+                save("settings-usage-log-\(suffix)")
+            }
+            page(app, "drive-log") {
+                app.switches["drive-log-toggle"].switches.firstMatch.tap()
+            }
+            // A few seconds of recording, so the detailed log has something to count, share and clear.
+            app.buttons["drive-record-toggle"].tap()
+            Thread.sleep(forTimeInterval: 3)
+            save("settings-root-recording-\(suffix)")
+            app.buttons["drive-record-toggle"].tap()
+            save("settings-root-logs-on-\(suffix)")
+            page(app, "drive-log") {
+                save("settings-detailed-log-\(suffix)")
+                app.collectionViews.firstMatch.swipeUp()
+                save("settings-detailed-log-about-\(suffix)")
+            }
+            page(app, "saved-reports") { save("settings-saved-reports-\(suffix)") }
+            page(app, "calmer-means") { save("settings-calmer-means-\(suffix)") }
+            page(app, "map-data") {
+                save("settings-map-data-\(suffix)")
+                app.collectionViews.firstMatch.swipeUp()
+                save("settings-map-data-coverage-\(suffix)")
+            }
+            page(app, "acknowledgements") { save("settings-acknowledgements-\(suffix)") }
+            app.terminate()
+        }
+    }
+
+    /// Settings and the Detailed log page at the largest accessibility text size, scrolled through, and Settings in landscape.
+    @MainActor func testSettingsLargeTextAndLandscape() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")
+        var app = launch(["--location-granted", "47.6295,-122.3599", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
+        raise(app)
+        save("home-raised-ax5")
+        openSettings(app)
+        let list = app.collectionViews.firstMatch
+        for part in 1...4 {
+            save("settings-root-ax5-\(part)")
+            list.swipeUp()
+        }
+        // Back to the top: rows scrolled off are not in the hierarchy.
+        for _ in 0..<5 { list.swipeDown() }
+        page(app, "drive-log") {
+            app.switches["drive-log-toggle"].switches.firstMatch.tap()
+            for part in 1...4 {
+                save("settings-detailed-log-ax5-\(part)")
+                app.collectionViews.firstMatch.swipeUp()
+            }
+        }
+        app.terminate()
+
+        app = launch(["--location-granted", "47.6295,-122.3599"])
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        Thread.sleep(forTimeInterval: 2)
+        let settings = app.buttons["settings"]
+        if !settings.exists { raise(app) }
+        XCTAssertTrue(settings.waitForExistence(timeout: 5))
+        save("home-landscape")
+        settings.tap()
+        XCTAssertTrue(app.buttons["close-settings"].waitForExistence(timeout: 5))
+        save("settings-root-landscape")
+        app.collectionViews.firstMatch.swipeUp()
+        save("settings-root-landscape-2")
+        for _ in 0..<3 { app.collectionViews.firstMatch.swipeUp() }
+        save("settings-root-landscape-end")
     }
 
     /// The controls pass of November 2026: composer with the keyboard up, preview, raised home, the empty search and the place card,
@@ -360,9 +463,9 @@ final class EvidenceTour: XCTestCase {
             Thread.sleep(forTimeInterval: 2)
             save("home-floating-hint")
             raise(app)
-            XCTAssertTrue(app.buttons["about"].waitForExistence(timeout: 5))
+            XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
             save("home-raised-hint")
-            app.buttons["about"].tap()
+            app.buttons["settings"].tap()
             let report = app.buttons["report-problem-about"]
             XCTAssertTrue(app.collectionViews.firstMatch.waitForExistence(timeout: 10))
             for _ in 0..<12 where !(report.exists && report.isHittable) { app.collectionViews.firstMatch.swipeUp() }

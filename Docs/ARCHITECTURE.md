@@ -151,8 +151,8 @@ Add or update a region file:
 ### Downloading a region on the phone
 
 The app ships `Data/regions.json` (through `Scripts/generate_project.py`, so the project is regenerated, not hand-edited) and offers
-King County from About, under Map area. Only a region's outputs (`expected/<output>`, five for king-county) are downloaded, never
-its inputs; the size on the offer card is the sum of their `bytes` in the manifest (232.3 MB for release `data-seattle-all-2026-11d`).
+King County from Settings, under Map. Only a region's outputs (`expected/<output>`, five for king-county) are downloaded, never
+its inputs; the size on the offer card is the sum of their `bytes` in the manifest (232.3 MB for release `data-seattle-all-2026-11d`, shown on the row as whole megabytes, "232 MB").
 The space it takes on the phone is an estimate, "about 350 MB": the search index arrives gzipped and is inflated, and its ratio
 (3.3) is measured on the bundled Seattle index, not on the county files. Nothing on a phone has measured it yet.
 
@@ -170,7 +170,7 @@ The space it takes on the phone is an estimate, "about 350 MB": the search index
   then the app bundle, then the package fixture, and the graph, map, search index and coverage always come from the same one.
   The choice is read once per launch. A finished download selects itself and takes effect at the next launch, or on Switch now
   when no route is shown and the person is not navigating; the map never changes under a route or guidance. If the downloaded
-  files fail to load, Seattle is used for that launch and About says so.
+  files fail to load, Seattle is used for that launch and Settings says so.
 - A new app build with a different `release` keeps the old folder in use until the new one is in; the old one is deleted after
   that, at the next launch if the running app has it open. Remove marks an open folder and deletes it at the next launch.
 - UI tests keep regions in their own folder and aim the app at a local server: `--region-server URL` and

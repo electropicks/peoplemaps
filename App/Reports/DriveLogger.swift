@@ -4,7 +4,7 @@ import PeoplemapsCore
 @preconcurrency import FerrostarCoreFFI
 
 /// The opt-in detailed log (`Core/DriveLog.swift`, Docs/REPORTS.md section 11): every call here does nothing unless the
-/// "Keep a detailed log" switch in About is on, and then only writes to the phone. The rest of the app calls this one type,
+/// "Keep a detailed log" switch in Settings is on, and then only writes to the phone. The rest of the app calls this one type,
 /// so the feature stays easy to remove. Nothing here touches the network.
 @MainActor
 enum DriveLogger {
