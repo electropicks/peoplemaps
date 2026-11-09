@@ -53,6 +53,47 @@ final class ReportsUITests: XCTestCase {
         app.buttons["close-report"].tap()
     }
 
+    @MainActor private func openComposerWithTheKeyboardUp(_ app: XCUIApplication) -> XCUIElement {
+        openAbout(app)
+        scrollTo(app.buttons["report-problem-about"], in: app)
+        app.buttons["report-problem-about"].tap()
+        XCTAssertTrue(app.textFields["report-note"].waitForExistence(timeout: 5))
+        let keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(keyboard.waitForExistence(timeout: 5), "The note is focused as the composer opens, so the keyboard is up")
+        Thread.sleep(forTimeInterval: 1)
+        return keyboard
+    }
+
+    /// The keyboard comes up with the composer. Share stays in reach above it, and brings up the share sheet from there.
+    @MainActor func testShareIsInReachWithTheKeyboardUp() {
+        let app = launch()
+        let keyboard = openComposerWithTheKeyboardUp(app)
+        let share = app.buttons["share-report"]
+        XCTAssertTrue(share.waitForExistence(timeout: 5))
+        capture("reports-05-composer-keyboard")
+        XCTAssertTrue(share.isHittable, "Share can\u{2019}t be tapped with the keyboard up")
+        XCTAssertLessThanOrEqual(share.frame.maxY, keyboard.frame.minY + 1, "Share is under the keyboard")
+        XCTAssertGreaterThanOrEqual(share.frame.height, 44)
+        share.tap()
+        let sheet = app.otherElements["ActivityListView"], copy = app.buttons["Copy"]
+        let deadline = Date().addingTimeInterval(5)
+        while Date() < deadline && !sheet.exists && !copy.exists { usleep(200_000) }
+        XCTAssertTrue(sheet.exists || copy.exists, "Share brings up the share sheet\n\(app.debugDescription)")
+    }
+
+    /// A drag down the form puts the keyboard away and leaves the composer open.
+    @MainActor func testDraggingTheComposerDownPutsTheKeyboardAway() {
+        let app = launch()
+        let keyboard = openComposerWithTheKeyboardUp(app)
+        let from = app.switches["report-exact"].coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.5))
+        from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: 0, dy: 260)), withVelocity: .slow, thenHoldForDuration: 0.1)
+        let gone = NSPredicate { _, _ in !keyboard.exists }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: gone, object: nil)], timeout: 5), .completed, "The keyboard stays up")
+        XCTAssertTrue(app.textFields["report-note"].exists, "The composer stays open")
+        XCTAssertTrue(app.buttons["share-report"].isHittable)
+        app.buttons["close-report"].tap()
+    }
+
     @MainActor func testIncludedDetailsAreShownAndFollowTheToggle() {
         let app = launch(location: Self.atKerryPark)
         openAbout(app)
