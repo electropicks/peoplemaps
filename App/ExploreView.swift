@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 import PeoplemapsCore
 
-private enum Sheet: String, Identifiable { case origin, destination, details, about, favourites, preferences; var id: String { rawValue } }
+private enum Sheet: String, Identifiable { case origin, destination, details, settings, favourites, preferences; var id: String { rawValue } }
 
 private enum Screen: Equatable {
     case home, search, place(Place), preview, navigating
@@ -461,8 +461,8 @@ struct ExploreView: View {
                     PlacePicker(title: "Going to", search: search, selected: destination, saved: saved) { destination = $0; saved.addRecent($0) }
                 case .details:
                     if let comparison = session.comparison { RouteDetails(comparison: comparison) }
-                case .about:
-                    AboutView(graph: graph, canSwitchNow: screen != .preview && screen != .navigating)
+                case .settings:
+                    SettingsView(graph: graph, dataVersion: search.dataVersion, canSwitchNow: screen != .preview && screen != .navigating)
                 case .favourites:
                     FavouritesEditor(saved: saved)
                 case .preferences:
@@ -699,10 +699,12 @@ struct ExploreView: View {
             }
             VStack(alignment: .leading, spacing: 0) {
                 if !saved.favourites.isEmpty {
-                    homeRow("Edit favourites", symbol: "star", id: "edit-favourites") { sheet = .favourites }
-                    Hairline().padding(.leading, 4)
+                    HomeRow(title: "Edit favourites", symbol: "star", minHeight: landscape ? 46 : 52) { sheet = .favourites }
+                        .accessibilityIdentifier("edit-favourites")
+                    Hairline().padding(.leading, 60)
                 }
-                homeRow("About PeopleMaps", symbol: "info.circle", id: "about") { sheet = .about }
+                HomeRow(title: "Settings", symbol: "gearshape", minHeight: landscape ? 46 : 52) { sheet = .settings }
+                    .accessibilityIdentifier("settings")
             }
         }
     }
@@ -731,17 +733,10 @@ struct ExploreView: View {
                 .frame(width: 56, height: 56).contentShape(Circle())
                 .chip(floating: true, in: Circle())
         }
-        .buttonStyle(.plain).accessibilityLabel("More").accessibilityHint("Shows recents and About").accessibilityIdentifier("home-more")
+        .buttonStyle(.plain).accessibilityLabel("More").accessibilityHint("Shows recents and Settings").accessibilityIdentifier("home-more")
     }
 
     private func raiseHome() { stop = .medium; homeStop = .medium }
-
-    private func homeRow(_ title: String, symbol: String, id: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: symbol).font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
-        }.buttonStyle(.plain).padding(.leading, 4).accessibilityIdentifier(id)
-    }
 
     // MARK: Search
 

@@ -5,36 +5,36 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
     /// At rest home is only its floating controls; More raises the sheet, and pulling that down leaves the controls again.
     @MainActor func testHomeRestsAsFloatingControlsAndRaisesToASheet() {
         let app = launchHome()
-        XCTAssertFalse(app.buttons["about"].exists, "The rest of home waits for the sheet")
+        XCTAssertFalse(app.buttons["settings"].exists, "The rest of home waits for the sheet")
         app.buttons["home-more"].tap()
-        XCTAssertTrue(app.buttons["about"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["home-more"].exists)
         capture("home-raised", app: app)
         let start = app.buttons["search-field"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 500)))
         XCTAssertTrue(app.buttons["home-more"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["about"].exists)
+        XCTAssertFalse(app.buttons["settings"].exists)
         // Dragging the capsule raises it too.
         raiseHome(app)
-        XCTAssertTrue(app.buttons["about"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
     }
-    /// The raised home sheet is frosted, and stays so after About opens over it and closes, and after the map is panned: the system's
+    /// The raised home sheet is frosted, and stays so after Settings opens over it and closes, and after the map is panned: the system's
     /// own glass stops drawing in both cases, so the frost comes from the sheet's background (Docs/DESIGN.md, principle 4).
-    @MainActor func testHomeSheetStaysFrostedAfterAboutAndAPan() {
+    @MainActor func testHomeSheetStaysFrostedAfterSettingsAndAPan() {
         let app = launchHome(location: Self.atKerryPark)
         raiseHome(app)
-        XCTAssertTrue(app.buttons["about"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
         // The empty body of the sheet, below its last row, over a part of the map with streets and water.
         let body = CGRect(x: 0.1, y: 0.70, width: 0.8, height: 0.22)
         Thread.sleep(forTimeInterval: 2)
         XCTAssertLessThan(brightnessSpread(body), 5, "Raised home is frosted")
-        app.buttons["about"].tap()
-        XCTAssertTrue(app.buttons["close-about"].waitForExistence(timeout: 5))
-        app.buttons["close-about"].tap()
+        app.buttons["settings"].tap()
+        XCTAssertTrue(app.buttons["close-settings"].waitForExistence(timeout: 5))
+        app.buttons["close-settings"].tap()
         XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
         Thread.sleep(forTimeInterval: 2)
-        capture("home-after-about", app: app)
-        XCTAssertLessThan(brightnessSpread(body), 5, "Still frosted after About closes")
+        capture("home-after-settings", app: app)
+        XCTAssertLessThan(brightnessSpread(body), 5, "Still frosted after Settings closes")
         let window = app.windows.firstMatch
         window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
             .press(forDuration: 0.1, thenDragTo: window.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.4)))
@@ -116,20 +116,19 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         app.buttons["cancel-route"].tap()
         XCTAssertFalse(app.buttons["cancel-route"].waitForExistence(timeout: 1))
     }
-    @MainActor func testAboutCountsSegmentsFromTheGraphFile() {
+    @MainActor func testMapDataCountsSegmentsFromTheGraphFile() {
         let app = launchHome(extra: ["--hold-router"])
-        raiseHome(app)
-        app.buttons["about"].tap()
-        let counted = app.staticTexts.containing(NSPredicate(format: "label MATCHES %@", #"^[\d,]{5,} directed street and path segments are bundled.*"#)).firstMatch
-        XCTAssertTrue(counted.waitForExistence(timeout: 5), "A real count while the graph is still loading")
+        openSettings(app)
+        openSettingsPage(app, "map-data")
+        let counted = app.descendants(matching: .any)["segment-count"]
+        XCTAssertTrue(counted.waitForExistence(timeout: 5), "A count while the graph is still loading")
+        XCTAssertNotNil(rowText(counted).range(of: #"[\d,]{5,}"#, options: .regularExpression), rowText(counted))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'This prototype has not been field validated.'")).firstMatch.exists)
     }
-    @MainActor func testAboutShowsAcknowledgementsAndLicences() {
+    @MainActor func testSettingsShowsAcknowledgementsAndLicences() {
         let app = launchHome()
-        raiseHome(app)
-        app.buttons["about"].tap()
-        let acknowledgements = app.buttons["acknowledgements"]
-        for _ in 0..<3 where !acknowledgements.isHittable { app.collectionViews.firstMatch.swipeUp() }
-        acknowledgements.tap()
+        openSettings(app)
+        openSettingsPage(app, "acknowledgements")
         XCTAssertTrue(app.navigationBars["Acknowledgements"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["USGS 3D Elevation Program"].exists)
         app.buttons["licence-Ferrostar-LICENSE"].tap()

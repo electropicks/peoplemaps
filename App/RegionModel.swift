@@ -1,7 +1,7 @@
 import SwiftUI
 import PeoplemapsCore
 
-/// What the Map area section of About shows and does: the King County download, its state, and switching to it. Holds no map data itself;
+/// What the Map section of Settings shows and does: the King County download, its state, and switching to it. Holds no map data itself;
 /// `RegionStore` downloads and installs, `RegionSelection` decides what the app loads.
 @MainActor @Observable
 final class RegionModel {

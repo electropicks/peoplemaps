@@ -1,7 +1,7 @@
 import XCTest
 import CryptoKit
 
-/// The Map area section of About. The offer reads the app's real manifest; the download tests point the app at a small server in this
+/// The Map section of Settings. The offer reads the app's real manifest; the download tests point the app at a small server in this
 /// process (`--region-server`) and a made-up manifest (`--region-manifest-json`), so no real county data moves.
 final class RegionDownloadUITests: PeoplemapsUITestCase {
     private var server: TinyHTTPServer?
@@ -30,27 +30,24 @@ final class RegionDownloadUITests: PeoplemapsUITestCase {
         return ["--region-server", server.baseURL.absoluteString, "--region-manifest-json", json]
     }
 
+    /// The Map section is the first on Settings, so its rows need no scrolling.
     @MainActor private func openMapArea(_ app: XCUIApplication) {
-        raiseHome(app)
-        app.buttons["about"].tap()
-        let card = app.descendants(matching: .any)["region-card"]
-        // Home tops out at medium, so About is half a screen tall and takes more swipes to reach the section.
-        for _ in 0..<10 where !(card.exists && card.isHittable) { app.collectionViews.firstMatch.swipeUp() }
-        XCTAssertTrue(card.waitForExistence(timeout: 5))
-        // The controls under the card: swipes bring them clear of the sheet's bottom edge.
-        let controls = app.buttons["region-download"]
-        for _ in 0..<4 where !(controls.exists && controls.isHittable) { app.collectionViews.firstMatch.swipeUp(velocity: .slow) }
+        openSettings(app)
+        XCTAssertTrue(app.descendants(matching: .any)["region-current"].waitForExistence(timeout: 5))
     }
 
     @MainActor func testTheOfferShowsTheManifestsDownloadSizeAndSpace() {
         let app = launchHome()
         openMapArea(app)
-        XCTAssertTrue(app.staticTexts["King County: Seattle, Bellevue and the rest of the county, plus 3 miles"].exists, app.debugDescription)
         // Data/regions.json: the five king-county outputs add up to 232,312,020 bytes.
-        let size = app.staticTexts["region-size"].label
-        XCTAssertTrue(size.hasPrefix("232.3 MB to download. About 350 MB on your phone"), size)
-        XCTAssertTrue(app.buttons["region-download"].exists)
-        XCTAssertEqual(app.staticTexts["region-current"].label, "On this phone now: Seattle, included with the app")
+        let download = app.buttons["region-download"]
+        XCTAssertTrue(download.isHittable, app.debugDescription)
+        XCTAssertTrue(rowText(download).contains("Download King County"), rowText(download))
+        XCTAssertTrue(rowText(download).contains("232.3 MB"), rowText(download))
+        let footer = app.staticTexts["region-footer"].label
+        XCTAssertTrue(footer.hasPrefix("The whole county and 3 miles beyond, about 350 MB on your phone."), footer)
+        let current = rowText(app.descendants(matching: .any)["region-current"])
+        XCTAssertTrue(current.contains("On this phone") && current.contains("Seattle"), current)
         capture("region-offer", app: app)
     }
 
@@ -104,12 +101,14 @@ final class RegionDownloadUITests: PeoplemapsUITestCase {
         app.buttons["region-download"].tap()
         XCTAssertTrue(app.buttons["region-remove"].waitForExistence(timeout: 40))
         app.buttons["region-remove"].tap()
-        // The confirmation lists "Remove" after the row's own button.
-        app.buttons.matching(NSPredicate(format: "label == 'Remove'")).allElementsBoundByIndex.last?.tap()
+        // The row says "Remove King County"; the confirmation's button is the only plain "Remove".
+        let confirm = app.buttons["Remove"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        confirm.tap()
         XCTAssertTrue(app.buttons["region-download"].waitForExistence(timeout: 10))
     }
 
-    /// The made-up files are not a map, so the next launch cannot load them: Seattle shows, and About says why.
+    /// The made-up files are not a map, so the next launch cannot load them: Seattle shows, and Settings says why.
     @MainActor func testADownloadedRegionThatWillNotLoadFallsBackToSeattle() throws {
         let arguments = try tinyRegionArguments()
         var app = launchHome(extra: arguments)
