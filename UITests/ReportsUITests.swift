@@ -61,7 +61,7 @@ final class ReportsUITests: PeoplemapsUITestCase {
 
     /// The keyboard comes up with the composer. Share stays in reach above it, and brings up the share sheet from there.
     @MainActor func testShareIsInReachWithTheKeyboardUp() {
-        let app = launch()
+        let app = launchHome()
         let keyboard = openComposerWithTheKeyboardUp(app)
         let share = app.buttons["share-report"]
         XCTAssertTrue(share.waitForExistence(timeout: 5))
@@ -78,7 +78,7 @@ final class ReportsUITests: PeoplemapsUITestCase {
 
     /// A drag down the form puts the keyboard away and leaves the composer open.
     @MainActor func testDraggingTheComposerDownPutsTheKeyboardAway() {
-        let app = launch()
+        let app = launchHome()
         let keyboard = openComposerWithTheKeyboardUp(app)
         let from = app.switches["report-exact"].coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.5))
         from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: 0, dy: 260)), withVelocity: .slow, thenHoldForDuration: 0.1)
