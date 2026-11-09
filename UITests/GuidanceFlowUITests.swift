@@ -115,4 +115,19 @@ final class GuidanceFlowUITests: PeoplemapsUITestCase {
         app.buttons["done-navigation"].tap()
         XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 10))
     }
+    /// What a scout did during a fast simulated drive: flag a moment, unmute, pan the map. The trip still ends on the arrival card.
+    @MainActor func testFlagMuteAndPanDuringGuidanceStillArrives() {
+        let app = launch(simulateRoute: true, fast: true)
+        startSimulatedGuidance(app)
+        let flag = app.buttons["mark-moment"], mute = app.buttons["guidance-mute"]
+        XCTAssertTrue(flag.waitForExistence(timeout: 10))
+        flag.tap()
+        XCTAssertTrue(mute.waitForExistence(timeout: 5))
+        mute.tap()
+        panMap(app)
+        let arrived = app.staticTexts["guidance-arrived"]
+        XCTAssertTrue(arrived.waitForExistence(timeout: 150), "Never arrived: search field \(app.buttons["search-field"].exists), preview \(app.buttons["route-fastest"].exists), instruction \(app.staticTexts["guidance-instruction"].exists)")
+        XCTAssertTrue(app.buttons["done-navigation"].isHittable)
+        capture("16-arrived-after-flag-mute-pan", app: app)
+    }
 }
