@@ -161,7 +161,7 @@ The usage log and the detailed log are off unless you turn them on, and they sta
 tap **Send to PeopleMaps** on the log's page in Settings. That button is the only thing that sends a log; nothing is sent
 on a timer or in the background.
 
-- **What goes.** The log's files exactly as they are on the phone, the same files Share hands over. The usage log is one
+- **What goes.** The log's files, with the same contents Share hands over, encrypted on your phone before they leave it. The usage log is one
   line per trip, with places rounded to about 100 m unless **Exact places** is on. The detailed log has exact places: your
   starts and destinations, every location fix of each trip and recording, what you searched for and the places you opened.
   Before anything is sent the app says how many files and how large, and that they include exact places when they do. Files
@@ -169,16 +169,18 @@ on a timer or in the background.
 - **What goes with it.** A check that the app is a genuine copy of PeopleMaps (Apple's App Attest, as for a map download),
   and nothing else: no name, no account, no report ID, no device name. The server does not record which install sent a
   file. The files themselves can still identify you: a log of your trips shows where you start and end them.
-- **Where it is kept.** On our server at Cloudflare, in private storage separate from the map files, for the maintainer to
-  read. It is not published and never filed as an issue. It is not encrypted beyond the connection and Cloudflare's own
-  storage, so people with access to the project's Cloudflare account or its deploy credentials can read it while it is
-  there.
+- **Where it is kept.** On our server at Cloudflare, in private storage separate from the map files. It is not published
+  and never filed as an issue. Each file is encrypted on your phone to a key that only the maintainer holds, on their own
+  computer and not on the server. So the server, Cloudflare, and anyone with access to the project's Cloudflare account can
+  see that a file was sent, its size, its name (a trip's start time and mode, or a day) and the hour, but not what is in it.
 - **How long.** Up to 30 days. The maintainer usually copies a log off the server sooner, which deletes it there, and
   the daily cleanup deletes anything older than 30 days. A copy the maintainer took is kept on their computer, outside
   the project's repository, for as long as it is useful for fixing the app.
-- **Deleting.** **Clear** on the log's page deletes the phone's copy only. The app cannot delete a log from the server,
-  because the server does not know which install sent it; ask through the project's GitHub issues (without personal
-  details), or wait for the 30 days.
+- **Deleting.** **Clear** on the log's page deletes the phone's copy only. **Delete sent logs**, on the same page while
+  something you sent may still be on the server, removes what this phone sent from the server. The phone keeps a random
+  delete key for each send for this; the server does not know which install sent a file. It cannot remove a copy the
+  maintainer already took: ask through the project's GitHub issues (without personal details). If you erase the app or
+  lose the phone, the delete keys go with it, and what you sent stays until its 30 days end.
 
 If your device cannot do App Attest (the Simulator, some devices), the button says the device can't send logs and
 nothing is sent.

@@ -464,50 +464,73 @@ Range, If-Range, If-None-Match, If-Match              // optional
 ### 4.8 Sending the trip logs
 
 The usage log and the detailed log (11) can be sent to the server with one tap, **Send to PeopleMaps** on each log's page in
-Settings, next to Share. Nothing is sent on a timer or in the background. Code: `Backend/src/logs.ts`, `Core/LogUpload.swift`,
-`App/Settings/TripLogs.swift` (`LogSender`).
+Settings, next to Share. Nothing is sent on a timer or in the background. Each file is encrypted on the phone to the owner's
+key, so the server holds bytes it cannot read. Code: `Backend/src/logs.ts`, `Core/LogUpload.swift`, `Core/SealedBox.swift`,
+`App/Settings/TripLogs.swift` (`LogSender`), `LogKey/main.swift`.
 
 ```
-PUT /v1/logs/{batch}/{name}
+PUT /v1/logs/{batch}/{name}.enc
 Authorization: Bearer pmd_…          // the download token of 4.7, from POST /v1/attest (4.5)
-X-Content-SHA256: <hex>               // of the body
-<the file's bytes>
+X-Content-SHA256: <hex>               // of the body, the sealed bytes
+X-Delete-SHA256: <hex>                // SHA-256 of the batch's delete secret
+<the sealed file>
 201 { key, bytes, expiresAt } | 200 the same file again | 400 | 401 | 404 | 409 | 413 | 429
+
+DELETE /v1/logs/{batch}
+Authorization: Bearer pmd_…
+X-Delete-Secret: <hex>                // the secret itself
+204 | 401 | 404 | 429
 ```
 
-- **What is sent.** The log's files, byte for byte as Share hands them over: `usage-log.jsonl` (sent as
+- **What is sent.** The log's files, sealed, with the same contents Share hands over: `usage-log.jsonl` (sent as
   `peoplemaps-usage-log-…`), and for the detailed log every `trip-…`, `rec-…` and `use-…` file. The detailed log holds exact
   places, every location fix and search text (11); the usage log holds exact places only when "Exact places" is on. The
   request carries nothing else about the person or the phone: no install ID, no report ID, no device name.
 - **The tap.** The app hashes the files and leaves out any whose contents it has already sent (it keeps the SHA-256s in
   `UserDefaults`, `usageLogSentHashes` and `driveLogSentHashes`, the last 2,000). If nothing is new the row reads "Already
   sent". Otherwise a confirmation names the count and size ("Send 4 files, 2.1 MB to PeopleMaps?"), says when they include
-  exact places and that the server keeps them for up to 30 days, and only **Send** uploads. Files go one at a time under one
+  exact places, that they are encrypted so only the maintainer can read them and that the server keeps them for up to 30
+  days, and only **Send** uploads. Files go one at a time under one
   batch UUID per tap; a failure keeps what got through, and the next tap sends the rest. A file that changed between the
   check and the upload (a trip being written) waits for the next tap.
 - **Who may send.** A holder of a download token, so a genuine copy of the app (4.5). A 401 gets one fresh attestation and
   one retry. Where App Attest is unsupported (the Simulator) the row says the device can't send logs, and Share still works.
-- **Names.** `{batch}` is a lowercase UUID and `{name}` must match
-  `^(peoplemaps-usage-log|trip|rec|use)-[A-Za-z0-9-]{1,40}\.jsonl$`; anything else is a 404 that never reaches the bucket.
+- **Sealing.** `SealedBox` is HPKE (RFC 9180) from CryptoKit: X25519, HKDF-SHA256, ChaCha20-Poly1305, one message per file,
+  with `info` `peoplemaps log v1` and the file's name authenticated, so a box opens only as the file it was sent as. A box is
+  `PMBOX1\n`, the 32-byte encapsulated key, then the ciphertext and tag. The app ships only the public key
+  (`LogSeal.publicKey`); the private key is in the owner's login Keychain (item `peoplemaps-log-key`), made by
+  `swift run peoplemaps-logkey keygen`, and never in the repository or on the server. `peoplemaps-logkey export` prints it for
+  a password manager and `import` puts it on another Mac: **if it is lost, logs sealed to it cannot be read**, and a new key
+  means a new app build. The Worker refuses a body that does not start with the box's header, so an unsealed log is never
+  stored. `SealedBox` is not specific to logs: another use takes another `info`.
+- **Names.** `{batch}` is a lowercase UUID and `{name}.enc` must match
+  `^(peoplemaps-usage-log|trip|rec|use)-[A-Za-z0-9-]{1,40}\.jsonl\.enc$`; anything else is a 404 that never reaches the
+  bucket. File names are not encrypted: they show a trip's start time and mode, or a day.
 - **Limits.** A file over 25 MB is `413` (`MAX_LOG_BYTES`; the Worker reads the body whole to hash it, and a one-hour drive
   is about 0.6 MB); the app refuses it before sending and says to share it instead. `LOG_BYTES_PER_DAY` (300 MB) caps what
   all senders together store in a UTC day, counted from `log_uploads`, then `429` with `Retry-After` to midnight UTC.
   `RL_LOGS`, 30 per minute keyed on the token's key ID.
 - **Where it is stored.** The bytes go to the private R2 bucket `peoplemaps-logs` (binding `LOGS`), separate from the map
-  data, under `<batch>/<name>`. D1 gets one row in `log_uploads` (5.1): the key, size, SHA-256, and the hour received and
-  the expiry. The token, its key ID and the address are not stored with it, so a file is not tied to an attested key. The
+  data, under `<batch>/<name>`. D1 gets one row in `log_uploads` (5.1): the key, size, SHA-256 of the sealed bytes, the hash of
+  the batch's delete secret, and the hour received and the expiry. The token, its key ID and the address are not stored with it, so a file is not tied to an attested key. The
   same key with the same hash is a 200 and stores nothing; with another hash it is a 409.
 - **How long.** `LOG_RETENTION_DAYS` (30). The daily cron (5.3) deletes the file, then its row. The owner usually removes
   them sooner: `npm run pull-logs` in `Backend/` (run with the owner's wrangler login, never deployed) lists `log_uploads`,
-  copies each file to `~/atrium/peoplemaps/logs/<hour>-<batch>/` outside the repository, checks it against its SHA-256, and
-  then deletes the file and its row from the server. `--list` only lists, `--keep` copies without deleting. Real logs never
+  copies each file to `~/atrium/peoplemaps/logs/<hour>-<batch>/` outside the repository, checks it against its SHA-256,
+  opens it with the Keychain's key (`peoplemaps-logkey open`, built on the first run) into the plain `.jsonl`, and only then
+  deletes the file and its row from the server. `--list` only lists, `--keep` copies without deleting. Real logs never
   go in the repository, Evidence or tests. D1's Time Travel (5.3) can restore a deleted row for 7 days, but the row holds no
   log content; a deleted R2 object is not restorable.
-- **Not encrypted to the owner.** The files are protected in transit (TLS) and by the bucket being private, so anyone with
-  access to the project's Cloudflare account or its deploy credentials could read them while they are there. Encrypting on
-  the phone to a key only the owner's Mac holds is the step to take before builds go to other people.
-- **Deleting from the phone.** There is no route to delete a sent log from the app: a file is not tied to an install. It goes
-  when the owner pulls it or after 30 days.
+- **Who can read it.** Only the holder of the private key. People with access to the project's Cloudflare account or its
+  deploy credentials see file names, sizes and times, not contents.
+- **Deleting from the phone.** Each tap of Send makes a random 32-byte delete secret, kept on the phone with the batch ID
+  (`UserDefaults`, `<sentKey>.batches`, for 31 days); the server gets only its SHA-256. **Delete sent logs**, shown on the
+  log's page while a send may still be on the server, asks, then calls `DELETE /v1/logs/{batch}` for each: the Worker deletes
+  the batch's files and rows where the hash matches, and answers 204 also when nothing is left (pulled, expired, or another
+  secret), so the answer says nothing about what exists. It does not reach a copy the owner already pulled, and the dialog
+  says so. After it, the phone forgets what it sent, so the log can be sent again.
+- **Privacy manifest.** `App/PrivacyInfo.xcprivacy` declares Precise Location, Search History and Product Interaction as
+  collected, not linked, not tracking, purpose `AppFunctionality`. App Store Connect's answers must say the same.
 - **Tested** in `test/logs.test.ts` against an in-memory bucket and in `Tests/LogUploadTests.swift` with a fake Worker. Real
   R2 is not exercised.
 
@@ -546,7 +569,7 @@ CREATE INDEX reports_expires ON reports(expires_at);
 created_at)`, each attested key by its base64 key ID, `created_at` to the hour. Challenges are stateless and have no
 table.
 
-`Backend/migrations/0003_logs.sql` adds sent logs (4.8): `log_uploads (key, batch, name, bytes, sha256, received_at,
+`Backend/migrations/0003_logs.sql` adds sent logs (4.8): `log_uploads (key, batch, name, bytes, sha256, delete_hash, received_at,
 expires_at)`, one row per file in the `peoplemaps-logs` bucket, times to the hour. It holds nothing from the file and
 nothing about who sent it.
 
@@ -638,7 +661,7 @@ Backend/
   src/apple-root.ts       Apple's App Attestation Root CA
   src/download-token.ts   the HMAC download token (4.7)
   src/regions.ts          GET /v1/regions/{release}/{object} (4.7)
-  src/logs.ts             PUT /v1/logs/{batch}/{name} (4.8)
+  src/logs.ts             PUT /v1/logs/{batch}/{name}, DELETE /v1/logs/{batch} (4.8)
   src/bytes.ts            base64, hashing and comparison helpers
   src/retention.ts        the cron job
   src/errors.ts, time.ts  the error envelope; hour-precision timestamps
