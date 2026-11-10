@@ -461,6 +461,56 @@ Range, If-Range, If-None-Match, If-Match              // optional
   `com.apple.developer.devicecheck.appattest-environment` is `production` (`App/Peoplemaps.entitlements`), which is what
   the Worker accepts unless `ATTEST_ENV` is `development`. The real exchange has only been run in tests with a fake device.
 
+### 4.8 Sending the trip logs
+
+The usage log and the detailed log (11) can be sent to the server with one tap, **Send to PeopleMaps** on each log's page in
+Settings, next to Share. Nothing is sent on a timer or in the background. Code: `Backend/src/logs.ts`, `Core/LogUpload.swift`,
+`App/Settings/TripLogs.swift` (`LogSender`).
+
+```
+PUT /v1/logs/{batch}/{name}
+Authorization: Bearer pmd_…          // the download token of 4.7, from POST /v1/attest (4.5)
+X-Content-SHA256: <hex>               // of the body
+<the file's bytes>
+201 { key, bytes, expiresAt } | 200 the same file again | 400 | 401 | 404 | 409 | 413 | 429
+```
+
+- **What is sent.** The log's files, byte for byte as Share hands them over: `usage-log.jsonl` (sent as
+  `peoplemaps-usage-log-…`), and for the detailed log every `trip-…`, `rec-…` and `use-…` file. The detailed log holds exact
+  places, every location fix and search text (11); the usage log holds exact places only when "Exact places" is on. The
+  request carries nothing else about the person or the phone: no install ID, no report ID, no device name.
+- **The tap.** The app hashes the files and leaves out any whose contents it has already sent (it keeps the SHA-256s in
+  `UserDefaults`, `usageLogSentHashes` and `driveLogSentHashes`, the last 2,000). If nothing is new the row reads "Already
+  sent". Otherwise a confirmation names the count and size ("Send 4 files, 2.1 MB to PeopleMaps?"), says when they include
+  exact places and that the server keeps them for up to 30 days, and only **Send** uploads. Files go one at a time under one
+  batch UUID per tap; a failure keeps what got through, and the next tap sends the rest. A file that changed between the
+  check and the upload (a trip being written) waits for the next tap.
+- **Who may send.** A holder of a download token, so a genuine copy of the app (4.5). A 401 gets one fresh attestation and
+  one retry. Where App Attest is unsupported (the Simulator) the row says the device can't send logs, and Share still works.
+- **Names.** `{batch}` is a lowercase UUID and `{name}` must match
+  `^(peoplemaps-usage-log|trip|rec|use)-[A-Za-z0-9-]{1,40}\.jsonl$`; anything else is a 404 that never reaches the bucket.
+- **Limits.** A file over 25 MB is `413` (`MAX_LOG_BYTES`; the Worker reads the body whole to hash it, and a one-hour drive
+  is about 0.6 MB); the app refuses it before sending and says to share it instead. `LOG_BYTES_PER_DAY` (300 MB) caps what
+  all senders together store in a UTC day, counted from `log_uploads`, then `429` with `Retry-After` to midnight UTC.
+  `RL_LOGS`, 30 per minute keyed on the token's key ID.
+- **Where it is stored.** The bytes go to the private R2 bucket `peoplemaps-logs` (binding `LOGS`), separate from the map
+  data, under `<batch>/<name>`. D1 gets one row in `log_uploads` (5.1): the key, size, SHA-256, and the hour received and
+  the expiry. The token, its key ID and the address are not stored with it, so a file is not tied to an attested key. The
+  same key with the same hash is a 200 and stores nothing; with another hash it is a 409.
+- **How long.** `LOG_RETENTION_DAYS` (30). The daily cron (5.3) deletes the file, then its row. The owner usually removes
+  them sooner: `npm run pull-logs` in `Backend/` (run with the owner's wrangler login, never deployed) lists `log_uploads`,
+  copies each file to `~/atrium/peoplemaps/logs/<hour>-<batch>/` outside the repository, checks it against its SHA-256, and
+  then deletes the file and its row from the server. `--list` only lists, `--keep` copies without deleting. Real logs never
+  go in the repository, Evidence or tests. D1's Time Travel (5.3) can restore a deleted row for 7 days, but the row holds no
+  log content; a deleted R2 object is not restorable.
+- **Not encrypted to the owner.** The files are protected in transit (TLS) and by the bucket being private, so anyone with
+  access to the project's Cloudflare account or its deploy credentials could read them while they are there. Encrypting on
+  the phone to a key only the owner's Mac holds is the step to take before builds go to other people.
+- **Deleting from the phone.** There is no route to delete a sent log from the app: a file is not tied to an install. It goes
+  when the owner pulls it or after 30 days.
+- **Tested** in `test/logs.test.ts` against an in-memory bucket and in `Tests/LogUploadTests.swift` with a fake Worker. Real
+  R2 is not exercised.
+
 ## 5. D1 schema, retention
 
 ### 5.1 Tables
@@ -496,6 +546,10 @@ CREATE INDEX reports_expires ON reports(expires_at);
 created_at)`, each attested key by its base64 key ID, `created_at` to the hour. Challenges are stateless and have no
 table.
 
+`Backend/migrations/0003_logs.sql` adds sent logs (4.8): `log_uploads (key, batch, name, bytes, sha256, received_at,
+expires_at)`, one row per file in the `peoplemaps-logs` bucket, times to the hour. It holds nothing from the file and
+nothing about who sent it.
+
 Anything else a maintainer wants is in `public_json`: `json_extract(public_json, '$.request.mode')`.
 
 ### 5.2 The cell grid
@@ -510,7 +564,8 @@ rebuilt from any rows still held; rows deleted before then are not counted.
 ### 5.3 Retention
 
 One cron, `17 3 * * *`: `DELETE FROM reports WHERE expires_at < now()`, delete installs not seen for 365 days that
-have no reports, and attest keys attested more than `RETENTION_DAYS` ago. It logs one count, and the handler awaits the job so a failure fails the invocation rather than vanishing.
+have no reports, and attest keys attested more than `RETENTION_DAYS` ago. Sent logs (4.8) past their `expires_at` go too:
+the R2 object first, then its `log_uploads` row, up to 1,000 a run. It logs one count, and the handler awaits the job so a failure fails the invocation rather than vanishing.
 
 **Time Travel.** D1 keeps a restorable copy of the database for 7 days on the Workers Free plan and 30 on Paid. It cannot
 be shortened or turned off, and only the maintainers' Cloudflare account can restore from it. So a row deleted by the
@@ -565,8 +620,9 @@ Backend/
   README.md               run, test, deploy
   package.json            wrangler, typescript, vitest, @cloudflare/workers-types
   wrangler.jsonc          see 7.2
-  migrations/0001_init.sql, 0002_attest.sql
+  migrations/0001_init.sql, 0002_attest.sql, 0003_logs.sql
   scripts/file-issue.ts   the hand-filing tool (6); never deployed
+  scripts/pull-logs.ts    copies sent logs to the owner's Mac and deletes them from the server (4.8); never deployed
   src/index.ts            the only Cloudflare-specific entry: builds Deps from env, routes, runs the cron
   src/deps.ts             Deps { store, limits, clock, vars }; the interfaces handlers take
   src/store.ts            installs and reports, plain SQL over a run/all/batch shim
@@ -582,6 +638,7 @@ Backend/
   src/apple-root.ts       Apple's App Attestation Root CA
   src/download-token.ts   the HMAC download token (4.7)
   src/regions.ts          GET /v1/regions/{release}/{object} (4.7)
+  src/logs.ts             PUT /v1/logs/{batch}/{name} (4.8)
   src/bytes.ts            base64, hashing and comparison helpers
   src/retention.ts        the cron job
   src/errors.ts, time.ts  the error envelope; hour-precision timestamps
@@ -602,15 +659,16 @@ Handlers are plain functions, `(request, deps) => Response`. None imports anythi
   "workers_dev": true,
   "preview_urls": false,
   "observability": { "enabled": false, "logs": { "invocation_logs": false } },
-  "vars": { "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "5", "INSTALLS_PER_HOUR": "60", "ATTESTS_PER_HOUR": "60", "ATTEST_ENV": "production" },
+  "vars": { "RETENTION_DAYS": "90", "REPORTS_PER_DAY": "5", "INSTALLS_PER_HOUR": "60", "ATTESTS_PER_HOUR": "60", "ATTEST_ENV": "production", "LOG_RETENTION_DAYS": "30", "LOG_BYTES_PER_DAY": "300000000" },
   "d1_databases": [{ "binding": "DB", "database_name": "peoplemaps-reports", "database_id": "22e78664-ede8-40dd-80bf-7e2b0e7ec41f", "migrations_dir": "migrations" }],
-  "r2_buckets": [{ "binding": "DATA", "bucket_name": "peoplemaps-data" }],
+  "r2_buckets": [{ "binding": "DATA", "bucket_name": "peoplemaps-data" }, { "binding": "LOGS", "bucket_name": "peoplemaps-logs" }],
   "ratelimits": [
     { "name": "RL_AUTH", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
     { "name": "RL_INSTALLS", "namespace_id": "1002", "simple": { "limit": 2, "period": 60 } },
     { "name": "RL_REPORTS", "namespace_id": "1003", "simple": { "limit": 10, "period": 60 } },
     { "name": "RL_ATTEST", "namespace_id": "1004", "simple": { "limit": 10, "period": 60 } },
-    { "name": "RL_DOWNLOADS", "namespace_id": "1005", "simple": { "limit": 60, "period": 60 } }
+    { "name": "RL_DOWNLOADS", "namespace_id": "1005", "simple": { "limit": 60, "period": 60 } },
+    { "name": "RL_LOGS", "namespace_id": "1006", "simple": { "limit": 30, "period": 60 } }
   ],
   "triggers": { "crons": ["17 3 * * *"] }
 }
@@ -828,13 +886,13 @@ of the start and destination and a 550 m cell for a marked moment, as in 2.2. "W
   the root row shows "Off", "On" or "On · 3 trips"). When on, one JSON line per trip in
   `usage-log.jsonl`: date and time, mode, extra-time limit, which route was started, both estimates, whether a calmer
   route was offered, reroute count, each point the user left the route (rounded to about 100 m unless "Exact places" is
-  on) and whether the trip arrived or ended early. The last 500 trips are kept. It is shared or cleared from that page
-  and has no network code. A trip the app is killed during is not logged.
+  on) and whether the trip arrived or ended early. The last 500 trips are kept. It is shared, sent (4.8) or cleared from that
+  page; `UsageLog` itself has no network code. A trip the app is killed during is not logged.
 - **Detailed log** (`Core/DriveLog.swift`, `App/Reports/DriveLogger.swift`): for the owner's own use of a build on their own
   phone, to answer where a drive waits (for example at a left turn because the street it turns onto is backed up), how real
   speeds compare with the estimates, and how the app is used. Off by default; the "Keep a detailed log" switch, on the
-  Detailed log page in Settings (Trip logs), is separate from the usage log. With it off nothing is recorded or held in memory and guidance runs as before. Nothing
-  touches the network. Trips record the fixes guidance already receives; only a manual recording (below) asks for more, and
+  Detailed log page in Settings (Trip logs), is separate from the usage log. With it off nothing is recorded or held in memory and guidance runs as before. Recording
+  never touches the network; the files leave only by Share or by Send to PeopleMaps on that page (4.8). Trips record the fixes guidance already receives; only a manual recording (below) asks for more, and
   only for the `location` background mode, with the same When-In-Use permission. It holds exact places, so it is meant for
   a private build and is not part of what a report contains.
   - **Folder** `drive-log.d` in Application Support (a separate `-uitests` copy under `--ui-testing`), excluded from
