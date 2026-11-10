@@ -368,7 +368,9 @@ struct ExploreView: View {
         // Home tops out at medium: at large it was a flat opaque page holding a search field and one row. Search is the screen that goes large.
         case .home: [.medium]
         case .search: [.medium, .large]
-        case .place: [detent(.fit), .medium, .large]
+        // The place card is all there is to show, so it rests at its own height: raised, it was the card over a blank panel.
+        // At accessibility sizes the card can outgrow the fit stop, so large stays.
+        case .place: typeSize.isAccessibilitySize ? [detent(.fit), .large] : [detent(.fit)]
         case .preview, .navigating: [detent(.fit), raisedDetent, .large]
         }
     }
@@ -863,8 +865,8 @@ struct ExploreView: View {
         estimate = (request, comparison)
     }
 
-    /// The route Start will default to, never the fastest when a calmer one exists: "Calmer: 16–19 min, 6.2 mi" over
-    /// "Yikes → Chill, mostly fewer unsignalled lefts". Plain "Directions" until it's estimated.
+    /// "Directions", so the one action on the card says what it does, over the route Start will default to, never the fastest when a
+    /// calmer one exists: "Calmer: 16–19 min, 6.2 mi". What the calmer route changes is a note under the button.
     private func directionsButton(_ place: Place) -> some View {
         let ready = readyEstimate(for: place)
         return Button { startDirections(to: place) } label: {
@@ -873,8 +875,10 @@ struct ExploreView: View {
                 Image(systemName: ready?.request.mode.symbol ?? "arrow.right").font(.body.weight(.semibold))
                     .frame(width: badgeColumn).padding(.leading, badgeColumn == nil ? 0 : -Self.buttonMargin)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(ready?.comparison.startHeadline ?? "Directions").font(.body.weight(.semibold))
-                    if let ready { Text(ready.comparison.calmSummary).font(.subheadline) }
+                    Text("Directions").font(.body.weight(.semibold))
+                    // The second line is there from the start, so the card keeps its height when the estimate lands.
+                    if let ready { Text(ready.comparison.startHeadline).font(.subheadline) }
+                    else if estimating(place) { Text("Estimating\u{2026}").font(.subheadline).opacity(0.75) }
                 }
             }
             .monospacedDigit().multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
@@ -909,6 +913,12 @@ struct ExploreView: View {
         return (request, comparison)
     }
 
+    /// An estimate is on its way for this place.
+    private func estimating(_ place: Place) -> Bool {
+        guard let request = estimateRequest(for: place) else { return false }
+        return estimate?.request != request
+    }
+
     /// What the button can't say: where the estimate starts when that isn't here, and that it is an estimate.
     @ViewBuilder private func estimateNotes(_ place: Place) -> some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -917,9 +927,13 @@ struct ExploreView: View {
                     Text("From \(ready.request.origin.shortName)").font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
                         .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("place-estimate")
                 }
+                Text(ready.comparison.calmSummary).font(.subheadline).foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("place-calm-summary")
                 Text("Estimate, no live traffic").font(.footnote).foregroundStyle(GuidanceOverlay.onGlass)
-            } else if estimateRequest(for: place) != nil, estimate?.request != estimateRequest(for: place) {
-                Text("Estimating\u{2026}").font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass).accessibilityIdentifier("place-estimate-loading")
+            } else if estimating(place) {
+                // The button says "Estimating…"; this line holds the caveat's place until the estimate lands.
+                Text("Estimate, no live traffic").font(.footnote).foregroundStyle(GuidanceOverlay.onGlass).accessibilityLabel("Estimating")
+                    .accessibilityIdentifier("place-estimate-loading")
             } else {
                 Text("Compares the fastest route with a calmer one. Works offline.").font(.footnote).foregroundStyle(GuidanceOverlay.onGlass)
                     .fixedSize(horizontal: false, vertical: true)
