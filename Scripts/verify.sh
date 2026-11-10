@@ -37,7 +37,8 @@ reproduce() {
   # BinaryGraphTests reuses this run's output (graph.json and the binary graph) instead of running the importer again.
   export PEOPLEMAPS_IMPORT_DIR="$out"
   python3 Scripts/import_osm.py --out "$out" --json-graph "$out/graph.json" > "$out/import.log" 2>&1 || { tail -20 "$out/import.log"; return 1; }
-  local bad=0 files=(seattle-graph.bin seattle-map.pmtiles)
+  python3 Scripts/build_context.py --out "$out" >> "$out/import.log" 2>&1 || { tail -20 "$out/import.log"; return 1; }
+  local bad=0 files=(seattle-graph.bin seattle-map.pmtiles context-map.pmtiles puget-sound-map.pmtiles)
   # The search index's bytes depend on the SQLite version, so it is compared only where that matches the shipped build.
   local built shipped
   built="$(python3 -c 'import sqlite3; print(sqlite3.sqlite_version)')"
