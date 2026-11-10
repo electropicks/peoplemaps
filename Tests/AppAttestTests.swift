@@ -71,7 +71,7 @@ final class AppAttestTests: XCTestCase {
     }
 
     func testServerAnswersBecomePlainErrors() async throws {
-        for (status, expected) in [(401, RegionError.attestFailed), (429, .serverBusy), (400, .attestFailed), (500, .attestFailed)] {
+        for (status, expected) in [(401, RegionError.attestFailed), (429, .serverBusy), (400, .attestFailed), (404, .sourceUnavailable), (500, .sourceUnavailable)] {
             let (_, authorizer) = make(statuses: ["POST /v1/attest": [status]])
             do { _ = try await authorizer.token(); XCTFail("\(status) should fail") } catch { XCTAssertEqual(error as? RegionError, expected, "\(status)") }
         }
