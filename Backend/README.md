@@ -92,9 +92,13 @@ like any other. Not yet exercised: a real attestation from Apple's chain, real R
 `peoplemaps-logs` (binding `LOGS`), with one row in `log_uploads`. The bucket must exist before a deploy with the binding:
 once, `npx wrangler r2 bucket create peoplemaps-logs`. `LOG_RETENTION_DAYS` (30) and `LOG_BYTES_PER_DAY` (300 MB) are vars.
 
+The app seals each file to the owner's log key, so the bucket holds bytes only the owner's Mac can open. The private key is
+in the login Keychain (`peoplemaps-log-key`); `swift run peoplemaps-logkey export` prints it for a password manager, and
+`import` puts it on another Mac. Lose it and sent logs cannot be read.
+
 ```sh
 npm run pull-logs -- --list    # what is on the server
-npm run pull-logs              # copy to ~/atrium/peoplemaps/logs, check each SHA-256, then delete from the server
+npm run pull-logs              # copy to ~/atrium/peoplemaps/logs, check each SHA-256, decrypt, then delete from the server
 npm run pull-logs -- --keep    # copy without deleting
 ```
 

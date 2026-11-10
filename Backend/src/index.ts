@@ -4,7 +4,7 @@ import type { Deps, RateLimiter } from "./deps";
 import { parseVars } from "./deps";
 import { errorResponse, HttpError, StorageUnavailable } from "./errors";
 import { deleteInstall, mintInstall } from "./installs";
-import { uploadLog } from "./logs";
+import { deleteLogBatch, uploadLog } from "./logs";
 import { downloadRegionFile } from "./regions";
 import { deleteReport, getReport, listReports, sendReport } from "./reports";
 import { retention } from "./retention";
@@ -57,6 +57,7 @@ const routes: [string, RegExp, Handler][] = [
   ["POST", /^\/v1\/attest$/, (r, d) => attest(r, d)],
   ["GET", /^\/v1\/regions\/([^/]+)\/([^/]+)$/, (r, d, [release, object]) => downloadRegionFile(r, d, release, object)],
   ["PUT", /^\/v1\/logs\/([^/]+)\/([^/]+)$/, (r, d, [batch, name]) => uploadLog(r, d, batch, name)],
+  ["DELETE", /^\/v1\/logs\/([^/]+)$/, (r, d, [batch]) => deleteLogBatch(r, d, batch)],
 ];
 
 /** Routes a request to its handler and turns failures into the error envelope (4.6). Platform-free; tests call it. */
