@@ -22,7 +22,8 @@ final class LogUploadTests: XCTestCase {
         let fixture = AttestFixture(challenge: Data(count: 68), supported: true, now: Date(), lifetime: 86_400, statuses: [:])
         let authorizer = DownloadAuthorizer(client: AttestClient(baseURL: base, service: fixture, transport: fixture.transport), store: fixture)
         let recorder = Recorder(statuses: statuses)
-        return (LogUploader(base: base, authorizer: authorizer, transport: recorder.transport), recorder)
+        // A stand-in seal the test can read back: the name, a colon, the bytes.
+        return (LogUploader(base: base, authorizer: authorizer, seal: { plain, name in Data("\(name):".utf8) + plain }, transport: recorder.transport), recorder)
     }
 
     func testUnsentSkipsWhatWasSentAndEmptyFiles() throws {
@@ -40,34 +41,39 @@ final class LogUploadTests: XCTestCase {
     func testSendsEachFileUnderOneBatchWithItsHashAndToken() async throws {
         let files = LogFile.unsent([try file("use-2026-11-10.jsonl", "x\n"), try file("rec-20261110T221320Z.jsonl", "y\n")], sent: [])
         let (uploader, worker) = make()
-        let batch = UUID(uuidString: "0B6F7A52-3C1D-4E8F-9A2B-1C3D5E7F9A0B")!
+        let batch = SentLogBatch(id: "0b6f7a52-3c1d-4e8f-9a2b-1c3d5e7f9a0b", secret: String(repeating: "ab", count: 32))
         let done = Box()
         try await uploader.send(files, batch: batch) { done.add($0.name) }
         XCTAssertEqual(worker.requests.map(\.path), [
-            "PUT /v1/logs/0b6f7a52-3c1d-4e8f-9a2b-1c3d5e7f9a0b/use-2026-11-10.jsonl",
-            "PUT /v1/logs/0b6f7a52-3c1d-4e8f-9a2b-1c3d5e7f9a0b/rec-20261110T221320Z.jsonl",
+            "PUT /v1/logs/0b6f7a52-3c1d-4e8f-9a2b-1c3d5e7f9a0b/use-2026-11-10.jsonl.enc",
+            "PUT /v1/logs/0b6f7a52-3c1d-4e8f-9a2b-1c3d5e7f9a0b/rec-20261110T221320Z.jsonl.enc",
         ])
-        XCTAssertEqual(worker.requests.map(\.sha), files.map(\.sha256))
+        XCTAssertEqual(worker.requests.map(\.sha), worker.requests.map { Sha256.hexOf($0.body ?? Data()) }, "the hash is of the sealed bytes")
+        XCTAssertEqual(worker.requests.map(\.deleteHash), Array(repeating: Sha256.hexOf(Data(batch.secret.utf8)), count: 2), "only the secret's hash is sent")
         XCTAssertEqual(worker.requests.map(\.auth), ["Bearer pmd_1", "Bearer pmd_1"])
-        XCTAssertEqual(worker.requests.first?.body, Data("x\n".utf8))
+        XCTAssertEqual(worker.requests.first?.body, Data("use-2026-11-10.jsonl:x\n".utf8), "the body is the sealed file, sealed under its name")
+
+        try await uploader.delete(batch)
+        XCTAssertEqual(worker.requests.last?.path, "DELETE /v1/logs/0b6f7a52-3c1d-4e8f-9a2b-1c3d5e7f9a0b")
+        XCTAssertEqual(worker.requests.last?.secret, batch.secret)
         XCTAssertEqual(done.names, files.map(\.name))
     }
 
     func testA401GetsOneFreshTokenThenGivesUp() async throws {
         let files = LogFile.unsent([try file("use-2026-11-10.jsonl", "x\n")], sent: [])
         let (uploader, worker) = make(statuses: [401])
-        try await uploader.send(files) { _ in }
+        try await uploader.send(files, batch: SentLogBatch()) { _ in }
         XCTAssertEqual(worker.requests.map(\.auth), ["Bearer pmd_1", "Bearer pmd_2"])
 
         let (again, _) = make(statuses: [401, 401])
-        do { try await again.send(files) { _ in }; XCTFail("expected a failure") } catch { XCTAssertEqual(error as? LogUploadError, .unavailable) }
+        do { try await again.send(files, batch: SentLogBatch()) { _ in }; XCTFail("expected a failure") } catch { XCTAssertEqual(error as? LogUploadError, .unavailable) }
     }
 
     func testFailuresKeepWhatGotThrough() async throws {
         let files = LogFile.unsent([try file("use-2026-11-09.jsonl", "a\n"), try file("use-2026-11-10.jsonl", "b\n")], sent: [])
         let (uploader, _) = make(statuses: [201, 429])
         let done = Box()
-        do { try await uploader.send(files) { done.add($0.name) }; XCTFail("expected a failure") } catch {
+        do { try await uploader.send(files, batch: SentLogBatch()) { done.add($0.name) }; XCTFail("expected a failure") } catch {
             XCTAssertEqual(error as? LogUploadError, .busy(retryAfter: 60))
         }
         XCTAssertEqual(done.names, ["use-2026-11-09.jsonl"])
@@ -77,7 +83,7 @@ final class LogUploadTests: XCTestCase {
         let url = try file("trip-20261110T221320Z-drive.jsonl", "x\n")
         let (uploader, worker) = make()
         let big = LogFile(url: url, bytes: LogUploader.maxBytes + 1, sha256: "0")
-        do { try await uploader.send([big]) { _ in }; XCTFail("expected a failure") } catch {
+        do { try await uploader.send([big], batch: SentLogBatch()) { _ in }; XCTFail("expected a failure") } catch {
             XCTAssertEqual(error as? LogUploadError, .tooLarge("trip-20261110T221320Z-drive.jsonl"))
         }
         XCTAssertTrue(worker.requests.isEmpty)
@@ -88,7 +94,7 @@ final class LogUploadTests: XCTestCase {
         let files = LogFile.unsent([url], sent: [])
         try Data("x\ny\n".utf8).write(to: url)
         let (uploader, worker) = make()
-        try await uploader.send(files) { _ in }
+        try await uploader.send(files, batch: SentLogBatch()) { _ in }
         XCTAssertTrue(worker.requests.isEmpty)
     }
 }
@@ -101,7 +107,7 @@ private final class Box: @unchecked Sendable {
 }
 
 private final class Recorder: @unchecked Sendable {
-    struct Seen { var path: String; var sha: String?; var auth: String?; var body: Data? }
+    struct Seen { var path: String; var sha: String?; var auth: String?; var body: Data?; var deleteHash: String?; var secret: String? }
     private let lock = NSLock()
     private var statuses: [Int]
     private var _requests: [Seen] = []
@@ -112,8 +118,9 @@ private final class Recorder: @unchecked Sendable {
         { [self] request in
             lock.withLock {
                 _requests.append(Seen(path: "\(request.httpMethod ?? "") \(request.url!.path)", sha: request.value(forHTTPHeaderField: "X-Content-SHA256"),
-                                      auth: request.value(forHTTPHeaderField: "Authorization"), body: request.httpBody))
-                let status = statuses.isEmpty ? 201 : statuses.removeFirst()
+                                      auth: request.value(forHTTPHeaderField: "Authorization"), body: request.httpBody,
+                                      deleteHash: request.value(forHTTPHeaderField: "X-Delete-SHA256"), secret: request.value(forHTTPHeaderField: "X-Delete-Secret")))
+                let status = statuses.isEmpty ? (request.httpMethod == "DELETE" ? 204 : 201) : statuses.removeFirst()
                 return ReportsHTTPResponse(status: status, body: Data("{}".utf8), retryAfter: status == 429 ? "60" : nil)
             }
         }
