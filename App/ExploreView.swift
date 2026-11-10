@@ -113,7 +113,6 @@ struct ExploreView: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.dynamicTypeSize) private var typeSize
     /// The calm word is `.largeTitle`, held to 48 pt so at accessibility sizes the time under it stays in view.
     @ScaledMetric(relativeTo: .largeTitle) private var scaledWord = 34.0
@@ -528,8 +527,9 @@ struct ExploreView: View {
 
     private var portraitSheet: some View {
         presenting(panel)
-            .background { SheetGlass(detents: detents, screen: "\(screen)") }
-            .presentationBackground { sheetBackdrop }
+            // The sheet's background is the system's: Liquid Glass at the partial stops, opaque at large, frosted or solid under
+            // Reduce Transparency and Increase Contrast. Nothing of ours is painted over it (owner's decision, 10 November 2026).
+            .modifier(DebugOpaqueSheet())
             .presentationCornerRadius(Layout.sheetRadius)
             .safeAreaBar(edge: .bottom, spacing: 0) {
                 if stop == .large {
@@ -552,14 +552,6 @@ struct ExploreView: View {
             #if DEBUG
             .onGeometryChange(for: String.self) { "\(Int($0.frame(in: .global).minY)) \(Int($0.frame(in: .global).maxY)) \(Int($0.safeAreaInsets.bottom))" } action: { MapDebug.shared.sheet = $0 }
             #endif
-    }
-
-    /// What the sheet shows over its glass (`SheetGlass`): a frosted veil that keeps the map's labels from printing across the rows,
-    /// or a solid panel when raised to read or when asked for. The system's glass alone doesn't blur what is behind it here.
-    @ViewBuilder private var sheetBackdrop: some View {
-        if reduceTransparency || GlassFlags.reduceTransparency || stop == .large { Color.panel }
-        else if contrast == .increased { Color(uiColor: .glassVeilDense) }
-        else { Rectangle().fill(.regularMaterial).overlay(Color(uiColor: .glassVeil)) }
     }
 
     private func landscapeLayout(_ geo: GeometryProxy) -> some View {
