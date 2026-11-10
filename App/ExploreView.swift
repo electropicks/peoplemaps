@@ -81,15 +81,10 @@ struct ExploreView: View {
     @State private var locateCount = 0
     /// The map is on the user because of Locate; a gesture ends it.
     @State private var centred = false
-    /// Height of what the fit stop has to show: home or the place card, or the preview's scrolling part and its pinned part.
-    @State private var fitContent: CGFloat = 60
-    /// The place card's own height, kept from the last card shown: cards are nearly all the same height, so the sheet drops straight
-    /// to its stop. Sharing `fitContent` with home, it dropped to home's height first and then moved again once the card was measured.
-    @State private var placeContent: CGFloat = 196
     /// Height of everything on home's raised sheet; zero until it has been laid out once.
     @State private var homeBlock: CGFloat = 0
-    @State private var previewBlock: CGFloat = 200
-    @State private var previewPinned: CGFloat = 110
+    /// Home's previous stop, kept in the detents while the sheet glides from it to the new one (`measuredHome`).
+    @State private var leavingHome: PresentationDetent?
     @State private var screenHeight: CGFloat = 852
     @State private var safeBottom: CGFloat = 0
     /// Height the sheet covers now, and at its last rest short of large, which is what the map keeps clear of. Read only by the
@@ -353,28 +348,42 @@ struct ExploreView: View {
     /// The least the fit stop asks for: below this the system shrinks the sheet further (Docs/DESIGN.md 4.1), and the floating
     /// capsule with it. The room left over is empty glass-free space above the controls.
     private let leastFit: CGFloat = 100
-    /// The fit stop holds its content plus the padding `scrolling` puts around it, or the last of the content is cut off by the
-    /// sheet's edge. Never so tall that the map disappears; past that it scrolls.
+    /// The fit stop holds its content plus the padding `scrolling` puts around it, designed per screen (`SheetHeights`) so the detent
+    /// stays the same while the content lays out. Never so tall that the map disappears; past that it scrolls.
     private var fitHeight: CGFloat {
         let content: CGFloat = switch screen {
-        case .preview: previewBlock + previewPinned
-        case .place: placeContent
-        default: fitContent
+        case let .place(place): SheetHeights.place(typeSize, fromLine: estimateRequest(for: place).map { !$0.origin.isCurrentLocation } ?? false)
+        default: SheetHeights.preview(typeSize)
         }
-        // The system adds the bottom safe area to a height detent, and the panel lays out over it (`portraitSheet`).
-        return min(max(content + Layout.sheetTop + Layout.sheetBottom - safeBottom, leastFit), screenHeight * 0.7)
+        return sheetHeight(content)
     }
-    /// Home's raised sheet is as tall as what it holds: the field, favourites, Recents and its rows. At the system's medium it was
-    /// half a screen of panel under a field and one row. Before the first layout it is sized from what the rows will take.
-    private var homeHeight: CGFloat {
+    /// The system adds the bottom safe area to a height detent, and the panel lays out over it (`portraitSheet`).
+    private func sheetHeight(_ content: CGFloat) -> CGFloat {
+        min(max(content + Layout.sheetTop + Layout.sheetBottom - safeBottom, leastFit), screenHeight * 0.7)
+    }
+    /// Home's raised sheet is as tall as what it holds: the field, favourites, Recents and its rows, which change as places are used.
+    /// At the system's medium it was half a screen of panel under a field and one row. Before the first layout it is sized from what
+    /// the rows will take.
+    private func homeHeight(_ block: CGFloat) -> CGFloat {
         let rows = CGFloat(min(saved.recents.count, 5) + (saved.favourites.isEmpty ? 1 : 2)) * 52 + (saved.recents.isEmpty ? 0 : 54)
-        let content = homeBlock > 0 ? homeBlock : fitContent + 20 + rows
-        return min(max(content + Layout.sheetTop + Layout.sheetBottom - safeBottom, leastFit), screenHeight * 0.7)
+        return sheetHeight(block > 0 ? block : 68 + (saved.favourites.isEmpty ? 0 : 52) + 20 + rows)
+    }
+    /// A new measure of home adds its stop beside the old one and selects it; the old one goes once the sheet has glided there.
+    /// Swapping the one detent for another made the sheet jump.
+    private func measuredHome(_ block: CGFloat) {
+        let old = PresentationDetent.height(homeHeight(homeBlock)), new = PresentationDetent.height(homeHeight(block))
+        guard old != new else { homeBlock = block; return }
+        leavingHome = old
+        withAnimation(Motion.panel(reduceMotion)) { homeBlock = block }
+        Task {
+            try? await Task.sleep(for: .milliseconds(500))
+            if leavingHome == old { leavingHome = nil }
+        }
     }
     private func detent(_ stop: Stop) -> PresentationDetent {
         switch stop {
         case .fit: .height(fitHeight)
-        case .medium: screen == .home ? .height(homeHeight) : .medium
+        case .medium: screen == .home ? .height(homeHeight(homeBlock)) : .medium
         case .raised: raisedDetent
         case .large: .large
         }
@@ -382,7 +391,7 @@ struct ExploreView: View {
     private var detents: Set<PresentationDetent> {
         switch screen {
         // Home has one stop, sized to its content: at large it was a flat opaque page holding a search field and one row. Search is the screen that goes large.
-        case .home: [detent(.medium)]
+        case .home: Set([detent(.medium)] + (leavingHome.map { [$0] } ?? []))
         case .search: [.medium, .large]
         // The place card is all there is to show, so it rests at its own height: raised, it was the card over a blank panel.
         // At accessibility sizes the card can outgrow the fit stop, so large stays.
@@ -503,7 +512,7 @@ struct ExploreView: View {
             // bottom, so the location dot sits about 30% down at rest instead of where the raised sheet's edge lands. It never reads the stop, so
             // pulling the sheet up moves nothing.
             if landscape { return UIEdgeInsets(top: safe.top + 48, left: safe.leading + 12 + cardWidth + 24, bottom: safe.bottom + 48, right: safe.trailing + 16 + 44 + 24) }
-            return UIEdgeInsets(top: safe.top + 48, left: 48, bottom: max(fitHeight, screenHeight * 0.5) + 24, right: 16 + 44 + 24)
+            return UIEdgeInsets(top: safe.top + 48, left: 48, bottom: screenHeight * 0.5 + 24, right: 16 + 44 + 24)
         }
         if landscape {
             return UIEdgeInsets(top: safe.top + 24, left: safe.leading + 12 + cardWidth + 32, bottom: safe.bottom + 36, right: safe.trailing + 16 + 44 + 24)
@@ -720,7 +729,6 @@ struct ExploreView: View {
                         .accessibilityIdentifier("home-hint")
                 }
             }
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fitContent = $0 }
         }
     }
 
@@ -744,7 +752,7 @@ struct ExploreView: View {
                     .accessibilityIdentifier("settings")
             }
         }
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { homeBlock = $0 }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { measuredHome($0) }
     }
 
     /// The way to search: its own glass over the map, a plain well on a panel.
@@ -872,7 +880,6 @@ struct ExploreView: View {
             if let source = place.source { Text(source).font(.caption).foregroundStyle(GuidanceOverlay.onGlass).accessibilityIdentifier("place-source") }
         }
         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { placeContent = $0 }
         .task(id: estimateRequest(for: place)) { await loadEstimate(estimateRequest(for: place)) }
     }
 
@@ -1017,7 +1024,6 @@ struct ExploreView: View {
         VStack(spacing: 0) {
             scrolling { previewContent }
             previewActions
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { previewPinned = $0 }
         }
     }
 
@@ -1036,7 +1042,6 @@ struct ExploreView: View {
                 }
                 .animation(Motion.content(reduceMotion), value: request == nil ? "needs-place" : stateID)
             }
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { previewBlock = $0 }
             if landscape || stop == .raised || stop == .large || typeSize.isAccessibilitySize {
                 Hairline()
                 swapRow
