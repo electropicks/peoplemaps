@@ -83,6 +83,9 @@ struct ExploreView: View {
     @State private var centred = false
     /// Height of what the fit stop has to show: home or the place card, or the preview's scrolling part and its pinned part.
     @State private var fitContent: CGFloat = 60
+    /// The place card's own height, kept from the last card shown: cards are nearly all the same height, so the sheet drops straight
+    /// to its stop. Sharing `fitContent` with home, it dropped to home's height first and then moved again once the card was measured.
+    @State private var placeContent: CGFloat = 196
     @State private var previewBlock: CGFloat = 200
     @State private var previewPinned: CGFloat = 110
     @State private var screenHeight: CGFloat = 852
@@ -351,7 +354,11 @@ struct ExploreView: View {
     /// The fit stop holds its content plus the padding `scrolling` puts around it, or the last of the content is cut off by the
     /// sheet's edge. Never so tall that the map disappears; past that it scrolls.
     private var fitHeight: CGFloat {
-        let content = screen == .preview ? previewBlock + previewPinned : fitContent
+        let content: CGFloat = switch screen {
+        case .preview: previewBlock + previewPinned
+        case .place: placeContent
+        default: fitContent
+        }
         // The system adds the bottom safe area to a height detent, and the panel lays out over it (`portraitSheet`).
         return min(max(content + Layout.sheetTop + Layout.sheetBottom - safeBottom, leastFit), screenHeight * 0.7)
     }
@@ -833,7 +840,7 @@ struct ExploreView: View {
             if let source = place.source { Text(source).font(.caption).foregroundStyle(GuidanceOverlay.onGlass).accessibilityIdentifier("place-source") }
         }
         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fitContent = $0 }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { placeContent = $0 }
         .task(id: estimateRequest(for: place)) { await loadEstimate(estimateRequest(for: place)) }
     }
 
@@ -872,7 +879,7 @@ struct ExploreView: View {
         return Button { startDirections(to: place) } label: {
             // The symbol under the badge and the words under the name, as the header above lays them out.
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Image(systemName: ready?.request.mode.symbol ?? "arrow.right").font(.body.weight(.semibold))
+                Image(systemName: ready != nil || estimating(place) ? mode.symbol : "arrow.right").font(.body.weight(.semibold))
                     .frame(width: badgeColumn).padding(.leading, badgeColumn == nil ? 0 : -Self.buttonMargin)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Directions").font(.body.weight(.semibold))
@@ -913,6 +920,13 @@ struct ExploreView: View {
         return (request, comparison)
     }
 
+    /// What the calmer route changes, on one line at standard sizes so the card's height doesn't depend on the words.
+    private func calmNote(_ text: String) -> some View {
+        Text(text).font(.subheadline).foregroundStyle(.primary)
+            .lineLimit(typeSize.isAccessibilitySize ? nil : 1).minimumScaleFactor(typeSize.isAccessibilitySize ? 1 : 0.8)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
     /// An estimate is on its way for this place.
     private func estimating(_ place: Place) -> Bool {
         guard let request = estimateRequest(for: place) else { return false }
@@ -922,18 +936,19 @@ struct ExploreView: View {
     /// What the button can't say: where the estimate starts when that isn't here, and that it is an estimate.
     @ViewBuilder private func estimateNotes(_ place: Place) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            if let ready = readyEstimate(for: place) {
-                if !ready.request.origin.isCurrentLocation {
-                    Text("From \(ready.request.origin.shortName)").font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
+            let ready = readyEstimate(for: place)
+            if let request = estimateRequest(for: place), ready != nil || estimating(place) {
+                // Every line is there from the start, the calm note as a blank until the estimate lands (the button says
+                // "Estimating…" meanwhile), so the card and the sheet under it are measured once and don't move again.
+                if !request.origin.isCurrentLocation {
+                    Text("From \(request.origin.shortName)").font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
                         .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("place-estimate")
                 }
-                Text(ready.comparison.calmSummary).font(.subheadline).foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("place-calm-summary")
+                if let ready { calmNote(ready.comparison.calmSummary).accessibilityIdentifier("place-calm-summary") }
+                else { calmNote("Comparing with the fastest route").hidden().accessibilityHidden(true) }
                 Text("Estimate, no live traffic").font(.footnote).foregroundStyle(GuidanceOverlay.onGlass)
-            } else if estimating(place) {
-                // The button says "Estimating…"; this line holds the caveat's place until the estimate lands.
-                Text("Estimate, no live traffic").font(.footnote).foregroundStyle(GuidanceOverlay.onGlass).accessibilityLabel("Estimating")
-                    .accessibilityIdentifier("place-estimate-loading")
+                    .accessibilityLabel(ready == nil ? "Estimating" : "Estimate, no live traffic")
+                    .accessibilityIdentifier(ready == nil ? "place-estimate-loading" : "place-estimate-caveat")
             } else {
                 Text("Compares the fastest route with a calmer one. Works offline.").font(.footnote).foregroundStyle(GuidanceOverlay.onGlass)
                     .fixedSize(horizontal: false, vertical: true)

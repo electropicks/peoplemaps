@@ -244,3 +244,20 @@ final class PlaceCardUITests: PeoplemapsUITestCase {
         check("start-navigation")
     }
 }
+
+extension PlaceCardUITests {
+    /// The card is laid out once: when the estimate lands, the Directions button keeps its size and place, so the sheet under it
+    /// has not moved either (owner's phone, 9 November 2026: the button's height flickered as each card opened).
+    @MainActor func testCardDoesNotMoveWhenTheEstimateLands() {
+        let app = launchHome(location: Self.atBallardLibrary, extra: ["--slow-routing"])
+        openPlace(app, "Gas Works", id: "relation/1047789")
+        XCTAssertTrue(app.staticTexts["place-estimate-loading"].waitForExistence(timeout: 2))
+        Thread.sleep(forTimeInterval: 1)
+        let before = app.buttons["directions"].frame
+        waitForEstimate(app)
+        Thread.sleep(forTimeInterval: 1)
+        let after = app.buttons["directions"].frame
+        XCTAssertEqual(before.height, after.height, accuracy: 0.5, "The button changed height")
+        XCTAssertEqual(before.minY, after.minY, accuracy: 0.5, "The card moved")
+    }
+}

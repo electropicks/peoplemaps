@@ -90,8 +90,9 @@ which lets the map show through; SwiftUI has no modifier for it. An empty
    principle 3 they are solid `.borderedProminent` buttons filled with
    `primaryActionFill` and labelled in `primaryActionText`: the label's slate with white
    words in light mode (9 November 2026: near-white on the pale sheet did not read as a
-   button on the owner's phone), a lifted grey with white words in dark mode (white at
-   86% was a slab brighter than anything else on a dark card). They are tokens, so they
+   button on the owner's phone), dusk blue with white words in dark mode (a lifted grey
+   was no clearer there, and white at 86% was a slab brighter than anything else on a dark
+   card). Dusk blue is the hue the switches take, the one a control may (principle 5). They are tokens, so they
    can move to dusk blue later. `.glassProminent` is only for a button floating directly
    over the map; there is none today.
 7. **Honest words survive the redesign.** Every "Estimate", "unknown" and
@@ -112,9 +113,9 @@ rendered pixels (below).
 | `switchOn` | `#4A6F97` | `#4A6F97` | a switch's track when on. Not `calmer` in dark: `#7FA3CC` under the white thumb is 2.6:1 and reads as off | track vs a near-black card `#1C1C1E` 3.3, vs the white thumb 5.2 |
 | `fastest` | `#6B7872` | `#AEBAB3` | fastest line, dotted | vs land 4.1 / 7.9 |
 | `passedRoute` | `#A6B3C0` | `#53616F` | the part of the followed route already driven, drawn 3.5 pt (the route is 5.5) | vs land 1.9 / 2.5; vs the route ahead 2.5 / 2.4. Below 3:1 on purpose: it is a trail, not information, and the width, the puck at its end and the casing say "behind" without colour |
-| `primaryActionFill` | `#20384F` | white 26% | fill of the solid `.borderedProminent` primary actions: Directions, Start, Done | |
-| `primaryActionSolidFill` | `#20384F` | `#5A5D61` | the same on a solid panel: the large stop, Reduce Transparency, Share report in the report sheet. Opaque, so a form scrolling under a pinned button doesn't show through | |
-| `primaryActionText` | white | white | label on the above | light: 12.1 on the fill; dark: 6.6 on the solid fill (computed) |
+| `primaryActionFill` | `#20384F` | `#4A6F97` | fill of the solid `.borderedProminent` primary actions: Directions, Start, Done | |
+| `primaryActionSolidFill` | `#20384F` | `#4A6F97` | the same on a solid panel: the large stop, Reduce Transparency, Share report in the report sheet. Opaque, so a form scrolling under a pinned button doesn't show through | |
+| `primaryActionText` | white | white | label on the above | light: 12.1 on the fill; dark: 5.2 on the fill (computed) |
 | `glassVeil` | white 34% | `#101412` 50% | over `.clear` on text surfaces: guidance, landscape card, credit; over `.regular` and a `.regularMaterial` on the sheet | |
 | `glassVeilDense` | white 72% | `#101412` 72% | Increase Contrast | |
 | `glassHairline` | `#142D23` 14% | white 14% | dividers on glass | decorative |
@@ -266,7 +267,7 @@ over the preview and search screens. Worst case, primary / `onGlass`:
 | `.regular` + material + `glassVeil` | 17.3 / 9.3 | 12.1 / 7.6 |
 
 The place card's estimate line sits in the primary action's fill: in light mode white on slate, 12.1;
-in dark mode white on a lifted grey (`PlaceCardUITests.testDirectionsIsNotABrightSlabInDarkMode` reads both from the screen and fails
+in dark mode white on dusk blue (`PlaceCardUITests.testDirectionsIsNotABrightSlabInDarkMode` reads both from the screen and fails
 under 4.5, or if the fill is brighter than mid-grey; the ratio itself has not been written down here yet). How far the map shows through the
 empty body of the sheet, as the standard deviation of its brightness (0 to 255) with a label under it: 16.8 and 11.5 (dark),
 15.9 and 15.7 (light) before; 0.5, 0.6 and 0.3, 0.4 after. The labels are no longer readable through the body. Run
@@ -436,10 +437,13 @@ doesn't leave half of it empty; at accessibility sizes the same fit stop, capped
   header above them (at accessibility sizes the name has the full width, and the symbol
   takes its own). It says **Directions**, so the card's one action names what it does,
   over the route Start would take: "Calmer: 12–14 min, 3.4 mi", or "9–11 min, 2.9 mi"
-  with no calmer route; "Estimating…" holds that line until the estimate lands, so the
-  card keeps its height. Under the button, as notes and not as part of it: "Mixed →
+  with no calmer route; "Estimating…" holds that line until the estimate lands. Under the button, as notes and not as part of it: "Mixed →
   Breezy, mostly fewer unsignalled lefts" or "Chill, best balance we found"
   (`Docs/STRESS_MODEL.md`, Calm score), then "Estimate, no live traffic".
+- **The card is laid out once.** Every line is there from the first frame (the calm note as a blank until the estimate
+  lands, held to one line at standard sizes), and the sheet's fit stop uses the place card's own remembered height, not
+  home's. Before, the card opened at home's height, moved when it was measured, and moved again when the estimate added
+  lines, which read as a flicker (`PlaceCardUITests.testCardDoesNotMoveWhenTheEstimateLands`).
 - The card rests at its own height and has no other stop (large stays at accessibility
   sizes, where it can outgrow the fit stop): raised, it was the card over a blank panel.
 - Source/date line at the bottom.

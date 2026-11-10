@@ -114,12 +114,13 @@ extension UIColor {
     static let passedRoute = dynamic(light: 0xA6B3C0, dark: 0x53616F)
     /// The user's marker and the Current location badge.
     static let userLocation = hex(0x4A8FD6)
-    /// Start, Directions, Done and Share report: the one filled control on a screen. In light mode the label's slate with white text;
-    /// white at 72% on the pale sheet did not read as a button (owner's phone, 9 November 2026). In dark mode a lifted grey with white
-    /// text, since white at 86% was a slab brighter than anything else on the card. Swap these to change the primary action everywhere.
-    static let primaryActionFill = dynamic(light: 0x20384F, lightAlpha: 1, dark: 0xFFFFFF, darkAlpha: 0.26)
-    /// On a solid panel. Opaque, so a form scrolling under a pinned button doesn't show through it.
-    static let primaryActionSolidFill = dynamic(light: 0x20384F, dark: 0x5A5D61)
+    /// Start, Directions, Done and Share report: the one filled control on a screen, with white words. In light mode the label's slate;
+    /// white at 72% on the pale sheet did not read as a button. In dark mode dusk blue, the hue the switches take: a lifted grey was no
+    /// clearer there, and white at 86% was a slab brighter than anything else on the card (owner's phone, 9 November 2026).
+    /// Opaque, so nothing shows through. Swap these to change the primary action everywhere.
+    static let primaryActionFill = dynamic(light: 0x20384F, dark: 0x4A6F97)
+    /// The same on a solid panel; kept apart so the two can differ again.
+    static let primaryActionSolidFill = primaryActionFill
     static let primaryActionText = hex(0xFFFFFF)
     /// Laid over the glass of a panel, so text holds its contrast over a busy map. Neutral: glass is never tinted a hue.
     static let glassVeil = dynamic(light: 0xFFFFFF, lightAlpha: 0.34, dark: 0x101412, darkAlpha: 0.5)
