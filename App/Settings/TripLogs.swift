@@ -75,3 +75,96 @@ final class TripLogs {
     }
     private static func state(_ on: Bool, kept: String?) -> String { (on ? "On" : "Off") + (kept.map { " \u{00B7} \($0)" } ?? "") }
 }
+
+/// Send to PeopleMaps for one log (Docs/REPORTS.md 4.8): works out what is new, asks, then sends it to the Worker. One per page.
+@MainActor @Observable
+final class LogSender {
+    enum Phase: Equatable {
+        case idle, checking, sending(done: Int, total: Int), sent(Int), nothingNew
+        case failed(String)
+    }
+
+    private(set) var phase = Phase.idle
+    /// What the confirmation offers; set once the check found something new.
+    var pending: [LogFile] = []
+    var confirming = false
+    private let files: @MainActor () -> [URL]
+    private let sentKey: String
+
+    init(sentKey: String, files: @escaping @MainActor () -> [URL]) { self.sentKey = sentKey; self.files = files }
+
+    var busy: Bool { switch phase { case .checking, .sending: true; default: false } }
+
+    /// The row's trailing value.
+    var status: String? {
+        switch phase {
+        case .idle, .failed: nil
+        case .checking: "Checking\u{2026}"
+        case let .sending(done, total): "Sending \(min(done + 1, total)) of \(total)"
+        case .sent: "Sent"
+        case .nothingNew: "Already sent"
+        }
+    }
+
+    /// "4 files, 2.1 MB".
+    var pendingSummary: String {
+        let n = pending.count
+        return "\(n) \(n == 1 ? "file" : "files"), " + ByteCountFormatter.string(fromByteCount: Int64(pending.reduce(0) { $0 + $1.bytes }), countStyle: .file)
+    }
+
+    func check() {
+        guard !busy else { return }
+        phase = .checking
+        let urls = files(), sent = sentHashes
+        Task {
+            let fresh = await Task.detached(priority: .userInitiated) { LogFile.unsent(urls, sent: sent) }.value
+            pending = fresh
+            if fresh.isEmpty { phase = .nothingNew } else { phase = .idle; confirming = true }
+        }
+    }
+
+    func send() {
+        let files = pending
+        guard !files.isEmpty, !busy else { return }
+        phase = .sending(done: 0, total: files.count)
+        Task {
+            let counter = Counter()
+            do {
+                try await Self.uploader.send(files) { file in
+                    let done = await counter.next()
+                    await MainActor.run {
+                        self.remember(file.sha256)
+                        self.phase = .sending(done: done, total: files.count)
+                    }
+                }
+                phase = .sent(files.count)
+            } catch let e as LogUploadError {
+                phase = .failed(Self.words(e))
+            } catch {
+                phase = .failed(Self.words(.unavailable))
+            }
+            pending = []
+        }
+    }
+
+    private static let uploader = LogUploader()
+    private var defaults: UserDefaults { ExploreView.voiceStore }
+    private var sentHashes: Set<String> { Set(defaults.stringArray(forKey: sentKey) ?? []) }
+    /// The last 2,000 hashes: far more files than either log keeps.
+    private func remember(_ hash: String) { defaults.set(Array(((defaults.stringArray(forKey: sentKey) ?? []) + [hash]).suffix(2000)), forKey: sentKey) }
+
+    static func words(_ e: LogUploadError) -> String {
+        switch e {
+        case .noConnection: "No connection. Try again when you\u{2019}re online."
+        case let .tooLarge(name): "\(name) is over 25\u{00A0}MB, too large to send. Share it instead."
+        case .busy: "The PeopleMaps server isn\u{2019}t taking logs right now. Try again later."
+        case .unavailable: "The PeopleMaps server didn\u{2019}t take the log. Try again later, or share it instead."
+        case .cannotAttest: "This device can\u{2019}t send logs. Share them instead."
+        }
+    }
+}
+
+private actor Counter {
+    private var n = 0
+    func next() -> Int { n += 1; return n }
+}
