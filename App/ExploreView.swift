@@ -514,7 +514,11 @@ struct ExploreView: View {
                         .padding(.bottom, floatingHome ? 8 : max(cover.sheet - geo.safeAreaInsets.bottom, 0) + 8)
                 }
             }
-            if floatingHome { presenting(homeControls).padding(.horizontal, 14) }
+            if floatingHome {
+                // The whole cluster is the drawer's handle, with some room above it: a short, loose drag up anywhere here raises it.
+                presenting(homeControls).padding(.horizontal, 14).padding(.top, 24).contentShape(Rectangle())
+                    .simultaneousGesture(raiseDrag)
+            }
         }
         .opacity(stop == .large ? 0 : 1)
         .allowsHitTesting(stop != .large)
@@ -583,7 +587,7 @@ struct ExploreView: View {
         ZStack(alignment: .top) {
             Group {
                 switch screen {
-                case .home: scrolling { homeContent }
+                case .home: scrolling { homeContent }.simultaneousGesture(lowerDrag)
                 case .search: searchPanel
                 case let .place(place): scrolling { placeContent(place) }
                 case .preview: previewPanel
@@ -745,8 +749,6 @@ struct ExploreView: View {
             .contentShape(Capsule())
             .chip(floating: floatingHome, in: Capsule())
         }
-        // Dragging it up raises the sheet, as dragging a sheet's handle would.
-        .simultaneousGesture(DragGesture(minimumDistance: 20).onEnded { if floatingHome, $0.translation.height < -30 { raiseHome() } })
         .buttonStyle(.plain).accessibilityLabel("Where to?").accessibilityHint("Search places and addresses").accessibilityIdentifier("search-field")
     }
 
@@ -761,6 +763,24 @@ struct ExploreView: View {
     }
 
     private func raiseHome() { stop = .medium; homeStop = .medium }
+    private func lowerHome() { stop = .fit; homeStop = .fit }
+
+    /// Raises home as soon as a drag on the floating controls has gone 24 pt up, without waiting for the finger to lift. It used to
+    /// take a drag that started on the search capsule and ended 30 pt up, which a quick or slightly sideways swipe missed.
+    private var raiseDrag: some Gesture {
+        DragGesture(minimumDistance: 8).onChanged { drag in
+            if floatingHome, drag.translation.height < -24, -drag.translation.height > abs(drag.translation.width) { raiseHome() }
+        }
+    }
+    /// Lowers home once a drag anywhere on it has gone 44 pt down. The system's own pull-to-dismiss wants the sheet dragged most of
+    /// the way off the screen. Measured on the screen, since the sheet moves under the finger. Not at accessibility sizes, where
+    /// the sheet's content scrolls.
+    private var lowerDrag: some Gesture {
+        DragGesture(minimumDistance: 8, coordinateSpace: .global).onChanged { drag in
+            guard screen == .home, !floatingHome, !landscape, !typeSize.isAccessibilitySize else { return }
+            if drag.translation.height > 44, drag.translation.height > abs(drag.translation.width) { lowerHome() }
+        }
+    }
 
     // MARK: Search
 

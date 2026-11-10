@@ -362,12 +362,12 @@ floating controls over it, each on its own `.clear` glass. Favourite chips above
 First launch shows a one-line hint chip where the favourites go: "Search a place or
 address, or long-press the map" (D4). The chip is plain glass, not interactive: it is not a button.
 
-More, or dragging the capsule up, presents a system sheet at `.medium` only
+More, or a drag of 24 pt up anywhere on the floating controls, presents a system sheet at `.medium` only
 (`raiseHome`). Home has no large stop (decision, 4 November 2026): at large it was a flat,
 square-edged, opaque page with the map dimmed, holding a hint, the field and one row.
 Medium keeps the inset frosted card over a live map. Search is the screen that goes large,
 where results need the room. It holds the same chips and field, then Recents and the rows **Edit
-favourites** and **Settings**. Pulling it down dismisses it back to the
+favourites** and **Settings**. A drag of 44 pt down anywhere on it (not only the system's long pull from the grabber; 10 November 2026, the owner's finger "has to be too precise") dismisses it back to the
 floating controls. On the sheet (and the landscape card) the first-launch hint is a `.footnote` caption in `onGlass`
 under the field, with nothing behind it: in a well of its own above the field it passed for a second field
 (9 November 2026).

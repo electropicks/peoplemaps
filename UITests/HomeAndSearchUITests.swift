@@ -235,3 +235,36 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         XCTAssertTrue(app.descendants(matching: .any)["search-empty"].exists, "It still says that nothing matched")
     }
 }
+
+extension HomeAndSearchUITests {
+    @MainActor private func drag(_ element: XCUIElement, by dy: CGFloat) {
+        let start = element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 8, dy: dy)))
+    }
+    @MainActor private func raised(_ app: XCUIApplication) -> Bool { app.buttons["settings"].waitForExistence(timeout: 3) && app.buttons["settings"].isHittable }
+
+    /// The drawer comes up from a short, loose drag on any of the floating controls, not only a long one on the search capsule
+    /// (owner's phone, 10 November 2026: "finger has to be too precise").
+    @MainActor func testAShortDragOnAnyFloatingControlRaisesHome() {
+        for id in ["search-field", "home-more", "home-hint"] {
+            let app = launchHome()
+            let element = id == "home-hint" ? app.staticTexts[id] : app.buttons[id]
+            XCTAssertTrue(element.waitForExistence(timeout: 5), id)
+            drag(element, by: -70)
+            XCTAssertTrue(raised(app), "A 70 pt drag up on \(id) did not raise home")
+            app.terminate()
+        }
+    }
+
+    /// And goes back down from a short drag anywhere on it.
+    @MainActor func testAShortDragDownAnywhereLowersHome() {
+        for id in ["settings", "search-field"] {
+            let app = launchHome()
+            app.buttons["home-more"].tap()
+            XCTAssertTrue(raised(app))
+            drag(app.buttons[id], by: 110)
+            XCTAssertTrue(app.buttons["home-more"].waitForExistence(timeout: 3), "A 110 pt drag down on \(id) did not lower home")
+            app.terminate()
+        }
+    }
+}
