@@ -25,13 +25,14 @@ struct UsageLogPage: View {
                         ShareLink(item: file) { SettingsAction("Share usage log", symbol: "square.and.arrow.up") }.accessibilityIdentifier("usage-log-share")
                     }
                     SendLogRow(sender: sender, identifier: "usage-log-send")
+                    if !sender.batches.isEmpty { DeleteSentRow(sender: sender, identifier: "usage-log-delete-sent") }
                     Button(role: .destructive) { confirmClear = true } label: { SettingsAction("Clear usage log", symbol: "trash", destructive: true) }
                         .accessibilityIdentifier("usage-log-clear")
                 } footer: { SendLogFooter(sender: sender) }
             }
             Section {
                 SettingsNote(title: "What it keeps", text: "One line for each guided trip: the time, your mode and extra-time limit, the route you started, both routes\u{2019} estimates, any reroutes, where you left the route, and whether you arrived.")
-                SettingsNote(title: "Where it stays", text: "On this phone, up to the last 500 trips. It leaves only if you share it, or tap Send to PeopleMaps: then it is kept on the PeopleMaps server for up to 30\u{00A0}days.")
+                SettingsNote(title: "Where it stays", text: "On this phone, up to the last 500 trips. It leaves only if you share it, or tap Send to PeopleMaps: then it is encrypted so only the maintainer can read it, and kept on the PeopleMaps server for up to 30\u{00A0}days.")
             } header: { SettingsHeader("About this log") }
         }
         .settingsPage("Usage log")
@@ -65,6 +66,7 @@ struct DetailedLogPage: View {
                             .accessibilityIdentifier("drive-log-share")
                     }
                     SendLogRow(sender: sender, identifier: "drive-log-send")
+                    if !sender.batches.isEmpty { DeleteSentRow(sender: sender, identifier: "drive-log-delete-sent") }
                     Button(role: .destructive) { confirmClear = true } label: { SettingsAction("Clear detailed log", symbol: "trash", destructive: true) }
                         .accessibilityIdentifier("drive-log-clear")
                 } footer: { SendLogFooter(sender: sender) }
@@ -73,7 +75,7 @@ struct DetailedLogPage: View {
                 SettingsNote(title: "What it keeps", text: "Each guided walk, cycle or drive: your route and the places you chose, every location fix with its speed and accuracy, and what the app did (turns reached, leaving the route, rerouting, voice, mute, going to the background). It also keeps what you search for and open.")
                     .accessibilityIdentifier("drive-log-footer")
                 SettingsNote(title: "Recordings you start", text: "A recording keeps your location, with its speed and accuracy, until you stop it, also while the app is in the background. iOS shows its blue location indicator meanwhile.")
-                SettingsNote(title: "Where it stays", text: "On this phone, with exact places, unless you share the files or tap Send to PeopleMaps: then they are kept on the PeopleMaps server for up to 30\u{00A0}days. It is left out of backups.")
+                SettingsNote(title: "Where it stays", text: "On this phone, with exact places, unless you share the files or tap Send to PeopleMaps: then they are encrypted so only the maintainer can read them, and kept on the PeopleMaps server for up to 30\u{00A0}days. It is left out of backups.")
                 SettingsNote(title: "Limits", text: "Trips and recordings under 3 minutes are deleted when they end. Past 500 MB the oldest are\u{00A0}removed.")
             } header: { SettingsHeader("About this log") }
         }
@@ -101,7 +103,23 @@ private struct SendLogRow: View {
     }
 }
 
-/// Why the last send failed, under the section.
+/// Delete sent logs: takes what this phone sent off the server, after asking. Shown while a send may still be there.
+private struct DeleteSentRow: View {
+    let sender: LogSender
+    let identifier: String
+    var body: some View {
+        Button { sender.confirmingDelete = true } label: {
+            SettingsAction(title: "Delete sent logs", symbol: "xmark.icloud") {
+                if let status = sender.deleteStatus { Text(status) }
+            }
+        }
+        .foregroundStyle(.primary)
+        .disabled(sender.busy)
+        .accessibilityIdentifier(identifier)
+    }
+}
+
+/// Why the last send or delete failed, under the section.
 private struct SendLogFooter: View {
     let sender: LogSender
     var body: some View {
@@ -118,7 +136,15 @@ private extension View {
                 Button("Send") { sender.send() }
             } message: {
                 Text((exactPlaces ? "They include exact places. " : "")
-                     + "The PeopleMaps server keeps them for up to 30\u{00A0}days for the maintainer to read, then deletes them.")
+                     + "They are encrypted on this phone so only the maintainer can read them. The PeopleMaps server keeps them for up to 30\u{00A0}days, then deletes them.")
+            }
+        }
+        .background {
+            Color.clear.confirmationDialog("Delete the logs this phone sent?",
+                                           isPresented: Binding(get: { sender.confirmingDelete }, set: { sender.confirmingDelete = $0 }), titleVisibility: .visible) {
+                Button("Delete from server", role: .destructive) { sender.deleteSent() }
+            } message: {
+                Text("This removes them from the PeopleMaps server. A copy the maintainer already took is not removed. The log on this phone stays.")
             }
         }
     }

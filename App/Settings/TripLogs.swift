@@ -76,11 +76,12 @@ final class TripLogs {
     private static func state(_ on: Bool, kept: String?) -> String { (on ? "On" : "Off") + (kept.map { " \u{00B7} \($0)" } ?? "") }
 }
 
-/// Send to PeopleMaps for one log (Docs/REPORTS.md 4.8): works out what is new, asks, then sends it to the Worker. One per page.
+/// Send to PeopleMaps for one log (Docs/REPORTS.md 4.8): works out what is new, asks, then seals it and sends it to the Worker.
+/// It keeps each send's delete secret, so Delete sent logs can take them off the server again. One per page.
 @MainActor @Observable
 final class LogSender {
     enum Phase: Equatable {
-        case idle, checking, sending(done: Int, total: Int), sent(Int), nothingNew
+        case idle, checking, sending(done: Int, total: Int), sent(Int), nothingNew, deleting, deleted
         case failed(String)
     }
 
@@ -88,17 +89,23 @@ final class LogSender {
     /// What the confirmation offers; set once the check found something new.
     var pending: [LogFile] = []
     var confirming = false
+    var confirmingDelete = false
+    /// Sends that may still be on the server: under 30 days old and not deleted from here.
+    private(set) var batches: [SentLogBatch] = []
     private let files: @MainActor () -> [URL]
     private let sentKey: String
 
-    init(sentKey: String, files: @escaping @MainActor () -> [URL]) { self.sentKey = sentKey; self.files = files }
+    init(sentKey: String, files: @escaping @MainActor () -> [URL]) {
+        self.sentKey = sentKey; self.files = files
+        batches = loadBatches()
+    }
 
-    var busy: Bool { switch phase { case .checking, .sending: true; default: false } }
+    var busy: Bool { switch phase { case .checking, .sending, .deleting: true; default: false } }
 
     /// The row's trailing value.
     var status: String? {
         switch phase {
-        case .idle, .failed: nil
+        case .idle, .failed, .deleting, .deleted: nil
         case .checking: "Checking\u{2026}"
         case let .sending(done, total): "Sending \(min(done + 1, total)) of \(total)"
         case .sent: "Sent"
@@ -127,10 +134,13 @@ final class LogSender {
         let files = pending
         guard !files.isEmpty, !busy else { return }
         phase = .sending(done: 0, total: files.count)
+        // Saved before the first byte goes, so a send that is cut off can still be deleted.
+        let batch = SentLogBatch()
+        save(batches + [batch])
         Task {
             let counter = Counter()
             do {
-                try await Self.uploader.send(files) { file in
+                try await Self.uploader.send(files, batch: batch) { file in
                     let done = await counter.next()
                     await MainActor.run {
                         self.remember(file.sha256)
@@ -147,14 +157,52 @@ final class LogSender {
         }
     }
 
+    /// The Delete row's trailing value.
+    var deleteStatus: String? {
+        switch phase { case .deleting: "Deleting\u{2026}"; case .deleted: "Deleted"; default: nil }
+    }
+
+    /// Takes every send this phone remembers off the server. A send that fails to delete is kept, to try again.
+    func deleteSent() {
+        guard !busy, !batches.isEmpty else { return }
+        phase = .deleting
+        Task {
+            var left = batches, failure: LogUploadError?
+            for batch in batches {
+                do { try await Self.uploader.delete(batch); left.removeAll { $0.id == batch.id } }
+                catch let e as LogUploadError { failure = e; break }
+                catch { failure = .unavailable; break }
+            }
+            save(left)
+            // What was deleted may be sent again.
+            if left.isEmpty { defaults.removeObject(forKey: sentKey) }
+            phase = failure.map { .failed(Self.words($0, deleting: true)) } ?? .deleted
+        }
+    }
+
+    private var batchesKey: String { sentKey + ".batches" }
+    private func loadBatches() -> [SentLogBatch] {
+        let all = defaults.data(forKey: batchesKey).flatMap { try? JSONDecoder().decode([SentLogBatch].self, from: $0) } ?? []
+        // Past the server's 30 days there is nothing left to delete.
+        return all.filter { $0.sentAt > Date().addingTimeInterval(-31 * 86_400) }
+    }
+    private func save(_ next: [SentLogBatch]) {
+        batches = next
+        defaults.set(try? JSONEncoder().encode(next), forKey: batchesKey)
+    }
+
     private static let uploader = LogUploader()
     private var defaults: UserDefaults { ExploreView.voiceStore }
     private var sentHashes: Set<String> { Set(defaults.stringArray(forKey: sentKey) ?? []) }
     /// The last 2,000 hashes: far more files than either log keeps.
     private func remember(_ hash: String) { defaults.set(Array(((defaults.stringArray(forKey: sentKey) ?? []) + [hash]).suffix(2000)), forKey: sentKey) }
 
-    static func words(_ e: LogUploadError) -> String {
-        switch e {
+    static func words(_ e: LogUploadError, deleting: Bool = false) -> String {
+        if deleting {
+            return e == .noConnection ? "No connection. The sent logs are still on the server; try again when you\u{2019}re online."
+                : "The PeopleMaps server didn\u{2019}t delete the logs. Try again later."
+        }
+        return switch e {
         case .noConnection: "No connection. Try again when you\u{2019}re online."
         case let .tooLarge(name): "\(name) is over 25\u{00A0}MB, too large to send. Share it instead."
         case .busy: "The PeopleMaps server isn\u{2019}t taking logs right now. Try again later."
