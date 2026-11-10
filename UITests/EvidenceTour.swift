@@ -503,4 +503,45 @@ final class EvidenceTour: XCTestCase {
             app.terminate()
         }
     }
+
+    /// The raised home sheet and the search sheet before anything is typed, on a fresh install and with recents, and the coverage
+    /// notes in Settings. In the simulator's appearance: set it before the run.
+    @MainActor func testHomeSheetAndEmptySearch() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_EVIDENCE"] == "1", "Set TEST_RUNNER_PEOPLEMAPS_EVIDENCE=1")
+        let app = launch(["--location-granted", "47.6295,-122.3599"])
+        raise(app)
+        XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
+        save("home-raised-first")
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 5))
+        save("search-empty-first")
+        app.buttons["shortcut-coffee"].tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'result-'")).firstMatch.waitForExistence(timeout: 5))
+        save("search-shortcut-coffee")
+        app.buttons["cancel-search-home"].tap()
+        for query in ["Gas Works", "Kerry Park", "Fremont Troll"] {
+            app.buttons["search-field"].tap()
+            XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 5))
+            app.textFields["search-input"].typeText(query)
+            let result = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'result-'")).firstMatch
+            XCTAssertTrue(result.waitForExistence(timeout: 5), query)
+            result.tap()
+            XCTAssertTrue(app.buttons["directions"].waitForExistence(timeout: 5))
+            app.buttons["directions"].tap()
+            XCTAssertTrue(app.buttons["close-preview"].waitForExistence(timeout: 20))
+            app.buttons["close-preview"].tap()
+            XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
+        }
+        if !app.buttons["settings"].isHittable { raise(app) }
+        save("home-raised-recents")
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 5))
+        save("search-empty-recents")
+        app.buttons["cancel-search-home"].tap()
+        openSettings(app)
+        page(app, "map-data") {
+            app.collectionViews.firstMatch.swipeUp()
+            save("settings-map-data-coverage")
+        }
+    }
 }

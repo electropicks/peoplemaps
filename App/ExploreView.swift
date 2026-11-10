@@ -86,6 +86,8 @@ struct ExploreView: View {
     /// The place card's own height, kept from the last card shown: cards are nearly all the same height, so the sheet drops straight
     /// to its stop. Sharing `fitContent` with home, it dropped to home's height first and then moved again once the card was measured.
     @State private var placeContent: CGFloat = 196
+    /// Height of everything on home's raised sheet; zero until it has been laid out once.
+    @State private var homeBlock: CGFloat = 0
     @State private var previewBlock: CGFloat = 200
     @State private var previewPinned: CGFloat = 110
     @State private var screenHeight: CGFloat = 852
@@ -362,18 +364,25 @@ struct ExploreView: View {
         // The system adds the bottom safe area to a height detent, and the panel lays out over it (`portraitSheet`).
         return min(max(content + Layout.sheetTop + Layout.sheetBottom - safeBottom, leastFit), screenHeight * 0.7)
     }
+    /// Home's raised sheet is as tall as what it holds: the field, favourites, Recents and its rows. At the system's medium it was
+    /// half a screen of panel under a field and one row. Before the first layout it is sized from what the rows will take.
+    private var homeHeight: CGFloat {
+        let rows = CGFloat(min(saved.recents.count, 5) + (saved.favourites.isEmpty ? 1 : 2)) * 52 + (saved.recents.isEmpty ? 0 : 54)
+        let content = homeBlock > 0 ? homeBlock : fitContent + 20 + rows
+        return min(max(content + Layout.sheetTop + Layout.sheetBottom - safeBottom, leastFit), screenHeight * 0.7)
+    }
     private func detent(_ stop: Stop) -> PresentationDetent {
         switch stop {
         case .fit: .height(fitHeight)
-        case .medium: .medium
+        case .medium: screen == .home ? .height(homeHeight) : .medium
         case .raised: raisedDetent
         case .large: .large
         }
     }
     private var detents: Set<PresentationDetent> {
         switch screen {
-        // Home tops out at medium: at large it was a flat opaque page holding a search field and one row. Search is the screen that goes large.
-        case .home: [.medium]
+        // Home has one stop, sized to its content: at large it was a flat opaque page holding a search field and one row. Search is the screen that goes large.
+        case .home: [detent(.medium)]
         case .search: [.medium, .large]
         // The place card is all there is to show, so it rests at its own height: raised, it was the card over a blank panel.
         // At accessibility sizes the card can outgrow the fit stop, so large stays.
@@ -383,8 +392,8 @@ struct ExploreView: View {
     }
     private var stopBinding: Binding<PresentationDetent> {
         // Home's fit stop is the floating controls, with no sheet, so there the sheet is only ever on its way out.
-        Binding(get: { screen == .home && stop == .fit ? .medium : detent(stop) }, set: { new in
-            stop = new == .large ? .large : new == .medium ? .medium : new == raisedDetent ? .raised : .fit
+        Binding(get: { screen == .home ? detent(.medium) : detent(stop) }, set: { new in
+            stop = new == .large ? .large : new == .medium || screen == .home ? .medium : new == raisedDetent ? .raised : .fit
         })
     }
     /// Home at rest has no sheet: the system's partial-height sheet always draws a panel, and at rest the controls float on their own glass.
@@ -540,7 +549,7 @@ struct ExploreView: View {
             .ignoresSafeArea(.container, edges: stop == .large ? [] : .bottom)
             .animation(Motion.content(reduceMotion), value: stop == .large)
             .presentationDetents(detents, selection: stopBinding)
-            .presentationBackgroundInteraction(.enabled(upThrough: screen == .preview ? raisedDetent : .medium))
+            .presentationBackgroundInteraction(.enabled(upThrough: screen == .preview ? raisedDetent : detent(.medium)))
             .presentationDragIndicator(floatingHome ? .hidden : .visible)
             // Home's raised sheet pulls down to the floating controls; every other screen stays until it's closed.
             .interactiveDismissDisabled(screen != .home)
@@ -735,6 +744,7 @@ struct ExploreView: View {
                     .accessibilityIdentifier("settings")
             }
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { homeBlock = $0 }
     }
 
     /// The way to search: its own glass over the map, a plain well on a panel.
@@ -795,12 +805,14 @@ struct ExploreView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if query.isEmpty {
+                        // Never a blank page: what to type or the last places, then the searches people make most.
                         if !saved.recents.isEmpty { resultGroup("Recents", saved.recents, prefix: "recent-") }
                         else {
                             Text("Search a place, an address or a street").font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
                                 .fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4).padding(.top, 8)
                                 .accessibilityIdentifier("search-hint")
                         }
+                        SearchShortcuts(nearby: userInCoverage != nil) { query = $0 }
                     } else if results.isEmpty {
                         // The way out sits where a result would: under the empty state it fell behind the keyboard. VoiceOver still hears what happened first.
                         AppleMapsLookup(query: query)
