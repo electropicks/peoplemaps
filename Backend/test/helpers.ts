@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { APPLE_APP_ATTEST_ROOT } from "../src/apple-root";
-import type { AttestConfig, Bucket, BucketObject, BucketObjectBody, Deps, RateLimiter, Vars } from "../src/deps";
+import type { AttestConfig, Bucket, BucketObject, BucketObjectBody, Deps, LogBucket, RateLimiter, Vars } from "../src/deps";
 import { handle } from "../src/index";
 import { Store } from "../src/store";
 import type { Report } from "../src/validate";
@@ -57,13 +57,23 @@ export class MemoryBucket implements Bucket {
   }
 }
 
+/** The logs bucket: puts and deletes in memory. */
+export class MemoryLogBucket implements LogBucket {
+  objects = new Map<string, { bytes: Uint8Array; contentType: string; sha256: string }>();
+  async put(key: string, value: ArrayBuffer | Uint8Array, options: { httpMetadata: { contentType: string }; sha256: string }) {
+    this.objects.set(key, { bytes: new Uint8Array(value), contentType: options.httpMetadata.contentType, sha256: options.sha256 });
+  }
+  async delete(keys: string[]) { for (const k of keys) this.objects.delete(k); }
+}
+
 export interface World {
   deps: Deps;
   sql: ReturnType<typeof sqliteSql>;
-  limits: { auth: FakeLimiter; installs: FakeLimiter; reports: FakeLimiter; attest: FakeLimiter; downloads: FakeLimiter };
+  limits: { auth: FakeLimiter; installs: FakeLimiter; reports: FakeLimiter; attest: FakeLimiter; downloads: FakeLimiter; logs: FakeLimiter };
   data: MemoryBucket;
+  logs: MemoryLogBucket;
   clock: { t: Date; now(): Date };
-  call(method: string, path: string, opts?: { token?: string; body?: unknown; raw?: string; ip?: string; headers?: Record<string, string> }): Promise<Response>;
+  call(method: string, path: string, opts?: { token?: string; body?: unknown; raw?: string | Uint8Array; ip?: string; headers?: Record<string, string> }): Promise<Response>;
   mint(): Promise<{ installID: string; token: string }>;
   send(token: string, report?: unknown): Promise<Response>;
   rows(table: string): Record<string, unknown>[];
@@ -71,19 +81,21 @@ export interface World {
 
 export function world(vars: Partial<Vars> = {}, now = "2026-10-31T21:34:00Z", attest: Partial<AttestConfig> = {}): World {
   const sql = sqliteSql();
-  const limits = { auth: new FakeLimiter(), installs: new FakeLimiter(), reports: new FakeLimiter(), attest: new FakeLimiter(), downloads: new FakeLimiter() };
+  const limits = { auth: new FakeLimiter(), installs: new FakeLimiter(), reports: new FakeLimiter(), attest: new FakeLimiter(), downloads: new FakeLimiter(), logs: new FakeLimiter() };
   const data = new MemoryBucket();
+  const logs = new MemoryLogBucket();
   const clock = { t: new Date(now), now() { return new Date(this.t); } };
   const deps: Deps = {
     store: new Store(sql),
     limits,
     clock,
-    vars: { retentionDays: 90, reportsPerDay: 5, installsPerHour: 60, attestsPerHour: 60, ...vars },
+    vars: { retentionDays: 90, reportsPerDay: 5, installsPerHour: 60, attestsPerHour: 60, logRetentionDays: 30, logBytesPerDay: 300_000_000, ...vars },
     data,
+    logs,
     attest: { appId: TEST_APP_ID, allowDevelopment: false, rootPEM: APPLE_APP_ATTEST_ROOT, tokenSecret: TEST_TOKEN_SECRET, ...attest },
   };
   const w: World = {
-    deps, sql, limits, data, clock,
+    deps, sql, limits, data, logs, clock,
     call(method, path, opts = {}) {
       const headers: Record<string, string> = { "cf-connecting-ip": opts.ip ?? IP, ...opts.headers };
       if (opts.token) headers.authorization = `Bearer ${opts.token}`;

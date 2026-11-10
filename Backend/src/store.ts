@@ -19,7 +19,8 @@ export interface ReportRow {
 /** What the sender can see of a report (4.3). Never the body or its exact part. */
 export type ReportSummary = Pick<ReportRow, "id" | "received_at" | "expires_at" | "category">;
 export interface AttestKeyRow { key_id: string; public_key: string; counter: number; environment: "production" | "development"; created_at: string }
-export interface RetentionCounts { reports: number; installs: number; keys: number }
+export interface LogUploadRow { key: string; batch: string; name: string; bytes: number; sha256: string; received_at: string; expires_at: string }
+export interface RetentionCounts { reports: number; installs: number; keys: number; logs: number }
 
 const count = async (sql: Sql, q: string, ...p: unknown[]) => (await sql.all<{ n: number }>(q, ...p))[0]?.n ?? 0;
 
@@ -85,6 +86,29 @@ export class Store {
     return count(this.sql, "SELECT COUNT(*) AS n FROM attest_keys WHERE created_at >= ?", since);
   }
 
+  // sent logs (4.8)
+
+  async logUpload(key: string): Promise<LogUploadRow | null> {
+    return (await this.sql.all<LogUploadRow>("SELECT * FROM log_uploads WHERE key = ?", key))[0] ?? null;
+  }
+  async insertLogUpload(row: LogUploadRow): Promise<void> {
+    await this.sql.run(
+      "INSERT INTO log_uploads (key, batch, name, bytes, sha256, received_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      row.key, row.batch, row.name, row.bytes, row.sha256, row.received_at, row.expires_at,
+    );
+  }
+  logBytesSince(since: string): Promise<number> {
+    return count(this.sql, "SELECT COALESCE(SUM(bytes), 0) AS n FROM log_uploads WHERE received_at >= ?", since);
+  }
+  async expiredLogKeys(now: string): Promise<string[]> {
+    return (await this.sql.all<{ key: string }>("SELECT key FROM log_uploads WHERE expires_at < ? ORDER BY key LIMIT 1000", now)).map((r) => r.key);
+  }
+  async deleteLogUploads(keys: string[]): Promise<number> {
+    let n = 0;
+    for (const key of keys) n += (await this.sql.run("DELETE FROM log_uploads WHERE key = ?", key)).changes;
+    return n;
+  }
+
   // retention (5.3)
 
   async retain(now: string, idleBefore: string, keysBefore: string): Promise<RetentionCounts> {
@@ -93,6 +117,6 @@ export class Store {
       "DELETE FROM installs WHERE last_seen_at < ? AND NOT EXISTS (SELECT 1 FROM reports WHERE reports.install_id = installs.id)", idleBefore,
     )).changes;
     const keys = (await this.sql.run("DELETE FROM attest_keys WHERE created_at < ?", keysBefore)).changes;
-    return { reports, installs, keys };
+    return { reports, installs, keys, logs: 0 };
   }
 }

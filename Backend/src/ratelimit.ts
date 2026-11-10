@@ -37,6 +37,11 @@ export function limitDownloads(deps: Deps, keyId: string): Promise<void> {
   return check(deps.limits.downloads, keyId);
 }
 
+/** `RL_LOGS`, keyed on the App Attest key ID the token was issued for (4.8). */
+export function limitLogs(deps: Deps, keyId: string): Promise<void> {
+  return check(deps.limits.logs, keyId);
+}
+
 /** `ATTESTS_PER_HOUR`, counted from `attest_keys.created_at` in the current hour: a backstop on D1 writes from attesting. */
 export async function attestCeiling(deps: Deps): Promise<void> {
   const now = deps.clock.now();

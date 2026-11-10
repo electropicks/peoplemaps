@@ -4,6 +4,7 @@ import type { Deps, RateLimiter } from "./deps";
 import { parseVars } from "./deps";
 import { errorResponse, HttpError, StorageUnavailable } from "./errors";
 import { deleteInstall, mintInstall } from "./installs";
+import { uploadLog } from "./logs";
 import { downloadRegionFile } from "./regions";
 import { deleteReport, getReport, listReports, sendReport } from "./reports";
 import { retention } from "./retention";
@@ -16,21 +17,24 @@ import { secondsToMidnightUTC } from "./time";
 export interface Env {
   DB: D1Database;
   DATA: R2Bucket;
+  LOGS: R2Bucket;
   RL_AUTH: RateLimiter;
   RL_INSTALLS: RateLimiter;
   RL_REPORTS: RateLimiter;
   RL_ATTEST: RateLimiter;
   RL_DOWNLOADS: RateLimiter;
+  RL_LOGS: RateLimiter;
   [key: string]: unknown;
 }
 
 export function depsFromEnv(env: Env): Deps {
   return {
     store: new Store(d1Sql(env.DB)),
-    limits: { auth: env.RL_AUTH, installs: env.RL_INSTALLS, reports: env.RL_REPORTS, attest: env.RL_ATTEST, downloads: env.RL_DOWNLOADS },
+    limits: { auth: env.RL_AUTH, installs: env.RL_INSTALLS, reports: env.RL_REPORTS, attest: env.RL_ATTEST, downloads: env.RL_DOWNLOADS, logs: env.RL_LOGS },
     clock: { now: () => new Date() },
     vars: parseVars(env),
     data: env.DATA,
+    logs: env.LOGS,
     attest: {
       appId: typeof env.APP_ID === "string" ? env.APP_ID : "",
       allowDevelopment: env.ATTEST_ENV === "development",
@@ -52,6 +56,7 @@ const routes: [string, RegExp, Handler][] = [
   ["POST", /^\/v1\/attest\/challenge$/, (r, d) => attestChallenge(r, d)],
   ["POST", /^\/v1\/attest$/, (r, d) => attest(r, d)],
   ["GET", /^\/v1\/regions\/([^/]+)\/([^/]+)$/, (r, d, [release, object]) => downloadRegionFile(r, d, release, object)],
+  ["PUT", /^\/v1\/logs\/([^/]+)\/([^/]+)$/, (r, d, [batch, name]) => uploadLog(r, d, batch, name)],
 ];
 
 /** Routes a request to its handler and turns failures into the error envelope (4.6). Platform-free; tests call it. */

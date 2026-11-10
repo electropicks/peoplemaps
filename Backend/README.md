@@ -86,6 +86,21 @@ Attest (`Docs/REPORTS.md` 4.5 and 4.7). It needs two secrets and two vars. Until
 The bucket must exist before a deploy with the `DATA` binding. Migration `0002_attest.sql` is applied by the deploy job
 like any other. Not yet exercised: a real attestation from Apple's chain, real R2, and a deployed Worker.
 
+## Trip logs sent from the app
+
+`PUT /v1/logs/…` stores a trip log a tester sent with Send to PeopleMaps (`Docs/REPORTS.md` 4.8) in the private R2 bucket
+`peoplemaps-logs` (binding `LOGS`), with one row in `log_uploads`. The bucket must exist before a deploy with the binding:
+once, `npx wrangler r2 bucket create peoplemaps-logs`. `LOG_RETENTION_DAYS` (30) and `LOG_BYTES_PER_DAY` (300 MB) are vars.
+
+```sh
+npm run pull-logs -- --list    # what is on the server
+npm run pull-logs              # copy to ~/atrium/peoplemaps/logs, check each SHA-256, then delete from the server
+npm run pull-logs -- --keep    # copy without deleting
+```
+
+The files hold exact places. They never go in the repository, Evidence or tests; read them with
+`python3 Scripts/drive_log_report.py FOLDER`.
+
 ## Reading reports and filing an issue
 
 Reports stay in D1. Nothing reaches GitHub unless a maintainer files it (`Docs/REPORTS.md` 6). Exact locations are in
