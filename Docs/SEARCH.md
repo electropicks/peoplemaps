@@ -33,11 +33,12 @@ answer. It opens the Apple Maps app (`MKMapItem.openInMaps`) and hands the
 user off. Showing nothing from Apple inside PeopleMaps is what keeps this within
 the terms.
 
-**Open question, not planned:** a place the user shares *into* PeopleMaps
-from Apple Maps (a share-sheet link with coordinates). The user supplies it,
-not the Apple Maps Service, but it is a grey area. Decide before building it.
-`CLGeocoder` (Core Location) falls outside the "Apple Maps Service" definition
-on paper but returns Apple data, so do not rely on it either.
+**Decided 10 November 2026: links the user brings are accepted as search
+hints.** A link shared or pasted from Apple Maps is supplied by the user, not
+obtained by us from the Apple Maps Service, and Apple documents how to expand
+its short links. It is still a grey area, so the handling is conservative; see
+"Shared links" below. `CLGeocoder` (Core Location) falls outside the "Apple
+Maps Service" definition on paper but returns Apple data, so do not rely on it.
 
 ## Design: one offline index from open data
 
@@ -128,6 +129,36 @@ on paper but returns Apple data, so do not rely on it either.
   database, so it stays under ODbL 1.0, and every Overture-sourced row is
   identifiable by its `source` column.
 - **Next fetch.** Run the script for a newer release, then `import_osm.py`.
+
+## Shared links
+
+A link from another maps app is a search the person did not have to retype.
+Design and decisions: https://claude.ai/artifact/32QugGzJS3TRMLgUsgaLQM.
+
+- **Read** (`Core/SharedLink.swift`). `SharedLink.parse` takes pasted text and
+  returns hints per stop (name, address, point) for Apple Maps, Google Maps,
+  Waze, OpenStreetMap and `geo:` links and bare coordinate pairs; nil for
+  anything else, so ordinary search text passes through. A point that is only
+  the other app's map centre is marked not exact and never becomes a pin.
+  Google's path forms are observed, not documented, and may change.
+- **Expand** (`SharedLinkExpander`). `maps.apple` and `maps.app.goo.gl` short
+  links need one request to read their redirect: no page load, no cookies, at
+  most three hops, and only to `SharedLink.shortHosts`. Offline, the link is
+  unreadable and any text that came with it becomes the search.
+- **Match** (`SearchIndex.match`). The hints go through the ordinary search. A
+  result is taken as the shared place only when it is plainly the same: the
+  same house number and street within 150 m of the shared point (or with no
+  point at all), or the same name within 75 m. Otherwise results within 300 m
+  are offered as a search sorted from the shared point, with the point itself
+  as a pin beside them; with none, the pin alone. Outside the map area says so.
+- **Rules.** No MapKit call anywhere. The other app's name, address and place
+  ID are never shown or stored: what shows is our record with its own source
+  line, plus "Matched from a shared link". The only thing of theirs that can
+  reach our map is the point of a pin for a place we lack, named from our data
+  by `droppedPin`. A shared route gives its stops only, never a path or time.
+- **Built so far:** paste into search. A route link opens its last stop.
+  **Next:** the share sheet (Share Extension and a `peoplemaps://` URL), then a
+  stop picker for routes. Multi-stop routing is its own project.
 
 ## Coverage is the gate
 
