@@ -11,7 +11,7 @@ struct RoutePreferencesRow: View {
         Button(action: action) {
             Text(isCustom ? "Calmer means: Custom" : "Calmer means").multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
         }
-        .buttonStyle(WellButtonStyle())
+        .wellButton()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Calmer means, \(value)")
         .accessibilityHint("Choose what to avoid on calmer routes")
