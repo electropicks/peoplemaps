@@ -5,7 +5,7 @@ import Foundation
 struct TransitionCost {
     static let unknown: UInt8 = 255, overflow: UInt8 = 5
     /// Preference option index recorded for additions that no option scales.
-    static let unscaled: UInt8 = 7
+    static let unscaled = UInt8(RoutePreferences.Option.count)
     var seconds = Double.nan
     /// Number of additions kept, `overflow` when there were too many to keep, `unknown` before the stress was worked out.
     var count = unknown

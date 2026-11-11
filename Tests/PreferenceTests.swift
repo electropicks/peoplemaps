@@ -14,19 +14,43 @@ final class PreferenceTests: XCTestCase {
     }
 
     func testOptionsOnlyAppearWhereTheModeHasTheirFactors() {
-        XCTAssertEqual(RoutePreferences.Option.available(in: .walk), [.trafficLights, .busyStreets, .busyCrossings, .hills])
-        XCTAssertEqual(RoutePreferences.Option.available(in: .bike), RoutePreferences.Option.allCases)
-        XCTAssertEqual(RoutePreferences.Option.available(in: .drive), [.trafficLights, .stopSigns, .unprotectedLefts, .busyCrossings, .hills, .turns])
+        XCTAssertEqual(RoutePreferences.Option.available(in: .walk), [.trafficLights, .busyStreets, .busyCrossings, .hills, .steps, .noSidewalks])
+        XCTAssertEqual(RoutePreferences.Option.available(in: .bike), [.trafficLights, .stopSigns, .unprotectedLefts, .busyStreets, .busyCrossings, .hills, .turns, .drawbridges, .roughSurfaces])
+        XCTAssertEqual(RoutePreferences.Option.available(in: .drive), [.stops, .unprotectedLefts, .busyCrossings, .hills, .turns, .highwayMerges, .drawbridges, .complexJunctions, .narrowStreets])
+        XCTAssertEqual(Set(RoutePreferences.Option.allCases.map(\.index)), Set(0..<RoutePreferences.Option.count))
         for mode in TravelMode.allCases {
+            // Each multiplier slot belongs to one option per mode, so no two rows fight over a factor.
+            var owner: [RoutePreferences.Option: RoutePreferences.Option] = [:]
             for option in RoutePreferences.Option.allCases {
-                for factor in option.factors(in: mode) { XCTAssertEqual(factor.preferenceOption, option, "\(factor) in \(mode)") }
+                for factor in option.factors(in: mode) {
+                    let slot = try! XCTUnwrap(factor.preferenceOption, "\(factor) in \(mode)")
+                    XCTAssertEqual(owner[slot] ?? option, option, "\(factor) in \(mode)")
+                    owner[slot] = option
+                }
             }
         }
+        let stops = FactorScale(.init([.stops: .avoid]), mode: .drive)!
+        XCTAssertEqual([Factor.signal, .stopSign, .allWayStop, .turn].map { stops[$0] }, [3, 3, 3, 1], "Driving's Stops covers lights and stop signs")
+        XCTAssertNil(FactorScale(.init([.trafficLights: .avoid, .stopSigns: .avoid, .steps: .avoid]), mode: .drive), "Driving offers them only as Stops")
+        XCTAssertNil(FactorScale(.init([.stops: .avoid]), mode: .bike))
+        let walk = FactorScale(.init([.hills: .avoid]), mode: .walk)!
+        XCTAssertEqual([walk[.climb], walk[.stairs]], [3, 1], "Steps are their own row for walkers")
         for factor in Factor.allCases {
             guard let option = factor.preferenceOption else { continue }
             XCTAssertTrue(TravelMode.allCases.contains { option.factors(in: $0).contains(factor) }, "\(factor) is scaled but never offered")
         }
         XCTAssertNil(FactorScale(.init([.stopSigns: .avoid, .turns: .dontMind]), mode: .walk), "Walking has no stop signs or turn costs")
+    }
+
+    func testSavedChoicesCarryOverToTheNewOptions() {
+        typealias P = RoutePreferences
+        XCTAssertEqual(P([.trafficLights: .avoid, .turns: .avoid]).upgraded(in: .drive), P([.stops: .avoid, .turns: .avoid]))
+        XCTAssertEqual(P([.trafficLights: .dontMind, .stopSigns: .avoid]).upgraded(in: .drive), P([.stops: .avoid]))
+        XCTAssertEqual(P([.trafficLights: .dontMind, .stopSigns: .dontMind]).upgraded(in: .drive), P([.stops: .dontMind]))
+        XCTAssertEqual(P([.stopSigns: .dontMind]).upgraded(in: .drive), P(), "Don't mind on one of the two isn't Don't mind on both")
+        XCTAssertEqual(P([.hills: .avoid]).upgraded(in: .walk), P([.hills: .avoid, .steps: .avoid]))
+        XCTAssertEqual(P([.hills: .avoid, .stopSigns: .avoid]).upgraded(in: .bike), P([.hills: .avoid, .stopSigns: .avoid]))
+        for mode in TravelMode.allCases { XCTAssertEqual(P().upgraded(in: mode), P()) }
     }
 
     func testCodableIsStableAndTolerant() throws {
@@ -61,7 +85,7 @@ final class PreferenceTests: XCTestCase {
                             calmer: Route(edgeIDs: [2], coordinates: [], metrics: c, streetNames: []), candidateCount: 2,
                             originSnapMeters: 0, destinationSnapMeters: 0, snappedOrigin: place.coordinate, snappedDestination: place.coordinate)
         }
-        let avoiding = comparison(.init([.trafficLights: .avoid]))
+        let avoiding = comparison(.init([.stops: .avoid]))
         XCTAssertTrue(avoiding.tradesStress)
         XCTAssertTrue(avoiding.calmSummary.hasPrefix("Avoids fewer signals as you chose"), avoiding.calmSummary)
         XCTAssertFalse(avoiding.calmSummary.contains("→"))
@@ -93,7 +117,7 @@ final class PreferenceTests: XCTestCase {
                             originSnapMeters: 0, destinationSnapMeters: 0, snappedOrigin: place.coordinate, snappedDestination: place.coordinate).reasons
         }
         XCTAssertEqual(reasons(.default(for: .drive)), ["1 fewer left turn across traffic without a signal", "6 fewer traffic signals"])
-        XCTAssertEqual(reasons(.init([.trafficLights: .avoid])), ["6 fewer traffic signals", "1 fewer left turn across traffic without a signal"])
+        XCTAssertEqual(reasons(.init([.stops: .avoid])), ["6 fewer traffic signals", "1 fewer left turn across traffic without a signal"])
     }
 
     func testSelectionWeighsCandidatesAsThePersonDoes() {
@@ -105,7 +129,7 @@ final class PreferenceTests: XCTestCase {
         let fast = route(0, seconds: 100, signals: 200, turns: 200)
         let fewerTurns = route(1, seconds: 150, signals: 200, turns: 40), fewerSignals = route(2, seconds: 150, signals: 80, turns: 200)
         XCTAssertEqual(NativeRouter.selectCalmer(candidates: [fewerTurns, fewerSignals], fastest: fast, extraMinutes: 5)?.edgeIDs, [1])
-        let scale = FactorScale(.init([.trafficLights: .avoid]), mode: .drive)!
+        let scale = FactorScale(.init([.stops: .avoid]), mode: .drive)!
         XCTAssertEqual(NativeRouter.selectCalmer(candidates: [fewerTurns, fewerSignals], fastest: fast, extraMinutes: 5,
                                                  stress: { scale.stress($0.metrics.breakdown) })?.edgeIDs, [2])
     }
@@ -164,17 +188,24 @@ final class SeattlePreferenceTests: XCTestCase {
 
     /// Trips in the bundled data where each option, set to Avoid, changes the route and cuts that option's factors.
     private static let avoidTrips: [(trip: (String, String), mode: TravelMode, options: [RoutePreferences.Option])] = [
-        (("node/2544213221", "node/4318969638"), .bike, RoutePreferences.Option.allCases.filter { $0 != .turns && $0 != .hills }),
+        (("node/2544213221", "node/4318969638"), .bike, [.trafficLights, .stopSigns, .unprotectedLefts, .busyStreets, .busyCrossings]),
         (("node/12955400411", "way/445746568"), .bike, [.hills]),
         (("way/58740248", "way/54029687"), .bike, [.turns]),
-        (("node/6737717414", "way/293941621"), .drive, [.trafficLights, .unprotectedLefts]),
+        (("node/2270094586", "node/2349971983"), .bike, [.drawbridges]),
+        (("node/13922010001", "node/2464038952"), .bike, [.roughSurfaces]),
+        (("node/6737717414", "way/293941621"), .drive, [.unprotectedLefts]),
+        (("node/2400859468", "way/40833029"), .drive, [.stops, .complexJunctions]),
         (("node/1783136676", "relation/7406606"), .drive, [.turns]),
-        (("way/50329131", "node/3407701999"), .drive, [.stopSigns]),
         (("way/222420235", "way/333892011"), .drive, [.busyCrossings]),
         (("relation/7174146", "node/2158750305"), .drive, [.hills]),
-        (("way/253553517", "way/222420235"), .walk, [.busyStreets, .hills]),
+        (("node/2550155170", "way/115699732"), .drive, [.highwayMerges]),
+        (("relation/5342294", "node/4797835838"), .drive, [.drawbridges]),
+        (("node/2207104562", "node/2439831123"), .drive, [.narrowStreets]),
+        (("way/253553517", "way/222420235"), .walk, [.busyStreets]),
         (("node/1793521066", "node/2400859468"), .walk, [.trafficLights]),
         (("relation/7174146", "node/2158750305"), .walk, [.busyCrossings]),
+        (("node/12851127051", "node/2464038952"), .walk, [.steps]),
+        (("node/2400859468", "way/40833029"), .walk, [.hills, .noSidewalks]),
     ]
 
     func testEachOptionSetToAvoidChangesARealTripAndNeverAddsItsFactors() throws {
@@ -183,7 +214,7 @@ final class SeattlePreferenceTests: XCTestCase {
             let plain = try compare(trip.0, trip.1, mode)
             for factor in Set([plain.fastest, shown(plain)].flatMap { $0.metrics.breakdown.tallies.keys }) {
                 guard let option = factor.preferenceOption else { continue }
-                XCTAssertTrue(option.factors(in: mode).contains(factor), "\(mode) records \(factor), which \(option) doesn't list")
+                XCTAssertTrue(RoutePreferences.Option.available(in: mode).contains { $0.factors(in: mode).contains(factor) }, "\(mode) records \(factor) for \(option), which no option lists")
             }
             for option in options {
                 let avoided = try compare(trip.0, trip.1, mode, 5, .init([option: .avoid]))
@@ -199,10 +230,10 @@ final class SeattlePreferenceTests: XCTestCase {
         XCTAssertEqual(covered, Set(offered), "Every offered option has a trip it changes")
     }
 
-    /// Cyclists and drivers who don't mind stop signs get a quicker route through them; walkers who don't mind busy crossings likewise.
+    /// Cyclists who don't mind stop signs and drivers who don't mind stops get a quicker route through them; walkers who don't mind busy crossings likewise.
     func testDontMindTradesThatFactorForTime() throws {
         let cases: [(TravelMode, RoutePreferences.Option, (String, String))] = [
-            (.bike, .stopSigns, ("node/6737717414", "way/293941621")), (.drive, .stopSigns, ("relation/7174146", "node/2158750305")),
+            (.bike, .stopSigns, ("node/6737717414", "way/293941621")), (.drive, .stops, ("node/11029532422", "node/2138396731")),
             (.walk, .busyCrossings, ("relation/7174146", "node/2158750305"))]
         for (mode, option, trip) in cases {
             let plain = try compare(trip.0, trip.1, mode), relaxed = try compare(trip.0, trip.1, mode, 5, .init([option: .dontMind]))

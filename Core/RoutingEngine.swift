@@ -306,7 +306,7 @@ public final class NativeRouter: RouteComputing, Sendable {
     /// Per-edge exposure stress for one request: the precomputed costs, with each preferred option's share rescaled on lookup.
     private func exposure(mode: TravelMode, scale: FactorScale?) -> Exposure {
         Exposure(base: edgeStress[mode]!, shares: scale == nil ? nil : edgeOptionStress[mode]!,
-                 extra: RoutePreferences.Option.allCases.map { (scale?.multiplier($0) ?? 1) - 1 })
+                 extra: (scale ?? .identity).bySlot.map { $0 - 1 })
     }
 
     public func compare(_ request: RouteRequest) async throws -> RouteComparison {
@@ -545,7 +545,7 @@ public final class NativeRouter: RouteComputing, Sendable {
         stamp[source] = reached; costs[source] = 0; parents[source] = -1
         var heap = MinHeap(); heap.push(.init(cost: remaining(start), state: source))
         var visits = 0, none = NoRecord(), scaled = ScaledRecord(scale: scale ?? .identity)
-        let multipliers = RoutePreferences.Option.allCases.map { scale?.multiplier($0) ?? 1 } + [1]
+        let multipliers = (scale ?? .identity).bySlot + [1]
         while let item = heap.pop() {
             if stamp[item.state] == closed { continue }
             stamp[item.state] = closed
