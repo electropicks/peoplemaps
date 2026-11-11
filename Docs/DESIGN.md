@@ -128,8 +128,10 @@ takes `minus.circle` in `onGlass`, never a tick: on the arrival card, and in "Be
 
 ### Rating
 
-The rating is a real progress bar: fill width is the 0 to 100 calm score, track
-`glassTrack`, fill and word coloured by level (`CalmMeter`). Blue through grey to
+The rating is a system `Gauge` in the linear capacity style: the fill is the 0 to
+100 calm score on the system's track, at the system's one thickness, tint and word
+coloured by level (`CalmMeter`).
+Blue through grey to
 orange and rose, not green to red, so it doesn't read as safe and unsafe. VoiceOver
 reads "Chill, 69 out of 100".
 
@@ -519,24 +521,23 @@ unmarked crossings instead, shown as one "Unsignalled crossings" row in place
 of those two. Confirm the per-mode set against the route-preferences PR before
 building; the table is a starting point.
 
-Each row: symbol (`light.beacon.max`, `octagon`, `arrow.turn.up.left`,
-`car.2.fill`, `mountain.2`, `arrow.triangle.turn.up.right.diamond`), label,
-and a three-way segmented control **Avoid / Normal / Don't mind**. At
-accessibility sizes the control drops below the label. Changes recompute the
-comparison live behind the sheet.
+Each row is a standard `Picker` in the default menu style with a system `Label`:
+symbol (`light.beacon.max`, `octagon`, `arrow.turn.up.left`, `car.2.fill`,
+`mountain.2`, `arrow.triangle.turn.up.right.diamond`) and title on the left, the
+current value on the right, and a menu of **Avoid / Normal / Don't mind**. Layout
+at accessibility sizes is the system's. Changes recompute the comparison live
+behind the sheet.
 
 Footer: **Reset to defaults** (plain button, disabled when already default),
-then the note **"Times stay estimates."** `.footnote` secondary. Done in the
+then the note **"Times stay estimates."** as the section's plain footer. Done in the
 toolbar (`.confirmationAction`). No "safe", no scores.
 
 ```
 ╭────────────────────────────╮
 │ Calmer means         Done  │
 │ Driving                    │
-│ 🚦 Traffic lights           │
-│   [Avoid|Normal|Don't mind]│
-│ 🛑 Stop signs               │
-│   [Avoid|Normal|Don't mind]│
+│ 🚦 Traffic lights   Normal ⌃│
+│ 🛑 Stop signs        Avoid ⌃│
 │ …                          │
 │ Reset to defaults          │
 │ Times stay estimates.      │
@@ -625,7 +626,11 @@ would push mute, the flag and the camera button off it. Secondary text on glass 
 A bottom glass card inside `GuidanceView`, not the returning sheet, no grabber.
 Check badge on `glassWell`, "You've arrived at Gas Works Park", summary line, trip
 notes split by hairlines, **Done** as `.primaryAction()`, "Times are estimates. No
-live traffic." and the voice tip. `.sensoryFeedback(.success)` fires on arrival.
+live traffic." and, under them at the foot of the card, the voice tip: a TipKit
+`TipView` (`VoiceUpgradeTip`) in the system style, shown only when a better voice
+could be downloaded; its close button dismisses it for good. It stays outside the
+scrolling part, so at the largest text sizes it is pinned under Done.
+`.sensoryFeedback(.success)` fires on arrival.
 
 ### 4.9 Settings
 
