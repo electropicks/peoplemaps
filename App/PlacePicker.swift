@@ -60,7 +60,7 @@ struct PlacePicker: View {
             }
             .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() }.accessibilityIdentifier("cancel-search") } }
-        }.tint(.primary)
+        }
     }
 
     /// One system row per place, with `PlaceRow`'s own content and padding so it reads as it does elsewhere.

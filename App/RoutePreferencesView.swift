@@ -54,7 +54,7 @@ struct RoutePreferencesView: View {
                 ToolbarItem(placement: .topBarTrailing) { Button(role: .close) { dismiss() }.accessibilityIdentifier("preferences-done") }
             }
         }
-        .tint(.primary).presentationDetents([.medium, .large])
+        .presentationDetents([.medium, .large])
         .onChange(of: draft) { store[mode] = draft }
     }
 

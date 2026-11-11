@@ -86,6 +86,6 @@ struct FavouritesEditor: View {
                 ToolbarItem(placement: .topBarTrailing) { Button(role: .close) { dismiss() }.accessibilityIdentifier("close-favourites") }
             }
         }
-        .tint(.primary).presentationDetents([.medium, .large])
+        .presentationDetents([.medium, .large])
     }
 }
