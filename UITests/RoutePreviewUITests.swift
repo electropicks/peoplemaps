@@ -87,10 +87,12 @@ final class RoutePreviewUITests: PeoplemapsUITestCase {
         XCTAssertEqual(row.label, "Calmer means, Default")
         row.tap()
         XCTAssertTrue(app.navigationBars["Calmer means"].waitForExistence(timeout: 5))
-        let hills = app.segmentedControls["preference-hills"]
+        let hills = app.buttons["preference-hills"]
         scrollPreferences(to: hills, in: app)
-        hills.buttons["Avoid"].tap()
-        XCTAssertTrue(hills.buttons["Avoid"].isSelected)
+        XCTAssertEqual(hills.label, "Hills, Normal")
+        hills.tap()
+        app.buttons["Avoid"].tap()
+        XCTAssertEqual(hills.label, "Hills, Avoid")
         capture("17-route-preferences", app: app)
         app.buttons["preferences-done"].tap()
         XCTAssertTrue(app.buttons["preferences-done"].waitForNonExistence(timeout: 5))
