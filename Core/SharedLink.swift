@@ -26,6 +26,16 @@ public enum SharedLink: Equatable, Sendable {
     /// A maps link in a form we don't read.
     case unreadable(text: String?)
 
+    /// The text a `peoplemaps://share?text=…` URL carries: what the Share Extension (Share/ShareViewController.swift)
+    /// was handed, link and words together. Any app or web page can open such a URL, so the text gets no more trust
+    /// than a paste.
+    public static func sharedText(opened url: URL) -> String? {
+        guard url.scheme?.lowercased() == "peoplemaps", url.host?.lowercased() == "share",
+              let text = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "text" })?.value?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return nil }
+        return String(text.prefix(4_000))
+    }
+
     /// Hosts whose short links may be expanded. Nothing else is ever contacted.
     static let shortHosts: Set<String> = ["maps.apple", "maps.app.goo.gl", "goo.gl", "g.co"]
 
@@ -34,14 +44,25 @@ public enum SharedLink: Equatable, Sendable {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         if let pair = coordinate(trimmed, loose: true) { return .place(SharedStop(coordinate: pair)) }
-        guard let range = trimmed.range(of: #"(?i)\b(https?|geo|maps|comgooglemaps)://?[^\s<>"]+"#, options: .regularExpression)
-                ?? trimmed.range(of: #"(?i)\bgeo:[^\s<>"]+"#, options: .regularExpression) else { return nil }
-        // Punctuation after a link in a sentence is not part of it; a closing bracket is, when the link opened one.
-        var link = String(trimmed[range])
-        while let last = link.last, ".,;".contains(last) || (last == ")" && !link.contains("(")) { link.removeLast() }
-        var rest = trimmed; rest.removeSubrange(range)
-        let text = rest.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.joined(separator: ", ")
-        return parse(link: link, text: text.isEmpty ? nil : text)
+        guard let regex = try? NSRegularExpression(pattern: #"\b(?:(?:https?|maps|comgooglemaps)://|geo:)[^\s<>"]+"#, options: .caseInsensitive) else { return nil }
+        let ranges = regex.matches(in: trimmed, range: NSRange(trimmed.startIndex..., in: trimmed)).compactMap { Range($0.range, in: trimmed) }
+        guard !ranges.isEmpty else { return nil }
+        var rest = trimmed
+        for range in ranges.reversed() { rest.removeSubrange(range) }
+        let words = rest.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.joined(separator: ", ")
+        // A share can carry more than one link (Safari adds the site's own): the first that says where wins.
+        var unreadable: SharedLink?
+        for range in ranges {
+            // Punctuation after a link in a sentence is not part of it; a closing bracket is, when the link opened one.
+            var link = String(trimmed[range])
+            while let last = link.last, ".,;".contains(last) || (last == ")" && !link.contains("(")) { link.removeLast() }
+            switch parse(link: link, text: words.isEmpty ? nil : words) {
+            case .unreadable?: unreadable = unreadable ?? .unreadable(text: words.isEmpty ? nil : words)
+            case let found?: return found
+            case nil: continue
+            }
+        }
+        return unreadable
     }
 
     static func parse(link: String, text: String?) -> SharedLink? {

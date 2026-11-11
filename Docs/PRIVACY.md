@@ -14,8 +14,8 @@ one is wrong and gets fixed.
 - The app works offline. Maps, search and routes are on your phone.
 - Nothing leaves your phone unless you tap **Send** on a report you have
   read, tap **Download King County** in Settings (see Downloading a bigger
-  map), or paste a short link from Apple Maps or Google Maps into search (see
-  Links from other maps apps).
+  map), or share or paste a short link from Apple Maps or Google Maps into
+  PeopleMaps (see Links from other maps apps).
 - There are no accounts, no sign-in, no analytics, no ads, no tracking.
 - A report you send is stored on our server and read by a maintainer. Nothing
   is published automatically. A maintainer may file a useful report as a public
@@ -157,7 +157,8 @@ checksum it already has before using it. Downloads go over Wi-Fi unless you tap 
 
 ## Links from other maps apps
 
-You can paste a link from another maps app into search, and PeopleMaps finds its own matching place. Most links are read
+You can share a link from another maps app to PeopleMaps from the share sheet, or paste it into search, and PeopleMaps
+finds its own matching place. The share sheet entry only passes the link and any words with it to the app on your phone. Most links are read
 on the phone with no connection. A short link (`maps.apple/…` from Apple Maps, `maps.app.goo.gl/…` from Google Maps)
 hides the place until its issuer says where it points, so for those the app sends one request to Apple or Google and
 reads the address it redirects to. It does not load the page. The request carries no cookies, no account and no
@@ -167,7 +168,8 @@ server, theirs sees the link, which they issued, and the address your phone conn
 The name, address and point in a link are used to search PeopleMaps' own map data and are then dropped. The app shows
 and saves its own place, from OpenStreetMap or Overture. The one exception is a place PeopleMaps does not have: it then
 drops a pin at the point from the link, named from its own data, and that point is kept if you save the pin as a
-favourite or it stays in your recents.
+favourite or it stays in your recents. If iOS will not let the share sheet open PeopleMaps, the link is copied to the
+clipboard instead so you can paste it.
 
 ## Your report ID
 

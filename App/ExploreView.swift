@@ -331,6 +331,15 @@ struct ExploreView: View {
         guard text.count > old.count + 1, let link = SharedLink.parse(text) else { return }
         take(link)
     }
+    /// The Share Extension's hand-off (`peoplemaps://share?text=…`): the same handling as a paste. A link opens its
+    /// place; plain words become the search. Guidance is never interrupted.
+    private func opened(_ url: URL) {
+        guard let text = SharedLink.sharedText(opened: url), screen != .navigating else { return }
+        sheet = nil; addingFavourite = false
+        show(.search)
+        if let link = SharedLink.parse(text) { take(link) }
+        else { query = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.joined(separator: ", ") }
+    }
     private func take(_ link: SharedLink) {
         switch link {
         case let .short(url, text):
@@ -467,6 +476,7 @@ struct ExploreView: View {
         .task { if !Self.markersOff { markerFeed = await PlaceMarkerFeed.load(search) } }
         .onDisappear { session.cancel(); navigator.stop() }
         .onChange(of: voiceMuted) { navigator.setMuted(voiceMuted) }
+        .onOpenURL(perform: opened)
         .driveLogUse(driveLogSnapshot)
         .reportContext(screen: String(String(describing: screen).prefix { $0 != "(" }), mode: mode, extraMinutes: budget, comparison: session.comparison, navigator: navigator, dataVersion: search.dataVersion)
         .onChange(of: userLocation) { followUser() }

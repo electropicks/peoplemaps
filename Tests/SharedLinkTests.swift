@@ -92,6 +92,22 @@ final class SharedLinkTests: XCTestCase {
         XCTAssertEqual(place("geo:0,0?q=400+Broad+St"), SharedStop(name: "400 Broad St"))
     }
 
+    func testOpenedShareURLCarriesItsTextAndNothingElseCounts() {
+        var parts = URLComponents(string: "peoplemaps://share")!
+        parts.queryItems = [URLQueryItem(name: "text", value: "Space Needle\nhttps://maps.apple/p/abc?x=1&y=2")]
+        XCTAssertEqual(SharedLink.sharedText(opened: parts.url!), "Space Needle\nhttps://maps.apple/p/abc?x=1&y=2")
+        XCTAssertNil(SharedLink.sharedText(opened: URL(string: "peoplemaps://share?text=%20")!))
+        XCTAssertNil(SharedLink.sharedText(opened: URL(string: "peoplemaps://other?text=x")!))
+        XCTAssertNil(SharedLink.sharedText(opened: URL(string: "https://share?text=x")!))
+    }
+
+    func testTheFirstLinkThatSaysWhereWins() {
+        // Safari's share of an OpenStreetMap page, as the Share Extension passes it on.
+        XCTAssertEqual(place("https://www.openstreetmap.org/\nhttps://www.openstreetmap.org/?mlat=47.6205&mlon=-122.3493#map=12/47.6205/-122.3493"), SharedStop(coordinate: needle))
+        XCTAssertEqual(place("See https://example.com/menu and geo:47.6205,-122.3493"), SharedStop(coordinate: needle))
+        XCTAssertEqual(SharedLink.parse("Dinner https://www.google.com/maps/contrib/1 https://maps.apple.com/guides"), .unreadable(text: "Dinner"), "no link left in the words")
+    }
+
     func testAKnownMapsHostWeCannotReadSaysSo() {
         XCTAssertEqual(SharedLink.parse("Dinner https://maps.apple.com/guides?user=abc"), .unreadable(text: "Dinner"))
         XCTAssertEqual(SharedLink.parse("https://www.google.com/maps/contrib/123"), .unreadable(text: nil))

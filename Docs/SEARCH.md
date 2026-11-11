@@ -156,9 +156,19 @@ Design and decisions: https://claude.ai/artifact/32QugGzJS3TRMLgUsgaLQM.
   line, plus "Matched from a shared link". The only thing of theirs that can
   reach our map is the point of a pin for a place we lack, named from our data
   by `droppedPin`. A shared route gives its stops only, never a path or time.
-- **Built so far:** paste into search. A route link opens its last stop.
-  **Next:** the share sheet (Share Extension and a `peoplemaps://` URL), then a
-  stop picker for routes. Multi-stop routing is its own project.
+- **Share sheet** (`Share/ShareViewController.swift`, target
+  `PeoplemapsShare`). The extension reads and contacts nothing: it passes the
+  shared link and words to the app as `peoplemaps://share?text=…`, which the
+  app handles exactly like a paste (`SharedLink.sharedText`). Any app or page
+  can open that URL, so it gets no more trust than a paste. iOS has no
+  supported call for a share extension to open its app; the extension sends
+  `openURL:options:completionHandler:` up the responder chain by name, and if
+  that ever fails it copies the link and says to paste it. Checked on the
+  iOS 27 simulator by `UITests/ShareSheetSpike.swift` (run by name; not in the
+  suite, since it drives Safari).
+- **Built so far:** paste into search and the share sheet. A route link opens
+  its last stop. **Next:** a stop picker for routes. Multi-stop routing is its
+  own project.
 
 ## Coverage is the gate
 
