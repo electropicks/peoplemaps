@@ -49,6 +49,7 @@ struct PlaceCard: View {
             .dynamicTypeSize(...DynamicTypeSize.accessibility3)
         }
         .task(id: model.estimateRequest(for: place)) { await model.loadEstimate(model.estimateRequest(for: place)) }
+        .modifier(NamePlaceAlert(place: model.naming, name: Bindable(model).nameDraft, dismiss: { model.naming = nil }, save: model.name))
     }
 
     private var badge: some View {
@@ -139,7 +140,7 @@ struct PlaceCard: View {
 
     private var favouriteButton: some View {
         let on = model.saved.isFavourite(place)
-        return Button { withAnimation(Motion.content(reduceMotion)) { model.saved.toggleFavourite(place) } } label: {
+        return Button { withAnimation(Motion.content(reduceMotion)) { model.toggleFavourite(place) } } label: {
             Image(systemName: on ? "star.fill" : "star").font(.system(size: 14, weight: .semibold))
                 .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
                 .foregroundStyle(.primary)

@@ -28,4 +28,6 @@ extension Place {
         return .category(PlaceCategory(raw: category))
     }
     var symbol: String { badge.symbol(raw: category) }
+    /// An address or a dropped pin: its name says only where it is, so the user may give it one.
+    var canBeNamed: Bool { kind == .address || isDroppedPin }
 }

@@ -899,7 +899,8 @@ of the start and destination and a 550 m cell for a marked moment, as in 2.2. "W
 
 - **Open** by shaking the phone, or "Report a problem" in Settings (under Feedback) and Route details. `App/Reports/` holds
   the composer; the Settings rows and pages are in `App/Settings/`. A report started from Settings says `"screen":
-  "settings, over <screen>"`.
+  "settings, over <screen>"`. "Report it missing" under an empty search opens one from `"search, missing place"` with the
+  note started as "Missing place: " and the text searched for, which the user can change before sharing.
 - **Send** is a share sheet with one `peoplemaps-<date>-<words>.json` file; the owner saves it to iCloud Drive,
   `PeopleMaps Reports`. Reports (up to 50) stay on the phone until swiped away in Settings, Feedback, Saved reports (the row
   shows only when there is one), where they can be shared again.

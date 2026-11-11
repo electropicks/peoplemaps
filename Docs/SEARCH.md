@@ -102,6 +102,29 @@ on paper but returns Apple data, so do not rely on it either.
 - **Recents and favourites.** Stored on the device as our own place IDs and
   coordinates.
 
+## A place the data lacks
+
+Open data misses businesses (Kelley-Ross Pharmacy on Capitol Hill is in neither
+OpenStreetMap nor Overture 2026-10-21.0). An empty search is never a dead end
+(`App/MissingPlace.swift`):
+
+- **Closest matches.** `SearchIndex.closest` sets aside the neighbourhood and
+  the category word in the text, searches the words left alone, then lists that
+  category nearest the neighbourhood: "Kelley-Ross Capitol Hill pharmacy"
+  shows "Pharmacy near Capitol Hill". An address never gets a guess.
+- **Other ways to get there.** Look up in Apple Maps (the hand-off above),
+  paste its address with the system paste button (a whole postal address
+  works), drop a pin, or report it missing, which opens the problem report
+  with "Missing place: ..." as its note (`Docs/REPORTS.md` 11).
+- **Keeping it by name.** Starring an address or a dropped pin asks for a name,
+  starting from the last text search had no answer for. The favourite keeps
+  the name and its address (`SavedPlaces.name`), search lists saved names
+  ahead of the index (`SavedPlaces.matching`), and Favourites, Edit renames
+  with a swipe. Names stay on the device.
+
+The start and destination picker still shows the older empty state; it moves
+over once its rebuild on a system list lands.
+
 ## Overture places (stage 2)
 
 - **Archive.** Overture keeps only its last two releases online (about 60

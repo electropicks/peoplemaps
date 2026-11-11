@@ -248,6 +248,52 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         capture("home-raised-hint", app: app)
     }
     /// With no match and the keyboard up, the Apple Maps hand-off is in full view: clear of the keyboard and of the credit above it.
+    /// A business neither OpenStreetMap nor Overture has: the closest places we do have, the ways to get there anyway, and its
+    /// address kept under the name that was searched for.
+    @MainActor func testMissingPlaceOffersClosestMatchesAndKeepsItsAddressByName() {
+        let app = launchHome()
+        app.buttons["search-field"].tap()
+        let field = app.textFields["search-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("Kelley-Ross Capitol Hill pharmacy")
+        let heading = app.staticTexts["closest-heading"]
+        XCTAssertTrue(heading.waitForExistence(timeout: 5))
+        XCTAssertEqual(heading.label, "Pharmacy near Capitol Hill")
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'closest-'")).firstMatch.exists)
+        for id in ["apple-maps-lookup", "drop-a-pin", "report-missing-place"] { XCTAssertTrue(app.buttons[id].exists, id) }
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "paste-address").firstMatch.exists)
+        XCTAssertTrue(app.descendants(matching: .any)["search-empty"].exists)
+        capture("search-missing-place", app: app)
+        // Its address, as another app copies it, finds the unit.
+        app.buttons["cancel-search-home"].tap()
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("400 E Pine St Ste 100, Seattle, WA 98122, United States")
+        // The centre mapped in that unit shares the address's OSM ID and follows it.
+        let address = app.buttons.matching(identifier: "result-node/4400510992").firstMatch
+        XCTAssertTrue(address.waitForExistence(timeout: 5))
+        XCTAssertTrue(address.label.hasPrefix("400 East Pine Street, Unit 100"), address.label)
+        address.tap()
+        XCTAssertTrue(app.buttons["favourite"].waitForExistence(timeout: 5))
+        app.buttons["favourite"].tap()
+        // Keeping an address offers a name, starting from what search could not find.
+        let alert = app.alerts["Name this place"], name = alert.textFields.firstMatch
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        XCTAssertEqual(name.value as? String, "Kelley-Ross Capitol Hill pharmacy")
+        capture("place-name-alert", app: app)
+        alert.buttons["Save"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Kelley-Ross Capitol Hill pharmacy"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["place-subtitle"].label, "Address · 400 East Pine Street, Unit 100")
+        app.buttons["close-place"].tap()
+        // From then on search finds it by that name.
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("kelley ross")
+        let kept = app.buttons["result-node/4400510992"]
+        XCTAssertTrue(kept.waitForExistence(timeout: 5))
+        XCTAssertTrue(kept.label.hasPrefix("Kelley-Ross Capitol Hill pharmacy"), kept.label)
+        capture("search-kept-name", app: app)
+    }
     /// At the largest standard text size, which on this phone is what a smaller phone shows at the default one.
     @MainActor func testAppleMapsLookupIsInReachWithTheKeyboardUp() {
         let app = launchHome(extra: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"])

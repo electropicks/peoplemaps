@@ -31,6 +31,14 @@ final class SavedPlacesStore {
     func addRecent(_ place: Place) { guard !place.isCurrentLocation else { return }; change { $0.addRecent(place) } }
     func toggleFavourite(_ place: Place) { change { $0.toggleFavourite(place) } }
     func removeFavourite(_ place: Place) { change { $0.setFavourite(place, false) } }
+    func favourite(at place: Place) -> Place? { saved.favourite(at: place) }
+    func matching(_ query: String) -> [Place] { saved.matching(query) }
+    func hasOwnName(_ place: Place) -> Bool { saved.hasOwnName(place) }
+    func name(_ place: Place, _ name: String) -> Place {
+        var named = place
+        change { named = $0.name(place, name) }
+        return named
+    }
 
     private func change(_ body: (inout SavedPlaces) -> Void) {
         body(&saved)
