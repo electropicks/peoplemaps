@@ -56,7 +56,6 @@ struct ReportComposerView: View {
                     .frame(maxWidth: .infinity, minHeight: 34)
             }
             .primaryAction()
-            .environment(\.solidSurface, true)
             .simultaneousGesture(TapGesture().onEnded { persist() })
             .accessibilityIdentifier("share-report")
             // Held to one line at the largest sizes, so the note keeps its room above the keyboard.

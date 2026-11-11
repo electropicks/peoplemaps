@@ -88,7 +88,6 @@ struct PeoplemapsApp: App {
             }
             .environment(regions)
             .task { await regions.start() }
-            .tint(.primary)
         }
     }
 }
@@ -117,10 +116,8 @@ extension UIColor {
     /// Start, Directions, Done and Share report: the one filled control on a screen, with white words. In light mode the label's slate;
     /// white at 72% on the pale sheet did not read as a button. In dark mode dusk blue, the hue the switches take: a lifted grey was no
     /// clearer there, and white at 86% was a slab brighter than anything else on the card (owner's phone, 9 November 2026).
-    /// Opaque, so nothing shows through. Swap these to change the primary action everywhere.
+    /// Swap these to change the primary action everywhere.
     static let primaryActionFill = dynamic(light: 0x20384F, dark: 0x4A6F97)
-    /// The same on a solid panel; kept apart so the two can differ again.
-    static let primaryActionSolidFill = primaryActionFill
     static let primaryActionText = hex(0xFFFFFF)
     /// Laid over the glass of a panel, so text holds its contrast over a busy map. Neutral: glass is never tinted a hue.
     static let glassVeil = dynamic(light: 0xFFFFFF, lightAlpha: 0.34, dark: 0x101412, darkAlpha: 0.5)
@@ -188,7 +185,6 @@ extension ShapeStyle where Self == Color {
     static var calmer: Color { Color(uiColor: .calmer) }
     static var fastest: Color { Color(uiColor: .fastest) }
     static var primaryActionFill: Color { Color(uiColor: .primaryActionFill) }
-    static var primaryActionSolidFill: Color { Color(uiColor: .primaryActionSolidFill) }
     static var primaryActionText: Color { Color(uiColor: .primaryActionText) }
     static var panel: Color { Color(uiColor: .panel) }
     static var panelFill: Color { Color(uiColor: .panelFill) }

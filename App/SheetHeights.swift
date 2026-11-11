@@ -3,7 +3,7 @@ import UIKit
 
 /// What the portrait sheet's fit stop holds on the place card and the route preview, designed per screen and scaled for Dynamic Type
 /// rather than measured from the content. A measured `.height` is a new detent every time the content is laid out again, so the sheet
-/// opened at one height and moved to another a frame later (Docs/DESIGN.md 4.1). Taken from both screens on an iPhone 17 Pro on
+/// opened at one height and moved to another a frame later (Docs/DESIGN.md 4.4). Taken from both screens on an iPhone 17 Pro on
 /// 10 November 2026 at the sizes listed, each the tallest of the places tried; between them a size is interpolated by the body
 /// font's point size. Content taller than its stop scrolls.
 enum SheetHeights {

@@ -77,8 +77,13 @@ which lets the map show through; SwiftUI has no modifier for it. An empty
    `invalidateDetents()` does not bring it back. The material is not affected, so the legibility
    never depends on the glass drawing. Large is the solid `panel`.
 5. **No accent on controls, plus category colour.** Controls and text use the
-   label colour; the app's tint is `.primary`. The one exception is a switch's
-   track when on (`switchTint()`, `calmer`): under `.primary` it is a white track
+   label colour, set where they are drawn. The explore panel and the app take the
+   system's tint, the `AccentColor` asset (dusk blue), so a text button that acts
+   ("Choose start", "Try again", Cancel while comparing, an alert's buttons) reads as an
+   action; until 10 November 2026 the app's tint was `.primary`, white in dark mode
+   (the sheet research of 10 November 2026, step 3). Modal sheets (Settings, details,
+   favourites, preferences, picker) still set `.primary` themselves. A switch's
+   track when on is `switchTint()`: under `.primary` it is a white track
    under a white knob in dark mode, with nothing to tell on from off. Dusk blue (`.calmer`) is a
    colour on the map (the route line, its leader and the selected pin) and the on-state of a switch. Green no longer
    means calmer, and no fill anywhere is a saturated blue or green. Rating colour
@@ -86,15 +91,16 @@ which lets the map show through; SwiftUI has no modifier for it. An empty
    badges (list rows, map markers, place card); they never tint glass, text or
    buttons.
 6. **Glass stays neutral.** The sheet and banner are never tinted. Start and the
-   other primary actions (Directions, Start, Done) all sit on a glass panel, so by
-   principle 3 they are solid `.borderedProminent` buttons filled with
-   `primaryActionFill` and labelled in `primaryActionText`: the label's slate with white
+   other primary actions (Directions, Start, Done, Share report) are the system's
+   `.glassProminent` button tinted `primaryActionFill` and labelled in `primaryActionText`,
+   which the system makes opaque under Reduce Transparency and on an opaque sheet (10 November
+   2026, replacing a solid `.borderedProminent` fill that switched with a `solidSurface` flag;
+   on trial on the owner's phone). The fill is the label's slate with white
    words in light mode (9 November 2026: near-white on the pale sheet did not read as a
    button on the owner's phone), dusk blue with white words in dark mode (a lifted grey
    was no clearer there, and white at 86% was a slab brighter than anything else on a dark
    card). Dusk blue is the hue the switches take, the one a control may (principle 5). They are tokens, so they
-   can move to dusk blue later. `.glassProminent` is only for a button floating directly
-   over the map; there is none today.
+   can move to dusk blue later.
 7. **Honest words survive the redesign.** Every "Estimate", "unknown" and
    source/date line in the current UI stays. No screen says "safe".
 
@@ -113,8 +119,7 @@ rendered pixels (below).
 | `switchOn` | `#4A6F97` | `#4A6F97` | a switch's track when on. Not `calmer` in dark: `#7FA3CC` under the white thumb is 2.6:1 and reads as off | track vs a near-black card `#1C1C1E` 3.3, vs the white thumb 5.2 |
 | `fastest` | `#6B7872` | `#AEBAB3` | fastest line, dotted | vs land 4.1 / 7.9 |
 | `passedRoute` | `#A6B3C0` | `#53616F` | the part of the followed route already driven, drawn 3.5 pt (the route is 5.5) | vs land 1.9 / 2.5; vs the route ahead 2.5 / 2.4. Below 3:1 on purpose: it is a trail, not information, and the width, the puck at its end and the casing say "behind" without colour |
-| `primaryActionFill` | `#20384F` | `#4A6F97` | fill of the solid `.borderedProminent` primary actions: Directions, Start, Done | |
-| `primaryActionSolidFill` | `#20384F` | `#4A6F97` | the same on a solid panel: the large stop, Reduce Transparency, Share report in the report sheet. Opaque, so a form scrolling under a pinned button doesn't show through | |
+| `primaryActionFill` | `#20384F` | `#4A6F97` | tint of the `.glassProminent` primary actions: Directions, Start, Done, Share report | |
 | `primaryActionText` | white | white | label on the above | light: 12.1 on the fill; dark: 5.2 on the fill (computed) |
 | `glassVeil` | white 34% | `#101412` 50% | over `.clear` on text surfaces: guidance, landscape card, credit; over `.regular` and a `.regularMaterial` on the sheet | |
 | `glassVeilDense` | white 72% | `#101412` 72% | Increase Contrast | |
@@ -363,7 +368,9 @@ First launch shows a one-line hint chip where the favourites go: "Search a place
 address, or long-press the map" (D4). The chip is plain glass, not interactive: it is not a button.
 
 More, or a drag of 24 pt up anywhere on the floating controls, presents a system sheet with one stop, as tall as what it
-holds (`raiseHome`, `homeHeight`), up to 70% of the screen, past which it scrolls. At the system's medium a fresh install
+holds (`raiseHome`, `PortraitSheet`), up to 70% of the screen, past which it scrolls. Home is the one screen whose stop is
+measured, since Recents and favourites change what it holds: a new height is added beside the old one and selected, and the
+old one is dropped once the sheet has glided there, so it never jumps. At the system's medium a fresh install
 showed half a screen of empty panel under the field and one row (9 November 2026); the place card is sized the same way
 (4.4). Home has no large stop (decision, 4 November 2026): at large it was a flat,
 square-edged, opaque page with the map dimmed, holding a hint, the field and one row.
@@ -449,9 +456,12 @@ doesn't leave half of it empty; at accessibility sizes the same fit stop, capped
   Breezy, mostly fewer unsignalled lefts" or "Chill, best balance we found"
   (`Docs/STRESS_MODEL.md`, Calm score), then "Estimate, no live traffic".
 - **The card is laid out once.** Every line is there from the first frame (the calm note as a blank until the estimate
-  lands, held to one line at standard sizes), and the sheet's fit stop uses the place card's own remembered height, not
-  home's. Before, the card opened at home's height, moved when it was measured, and moved again when the estimate added
-  lines, which read as a flicker (`PlaceCardUITests.testCardDoesNotMoveWhenTheEstimateLands`).
+  lands, held to one line at standard sizes), and the sheet's fit stop is a height designed for the card at each text
+  size (`SheetHeights`, from captures on 10 November 2026), plus a line when the estimate starts somewhere else. Before,
+  the stop was the card's measured height: a `.height` detent of a new value is a new detent, so the card opened at one
+  height and moved when it was measured, and again when the estimate added lines, which read as a flicker
+  (`PlaceCardUITests.testCardDoesNotMoveWhenTheEstimateLands`). A shorter card (outside the area we cover) leaves glass
+  under it; a taller one scrolls.
 - The card rests at its own height and has no other stop (large stays at accessibility
   sizes, where it can outgrow the fit stop): raised, it was the card over a blank panel.
 - Source/date line at the bottom.
@@ -461,7 +471,8 @@ doesn't leave half of it empty; at accessibility sizes the same fit stop, capped
 ### 4.5 Route preview
 
 A floating glass panel, content straight on the glass, split by hairlines, no
-cards. It opens sized to its content (`fitHeight`), with the route and map above.
+cards. It opens at a height designed for it at each text size (`SheetHeights.preview`, room for a two-line reason
+under the calmer route), with the route and map above.
 Top to bottom:
 
 1. **Header.** Destination (`choose-destination`), distance, "From Current location"
@@ -710,7 +721,7 @@ A system page sheet with a solid grouped `Form` (`ReportComposerView`; what it c
 
 The note is focused as the sheet opens, since typing is the point, so the keyboard is up from the start. **Share report**
 (`share-report`) is therefore not a row in the form, where it sat under the keyboard: it is the sheet's one `.primaryAction()`,
-on `primaryActionSolidFill`, pinned in a bottom `safeAreaBar` that rides above the keyboard. A drag down the form puts the
+pinned in a bottom `safeAreaBar` that rides above the keyboard. A drag down the form puts the
 keyboard away (`scrollDismissesKeyboard(.interactively)`) and leaves the sheet open. The button's type stops at `accessibility1`,
 so at the largest sizes it stays one line and the note keeps its room.
 

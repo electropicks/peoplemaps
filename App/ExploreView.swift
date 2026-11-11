@@ -374,8 +374,7 @@ struct ExploreView: View {
                 }
             }.id(screen.panelID).transition(.opacity)
         }
-        .tint(.primary)
-        .environment(\.onGlassPanel, true).environment(\.solidSurface, model.stop == .large && !landscape)
+        .environment(\.onGlassPanel, true)
         .environment(\.landscapeCard, landscape)
         .animation(Motion.content(reduceMotion), value: screen.panelID)
     }
