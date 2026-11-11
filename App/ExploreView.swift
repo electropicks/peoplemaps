@@ -14,15 +14,17 @@ private enum Screen: Equatable {
 /// the preview's rating and buttons. Raised is the preview with its start, swap and extra time as well.
 private enum Stop { case fit, medium, raised, large }
 
-/// Why location can't do what was just asked of it.
+/// Why location, or a pasted maps link, can't do what was just asked of it.
 private enum LocationNotice: String, Identifiable {
-    case startGuidance, locate, outside, noFix, record
+    case startGuidance, locate, outside, noFix, record, sharedOutside, sharedUnreadable
     var id: String { rawValue }
     var title: String {
         switch self {
         case .startGuidance, .locate, .record: "Location is off for PeopleMaps"
         case .outside: "You\u{2019}re outside the area we cover"
         case .noFix: "Can\u{2019}t find you right now"
+        case .sharedOutside: "This place is outside your map area"
+        case .sharedUnreadable: "PeopleMaps couldn\u{2019}t read this link"
         }
     }
     var message: String {
@@ -33,6 +35,8 @@ private enum LocationNotice: String, Identifiable {
         case .outside: RegionSelection.usesCounty ? "\(RegionSelection.coverageSentence) It can\u{2019}t show where you are from here. You can still choose a start inside it."
             : "The map covers Seattle for now, so it can\u{2019}t show where you are. You can still choose a start inside it."
         case .noFix: "Your iPhone hasn\u{2019}t given a location yet. Try again in a moment, or choose a start yourself."
+        case .sharedOutside: RegionSelection.usesCounty ? RegionSelection.coverageSentence : "PeopleMaps can route only inside its offline Seattle area for now."
+        case .sharedUnreadable: "Short links need a connection to open, and some link formats aren\u{2019}t supported yet. You can search for the place by name or address instead."
         }
     }
     var offersSettings: Bool { self == .startGuidance || self == .locate || self == .record }
@@ -65,6 +69,11 @@ struct ExploreView: View {
     /// Where home was resting, to go back to.
     @State private var homeStop = Stop.fit
     @State private var query = ""
+    /// A pasted maps link that needs a choice: the search it filled in, where its results rank from, and the pin at its point.
+    @State private var shared: (query: String, near: Coordinate?, pin: Place?)?
+    @State private var readingLink = false
+    /// The place a pasted link was matched to, so its card can say so.
+    @State private var sharedMatchID: String?
     /// Search was opened by Add in the favourites row: the place picked becomes a favourite.
     @State private var addingFavourite = false
     /// The start the user chose last. Without location, a later Directions reuses it unless it is the new destination.
@@ -306,6 +315,7 @@ struct ExploreView: View {
     }
     /// A search result: its place card, or a new favourite when Add opened the search.
     private func picked(_ place: Place) {
+        sharedMatchID = nil
         DriveLogger.use("search_pick", ["query": .string(query), "id": .string(place.id), "name": .string(place.name),
                                         "rank": .num(results.firstIndex { $0.id == place.id } ?? -1), "results": .num(results.count), "addingFavourite": .bool(addingFavourite)])
         guard addingFavourite else { open(place); return }
@@ -314,6 +324,34 @@ struct ExploreView: View {
         cancelSearch()
     }
     private func cancelSearch() { query = ""; addingFavourite = false; show(.home) }
+    /// A maps link or coordinates pasted into search: our own matching place, a choice of near ones, or a pin
+    /// (Docs/SEARCH.md, "Shared links"). Only a paste counts, so coordinates typed digit by digit don't jump early.
+    private func searchChanged(from old: String, to text: String) {
+        if shared?.query != text { shared = nil }
+        guard text.count > old.count + 1, let link = SharedLink.parse(text) else { return }
+        take(link)
+    }
+    private func take(_ link: SharedLink) {
+        switch link {
+        case let .short(url, text):
+            query = ""; readingLink = true
+            Task {
+                let found = await SharedLinkExpander().expand(url, text: text)
+                readingLink = false
+                if screen == .search { take(found) }
+            }
+        case let .unreadable(text): query = text ?? ""; notice = .sharedUnreadable
+        // One destination at a time for now: a shared route gives its last stop.
+        case let .route(_, stops, _): if let last = stops.last { take(.place(last)) }
+        case let .place(stop):
+            switch search.match(stop, covers: graph.coverage.contains, near: userLocation ?? origin?.coordinate ?? lastOrigin?.coordinate) {
+            case let .place(place): addingFavourite = false; open(place); sharedMatchID = place.id
+            case let .pin(place): addingFavourite = false; open(place)
+            case let .candidates(text, near, pin): shared = (text, near, pin); query = text
+            case .outside: query = ""; notice = .sharedOutside
+            }
+        }
+    }
     /// Long-press drops a pin while browsing, never over a route or guidance.
     private func dropPin(_ c: Coordinate) {
         guard screen == .home || selectedPlace != nil else { return }
@@ -755,7 +793,7 @@ struct ExploreView: View {
 
     // MARK: Search
 
-    private var results: [Place] { search.search(query, near: userLocation ?? origin?.coordinate ?? lastOrigin?.coordinate) }
+    private var results: [Place] { search.search(query, near: shared?.near ?? userLocation ?? origin?.coordinate ?? lastOrigin?.coordinate) }
 
     private var searchPanel: some View {
         VStack(spacing: 0) {
@@ -765,7 +803,9 @@ struct ExploreView: View {
             }.padding(.horizontal, inset).padding(.top, landscape ? Layout.cardInset : 20).padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    if query.isEmpty {
+                    if readingLink {
+                        ProgressView("Reading link\u{2026}").frame(maxWidth: .infinity).padding(.top, 24).accessibilityIdentifier("reading-link")
+                    } else if query.isEmpty {
                         if !saved.recents.isEmpty { resultGroup("Recents", saved.recents, prefix: "recent-") }
                         else {
                             Text("Search a place, an address or a street").font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
@@ -780,11 +820,13 @@ struct ExploreView: View {
                         resultGroup("Top match", Array(results.prefix(1)))
                         if results.count > 1 { resultGroup("Other matches", Array(results.dropFirst())) }
                     }
+                    if let pin = shared?.pin, !readingLink { resultGroup("Or use the shared location", [pin], prefix: "shared-pin-") }
                 }.padding(.horizontal, inset).padding(.bottom, 16)
             }
             .scrollDismissesKeyboard(.interactively).scrollBounceBehavior(.basedOnSize)
             .scrollEdgeEffectStyle(.soft, for: .top)
         }
+        .onChange(of: query) { old, text in searchChanged(from: old, to: text) }
     }
 
     private func resultGroup(_ title: String, _ places: [Place], prefix: String = "result-") -> some View {
@@ -829,6 +871,7 @@ struct ExploreView: View {
                 .accessibilityElement(children: .combine).accessibilityIdentifier("outside-coverage")
             }
             if let source = place.source { Text(source).font(.caption).foregroundStyle(GuidanceOverlay.onGlass).accessibilityIdentifier("place-source") }
+            if sharedMatchID == place.id { Text("Matched from a shared link").font(.caption).foregroundStyle(GuidanceOverlay.onGlass).accessibilityIdentifier("place-shared-match") }
         }
         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fitContent = $0 }
