@@ -52,7 +52,7 @@ struct MapSettingsSection: View {
             LabeledContent {
                 HStack(spacing: 8) {
                     ProgressView()
-                    Text("Verifying").foregroundStyle(GuidanceOverlay.onGlass).accessibilityIdentifier("region-status")
+                    Text("Verifying").accessibilityIdentifier("region-status")
                 }
             } label: { Text("King County") }
         case .ready:
@@ -89,22 +89,21 @@ struct MapSettingsSection: View {
     private func card(@ViewBuilder _ status: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text("King County")
-            status().font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
+            status().font(.subheadline).foregroundStyle(.secondary)
         }
         .accessibilityElement(children: .contain).accessibilityIdentifier("region-card")
     }
 
+    /// Where the download stands, over the system's progress bar with the bytes as its value.
     private func bar(_ progress: RegionProgress, status: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            LabeledContent {
-                Text(status).foregroundStyle(GuidanceOverlay.onGlass).accessibilityIdentifier("region-status")
-            } label: { Text("King County") }
-            ProgressView(value: progress.fraction).accessibilityLabel(status).accessibilityValue("\(Int(progress.fraction * 100)) percent")
-                .accessibilityIdentifier("region-progress")
-            Text("\(RegionManifest.sizeLabel(progress.received)) of \(RegionManifest.sizeLabel(progress.total))").font(.footnote.monospacedDigit())
-                .foregroundStyle(GuidanceOverlay.onGlass).accessibilityIdentifier("region-bytes")
+            LabeledContent { Text(status).accessibilityIdentifier("region-status") } label: { Text("King County") }
+            ProgressView(value: progress.fraction) {} currentValueLabel: {
+                Text("\(RegionManifest.sizeLabel(progress.received)) of \(RegionManifest.sizeLabel(progress.total))").monospacedDigit()
+                    .accessibilityIdentifier("region-bytes")
+            }
+            .accessibilityLabel(status).accessibilityIdentifier("region-progress")
         }
-        .padding(.vertical, 3)
         .accessibilityElement(children: .contain).accessibilityIdentifier("region-card")
     }
 
