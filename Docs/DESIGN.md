@@ -503,43 +503,46 @@ then the reasons and metrics.
 ### 4.6 Route preferences sheet ("Calmer means")
 
 A second sheet on top of the persistent one, `.medium` and `.large`,
-title "Calmer means" with the current mode in the subtitle ("Driving"). One
-`Form`, inset grouped. Mode-specific rows only (`Docs/STRESS_MODEL.md`: don't
-apply one mode's rule to another):
+title "Calmer means". One `Form`, inset grouped. The first row is a standard
+segmented `Picker`, **Drive / Cycle / Walk** (`preferences-mode`), on a clear row
+background; it opens on the mode being routed, and switching it shows that
+mode's own rows without leaving the sheet. Each mode keeps its own choices.
 
-| Factor | Drive | Cycle | Walk |
-|---|---|---|---|
-| Traffic lights | ✓ | ✓ | ✓ (crossings) |
-| Stop signs | ✓ | ✓ | Unsignalled crossings |
-| Unsignalled lefts | ✓ | ✓ | Unsignalled crossings |
-| Busy streets | ✓ | ✓ | ✓ |
-| Hills | ✓ | ✓ | ✓ |
-| Turns | ✓ | ✓ | ✓ |
+Rows are mode-specific (`Docs/STRESS_MODEL.md`, "Preferences", has the factors
+behind each; don't apply one mode's rule to another):
 
-Walk has no stop signs or lefts in the stress model; it has unsignalled and
-unmarked crossings instead, shown as one "Unsignalled crossings" row in place
-of those two. Confirm the per-mode set against the route-preferences PR before
-building; the table is a starting point.
+| Drive | Cycle | Walk |
+|---|---|---|
+| Stops (lights and stop signs) | Traffic lights | Traffic lights |
+| Left turns across traffic | Stop signs | Busy streets |
+| Busy crossings (without a signal) | Left turns across traffic | Busy crossings (without a signal) |
+| Hills | Busy streets | Hills |
+| Turns | Busy crossings (without a signal) | Steps |
+| Highway on-ramps | Hills | Streets without sidewalks |
+| Drawbridges | Turns | |
+| Complex intersections (five or more streets) | Drawbridges | |
+| Narrow streets (parked on both sides) | Rough surfaces | |
 
 Each row is a standard `Picker` in the default menu style with a system `Label`:
-symbol (`light.beacon.max`, `octagon`, `arrow.turn.up.left`, `car.2.fill`,
-`mountain.2`, `arrow.triangle.turn.up.right.diamond`) and title on the left, the
-current value on the right, and a menu of **Avoid / Normal / Don't mind**. Layout
-at accessibility sizes is the system's. Changes recompute the comparison live
-behind the sheet.
+symbol and title on the left (a few add a second line, as Stops does: "Lights and stop signs"), the current value on the right, and a menu of
+**Avoid / Normal / Don't mind**. Layout at accessibility sizes is the system's.
+Changes recompute the comparison live behind the sheet.
 
-Footer: **Reset to defaults** (plain button, disabled when already default),
-then the note **"Times stay estimates."** as the section's plain footer. Done in the
-toolbar (`.confirmationAction`). No "safe", no scores.
+Footer: **Reset driving to defaults** (or cycling, walking; plain button, disabled
+when that mode is already default), then the note **"Times stay estimates."** as
+the section's plain footer. Close in the toolbar. No "safe", no scores.
+
+The route preview's button says "Calmer means: Custom" only for the mode being routed.
 
 ```
 ╭────────────────────────────╮
-│ Calmer means         Done  │
-│ Driving                    │
-│ 🚦 Traffic lights   Normal ⌃│
-│ 🛑 Stop signs        Avoid ⌃│
+│        Calmer means      ✕ │
+│ [ Drive | Cycle  |  Walk ] │
+│ ✋ Stops            Avoid ⌃│
+│    Lights and stop signs   │
+│ ↰ Left turns…      Normal ⌃│
 │ …                          │
-│ Reset to defaults          │
+│ Reset driving to defaults  │
 │ Times stay estimates.      │
 ```
 
