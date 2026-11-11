@@ -49,13 +49,14 @@ final class RouteGoldenTests: XCTestCase {
             out.append(("\(a.id)>\(b.id) \(mode.rawValue) \(budget) \(label)", RouteRequest(origin: a, destination: b, mode: mode, extraMinutes: budget, preferences: prefs)))
         }
         for (a, b) in short + long { for mode in TravelMode.allCases { for budget in [0, 5] { add(a, b, mode, budget) } } }
+        // Written as the options were first named; driving's lights and stop signs are carried over to Stops.
         let sets: [(String, RoutePreferences)] = [
             ("hills+lights avoid", .init([.hills: .avoid, .trafficLights: .avoid])),
             ("stops+turns dontMind", .init([.stopSigns: .dontMind, .turns: .dontMind, .busyCrossings: .dontMind])),
             ("streets+lefts avoid", .init([.busyStreets: .avoid, .unprotectedLefts: .avoid])),
         ]
         for (i, (a, b)) in (short.prefix(4) + long.prefix(1)).enumerated() {
-            for (m, mode) in TravelMode.allCases.enumerated() { let (label, prefs) = sets[(i + m) % sets.count]; add(a, b, mode, 5, prefs, label) }
+            for (m, mode) in TravelMode.allCases.enumerated() { let (label, prefs) = sets[(i + m) % sets.count]; add(a, b, mode, 5, prefs.upgraded(in: mode), label) }
         }
         return out
     }

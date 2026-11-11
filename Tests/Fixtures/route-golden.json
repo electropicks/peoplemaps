@@ -1946,7 +1946,7 @@
       "seconds" : 380.283017,
       "stress" : 428.1397
     },
-    "candidates" : 4,
+    "candidates" : 3,
     "fastest" : {
       "count" : 57,
       "edges" : "bc681b01b6e3db6a",
@@ -2014,13 +2014,13 @@
   },
   {
     "calmer" : {
-      "count" : 151,
-      "edges" : "b5a21018462fc0c9",
-      "meters" : 3948.09,
-      "seconds" : 531.355002,
-      "stress" : 220.8029
+      "count" : 155,
+      "edges" : "7ab741eb30ae74ba",
+      "meters" : 3952.85,
+      "seconds" : 484.452532,
+      "stress" : 188.3625
     },
-    "candidates" : 4,
+    "candidates" : 3,
     "fastest" : {
       "count" : 110,
       "edges" : "c90980dc89976a95",
@@ -2033,8 +2033,8 @@
       "1 fewer left turn across traffic without a signal",
       "1 fewer side-street shortcut",
       "1 fewer crossing of a busy street without a signal",
-      "Tradeoff: 2 more traffic signals",
-      "Tradeoff: 2 more all-way stops"
+      "Tradeoff: 2 more left turns at signals",
+      "Tradeoff: 1 more traffic signal"
     ]
   },
   {
@@ -2171,8 +2171,8 @@
       "3 fewer left turns across traffic without a signal",
       "1 fewer traffic signal",
       "3 fewer stop-and-go stops",
-      "Tradeoff: 1 more intersection of five or more streets",
-      "Tradeoff: 1 more highway merge"
+      "Tradeoff: 1 more all-way stop",
+      "Tradeoff: 1 more intersection of five or more streets"
     ]
   }
 ]
