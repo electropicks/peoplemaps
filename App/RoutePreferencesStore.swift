@@ -15,6 +15,16 @@ final class RoutePreferencesStore {
         for mode in TravelMode.allCases {
             if let data = defaults.data(forKey: Self.key(mode)), let value = try? JSONDecoder().decode(RoutePreferences.self, from: data) { loaded[mode] = value }
         }
+        // Choices saved before each mode had its own options are carried over once.
+        if defaults.integer(forKey: Self.versionKey) < Self.version {
+            for (mode, saved) in loaded {
+                let now = saved.upgraded(in: mode)
+                loaded[mode] = now
+                if now == RoutePreferences() { defaults.removeObject(forKey: Self.key(mode)) }
+                else if let data = try? JSONEncoder().encode(now) { defaults.set(data, forKey: Self.key(mode)) }
+            }
+            defaults.set(Self.version, forKey: Self.versionKey)
+        }
         all = loaded
     }
 
@@ -29,13 +39,14 @@ final class RoutePreferencesStore {
     }
 
     private static func key(_ mode: TravelMode) -> String { "routePreferences.\(mode.rawValue)" }
+    private static let versionKey = "routePreferences.version", version = 2
 
     /// UI tests get their own defaults, cleared at launch unless a test checks that something survives a relaunch.
     private static func defaultStore() -> UserDefaults {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("--ui-testing"), let store = UserDefaults(suiteName: "peoplemaps.uitests") {
-            if !arguments.contains("--keep-saved") { for mode in TravelMode.allCases { store.removeObject(forKey: key(mode)) } }
+            if !arguments.contains("--keep-saved") { for mode in TravelMode.allCases { store.removeObject(forKey: key(mode)) }; store.removeObject(forKey: versionKey) }
             return store
         }
         #endif
