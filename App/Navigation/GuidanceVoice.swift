@@ -1,5 +1,6 @@
 import AVFoundation
 import SwiftUI
+import TipKit
 import UIKit
 import PeoplemapsCore
 @preconcurrency import FerrostarCore
@@ -61,22 +62,19 @@ enum GuidanceVoice {
     }
 }
 
-/// One-time tip on the arrival card, never while driving.
-struct VoiceUpgradeTip: View {
-    @AppStorage("voiceTipDismissed", store: ExploreView.voiceStore) private var dismissed = false
-    private let suggest = GuidanceVoice.current().suggestUpgrade
+/// One-time tip on the arrival card, never while driving. Closing it is permanent (TipKit's datastore).
+struct VoiceUpgradeTip: Tip {
+    var title: Text { Text("For a more natural voice") }
+    var message: Text? { Text("Download an Enhanced or Premium voice in Settings › Accessibility › Spoken Content › Voices.") }
+    var image: Image? { Image(systemName: "waveform") }
 
-    var body: some View {
-        if suggest && !dismissed {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "waveform").foregroundStyle(.secondary).accessibilityHidden(true)
-                Text("For a more natural voice, download an Enhanced or Premium voice in Settings › Accessibility › Spoken Content › Voices.")
-                    .font(.footnote).fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
-                Button("Got it") { dismissed = true }.font(.footnote.weight(.semibold)).accessibilityIdentifier("voice-tip-dismiss")
-            }
-            .padding(12).background(.glassWell, in: RoundedRectangle(cornerRadius: 12))
-            .accessibilityElement(children: .contain).accessibilityIdentifier("voice-tip")
+    /// Shown only when a better voice could be downloaded, and never to someone who dismissed the tip before it moved to TipKit.
+    struct Card: View {
+        @AppStorage("voiceTipDismissed", store: ExploreView.voiceStore) private var dismissedBefore = false
+        private let suggest = GuidanceVoice.current().suggestUpgrade
+
+        var body: some View {
+            if suggest && !dismissedBefore { TipView(VoiceUpgradeTip()).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("voice-tip") }
         }
     }
 }

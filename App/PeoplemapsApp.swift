@@ -1,4 +1,5 @@
 import SwiftUI
+import TipKit
 import PeoplemapsCore
 
 /// The launch data, loaded off the selected region (`RegionSelection`) and rebuilt on Switch now.
@@ -63,6 +64,7 @@ struct PeoplemapsApp: App {
     init() {
         Self.isolateRegionsForUITests()
         AppEventHooks.start()
+        Self.configureTips()
         let data = AppData(), regions = RegionModel.make()
         regions.reload = { [weak data] in data?.reload() }
         _data = State(initialValue: data)
@@ -77,6 +79,13 @@ struct PeoplemapsApp: App {
         if !arguments.contains("--keep-regions") { try? FileManager.default.removeItem(at: folder) }
         RegionSelection.configure(root: folder)
         #endif
+    }
+    /// Tips show as soon as they apply. UI tests start with none dismissed, so each launch shows the same ones.
+    private static func configureTips() {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-testing") { try? Tips.resetDatastore() }
+        #endif
+        try? Tips.configure([.displayFrequency(.immediate)])
     }
     var body: some Scene {
         WindowGroup {
