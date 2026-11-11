@@ -40,14 +40,21 @@ struct SettingsHeader: View {
     }
 }
 
-/// A section footer in the same grey. One sentence, two at most; anything longer is a `SettingsNote` on a page.
+/// A section footer in the same grey, under the group it explains, as the system's Settings sets an explanation. A paragraph
+/// to a string; the root list keeps to one sentence, two at most.
 struct SettingsFooter: View {
-    let text: String
-    init(_ text: String) { self.text = text }
-    var body: some View { Text(text).font(.footnote).foregroundStyle(GuidanceOverlay.onGlass) }
+    let paragraphs: [String]
+    init(_ text: String) { paragraphs = [text] }
+    init(_ paragraphs: [String]) { self.paragraphs = paragraphs }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(paragraphs, id: \.self) { Text($0).font(.footnote).foregroundStyle(GuidanceOverlay.onGlass) }
+        }
+    }
 }
 
-/// A short heading over a paragraph: how every explanation in Settings is set, with a symbol when the heading is a travel mode.
+/// A short heading over a paragraph, one to a row. Only the log pages still use it, until their footers land (PR 73); new
+/// explanations are a `SettingsFooter`.
 struct SettingsNote: View {
     let title: String
     let text: String

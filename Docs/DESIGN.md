@@ -695,8 +695,8 @@ sentence, two at most, and every explanation is a page behind a row. Sections, i
    0.1.0 · 793bdf6", the version and, when the build was given one, its commit (`PM_BUILD_COMMIT`, empty by default,
    through `PMBuildCommit` in `App/Info.plist`; `Scripts/run-simulator.sh` passes it).
 
-**Pages.** The same list. An explanation is a `SettingsNote`: a `.body` semibold heading over a `.subheadline` paragraph,
-one to a row.
+**Pages.** The same list. An explanation is a section footer, as in the system's Settings: grey text under the group it
+is about, a paragraph each (`SettingsFooter`). No page sets a heading over a paragraph in a row.
 
 - **Usage log:** "Keep a usage log", "Exact places" while it is on, and "Kept on this phone" with the count; "Share usage
   log", "Send to PeopleMaps" and "Clear usage log" once there is a trip.
@@ -712,16 +712,18 @@ one to a row.
 - **Clear asks first.** The dialog hangs off a view of its own behind the page. On a list or section that holds a
   `ShareLink` it stops the share sheet presenting (PR 68).
 - **Saved reports:** tap one to add words or share it again, swipe to remove it.
-- **What calmer means:** one sentence, then Driving, Cycling and Walking, each a row with its mode symbol. Footer, kept
-  word for word: "These are transparent preferences, not safety ratings. Times and stress are estimates, with no live
-  traffic."
-- **Map data and coverage:** what stays on the phone; Sources ("Map data from" the date of the extract in use, read from
-  the search index, the OpenStreetMap ODbL link, USGS elevation, and the count of street and path segments); Coverage
-  and what the map doesn't know, ending "These routes haven't been checked on the road, so go by the signs in front of you."
-- **Acknowledgements:** OpenStreetMap, Overture, USGS, MapLibre and Ferrostar with their licences. Links in label colour
-  with `arrow.up.forward`.
+- **What calmer means:** one sentence, then Driving, Cycling and Walking, each a group of one row (a system `Label` with
+  its mode symbol) over a footer that says what it avoids. The last footer ends, word for word: "These are transparent
+  preferences, not safety ratings. Times and stress are estimates, with no live traffic."
+- **Map data and coverage:** Sources ("Map data from" the date of the extract in use, read from the search index, the
+  OpenStreetMap ODbL link, USGS elevation, and the count of street and path segments), with what stays on the phone as
+  its footer; Coverage, an "Area" row over a footer that says where the map stops and what the map doesn't
+  know, ending "These routes haven't been checked on the road, so go by the signs in front of you."
+- **Acknowledgements:** OpenStreetMap, Overture and USGS, each a group of one link row (its name, in label colour with
+  `arrow.up.forward`) over the credit it asks for; then Software, MapLibre and Ferrostar with the licence as the row's
+  value, leading to the licence text.
 
-**Type and colour.** Section headers are `.footnote` semibold. Headers, footers, row values and note paragraphs use
+**Type and colour.** Section headers are `.footnote` semibold. Headers, footers and row values use
 `GuidanceOverlay.onGlass`, since the list's own grey is about 3:1 on its background. The root has no row icons, so every
 row starts on one line. Nothing takes an accent: rows and buttons are label colour, the two destructive rows the system's
 red, switches `switchTint()`. The navigation bar is solid, in the list's background colour, so a row is cut off under the
