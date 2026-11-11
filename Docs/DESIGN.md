@@ -429,6 +429,10 @@ list. Each row:
   keyboard and the credit on a smaller phone or at larger text (9 November 2026).
   VoiceOver still hears the empty state first. The start and destination pickers do the
   same. Nothing from Apple is shown in the app.
+- The start and destination pickers (`App/PlacePicker.swift`) are a system modal: an inset-grouped
+  `List` in a `NavigationStack`, the system search field (`.searchable`, in the navigation bar
+  drawer, always shown), system `Section` headers (Favourites, Recents, Matches) and one list row
+  per place with `PlaceRow`'s content. Current location is the first row of the origin's list.
 - `scrollEdgeEffectStyle(.soft, for: .top)` under the pinned field.
 - **Before anything is typed** the sheet is never a blank page (9 November 2026): Recents, or on a fresh install the line
   "Search a place, an address or a street", then six shortcuts in two columns (`SearchShortcuts`): Coffee, Food,
