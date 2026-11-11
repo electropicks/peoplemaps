@@ -45,6 +45,7 @@ struct PlaceCard: View {
                     .accessibilityElement(children: .combine).accessibilityIdentifier("outside-coverage")
                 }
                 if let source = place.source { Text(source).font(.caption).foregroundStyle(GuidanceOverlay.onGlass).accessibilityIdentifier("place-source") }
+                if model.sharedMatchID == place.id { Text("Matched from a shared link").font(.caption).foregroundStyle(GuidanceOverlay.onGlass).accessibilityIdentifier("place-shared-match") }
             }
             .dynamicTypeSize(...DynamicTypeSize.accessibility3)
         }

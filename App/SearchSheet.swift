@@ -15,7 +15,9 @@ struct SearchSheet: View {
             }.padding(.horizontal, inset).padding(.top, landscape ? Layout.cardInset : 20).padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    if model.query.isEmpty {
+                    if model.readingLink {
+                        ProgressView("Reading link\u{2026}").frame(maxWidth: .infinity).padding(.top, 24).accessibilityIdentifier("reading-link")
+                    } else if model.query.isEmpty {
                         // Never a blank page: what to type or the last places, then the searches people make most.
                         if !model.saved.recents.isEmpty { resultGroup("Recents", model.saved.recents, prefix: "recent-") }
                         else {
@@ -33,11 +35,13 @@ struct SearchSheet: View {
                         resultGroup("Top match", Array(results.prefix(1)))
                         if results.count > 1 { resultGroup("Other matches", Array(results.dropFirst())) }
                     }
+                    if let pin = model.shared?.pin, !model.readingLink { resultGroup("Or use the shared location", [pin], prefix: "shared-pin-") }
                 }.padding(.horizontal, inset).padding(.bottom, 16)
             }
             .scrollDismissesKeyboard(.interactively).scrollBounceBehavior(.basedOnSize)
             .scrollEdgeEffectStyle(.soft, for: .top)
         }
+        .onChange(of: model.query) { old, text in model.searchChanged(from: old, to: text) }
     }
 
     private func resultGroup(_ title: String, _ places: [Place], prefix: String = "result-") -> some View {

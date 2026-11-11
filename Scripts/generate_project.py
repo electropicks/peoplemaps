@@ -23,13 +23,16 @@ def files(folder):
     group(root/folder)
     return builds,resources
 app_sources,app_resources=files('App'); test_sources,test_resources=files('UITests')
+# The Share Extension (Share/): PeopleMaps in the share sheet. It only hands the shared link to the app, so it links nothing of ours.
+share_sources,share_resources=files('Share')
 # The region manifest ships in the app bundle, so the Map area section knows each region's release, files, sizes and checksums (Core/RegionManifest.swift).
 regions_manifest=obj('Data/regions.json','isa = PBXFileReference; lastKnownFileType = text.json; path = "Data/regions.json"; sourceTree = "<group>";')
 app_resources.append(obj('build:Data/regions.json',f'isa = PBXBuildFile; fileRef = {regions_manifest};'))
 app_product=obj('app-product','isa = PBXFileReference; explicitFileType = wrapper.application; path = Peoplemaps.app; sourceTree = BUILT_PRODUCTS_DIR;')
 test_product=obj('test-product','isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = PeoplemapsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR;')
-obj('products',f'isa = PBXGroup; children = ({app_product},{test_product}); name = Products; sourceTree = "<group>";')
-obj('root',f'isa = PBXGroup; children = ({ref("App")},{ref("UITests")},{regions_manifest},{ref("products")}); sourceTree = "<group>";')
+share_product=obj('share-product','isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; path = PeoplemapsShare.appex; sourceTree = BUILT_PRODUCTS_DIR;')
+obj('products',f'isa = PBXGroup; children = ({app_product},{test_product},{share_product}); name = Products; sourceTree = "<group>";')
+obj('root',f'isa = PBXGroup; children = ({ref("App")},{ref("Share")},{ref("UITests")},{regions_manifest},{ref("products")}); sourceTree = "<group>";')
 obj('core-package','isa = XCLocalSwiftPackageReference; relativePath = .;')
 obj('map-package','isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/maplibre/maplibre-gl-native-distribution"; requirement = {kind = exactVersion; version = 6.31.0;};')
 obj('ferrostar-package','isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/stadiamaps/ferrostar"; requirement = {kind = exactVersion; version = 0.59.0;};')
@@ -39,7 +42,8 @@ obj('ferrostar-product',f'isa = XCSwiftPackageProductDependency; package = {ref(
 obj('ferrostar-link',f'isa = PBXBuildFile; productRef = {ref("ferrostar-product")};')
 obj('core-link',f'isa = PBXBuildFile; productRef = {ref("core-product")};')
 obj('map-link',f'isa = PBXBuildFile; productRef = {ref("map-product")};')
-for name,sources,resources in [('app',app_sources,app_resources),('test',test_sources,test_resources)]:
+VERSION={'MARKETING_VERSION':'0.1.0','CURRENT_PROJECT_VERSION':'1'}
+for name,sources,resources in [('app',app_sources,app_resources),('test',test_sources,test_resources),('share',share_sources,share_resources)]:
     obj(name+'-sources',f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ({",".join(sources)}); runOnlyForDeploymentPostprocessing = 0;')
     obj(name+'-resources',f'isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = ({",".join(resources)}); runOnlyForDeploymentPostprocessing = 0;')
     frameworks=','.join([ref('core-link'),ref('map-link'),ref('ferrostar-link')]) if name=='app' else ''
@@ -50,9 +54,11 @@ for name,sources,resources in [('app',app_sources,app_resources),('test',test_so
                   'ENABLE_USER_SCRIPT_SANDBOXING':'NO','ONLY_ACTIVE_ARCH':'YES' if config=='Debug' else 'NO',
                   'SWIFT_OPTIMIZATION_LEVEL':'"-Onone"' if config=='Debug' else '"-O"',
                   'SWIFT_ACTIVE_COMPILATION_CONDITIONS':'"DEBUG $(inherited)"' if config=='Debug' else '"$(inherited)"',
-                  'PRODUCT_BUNDLE_IDENTIFIER':'electrocorp.peoplemaps' if name=='app' else 'electrocorp.peoplemaps.uitests',
+                  'PRODUCT_BUNDLE_IDENTIFIER':{'app':'electrocorp.peoplemaps','test':'electrocorp.peoplemaps.uitests','share':'electrocorp.peoplemaps.share'}[name],
                   'LD_RUNPATH_SEARCH_PATHS':'"$(inherited) @executable_path/Frameworks"'}
-        if name=='app':settings.update({'INFOPLIST_FILE':'App/Info.plist','CODE_SIGN_ENTITLEMENTS':'App/Peoplemaps.entitlements','INFOPLIST_KEY_UIApplicationSceneManifest_Generation':'YES','INFOPLIST_KEY_UISupportedInterfaceOrientations':'"UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"','INFOPLIST_KEY_CFBundleDisplayName':'Peoplemaps','INFOPLIST_KEY_ITSAppUsesNonExemptEncryption':'NO','INFOPLIST_KEY_NSLocationWhenInUseUsageDescription':'"PeopleMaps uses your location to start routes and time estimates from where you are, and while guiding you, to show where you are and announce the next turn."','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME':'AccentColor','MARKETING_VERSION':'0.1.0','CURRENT_PROJECT_VERSION':'1','PM_BUILD_COMMIT':'""'})
+        if name=='app':settings.update({'INFOPLIST_FILE':'App/Info.plist','CODE_SIGN_ENTITLEMENTS':'App/Peoplemaps.entitlements','INFOPLIST_KEY_UIApplicationSceneManifest_Generation':'YES','INFOPLIST_KEY_UISupportedInterfaceOrientations':'"UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"','INFOPLIST_KEY_CFBundleDisplayName':'Peoplemaps','INFOPLIST_KEY_ITSAppUsesNonExemptEncryption':'NO','INFOPLIST_KEY_NSLocationWhenInUseUsageDescription':'"PeopleMaps uses your location to start routes and time estimates from where you are, and while guiding you, to show where you are and announce the next turn."','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME':'AccentColor','PM_BUILD_COMMIT':'""',**VERSION})
+        # An extension's version must match its app's.
+        elif name=='share':settings.update({'INFOPLIST_FILE':'Share/Info.plist','INFOPLIST_KEY_CFBundleDisplayName':'PeopleMaps','SKIP_INSTALL':'YES','LD_RUNPATH_SEARCH_PATHS':'"$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"',**VERSION})
         else:settings['TEST_TARGET_NAME']='Peoplemaps'
         obj(name+'-'+config,f'isa = XCBuildConfiguration; name = {config}; buildSettings = {{'+''.join(f'{k} = {v};' for k,v in settings.items())+'};')
     obj(name+'-config',f'isa = XCConfigurationList; buildConfigurations = ({ref(name+"-Debug")},{ref(name+"-Release")}); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')
@@ -67,12 +73,16 @@ else echo "seattle-all not fetched (Scripts/fetch_data seattle-all): bundling th
 obj('app-region','isa = PBXShellScriptBuildPhase; buildActionMask = 2147483647; files = (); inputPaths = (); name = "Bundle fetched region"; outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "'+REGION_SCRIPT.replace('\\','\\\\').replace('"','\\"').replace('\n','\\n')+'"; alwaysOutOfDate = 1;')
 obj('proxy',f'isa = PBXContainerItemProxy; containerPortal = {ref("project")}; proxyType = 1; remoteGlobalIDString = {ref("app-target")}; remoteInfo = Peoplemaps;')
 obj('test-dependency',f'isa = PBXTargetDependency; target = {ref("app-target")}; targetProxy = {ref("proxy")};')
-for name,title,product,type_ in [('app','Peoplemaps',app_product,'com.apple.product-type.application'),('test','PeoplemapsUITests',test_product,'com.apple.product-type.bundle.ui-testing')]:
-    obj(name+'-target',f'isa = PBXNativeTarget; buildConfigurationList = {ref(name+"-config")}; buildPhases = ({ref(name+"-sources")},{ref(name+"-frameworks")},{ref(name+"-resources")}{","+ref("app-region") if name=="app" else ""}); buildRules = (); dependencies = ({ref("test-dependency") if name=="test" else ""}); name = {title}; productName = {title}; productReference = {product}; productType = "{type_}"; packageProductDependencies = ({",".join([ref("core-product"),ref("map-product"),ref("ferrostar-product")]) if name=="app" else ""});')
+obj('share-proxy',f'isa = PBXContainerItemProxy; containerPortal = {ref("project")}; proxyType = 1; remoteGlobalIDString = {ref("share-target")}; remoteInfo = PeoplemapsShare;')
+obj('share-dependency',f'isa = PBXTargetDependency; target = {ref("share-target")}; targetProxy = {ref("share-proxy")};')
+obj('share-embed-file',f'isa = PBXBuildFile; fileRef = {share_product}; settings = {{ATTRIBUTES = (RemoveHeadersOnCopy,);}};')
+obj('app-embed',f'isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = ""; dstSubfolderSpec = 13; files = ({ref("share-embed-file")}); name = "Embed Foundation Extensions"; runOnlyForDeploymentPostprocessing = 0;')
+for name,title,product,type_ in [('app','Peoplemaps',app_product,'com.apple.product-type.application'),('test','PeoplemapsUITests',test_product,'com.apple.product-type.bundle.ui-testing'),('share','PeoplemapsShare',share_product,'com.apple.product-type.app-extension')]:
+    obj(name+'-target',f'isa = PBXNativeTarget; buildConfigurationList = {ref(name+"-config")}; buildPhases = ({ref(name+"-sources")},{ref(name+"-frameworks")},{ref(name+"-resources")}{","+ref("app-region")+","+ref("app-embed") if name=="app" else ""}); buildRules = (); dependencies = ({ {"test":ref("test-dependency"),"app":ref("share-dependency")}.get(name,"") }); name = {title}; productName = {title}; productReference = {product}; productType = "{type_}"; packageProductDependencies = ({",".join([ref("core-product"),ref("map-product"),ref("ferrostar-product")]) if name=="app" else ""});')
 for config in ['Debug','Release']:
     obj('project-'+config,f'isa = XCBuildConfiguration; name = {config}; buildSettings = {{CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; ALWAYS_SEARCH_USER_PATHS = NO;}};')
 obj('project-config',f'isa = XCConfigurationList; buildConfigurations = ({ref("project-Debug")},{ref("project-Release")}); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')
-obj('project',f'isa = PBXProject; attributes = {{LastUpgradeCheck = 2700; TargetAttributes = {{{ref("test-target")} = {{TestTargetID = {ref("app-target")};}};}};}}; buildConfigurationList = {ref("project-config")}; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en,Base); mainGroup = {ref("root")}; productRefGroup = {ref("products")}; projectDirPath = ""; projectRoot = ""; targets = ({ref("app-target")},{ref("test-target")}); packageReferences = ({ref("core-package")},{ref("map-package")},{ref("ferrostar-package")});')
+obj('project',f'isa = PBXProject; attributes = {{LastUpgradeCheck = 2700; TargetAttributes = {{{ref("test-target")} = {{TestTargetID = {ref("app-target")};}};}};}}; buildConfigurationList = {ref("project-config")}; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en,Base); mainGroup = {ref("root")}; productRefGroup = {ref("products")}; projectDirPath = ""; projectRoot = ""; targets = ({ref("app-target")},{ref("test-target")},{ref("share-target")}); packageReferences = ({ref("core-package")},{ref("map-package")},{ref("ferrostar-package")});')
 (project/'project.pbxproj').write_text('// !$*UTF8*$!\n{ archiveVersion = 1; classes = {}; objectVersion = 56; objects = {\n'+'\n'.join(objects)+f'\n}}; rootObject = {ref("project")}; }}\n')
 schemes=project/'xcshareddata/xcschemes';schemes.mkdir(parents=True,exist_ok=True)
 def buildable(name,title):return f'<BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="{ref(name+"-target")}" BuildableName="{title}{".app" if name=="app" else ".xctest"}" BlueprintName="{title}" ReferencedContainer="container:Peoplemaps.xcodeproj"/>'
