@@ -417,13 +417,17 @@ struct GuidanceOverlay: View {
 
     private var arrivalSheet: some View {
         // Past the available height (large text) the card scrolls and Done stays pinned under it.
-        ViewThatFits(in: .vertical) {
-            arrivalContent
-            VStack(spacing: 12) {
-                ScrollView { arrivalBody(done: false).accessibilityElement(children: .contain).accessibilityIdentifier("arrival-card") }
-                    .scrollBounceBehavior(.basedOnSize)
-                doneButton
+        // The tip sits outside the choice: TipKit shows it a moment after the card is laid out, and it must not change which form fits.
+        VStack(spacing: 16) {
+            ViewThatFits(in: .vertical) {
+                arrivalContent
+                VStack(spacing: 12) {
+                    ScrollView { arrivalBody(done: false).accessibilityElement(children: .contain).accessibilityIdentifier("arrival-card") }
+                        .scrollBounceBehavior(.basedOnSize)
+                    doneButton
+                }
             }
+            VoiceUpgradeTip.Card()
         }
         .padding(16)
         .floatingSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous), veil: .light)
@@ -482,7 +486,6 @@ struct GuidanceOverlay: View {
             }
             if done { doneButton }
             Text("Times are estimates. No live traffic.").font(.footnote).foregroundStyle(Self.onGlass).padding(.horizontal, 4)
-            VoiceUpgradeTip()
         }
     }
 
