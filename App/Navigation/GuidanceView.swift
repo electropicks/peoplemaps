@@ -324,34 +324,26 @@ struct GuidanceOverlay: View {
 
     // MARK: Map buttons
 
-    /// Mute and the report flag in one glass capsule (vertical in landscape), 44 pt plain buttons with a divider.
+    /// Mute and the report flag: two system glass buttons side by side (stacked in landscape), in one container so their glass blends.
     private var mapButtons: some View {
-        let layout = landscape ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
-        return layout {
-            muteButton
-            mapDivider
-            markButton
+        let layout = landscape ? AnyLayout(VStackLayout(spacing: 8)) : AnyLayout(HStackLayout(spacing: 8))
+        return GlassEffectContainer(spacing: 8) {
+            layout {
+                muteButton
+                markButton
+            }
         }
-        .floatingSurface(in: Capsule(), interactive: true)
-    }
-
-    private var mapDivider: some View {
-        Divider().frame(width: landscape ? 24 : nil, height: landscape ? nil : 24)
-    }
-
-    private func mapButton(_ action: @escaping () -> Void, @ViewBuilder label: () -> some View) -> some View {
-        Button(action: action) { label().font(.system(size: 19)).frame(width: 44, height: 44).contentShape(Rectangle()) }
-            .buttonStyle(.plain).foregroundStyle(.primary)
     }
 
     private var muteButton: some View {
-        mapButton({ withAnimation(Motion.content(reduceMotion)) { muted.toggle() } }) {
-            Image(systemName: muted ? "speaker.slash.fill" : "speaker.wave.2.fill").contentTransition(.symbolEffect(.replace))
+        Button { withAnimation(Motion.content(reduceMotion)) { muted.toggle() } } label: {
+            Image(systemName: muted ? "speaker.slash.fill" : "speaker.wave.2.fill").contentTransition(.symbolEffect(.replace)).mapGlyph()
         }
+        .mapGlassButton()
         .accessibilityLabel(muted ? "Unmute voice" : "Mute voice").accessibilityIdentifier("guidance-mute")
     }
 
-    /// The one camera button, alone on its own glass in a bottom corner: clear of the turn banner and the recording pill at the
+    /// The one camera button, a system glass button alone in a bottom corner: clear of the turn banner and the recording pill at the
     /// top, and beside the attribution above the trip bar. It shows the state the map is in and a tap moves to the next:
     /// travel direction, compass direction, whole route. After a free look a tap returns to the state before the pan.
     private var cameraButton: some View {
@@ -361,12 +353,9 @@ struct GuidanceOverlay: View {
             DriveLogger.event("camera", ["mode": .string(Self.cameraName(camera.shown))])
             withAnimation(Motion.content(reduceMotion)) { camera.cycle() }
         } label: {
-            Image(systemName: symbol).font(.system(size: 21)).foregroundStyle(.primary)
-                .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
-                .frame(width: 52, height: 52).contentShape(Circle())
+            Image(systemName: symbol).contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace)).mapGlyph()
         }
-        .buttonStyle(.plain)
-        .floatingSurface(in: Circle(), interactive: true)
+        .mapGlassButton()
         .accessibilityLabel(Self.cameraLabel(state))
         .accessibilityHint(camera.mode == .free ? "Follows your position again" : Self.cameraHint(state))
         .accessibilityValue(Self.exposesArrow ? symbol : "")
@@ -409,12 +398,9 @@ struct GuidanceOverlay: View {
     private var markButton: some View {
         let marked = reports.justMarked
         return Button { reports.mark(navigator) } label: {
-            Group {
-                if marked { Label("Marked", systemImage: "checkmark").font(.body.weight(.semibold)).padding(.horizontal, 12).frame(minWidth: 44, minHeight: 44) }
-                else { Image(systemName: "flag").font(.system(size: 19)).frame(width: 44, height: 44) }
-            }.contentShape(Rectangle())
+            if marked { Label("Marked", systemImage: "checkmark").fontWeight(.semibold) } else { Image(systemName: "flag").mapGlyph() }
         }
-        .buttonStyle(.plain).foregroundStyle(.primary)
+        .mapGlassButton(shape: marked ? .capsule : .circle)
         .animation(Motion.content(reduceMotion), value: marked)
         .accessibilityLabel(marked ? "Marked" : "Mark this moment").accessibilityHint("Saves where you are on this phone, to report later")
         .accessibilityIdentifier("mark-moment")
@@ -457,7 +443,7 @@ struct GuidanceOverlay: View {
         let summary = "\(NavigationFormat.distance(navigator.tripMeters)) · \(minutes) min · \(navigator.calmerRoute ? "Calmer route" : "Fastest route")"
         return VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 14) {
-                Image(systemName: "checkmark").font(.system(size: 22, weight: .bold)).foregroundStyle(.primary)
+                Image(systemName: "checkmark").font(.title2.bold()).foregroundStyle(.primary)
                     .frame(width: 48, height: 48).background(.glassWell, in: Circle())
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
@@ -523,4 +509,24 @@ struct GuidanceOverlay: View {
     static let endRed = Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(red: 1, green: 0.5, blue: 0.47, alpha: 1) : UIColor(red: 0.69, green: 0.07, blue: 0.09, alpha: 1) })
 
     static func symbol(_ maneuver: Maneuver) -> String { maneuver.symbolName }
+}
+
+/// A control floating on the map: the system's glass button at the large size, in the app's glass variant and the label colour.
+/// With Reduce Transparency or Increase Contrast the system turns `.clear` glass dark, under a dark symbol in light mode, so those take `.regular`.
+private struct MapGlassButton: ViewModifier {
+    let shape: ButtonBorderShape
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var contrast
+
+    func body(content: Content) -> some View {
+        let plain = reduceTransparency || GlassFlags.reduceTransparency || contrast == .increased
+        content.buttonStyle(.glass(plain ? .regular : GlassFlags.variant)).buttonBorderShape(shape).controlSize(.large).imageScale(.large).foregroundStyle(.primary)
+    }
+}
+
+private extension View {
+    func mapGlassButton(shape: ButtonBorderShape = .circle) -> some View { modifier(MapGlassButton(shape: shape)) }
+
+    /// Symbols differ in width, and a round button takes its size from its label: one least box keeps the map buttons the same size.
+    func mapGlyph() -> some View { frame(minWidth: 20, minHeight: 20) }
 }
