@@ -88,5 +88,24 @@ final class SharedLinkMatchTests: XCTestCase {
         XCTAssertEqual(total, 4, "three hops at most")
     }
 
+    /// What `https://maps.apple/p/U8rE9v8n8iVZjr` (a public sample from Apple's developer forums) redirected to on 10 Nov 2026.
+    static let appleParkExpanded = "https://maps.apple.com/place?address=Apple%20Inc.,%201%20Apple%20Park%20Way,%20Cupertino,%20CA%2095014,%20United%20States&coordinate=37.334859,-122.009040&name=Apple%20Park&place-id=I7C250D2CDCB364A&map=h"
+
+    func testARealAppleShortLinkReadsAndFallsOutsideTheMap() async {
+        let found = await SharedLinkExpander { _ in URL(string: Self.appleParkExpanded) }.expand(URL(string: "https://maps.apple/p/U8rE9v8n8iVZjr")!)
+        let stop = SharedStop(name: "Apple Park", address: "Apple Inc., 1 Apple Park Way, Cupertino, CA 95014, United States", coordinate: Coordinate(lat: 37.334859, lon: -122.00904))
+        XCTAssertEqual(found, .place(stop))
+        XCTAssertEqual(SearchIndex.streetLine(stop.address!), "1 Apple Park Way", "the business name can come first")
+        XCTAssertEqual(index.match(stop, covers: SearchTests.graph.coverage.contains), .outside)
+    }
+
+    /// Opt-in, since it contacts Apple: `PEOPLEMAPS_LIVE_LINKS=1 swift test --filter Live`.
+    func testLiveAppleShortLinkStillRedirectsToAPlace() async throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["PEOPLEMAPS_LIVE_LINKS"] == "1", "set PEOPLEMAPS_LIVE_LINKS=1 to contact maps.apple")
+        guard case let .place(stop) = await SharedLinkExpander().expand(URL(string: "https://maps.apple/p/U8rE9v8n8iVZjr")!) else { return XCTFail("no place") }
+        XCTAssertEqual(stop.name, "Apple Park")
+        XCTAssertNotNil(stop.coordinate)
+    }
+
     private actor Asked { var urls: [URL] = []; func add(_ url: URL) { urls.append(url) } }
 }
