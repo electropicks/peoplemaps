@@ -284,6 +284,29 @@ final class ReportsUITests: PeoplemapsUITestCase {
         XCTAssertFalse(clear.exists, "Nothing left to clear")
         XCTAssertFalse(app.buttons["\(log)-share"].exists, "or to share")
     }
+    /// Send to PeopleMaps asks first, naming what goes and that it has exact places. The simulator has no App Attest, so the send
+    /// itself fails here and says so under the section; the upload is covered by `LogUploadTests` and the Worker's tests.
+    @MainActor func testSendToPeopleMapsAsksFirstThenSaysWhyItFailed() {
+        let app = shareLogsAfterATrip("drive-log-share")
+        let sheet = app.otherElements["ActivityListView"]
+        if app.buttons["Close"].exists { app.buttons["Close"].tap() } else {
+            let top = sheet.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02))
+            top.press(forDuration: 0.05, thenDragTo: top.withOffset(CGVector(dx: 0, dy: 700)))
+        }
+        let send = app.buttons["drive-log-send"]
+        scrollTo(send, in: app)
+        XCTAssertTrue(send.waitForExistence(timeout: 10), app.debugDescription)
+        send.tap()
+        let confirm = app.buttons["Send"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10), "Send asks first\n\(app.debugDescription)")
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'exact places'")).firstMatch.exists, "and says the files have exact places")
+        capture("send-to-peoplemaps-confirm")
+        confirm.tap()
+        let why = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'can’t send logs'")).firstMatch
+        XCTAssertTrue(why.waitForExistence(timeout: 15), app.debugDescription)
+        capture("send-to-peoplemaps-failed")
+    }
+
     @MainActor func testUsageLogClearsAfterSharing() { clearAfterSharing("usage-log") }
     @MainActor func testDetailedLogClearsAfterSharing() { clearAfterSharing("drive-log") }
 

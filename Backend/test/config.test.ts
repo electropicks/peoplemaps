@@ -13,9 +13,9 @@ describe("wrangler.jsonc", () => {
     expect(config.preview_urls).toBe(false);
     expect(config.observability).toEqual({ enabled: false, logs: { invocation_logs: false } });
   });
-  it("has the five rate limits under the ratelimits key, and no unsafe bindings", () => {
+  it("has the six rate limits under the ratelimits key, and no unsafe bindings", () => {
     expect(config.ratelimits.map((b: any) => [b.name, b.simple.limit, b.simple.period])).toEqual([
-      ["RL_AUTH", 10, 60], ["RL_INSTALLS", 2, 60], ["RL_REPORTS", 10, 60], ["RL_ATTEST", 10, 60], ["RL_DOWNLOADS", 60, 60],
+      ["RL_AUTH", 10, 60], ["RL_INSTALLS", 2, 60], ["RL_REPORTS", 10, 60], ["RL_ATTEST", 10, 60], ["RL_DOWNLOADS", 60, 60], ["RL_LOGS", 30, 60],
     ]);
     expect(new Set(config.ratelimits.map((b: any) => b.namespace_id)).size).toBe(config.ratelimits.length);
     expect(config.unsafe).toBeUndefined();
@@ -27,7 +27,7 @@ describe("wrangler.jsonc", () => {
     expect(text).not.toMatch(/DOWNLOAD_TOKEN_SECRET"\s*:/);
   });
   it("binds the data bucket as DATA and accepts production App Attest keys only (4.5)", () => {
-    expect(config.r2_buckets).toEqual([{ binding: "DATA", bucket_name: "peoplemaps-data" }]);
+    expect(config.r2_buckets).toEqual([{ binding: "DATA", bucket_name: "peoplemaps-data" }, { binding: "LOGS", bucket_name: "peoplemaps-logs" }]);
     expect(config.vars.ATTEST_ENV).toBe("production");
     // APP_ID holds the team ID, so it is a secret, never committed (Backend/README.md).
     expect(config.vars.APP_ID).toBeUndefined();
