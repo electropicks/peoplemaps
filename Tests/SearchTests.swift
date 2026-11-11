@@ -126,6 +126,35 @@ final class SearchTests: XCTestCase {
         XCTAssertFalse(near.contains { $0.name.hasPrefix("3405 ") })
         XCTAssertTrue(near[0].name.hasSuffix("Fremont Avenue North"), near[0].name)
     }
+    func testPastedPostalAddress() throws {
+        // As Apple Maps and Google Maps copy it: the unit mid-way, then city, state, ZIP and country, none of them indexed.
+        let pasted = try XCTUnwrap(index.search("400 E Pine St\nSte 100\nSeattle, WA 98122\nUnited States").first)
+        XCTAssertEqual(pasted.name, "400 East Pine Street, Unit 100")
+        for query in ["400 E Pine St, Seattle, WA 98122", "400 E Pine St Seattle WA 98122-2316 USA", "400 East Pine Street, Seattle, Washington",
+                      "400 e pine st seattle", "400 E Pine St, Seattle, WA 98122, United States of America"] {
+            XCTAssertEqual(index.search(query).first?.name, "400 East Pine Street", query)
+        }
+        XCTAssertEqual(index.search("400 E Pine St #100, Seattle, WA").first?.name, "400 East Pine Street, Unit 100")
+        // A name the index doesn't have, in front of an address it does.
+        XCTAssertEqual(index.search("Kelley-Ross Pharmacy, 400 E Pine St Ste 100, Seattle, WA 98122").first?.name, "400 East Pine Street, Unit 100")
+        // A typo in the street, and a number that isn't mapped: the nearest on that street, as when typed alone.
+        XCTAssertEqual(index.search("400 E Pien St, Seattle, WA 98122").first?.name, "400 East Pine Street")
+        XCTAssertEqual(index.search("3329 Fremont Ave N, Seattle, WA 98103").map(\.name).prefix(3), index.search("3329 Fremont Ave N").map(\.name).prefix(3))
+        // No address in it, or no such street: still nothing, never a guess from the number alone.
+        XCTAssertTrue(index.search("Kelley-Ross Pharmacy Seattle WA 98122").isEmpty)
+        XCTAssertTrue(index.search("400 Zzyzx Qqqqx Rd, Seattle, WA 98122").isEmpty)
+    }
+    func testAddressReadingsAndUnits() {
+        XCTAssertEqual(SearchIndex.addressReadings(["400", "e", "pine", "st", "seattle", "wa", "98122", "united", "states"]),
+                       [["400", "e", "pine", "st", "seattle"], ["400", "e", "pine", "st"], ["400", "e", "pine"]])
+        XCTAssertEqual(SearchIndex.addressReadings(["cafe", "12", "main", "st", "98122", "2316"]), [["12", "main", "st"]])
+        XCTAssertTrue(SearchIndex.addressReadings(["gas", "works", "park", "seattle"]).isEmpty)
+        XCTAssertEqual(SearchIndex.splitUnit("400 E Pine St\nSte 100\nSeattle", anywhere: true).1, "100")
+        XCTAssertEqual(SearchIndex.splitUnit("400 E Pine St Apt B Seattle", anywhere: true).1, "B")
+        XCTAssertNil(SearchIndex.splitUnit("12 Suite Life Rd Seattle", anywhere: true).1)
+        XCTAssertNil(SearchIndex.splitUnit("1900 Stewart").1, "a street that starts like \"ste\" is not a unit")
+        XCTAssertEqual(SearchIndex.splitUnit("3400 Fremont Ave N unit2").1, "2")
+    }
     func testRankingTextThenCategoryThenDistance() throws {
         // Parks and landmarks outrank shops and cafés for an equal text match.
         let fremont = index.search("fremont", near: Self.fremont)
