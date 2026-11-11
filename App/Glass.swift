@@ -114,24 +114,15 @@ extension View {
         modifier(FloatingSurface(shape: shape, interactive: interactive, veil: veil, legible: legible))
     }
 
-    /// The style of a primary action (Start, Directions, Done): a solid `primaryActionFill` button with dark text. Every one sits on a
-    /// glass panel, where a glass button would be glass on glass (Docs/DESIGN.md, principle 3).
-    func primaryAction(shape: ButtonBorderShape = .capsule) -> some View { modifier(PrimaryAction(shape: shape)) }
-
-    /// The track of a switch when on. The app's tint is `.primary`, which is white in dark mode: a white track under a white knob,
-    /// with nothing to tell on from off. Dusk blue (`switchOn`, a deeper value than the map's in dark) is the one hue a control may take (Docs/DESIGN.md, principle 5).
-    func switchTint() -> some View { tint(Color(uiColor: .switchOn)) }
-}
-
-private struct PrimaryAction: ViewModifier {
-    let shape: ButtonBorderShape
-    @Environment(\.solidSurface) private var solid
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    /// White on a solid white panel wouldn't show.
-    private var fill: Color { solid || reduceTransparency || GlassFlags.reduceTransparency ? .primaryActionSolidFill : .primaryActionFill }
-    func body(content: Content) -> some View {
-        content.buttonStyle(.borderedProminent).buttonBorderShape(shape).tint(fill).controlSize(.large)
+    /// The style of a primary action (Start, Directions, Done): the system's prominent glass button, tinted `primaryActionFill`, with
+    /// white words. The system makes it opaque where glass can't go: under Reduce Transparency and on an opaque sheet (Docs/DESIGN.md, principle 6).
+    func primaryAction(shape: ButtonBorderShape = .capsule) -> some View {
+        buttonStyle(.glassProminent).buttonBorderShape(shape).tint(.primaryActionFill).controlSize(.large)
     }
+
+    /// The track of a switch when on. Sheets whose tint is `.primary`, which is white in dark mode, would draw a white track under a
+    /// white knob, with nothing to tell on from off. Dusk blue (`switchOn`, a deeper value than the map's in dark) is the one hue a control may take (Docs/DESIGN.md, principle 5).
+    func switchTint() -> some View { tint(Color(uiColor: .switchOn)) }
 }
 
 /// A secondary action on a glass panel ("Why this route", "Calmer means"): its words in a quiet well, since glass doesn't go on
@@ -165,8 +156,6 @@ struct Hairline: View {
 }
 
 extension EnvironmentValues {
-    /// The panel is solid here, at the large stop: no glass behind the content.
-    @Entry var solidSurface = false
     /// The content is straight on a glass panel: no opaque groups, and secondary text uses `GuidanceOverlay.onGlass`.
     @Entry var onGlassPanel = false
 }

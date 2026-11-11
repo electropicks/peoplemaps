@@ -40,8 +40,6 @@ struct GuidanceOverlay: View {
         .onGeometryChange(for: CGSize.self) { $0.size } action: { screen = $0; report() }
         .onChange(of: topEdge) { report() }
         .onChange(of: navigator.hasArrived) { report() }
-        // The arrival card is near-opaque, so Done takes the solid fill: the glass fill is white and vanishes on it.
-        .environment(\.solidSurface, navigator.hasArrived)
         .onChange(of: bottomEdge) { report() }
         .onChange(of: leadingEdge) { report() }
         .onChange(of: landscape) { report() }

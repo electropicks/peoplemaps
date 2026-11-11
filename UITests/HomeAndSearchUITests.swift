@@ -3,18 +3,22 @@ import CoreLocation
 
 final class HomeAndSearchUITests: PeoplemapsUITestCase {
     /// At rest home is only its floating controls; More raises the sheet, and pulling that down leaves the controls again.
-    @MainActor func testHomeRestsAsFloatingControlsAndRaisesToASheet() {
+    @MainActor func testHomeRestsAtTheSearchFieldAndRaisesToTheRest() {
         let app = launchHome()
         XCTAssertFalse(app.buttons["settings"].exists, "The rest of home waits for the sheet")
         app.buttons["home-more"].tap()
         XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["home-more"].exists)
+        // The sheet is as tall as what it holds: on a fresh install the field, its hint and Settings, at the foot of the screen.
+        let screen = app.windows.firstMatch.frame.height
+        XCTAssertGreaterThan(app.buttons["search-field"].frame.minY, screen * 0.6, "A fresh install\u{2019}s sheet stops short of half the screen")
+        XCTAssertGreaterThan(app.buttons["settings"].frame.maxY, screen * 0.85, "No empty panel under the last row")
         capture("home-raised", app: app)
         let start = app.buttons["search-field"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 500)))
         XCTAssertTrue(app.buttons["home-more"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["settings"].exists)
-        // Dragging the capsule raises it too.
+        // Dragging the field raises it too.
         raiseHome(app)
         XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
     }
@@ -24,8 +28,10 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         let app = launchHome(location: Self.atKerryPark)
         raiseHome(app)
         XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
-        // The empty body of the sheet, below its last row, over a part of the map with streets and water.
-        let body = CGRect(x: 0.1, y: 0.70, width: 0.8, height: 0.22)
+        // The bare panel between the field's hint and the Settings row, over a part of the map with streets and water.
+        let window = app.windows.firstMatch.frame, hint = app.staticTexts["home-hint"].frame, row = app.buttons["settings"].frame
+        let body = CGRect(x: 0.1, y: (hint.maxY + 2) / window.height, width: 0.8, height: (row.minY - hint.maxY - 4) / window.height)
+        XCTAssertGreaterThan(body.height * window.height, 8, "Room to sample between the hint and the row")
         Thread.sleep(forTimeInterval: 2)
         XCTAssertLessThan(brightnessSpread(body), 5, "Raised home is frosted")
         app.buttons["settings"].tap()
@@ -35,9 +41,9 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         Thread.sleep(forTimeInterval: 2)
         capture("home-after-settings", app: app)
         XCTAssertLessThan(brightnessSpread(body), 5, "Still frosted after Settings closes")
-        let window = app.windows.firstMatch
-        window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
-            .press(forDuration: 0.1, thenDragTo: window.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.4)))
+        let map = app.windows.firstMatch
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
+            .press(forDuration: 0.1, thenDragTo: map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.4)))
         Thread.sleep(forTimeInterval: 2)
         XCTAssertLessThan(brightnessSpread(body), 5, "Still frosted after the map is panned")
     }
@@ -57,6 +63,31 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         XCTAssertFalse(app.descendants(matching: .any)["search-empty"].exists)
         XCTAssertTrue(app.staticTexts["search-hint"].exists, "The empty search sheet says what to type")
         XCTAssertEqual(app.staticTexts["search-hint"].label, "Search a place, an address or a street")
+    }
+    /// Before anything is typed the search sheet offers the searches people make most. Each types its word, so the results are the
+    /// index's own category search; none is a suggested place.
+    @MainActor func testEmptySearchOffersShortcutsThatSearch() {
+        let app = launchHome(location: Self.atKerryPark)
+        app.buttons["search-field"].tap()
+        let field = app.textFields["search-input"], keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Nearby"].waitForExistence(timeout: 5), "Location is known, so the results are the nearest")
+        for word in ["coffee", "food", "groceries", "parks", "gas", "pharmacy"] { XCTAssertTrue(app.buttons["shortcut-\(word)"].exists, word) }
+        let last = app.buttons["shortcut-pharmacy"]
+        XCTAssertGreaterThanOrEqual(last.frame.height, 44)
+        if keyboard.waitForExistence(timeout: 5) { XCTAssertLessThanOrEqual(last.frame.maxY, keyboard.frame.minY, "All six clear the keyboard on a fresh install") }
+        capture("search-empty-shortcuts", app: app)
+        app.buttons["shortcut-coffee"].tap()
+        XCTAssertEqual(field.value as? String, "Coffee")
+        let result = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'result-'")).firstMatch
+        XCTAssertTrue(result.waitForExistence(timeout: 5), "The shortcut runs a search")
+        XCTAssertFalse(app.buttons["shortcut-coffee"].exists, "Shortcuts give way to results")
+        // Without location they are searches of the whole area, and say so.
+        app.terminate()
+        let denied = launchHome()
+        denied.buttons["search-field"].tap()
+        XCTAssertTrue(denied.staticTexts["In Seattle"].waitForExistence(timeout: 5))
+        XCTAssertFalse(denied.staticTexts["Nearby"].exists)
     }
     @MainActor func testSearchFindsParkAndOpensPlaceCard() {
         let app = launchHome()
@@ -123,7 +154,10 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         let counted = app.descendants(matching: .any)["segment-count"]
         XCTAssertTrue(counted.waitForExistence(timeout: 5), "A count while the graph is still loading")
         XCTAssertNotNil(rowText(counted).range(of: #"[\d,]{5,}"#, options: .regularExpression), rowText(counted))
-        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'This prototype has not been field validated.'")).firstMatch.exists)
+        // The note is the page's last row: on a shorter screen or at a larger text size it starts below the fold.
+        let note = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'checked on the road'")).firstMatch
+        for _ in 0..<4 where !note.exists { app.collectionViews.firstMatch.swipeUp() }
+        XCTAssertTrue(note.waitForExistence(timeout: 2))
     }
     @MainActor func testSettingsShowsAcknowledgementsAndLicences() {
         let app = launchHome()
@@ -199,7 +233,7 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         let app = launchHome()
         let hint = app.staticTexts["home-hint"], field = app.buttons["search-field"]
         XCTAssertTrue(hint.exists)
-        XCTAssertLessThanOrEqual(hint.frame.maxY, field.frame.minY, "Floating, the hint chip sits above the capsule")
+        XCTAssertGreaterThanOrEqual(hint.frame.minY, field.frame.maxY, "At the lowest stop the hint is already the caption under the one field")
         app.buttons["home-more"].tap()
         XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
         XCTAssertTrue(hint.exists, "The raised sheet still says what to do")
@@ -233,5 +267,41 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         if credit.exists { XCTAssertLessThanOrEqual(lookup.frame.maxY, credit.frame.minY, "The row runs under the credit") }
         XCTAssertGreaterThanOrEqual(lookup.frame.minY, field.frame.maxY)
         XCTAssertTrue(app.descendants(matching: .any)["search-empty"].exists, "It still says that nothing matched")
+    }
+}
+
+extension HomeAndSearchUITests {
+    @MainActor private func flick(_ element: XCUIElement, by dy: CGFloat) {
+        let start = element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 8, dy: dy)), withVelocity: .fast, thenHoldForDuration: 0)
+    }
+    @MainActor private func raised(_ app: XCUIApplication) -> Bool { app.buttons["settings"].waitForExistence(timeout: 3) && app.buttons["settings"].isHittable }
+
+    /// Home is one sheet with the one search field in it. A quick flick up anywhere on it raises it, as on any system sheet
+    /// (owner's phone, 10 November 2026: a floating field over the sheet's own, and "finger has to be too precise").
+    @MainActor func testAFlickUpAnywhereOnHomeRaisesIt() {
+        for id in ["search-field", "home-more", "home-hint"] {
+            let app = launchHome()
+            let element = id == "home-hint" ? app.staticTexts[id] : app.buttons[id]
+            XCTAssertTrue(element.waitForExistence(timeout: 5), id)
+            XCTAssertEqual(app.buttons.matching(identifier: "search-field").count, 1, "One search field")
+            flick(element, by: -120)
+            XCTAssertTrue(raised(app), "A flick up on \(id) did not raise home")
+            XCTAssertEqual(app.buttons.matching(identifier: "search-field").count, 1, "Still one search field")
+            app.terminate()
+        }
+    }
+
+    /// And a flick down anywhere on it lowers it to the search field, which stays where it is in the sheet.
+    @MainActor func testAFlickDownAnywhereOnHomeLowersIt() {
+        for id in ["settings", "search-field"] {
+            let app = launchHome()
+            app.buttons["home-more"].tap()
+            XCTAssertTrue(raised(app))
+            flick(app.buttons[id], by: 160)
+            XCTAssertTrue(app.buttons["home-more"].waitForExistence(timeout: 3), "A flick down on \(id) did not lower home")
+            XCTAssertTrue(app.buttons["search-field"].isHittable)
+            app.terminate()
+        }
     }
 }

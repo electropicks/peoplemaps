@@ -135,6 +135,8 @@ public struct AttestClient: Sendable {
         if expect.contains(response.status) { return (response.status, response.body) }
         switch response.status {
         case 429: throw RegionError.serverBusy
+        // No such route (the server isn't deployed) or the server is failing: trying again in a moment won't help, so don't say it will.
+        case 404, 500...599: throw RegionError.sourceUnavailable
         default: throw RegionError.attestFailed
         }
     }
