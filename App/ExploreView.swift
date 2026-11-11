@@ -251,6 +251,7 @@ struct ExploreView: View {
         .task { await locate(prompting: true) }
         .task { if !Self.markersOff { markerFeed = await PlaceMarkerFeed.load(search) } }
         .onDisappear { model.session.cancel(); navigator.stop() }
+        .onOpenURL(perform: model.opened)
         .onChange(of: voiceMuted) { navigator.setMuted(voiceMuted) }
         .onChange(of: typeSize, initial: true) { model.accessibilitySize = typeSize.isAccessibilitySize }
         .driveLogUse(driveLogSnapshot)
