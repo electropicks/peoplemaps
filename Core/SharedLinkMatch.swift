@@ -34,7 +34,7 @@ extension SearchIndex {
         let anchor = stop.coordinate ?? here
         // The street line of the address, then the name; a name like "Space Needle, 400 Broad St" also on its own.
         var queries: [String] = []
-        for text in [stop.address.map(Self.firstPart), stop.name, stop.name.map(Self.firstPart)].compactMap({ $0 }) where !text.isEmpty && !queries.contains(text) { queries.append(text) }
+        for text in [stop.address.map(Self.streetLine), stop.name, stop.name.map(Self.firstPart)].compactMap({ $0 }) where !text.isEmpty && !queries.contains(text) { queries.append(text) }
         var fallback: String?
         for query in queries {
             let results = search(query, near: anchor, limit: 20)
@@ -61,6 +61,13 @@ extension SearchIndex {
         if let pin { return .pin(pin) }
         if let point = stop.coordinate, queries.isEmpty { return .pin(droppedPin(at: point)) }
         return .candidates(query: queries.first ?? "", near: anchor, pin: nil)
+    }
+
+    /// The part of an address that starts with a house number ("Apple Inc., 1 Apple Park Way, Cupertino" has the
+    /// business first), else its first part.
+    static func streetLine(_ text: String) -> String {
+        let parts = text.split(whereSeparator: { $0 == "," || $0.isNewline }).map { $0.trimmingCharacters(in: .whitespaces) }
+        return parts.first { $0.first?.isNumber == true && $0.contains(" ") } ?? parts.first ?? ""
     }
 
     static func firstPart(_ text: String) -> String {
