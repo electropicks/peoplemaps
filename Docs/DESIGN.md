@@ -634,7 +634,7 @@ use three screens down. Reached from the home sheet's **Settings** row (4.2). A 
 (principle 2): `NavigationStack`, inline title, inset grouped `List`, and the close button on every page. Code:
 `App/Settings/`.
 
-**The root list is rows only** and fits one screen at the default text size. It holds no paragraph: a footer is one
+**The root list is rows only.** It holds no paragraph: a footer is one
 sentence, two at most, and every explanation is a page behind a row. Sections, in order:
 
 1. **Map.** "On this phone" with the map in use as its value (Seattle, King County), then the King County offer. At rest
@@ -649,7 +649,7 @@ sentence, two at most, and every explanation is a page behind a row. Sections, i
    ferry or a road outside the map, as Vashon, the Kitsap shore and Skykomish do."
 2. **Trip logs.** "Usage log" and "Detailed log", each with its state as its value ("Off", "On", "On · 3 trips",
    "On · 2 trips, 1.4 MB"; the size only from 1 MB up) and its own page. While the detailed log is on, "Start recording"
-   sits on the root, since it is the one log action people repeat: a trailing `play.circle` in the secondary grey, and "Stop recording" (`stop.circle`) with the time so far
+   sits on the root, since it is the one log action people repeat: a leading `play.circle`, and "Stop recording" (`stop.circle`) with the time so far
    while one runs. If location is off, a row under it says the recording did not start. Footer: "Off by default. Kept on
    this phone unless shared."
 3. **Feedback.** "Report a problem", and "Saved reports" with its count once there is one. Footer: "Or shake the phone on
@@ -681,13 +681,13 @@ is about, a paragraph each (`SettingsFooter`). No page sets a heading over a par
   `arrow.up.forward`) over the credit it asks for; then Software, MapLibre and Ferrostar with the licence as the row's
   value, leading to the licence text.
 
-**Type and colour.** Section headers are `.footnote` semibold. Headers, footers and row values use
-`GuidanceOverlay.onGlass`, since the list's own grey is about 3:1 on its background. The root has no row icons, so every
-row starts on one line. Nothing takes an accent: rows and buttons are label colour, the two destructive rows the system's
-red, switches `switchTint()`. The navigation bar is solid, in the list's background colour, so a row is cut off under the
-title; the system's scroll edge effect blurred section headers into a ghost there. The last words of a footer are joined
-with no-break spaces where the line would otherwise end on one word. At accessibility sizes a row's value moves under
-its title.
+**Type and colour.** The system's, throughout: section headers and footers are the grouped list's own, a row's value is
+`LabeledContent`'s secondary grey, rows are the system's height, and the navigation bar keeps the system's scroll edge
+effect. A row that does something is a system `Label` with its symbol leading; a row that leads to a page has its chevron
+and a row that only states a value has neither. Nothing takes an accent: rows and buttons are label colour, the
+destructive rows the system's red, switches `switchTint()`. The download's bar is the system `ProgressView` with the bytes
+as its value. The last words of a footer are joined with no-break spaces where the line would otherwise end on one word.
+At accessibility sizes a row's value moves under its title, as `LabeledContent` does.
 
 ### 4.10 Report a problem
 
