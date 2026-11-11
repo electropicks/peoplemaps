@@ -58,7 +58,14 @@ on paper but returns Apple data, so do not rely on it either.
 - **Query.** Prefix matching as you type, ranked by text match, then category
   weight (landmarks and parks over shops), then distance from the map centre
   or the user. House numbers parse into an address lookup ("3329 Fremont Ave
-  N"). Typos are tolerated with a trigram fallback.
+  N"). Typos are tolerated with a trigram fallback. A whole postal address
+  pasted from another app ("400 E Pine St / Ste 100 / Seattle, WA 98122 /
+  United States", with or without a name in front) is read from its house
+  number on: the unit is taken from wherever it sits, the country, ZIP code and
+  state are dropped, then up to three closing words (the city), because the
+  index has none of those (`SearchIndex.addressReadings`). The city is not
+  checked, so the same number and street in another city would match; storing
+  `addr:postcode` in the index would close that.
 - **Snapping.** Each result stores its nearest routable node per mode, so
   routing starts without a search for the nearest road.
 - **Size.** Measured in stage 1 for the routing bounds (6,742 places, 50,026

@@ -120,9 +120,17 @@ public final class SearchIndex: @unchecked Sendable {
         guard !tokens.isEmpty else { return [] }
         var results = run(tokens, unit: unit, near: near, limit: limit)
         let byCategory = categoryMatches(tokens, near: near, limit: limit)
-        if results.isEmpty, byCategory.isEmpty, let corrected = correct(tokens), corrected != tokens {
-            tokens = corrected
-            results = run(tokens, unit: unit, near: near, limit: limit)
+        if results.isEmpty, byCategory.isEmpty {
+            if let pasted = postalAddress(query, near: near, limit: limit) { return pasted }
+            if let corrected = correct(tokens), corrected != tokens {
+                tokens = corrected
+                results = run(tokens, unit: unit, near: near, limit: limit)
+            }
+        } else if byCategory.isEmpty, Self.isHouseNumber(tokens[0]), !results.contains(where: { $0.kind == .address }),
+                  let pasted = postalAddress(query, exact: true, near: near, limit: limit) {
+            // "400 E Pine St, Seattle" finds a place there with Seattle in its name; the address itself still leads.
+            let ids = Set(pasted.map(\.id))
+            results = Array((pasted + results.filter { !ids.contains($0.id) }).prefix(limit))
         }
         guard !byCategory.isEmpty else { return results }
         // Category words ("gas station") list their places after the name matches, ahead of text found only in a
@@ -255,12 +263,65 @@ public final class SearchIndex: @unchecked Sendable {
         return Place(id: pin.id, name: c.distance(to: hit.coordinate) <= 15 ? name : "Near \(name)", lat: pin.lat, lon: pin.lon, category: Place.pinCategory)
     }
 
+    // MARK: Pasted addresses
+
+    /// A whole postal address, as other apps copy it ("400 E Pine St\nSte 100\nSeattle, WA 98122\nUnited States"), which
+    /// matches nothing as typed: the index has streets and house numbers, not cities, ZIP codes or countries. Tries each
+    /// reading from `addressReadings` and keeps the first with that exact house number, else the first with any match
+    /// (the nearest numbers on that street; not when `exact`), with a typo in the street corrected. Nil when the text has no address.
+    private func postalAddress(_ query: String, exact: Bool = false, near: Coordinate?, limit: Int) -> [Place]? {
+        let (text, unit) = Self.splitUnit(query, anywhere: true)
+        let tokens = Self.normalize(text).split(separator: " ").map(String.init)
+        for corrected in [false, true] where !(corrected && exact) {
+            guard let tokens = corrected ? correct(tokens) : tokens else { continue }
+            let readings = Self.addressReadings(tokens)
+            guard let reading = readings.first(where: { hasAddress(number: $0[0], street: Array($0.dropFirst())) })
+                ?? (exact ? nil : readings.first(where: { !run($0, unit: unit, near: near, limit: 1).isEmpty })) else { continue }
+            return run(reading, unit: unit, near: near, limit: limit)
+        }
+        return nil
+    }
+
+    /// The readings of a pasted address worth trying, best first: from each house number on (a name may come before
+    /// it), without the country, ZIP code and state, then without up to three more closing words (the city), never
+    /// down to fewer than a number and two words of street. The text as typed is left out.
+    static func addressReadings(_ tokens: [String]) -> [[String]] {
+        var tail = tokens
+        for country in [["united", "states", "of", "america"], ["united", "states"], ["usa"], ["us"]] where tail.count > country.count && tail.suffix(country.count) == country[...] {
+            tail.removeLast(country.count); break
+        }
+        func digits(_ token: String, _ n: Int) -> Bool { token.count == n && token.allSatisfy(\.isNumber) }
+        if tail.count > 2, digits(tail[tail.count - 1], 4), digits(tail[tail.count - 2], 5) { tail.removeLast(2) }
+        else if tail.count > 1, digits(tail[tail.count - 1], 5) { tail.removeLast() }
+        if tail.count > 1, ["wa", "washington"].contains(tail[tail.count - 1]) { tail.removeLast() }
+        var readings: [[String]] = []
+        for start in tail.indices where isHouseNumber(tail[start]) {
+            let whole = Array(tail[start...])
+            for dropped in 0...3 where whole.count - dropped >= 3 {
+                let reading = Array(whole.dropLast(dropped))
+                if reading != tokens { readings.append(reading) }
+            }
+        }
+        return readings
+    }
+
+    private static func isHouseNumber(_ token: String) -> Bool {
+        token.first!.isNumber && token.count <= 6 && token.allSatisfy { $0.isNumber || $0.isLetter }
+    }
+
+    private func hasAddress(number: String, street: [String]) -> Bool {
+        var found = false
+        Self.rows(db, "SELECT 1 FROM entries WHERE number = ?1 COLLATE NOCASE AND id IN (SELECT rowid FROM fts WHERE fts MATCH ?2) LIMIT 1",
+                  [.text(number), .text("{name alias}: (" + street.map { "\"\($0)\"*" }.joined(separator: " AND ") + ")")]) { _ in found = true }
+        return found
+    }
+
     private func run(_ tokens: [String], unit: String?, near: Coordinate?, limit: Int) -> [Place] {
         let prefixes = tokens.map { "\"\($0)\"*" }.joined(separator: " AND ")
         let startsWith = "{name}: ^ \"\(tokens.joined(separator: " "))\"*"
         let inName = "{name alias}: (\(prefixes))"
         var number: String?, street = prefixes
-        if tokens.count > 1, tokens[0].first!.isNumber, tokens[0].allSatisfy({ $0.isNumber || $0.isLetter }), tokens[0].count <= 6 {
+        if tokens.count > 1, Self.isHouseNumber(tokens[0]) {
             number = tokens[0]
             street = "{name alias}: (" + tokens.dropFirst().map { "\"\($0)\"*" }.joined(separator: " AND ") + ")"
         }
@@ -357,13 +418,16 @@ public final class SearchIndex: @unchecked Sendable {
 
     // MARK: Parsing and rows
 
-    /// "3400 Fremont Ave N #2" or "... unit 2" → ("3400 Fremont Ave N", "2").
-    static func splitUnit(_ query: String) -> (String, String?) {
-        let pattern = #"(?:#|\b(?:unit|apt|apartment|suite|ste)\.?)\s*([A-Za-z0-9-]+)\s*$"#
+    /// "3400 Fremont Ave N #2" or "... unit 2" → ("3400 Fremont Ave N", "2"). `anywhere` also takes a unit from the
+    /// middle of a pasted address ("400 E Pine St Ste 100, Seattle" → ("400 E Pine St , Seattle", "100")); there the
+    /// unit must hold a digit or be a letter or two, so a word after "apt" or "ste" is left alone.
+    static func splitUnit(_ query: String, anywhere: Bool = false) -> (String, String?) {
+        let pattern = #"(?:#|\b(?:unit|apt|apartment|suite|ste)(?:\.|\s|(?=\d)))\s*([A-Za-z0-9-]+)"# + (anywhere ? #"(?![A-Za-z0-9])"# : #"\s*$"#)
         guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
               let match = regex.firstMatch(in: query, range: NSRange(query.startIndex..., in: query)),
               let whole = Range(match.range, in: query), let unit = Range(match.range(at: 1), in: query) else { return (query, nil) }
-        return (String(query[..<whole.lowerBound]), String(query[unit]).uppercased())
+        if anywhere, whole.upperBound < query.endIndex, !query[unit].contains(where: \.isNumber), query[unit].count > 2 { return (query, nil) }
+        return (String(query[..<whole.lowerBound]) + " " + String(query[whole.upperBound...]), String(query[unit]).uppercased())
     }
 
     private func place(_ row: OpaquePointer) -> Place {
