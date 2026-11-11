@@ -1,21 +1,16 @@
 import SwiftUI
 import PeoplemapsCore
 
-/// A rating as a progress bar: the fill's width is the 0 to 100 calm score, its colour the level. Hidden from VoiceOver; whatever
+/// A rating as a system capacity gauge: the fill is the 0 to 100 calm score, its tint the level. Hidden from VoiceOver; whatever
 /// holds it says the word and the score. Words and scores carry the meaning, colour only adds to it.
 struct CalmMeter: View {
     let score: CalmScore
+    /// Kept for callers. The system gauge has one thickness and ignores it.
     var height: CGFloat = 10
 
     var body: some View {
-        Capsule().fill(.glassTrack)
-            .overlay(alignment: .leading) {
-                GeometryReader { geo in
-                    Capsule().fill(Color.calmFill(score.level)).frame(width: geo.size.width * CGFloat(score.value) / 100)
-                }
-            }
-            .clipShape(Capsule())
-            .frame(height: height)
+        Gauge(value: Double(score.value), in: 0...100) { EmptyView() }
+            .gaugeStyle(.linearCapacity).tint(Color.calmFill(score.level))
             .accessibilityHidden(true)
     }
 }
