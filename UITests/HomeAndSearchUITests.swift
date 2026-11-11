@@ -154,7 +154,10 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         let counted = app.descendants(matching: .any)["segment-count"]
         XCTAssertTrue(counted.waitForExistence(timeout: 5), "A count while the graph is still loading")
         XCTAssertNotNil(rowText(counted).range(of: #"[\d,]{5,}"#, options: .regularExpression), rowText(counted))
-        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'checked on the road'")).firstMatch.exists)
+        // The note is the page's last row: on a shorter screen or at a larger text size it starts below the fold.
+        let note = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'checked on the road'")).firstMatch
+        for _ in 0..<4 where !note.exists { app.collectionViews.firstMatch.swipeUp() }
+        XCTAssertTrue(note.waitForExistence(timeout: 2))
     }
     @MainActor func testSettingsShowsAcknowledgementsAndLicences() {
         let app = launchHome()
