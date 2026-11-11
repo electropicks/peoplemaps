@@ -350,16 +350,30 @@ offered only in a mode that has at least one of its factors.
 
 | Option | Drive | Bike | Walk |
 | --- | --- | --- | --- |
-| Traffic lights | `signal` | `signal` | `signalCrossing` |
-| Stop signs | `stopSign`, `allWayStop` | `stopSign`, `allWayStop` | not offered |
+| Stops | `signal`, `stopSign`, `allWayStop` | not offered | not offered |
+| Traffic lights | part of Stops | `signal` | `signalCrossing` |
+| Stop signs | part of Stops | `stopSign`, `allWayStop` | not offered |
 | Left turns across traffic | `unsignalledLeft`, `leftAtSignal` | `unsignalledLeft`, `leftAtSignal` | not offered |
 | Busy streets | not offered | `arterialRiding`, `busyArterialRiding`, `bikeRouteGap` | `besideTraffic` |
-| Busy crossings without a signal | `unsignalledCrossing` | `unsignalledCrossing` | `unmarkedCrossing`, `markedCrossing` |
-| Hills | `hillStop` | `climb`, `steepDescent`, `hillStop` | `climb`, `stairs` |
+| Busy crossings (second line: "Without a signal") | `unsignalledCrossing` | `unsignalledCrossing` | `unmarkedCrossing`, `markedCrossing` |
+| Hills | `hillStop` | `climb`, `steepDescent`, `hillStop` | `climb` |
+| Steps | not offered | not offered | `stairs` |
 | Turns | `turn` | `turn` | not offered |
+| Highway on-ramps | `freewayEntry` | not offered | not offered |
+| Drawbridges | `movableBridge` | `movableBridge` | not offered |
+| Complex intersections | `complexJunction` | not offered | not offered |
+| Narrow streets | `narrowWithParking` | not offered | not offered |
+| Rough surfaces | not offered | `roughSurface` | not offered |
+| Streets without sidewalks | not offered | not offered | `noSidewalk` |
+
+The sheet shows one mode at a time, with a Drive, Cycle, Walk switch at the top; it opens on the mode being routed.
 
 Choices behind the mapping:
 
+- **Driving has one Stops option** in place of Traffic lights and Stop signs: to a driver both are a place you have to
+  stop, and people asked for them together. Cyclists keep the two apart (a stop sign is a quick roll, a red light is a
+  wait beside traffic), and walkers only have lights. Saved driving choices are carried over once: Stops is Avoid if
+  either was, and Don't mind only if both were.
 - **Lefts at signals count as lefts across traffic.** The map doesn't record
   arrow phases, so a left at a signal may well be a permissive green. They
   keep their smaller base cost (10 to 30 s), so Avoid still mostly removes
@@ -370,13 +384,14 @@ Choices behind the mapping:
   driver steers away from busy roads.
 - **Walking has no Stop signs, Lefts or Turns.** Walkers don't stop at stop
   signs, and walking has no per-turn cost.
-- **Stairs are a hill for walkers**: the people who avoid hills (strollers,
-  sore knees, luggage) avoid steps too. A strict step-free mode is still later.
+- **Steps are their own option for walkers.** They used to be part of Hills; someone with a stroller or luggage minds
+  steps far more than a slope, and a runner may be the reverse. A saved Hills choice is carried over to Steps once, so
+  nothing changes until the person changes it. A strict step-free mode is still later.
+- **Highway on-ramps covers getting onto a highway**, which the search prices. Freeway-to-freeway interchanges are
+  counted only on finished routes, where the same multiplier weighs them when candidates are compared.
 - **Not scaled:** stop-and-go clusters, highway hops and side-street shortcuts
-  (scored only on finished routes), yields, rights into traffic, five-way
-  junctions, highway merges, drawbridges, residential and narrow streets,
-  rough surfaces, and unknowns. "Fewest stops of any kind" is Avoid on both
-  Traffic lights and Stop signs.
+  (scored only on finished routes), yields, rights into traffic, residential and quiet streets, steep descents on foot,
+  and unknowns. "Fewest stops of any kind" on a bike is Avoid on both Traffic lights and Stop signs.
 
 ### Multipliers
 
