@@ -43,7 +43,7 @@ private struct RecordingRow: View {
         .onChange(of: recorder.isRecording) { logs.refresh() }
         if denied {
             Text("Location is off for PeopleMaps, so the recording did not start. Allow it in the iPhone\u{2019}s Settings app.")
-                .font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass).accessibilityIdentifier("drive-record-denied")
+                .font(.subheadline).foregroundStyle(.secondary).accessibilityIdentifier("drive-record-denied")
         }
     }
 

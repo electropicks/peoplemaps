@@ -53,8 +53,8 @@ private struct SavedReportRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(report.hasNote ? report.note : report.moment != nil ? "Marked moment, no words yet" : "No words yet")
-                .lineLimit(2).foregroundStyle(report.hasNote ? Color.primary : GuidanceOverlay.onGlass)
-            Text(report.createdAt.formatted(date: .abbreviated, time: .shortened)).font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
+                .lineLimit(2).foregroundStyle(report.hasNote ? .primary : .secondary)
+            Text(report.createdAt.formatted(date: .abbreviated, time: .shortened)).font(.subheadline).foregroundStyle(.secondary)
         }
         .accessibilityElement(children: .combine)
     }
