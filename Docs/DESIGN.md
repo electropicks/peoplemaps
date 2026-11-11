@@ -634,7 +634,7 @@ use three screens down. Reached from the home sheet's **Settings** row (4.2). A 
 (principle 2): `NavigationStack`, inline title, inset grouped `List`, and the close button on every page. Code:
 `App/Settings/`.
 
-**The root list is rows only** and fits one screen at the default text size. It holds no paragraph: a footer is one
+**The root list is rows only.** It holds no paragraph: a footer is one
 sentence, two at most, and every explanation is a page behind a row. Sections, in order:
 
 1. **Map.** "On this phone" with the map in use as its value (Seattle, King County), then the King County offer. At rest
@@ -649,7 +649,7 @@ sentence, two at most, and every explanation is a page behind a row. Sections, i
    ferry or a road outside the map, as Vashon, the Kitsap shore and Skykomish do."
 2. **Trip logs.** "Usage log" and "Detailed log", each with its state as its value ("Off", "On", "On · 3 trips",
    "On · 2 trips, 1.4 MB"; the size only from 1 MB up) and its own page. While the detailed log is on, "Start recording"
-   sits on the root, since it is the one log action people repeat: a trailing `play.circle` in the secondary grey, and "Stop recording" (`stop.circle`) with the time so far
+   sits on the root, since it is the one log action people repeat: a leading `play.circle`, and "Stop recording" (`stop.circle`) with the time so far
    while one runs. If location is off, a row under it says the recording did not start. Footer: "Off by default. Kept on
    this phone unless shared."
 3. **Feedback.** "Report a problem", and "Saved reports" with its count once there is one. Footer: "Or shake the phone on
@@ -658,8 +658,8 @@ sentence, two at most, and every explanation is a page behind a row. Sections, i
    0.1.0 · 793bdf6", the version and, when the build was given one, its commit (`PM_BUILD_COMMIT`, empty by default,
    through `PMBuildCommit` in `App/Info.plist`; `Scripts/run-simulator.sh` passes it).
 
-**Pages.** The same list. An explanation is a `SettingsNote`: a `.body` semibold heading over a `.subheadline` paragraph,
-one to a row.
+**Pages.** The same list. An explanation is a section footer, as in the system's Settings: grey text under the group it
+is about, a paragraph each (`SettingsFooter`). No page sets a heading over a paragraph in a row.
 
 - **Usage log:** "Keep a usage log", "Exact places" while it is on, and "Kept on this phone" with the count; "Share usage
   log", "Send to PeopleMaps" and "Clear usage log" once there is a trip.
@@ -675,22 +675,24 @@ one to a row.
 - **Clear asks first.** The dialog hangs off a view of its own behind the page. On a list or section that holds a
   `ShareLink` it stops the share sheet presenting (PR 68).
 - **Saved reports:** tap one to add words or share it again, swipe to remove it.
-- **What calmer means:** one sentence, then Driving, Cycling and Walking, each a row with its mode symbol. Footer, kept
-  word for word: "These are transparent preferences, not safety ratings. Times and stress are estimates, with no live
-  traffic."
-- **Map data and coverage:** what stays on the phone; Sources ("Map data from" the date of the extract in use, read from
-  the search index, the OpenStreetMap ODbL link, USGS elevation, and the count of street and path segments); Coverage
-  and what the map can miss, ending "This prototype has not been field validated."
-- **Acknowledgements:** OpenStreetMap, Overture, USGS, MapLibre and Ferrostar with their licences. Links in label colour
-  with `arrow.up.forward`.
+- **What calmer means:** one sentence, then Driving, Cycling and Walking, each a group of one row (a system `Label` with
+  its mode symbol) over a footer that says what it avoids. The last footer ends, word for word: "These are transparent
+  preferences, not safety ratings. Times and stress are estimates, with no live traffic."
+- **Map data and coverage:** Sources ("Map data from" the date of the extract in use, read from the search index, the
+  OpenStreetMap ODbL link, USGS elevation, and the count of street and path segments), with what stays on the phone as
+  its footer; Coverage, an "Area" row over a footer that says where the map stops and what it can miss, ending "This
+  prototype has not been field validated."
+- **Acknowledgements:** OpenStreetMap, Overture and USGS, each a group of one link row (its name, in label colour with
+  `arrow.up.forward`) over the credit it asks for; then Software, MapLibre and Ferrostar with the licence as the row's
+  value, leading to the licence text.
 
-**Type and colour.** Section headers are `.footnote` semibold. Headers, footers, row values and note paragraphs use
-`GuidanceOverlay.onGlass`, since the list's own grey is about 3:1 on its background. The root has no row icons, so every
-row starts on one line. Nothing takes an accent: rows and buttons are label colour, the two destructive rows the system's
-red, switches `switchTint()`. The navigation bar is solid, in the list's background colour, so a row is cut off under the
-title; the system's scroll edge effect blurred section headers into a ghost there. The last words of a footer are joined
-with no-break spaces where the line would otherwise end on one word. At accessibility sizes a row's value moves under
-its title.
+**Type and colour.** The system's, throughout: section headers and footers are the grouped list's own, a row's value is
+`LabeledContent`'s secondary grey, rows are the system's height, and the navigation bar keeps the system's scroll edge
+effect. A row that does something is a system `Label` with its symbol leading; a row that leads to a page has its chevron
+and a row that only states a value has neither. Nothing takes an accent: rows and buttons are label colour, the
+destructive rows the system's red, switches `switchTint()`. The download's bar is the system `ProgressView` with the bytes
+as its value. The last words of a footer are joined with no-break spaces where the line would otherwise end on one word.
+At accessibility sizes a row's value moves under its title, as `LabeledContent` does.
 
 ### 4.10 Report a problem
 

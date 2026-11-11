@@ -4,42 +4,33 @@ import SwiftUI
 struct AcknowledgementsView: View {
     var body: some View {
         List {
+            credit("OpenStreetMap", "© OpenStreetMap contributors. Streets, paths and places, under the Open Database License\u{00A0}1.0.",
+                   link: "https://www.openstreetmap.org/copyright")
+            credit("Overture Maps Foundation", "Places: Overture Maps Foundation (release 2026-10-21), with data from Meta, Microsoft, BrightQuery, Foursquare, AllThePlaces, Uberall, Birdeye and DAC. Licences: CDLA Permissive 2.0, Apache 2.0, CC0 1.0. Foursquare data © Foursquare Labs, Inc. Combined with OpenStreetMap data in the search index, provided as is.",
+                   link: "https://docs.overturemaps.org/attribution/")
+            credit("USGS 3D Elevation Program", "Elevation from the U.S. Geological Survey 3DEP ground model, public domain.",
+                   link: "https://www.usgs.gov/3d-elevation-program")
             Section {
-                credit("OpenStreetMap", "© OpenStreetMap contributors. Streets, paths and places, under the Open Database License\u{00A0}1.0.",
-                       link: "https://www.openstreetmap.org/copyright")
-                credit("Overture Maps Foundation", "Places: Overture Maps Foundation (release 2026-10-21), with data from Meta, Microsoft, BrightQuery, Foursquare, AllThePlaces, Uberall, Birdeye and DAC. Licences: CDLA Permissive 2.0, Apache 2.0, CC0 1.0. Foursquare data © Foursquare Labs, Inc. Combined with OpenStreetMap data in the search index, provided as is.",
-                       link: "https://docs.overturemaps.org/attribution/")
-                credit("USGS 3D Elevation Program", "Elevation from the U.S. Geological Survey 3DEP ground model, public domain.",
-                       link: "https://www.usgs.gov/3d-elevation-program")
-            } header: { SettingsHeader("Data") }
-            Section {
-                licence("MapLibre Native", "Map rendering · BSD 2-Clause", file: "MapLibre-LICENSE")
-                licence("Ferrostar", "Turn-by-turn navigation core · BSD 3-Clause, © Stadia Maps", file: "Ferrostar-LICENSE")
+                licence("MapLibre Native", "BSD 2-Clause", file: "MapLibre-LICENSE")
+                licence("Ferrostar", "BSD 3-Clause", file: "Ferrostar-LICENSE")
             } header: { SettingsHeader("Software") } footer: {
-                SettingsFooter("Ferrostar\u{2019}s navigation core includes open-source Rust libraries, each under the MIT, Apache 2.0 or MPL 2.0 licence. Apple frameworks and SF Symbols are used through the iOS SDK.")
+                SettingsFooter([
+                    "MapLibre Native draws the map. Ferrostar, © Stadia Maps, is the turn-by-turn navigation core.",
+                    "Ferrostar\u{2019}s navigation core includes open-source Rust libraries, each under the MIT, Apache 2.0 or MPL 2.0 licence. Apple frameworks and SF Symbols are used through the iOS SDK.",
+                ])
             }
         }
         .settingsPage("Acknowledgements")
     }
 
+    /// A data source: its name is the link to its licence, and the credit it asks for is the footer.
     private func credit(_ name: String, _ detail: String, link: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(name).font(.body.weight(.semibold))
-            Text(detail).font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
-            ExternalLink(title: "Licence and attribution", url: URL(string: link)!, font: .subheadline)
-        }
+        Section { ExternalLink(title: name, url: URL(string: link)!) } footer: { SettingsFooter(detail) }
     }
 
-    private func licence(_ name: String, _ detail: String, file: String) -> some View {
-        NavigationLink {
-            LicenceText(title: name, file: file)
-        } label: {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(name).font(.body.weight(.semibold))
-                Text(detail).font(.subheadline).foregroundStyle(GuidanceOverlay.onGlass)
-            }
-        }
-        .accessibilityIdentifier("licence-\(file)")
+    private func licence(_ name: String, _ kind: String, file: String) -> some View {
+        NavigationLink { LicenceText(title: name, file: file) } label: { SettingsValueRow(title: name, value: kind) }
+            .accessibilityIdentifier("licence-\(file)")
     }
 }
 
