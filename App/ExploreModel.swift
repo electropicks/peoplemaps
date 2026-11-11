@@ -157,6 +157,15 @@ enum LocationNotice: String, Identifiable {
         guard text.count > old.count + 1, let link = SharedLink.parse(text) else { return }
         take(link)
     }
+    /// The Share Extension's hand-off (`peoplemaps://share?text=…`): the same handling as a paste. A link opens its
+    /// place; plain words become the search. Guidance is never interrupted.
+    func opened(_ url: URL) {
+        guard let text = SharedLink.sharedText(opened: url), screen != .navigating else { return }
+        sheet = nil; addingFavourite = false
+        show(.search)
+        if let link = SharedLink.parse(text) { take(link) }
+        else { query = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.joined(separator: ", ") }
+    }
     func take(_ link: SharedLink) {
         switch link {
         case let .short(url, text):
