@@ -136,6 +136,20 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         paste("45.5152, -122.6784", into: app)
         XCTAssertTrue(app.alerts["This place is outside your map area"].waitForExistence(timeout: 5))
     }
+    @MainActor func testShareHandOffOpensThePlaceOrFillsTheSearch() throws {
+        let app = launchHome()
+        // What the Share Extension sends for an Apple Maps place: the link, then the words that came with it.
+        var parts = URLComponents(string: "peoplemaps://share")!
+        parts.queryItems = [URLQueryItem(name: "text", value: "https://maps.apple.com/place?address=3400%20Fremont%20Ave%20N,%20Seattle&coordinate=47.6499,-122.3496&name=Somewhere%20We%20Lack\nSomewhere We Lack")]
+        app.open(try XCTUnwrap(parts.url))
+        XCTAssertTrue(app.staticTexts["place-shared-match"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["3400 Fremont Avenue North"].exists)
+        app.buttons["close-place"].tap()
+        // Plain words, as from Notes or Messages, become the search.
+        parts.queryItems = [URLQueryItem(name: "text", value: "Gas Works Park")]
+        app.open(try XCTUnwrap(parts.url))
+        XCTAssertTrue(app.buttons["result-relation/1047789"].waitForExistence(timeout: 10))
+    }
     @MainActor func testSearchAddressAndRouteToIt() {
         let app = launchHome(location: Self.atKerryPark)
         app.buttons["search-field"].tap()
