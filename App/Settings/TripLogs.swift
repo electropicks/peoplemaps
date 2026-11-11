@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftUI
 import PeoplemapsCore
 
 /// What the two trip logs hold right now, and the files Share hands over. Settings owns one and its pages read it; the logs
@@ -81,9 +82,12 @@ final class TripLogs {
 @MainActor @Observable
 final class LogSender {
     enum Phase: Equatable {
-        case idle, checking, sending(done: Int, total: Int), sent(Int), nothingNew, deleting, deleted
-        case failed(String)
+        case idle, checking, sending, sent, nothingNew, deleting
     }
+
+    /// Why the last send or delete did not happen, for an alert.
+    struct Failure: Equatable { var title: String; var message: String }
+    var failure: Failure?
 
     private(set) var phase = Phase.idle
     /// What the confirmation offers; set once the check found something new.
@@ -102,16 +106,12 @@ final class LogSender {
 
     var busy: Bool { switch phase { case .checking, .sending, .deleting: true; default: false } }
 
-    /// The row's trailing value.
+    /// The Send row's trailing value once it is done. While it works the row shows the system's spinner, with no changing words.
     var status: String? {
-        switch phase {
-        case .idle, .failed, .deleting, .deleted: nil
-        case .checking: "Checking\u{2026}"
-        case let .sending(done, total): "Sending \(min(done + 1, total)) of \(total)"
-        case .sent: "Sent"
-        case .nothingNew: "Already sent"
-        }
+        switch phase { case .sent: "Sent"; case .nothingNew: "Already sent"; default: nil }
     }
+    /// Delete sent logs is offered once a send is over, so the list does not change under a send in progress.
+    var offersDelete: Bool { !batches.isEmpty && phase != .checking && phase != .sending }
 
     /// "4 files, 2.1 MB".
     var pendingSummary: String {
@@ -133,33 +133,31 @@ final class LogSender {
     func send() {
         let files = pending
         guard !files.isEmpty, !busy else { return }
-        phase = .sending(done: 0, total: files.count)
+        phase = .sending
         // Saved before the first byte goes, so a send that is cut off can still be deleted.
         let batch = SentLogBatch()
         save(batches + [batch])
         Task {
-            let counter = Counter()
             do {
                 try await Self.uploader.send(files, batch: batch) { file in
-                    let done = await counter.next()
-                    await MainActor.run {
-                        self.remember(file.sha256)
-                        self.phase = .sending(done: done, total: files.count)
-                    }
+                    await MainActor.run { self.remember(file.sha256) }
                 }
-                phase = .sent(files.count)
+                withAnimation { phase = .sent }
             } catch let e as LogUploadError {
-                phase = .failed(Self.words(e))
+                // These stop before anything is sent, so there is nothing on the server to delete.
+                if case .cannotAttest = e { save(batches.filter { $0.id != batch.id }) }
+                if case .tooLarge = e { save(batches.filter { $0.id != batch.id }) }
+                fail("Not Sent", Self.words(e))
             } catch {
-                phase = .failed(Self.words(.unavailable))
+                fail("Not Sent", Self.words(.unavailable))
             }
             pending = []
         }
     }
 
-    /// The Delete row's trailing value.
-    var deleteStatus: String? {
-        switch phase { case .deleting: "Deleting\u{2026}"; case .deleted: "Deleted"; default: nil }
+    private func fail(_ title: String, _ message: String) {
+        withAnimation { phase = .idle }
+        failure = Failure(title: title, message: message)
     }
 
     /// Takes every send this phone remembers off the server. A send that fails to delete is kept, to try again.
@@ -173,10 +171,10 @@ final class LogSender {
                 catch let e as LogUploadError { failure = e; break }
                 catch { failure = .unavailable; break }
             }
-            save(left)
+            withAnimation { save(left) }
             // What was deleted may be sent again.
             if left.isEmpty { defaults.removeObject(forKey: sentKey) }
-            phase = failure.map { .failed(Self.words($0, deleting: true)) } ?? .deleted
+            if let failure { fail("Not Deleted", Self.words(failure, deleting: true)) } else { withAnimation { phase = .idle } }
         }
     }
 
@@ -210,9 +208,4 @@ final class LogSender {
         case .cannotAttest: "This device can\u{2019}t send logs. Share them instead."
         }
     }
-}
-
-private actor Counter {
-    private var n = 0
-    func next() -> Int { n += 1; return n }
 }

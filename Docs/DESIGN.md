@@ -689,11 +689,16 @@ sentence, two at most, and every explanation is a page behind a row. Sections, i
 one to a row.
 
 - **Usage log:** "Keep a usage log", "Exact places" while it is on, and "Kept on this phone" with the count; "Share usage
-  log" and "Clear usage log" once there is a trip; then About this log (What it keeps, Where it stays).
+  log", "Send to PeopleMaps" and "Clear usage log" once there is a trip.
 - **Detailed log:** "Keep a detailed log" and "Kept on this phone" ("2 trips, 1 recording, 1.4 MB"; an empty log is
-  "0 trips", never a zero size); "Share detailed log" and "Clear detailed log"; then About this log (What it keeps,
-  Recordings you start, Where it stays, Limits). It says everything `Docs/PRIVACY.md` says about the log in fewer words;
-  change them together.
+  "0 trips", never a zero size); "Share detailed log", "Send to PeopleMaps" and "Clear detailed log".
+- **The log pages explain in footers**, as the system's Settings does: grey footer text under the group it is about, a
+  paragraph each, and no rows of notes. What the log keeps sits under the switch; where it stays and what sending does sits
+  under the actions (under the switch while the log is empty). It says everything `Docs/PRIVACY.md` says about the log in
+  fewer words; change them together.
+- **Send to PeopleMaps** (`Docs/REPORTS.md` 4.8) never dims and never changes its words while it works: the system's
+  spinner stands in the row's value slot, then "Sent" (or "Already sent"). "Delete sent logs" joins the group only once a
+  send is over. A send or delete that did not happen is a system alert, not text that moves the list.
 - **Clear asks first.** The dialog hangs off a view of its own behind the page. On a list or section that holds a
   `ShareLink` it stops the share sheet presenting (PR 68).
 - **Saved reports:** tap one to add words or share it again, swipe to remove it.
