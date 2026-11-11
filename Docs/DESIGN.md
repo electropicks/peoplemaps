@@ -55,7 +55,7 @@ which lets the map show through; SwiftUI has no modifier for it. An empty
    (section 2, "On glass").
 3. **No glass on glass.** A glass button inside the glass sheet uses
    `.bordered`/plain styles, not `.glass`. One `GlassEffectContainer` per
-   cluster (home's floating controls; guidance top chrome; trip bar). A single glass
+   cluster (guidance top chrome; trip bar). A single glass
    shape, such as the map buttons on home, needs no container.
 4. **Clear, with a veil where it needs one.** `.clear` is what a person reads as
    glass over this pale map: `.regular` frosts it to off-white, which is what the
@@ -361,25 +361,24 @@ in light, dark, portrait and landscape.
 
 ### 4.2 Home: "Where to?"
 
-At rest home has no sheet (`floatingHome`): the map fills the screen, with only
-floating controls over it, each on its own `.clear` glass. Favourite chips above a
-56-pt "Where to?" capsule and a round More button (`home-more`), above the credit.
-First launch shows a one-line hint chip where the favourites go: "Search a place or
-address, or long-press the map" (D4). The chip is plain glass, not interactive: it is not a button.
+Home is one system sheet that is always there, and it holds the only search field (owner, 10 November 2026: the floating
+"Where to?" pill stacked over the sheet's own field read as two search bars). It has two stops and no large one.
 
-More, or a drag of 24 pt up anywhere on the floating controls, presents a system sheet with one stop, as tall as what it
-holds (`raiseHome`, `PortraitSheet`), up to 70% of the screen, past which it scrolls. Home is the one screen whose stop is
-measured, since Recents and favourites change what it holds: a new height is added beside the old one and selected, and the
-old one is dropped once the sheet has glided there, so it never jumps. At the system's medium a fresh install
-showed half a screen of empty panel under the field and one row (9 November 2026); the place card is sized the same way
-(4.4). Home has no large stop (decision, 4 November 2026): at large it was a flat,
-square-edged, opaque page with the map dimmed, holding a hint, the field and one row.
-The fitted stop keeps the inset frosted card over a live map. Search is the screen that goes large,
-where results need the room. The sheet holds the same chips and field, then Recents and the rows **Edit
-favourites** and **Settings**. A drag of 44 pt down anywhere on it (not only the system's long pull from the grabber; 10 November 2026, the owner's finger "has to be too precise") dismisses it back to the
-floating controls. On the sheet (and the landscape card) the first-launch hint is a `.footnote` caption in `onGlass`
-under the field, with nothing behind it: in a well of its own above the field it passed for a second field
-(9 November 2026).
+- **Lowest stop (peek).** As tall as the controls (`HomeHeight.controls`): favourite chips, the 44-pt "Where to?" field in a
+  `glassWell` with a round More button (`home-more`) beside it, and on first launch the hint "Search a place or address, or
+  long-press the map" (D4) as a `.footnote` caption in `onGlass` under the field. In a well of its own above the field it
+  passed for a second field (9 November 2026). Recents and the rows below are laid out under the fold, hidden from touch and
+  VoiceOver, so they slide into view as the sheet rises.
+- **Raised.** More, or a flick up, raises it to a stop as tall as everything it holds (`raiseHome`, `PortraitSheet`), up to 70%
+  of the screen, past which it scrolls: the controls, Recents, then the rows **Edit favourites** and **Settings**. At the
+  system's medium a fresh install showed half a screen of empty panel under the field and one row (9 November 2026). A flick
+  down returns to the peek.
+
+Home's stops are the only measured ones, since favourites and Recents change what it holds: a new height is added beside
+the old one and selected, and the old one is dropped once the sheet has glided there, so it never jumps. The place card and
+the preview have designed heights instead (4.4, 4.5). Home has no large stop (decision, 4 November 2026): at large it was a
+flat, square-edged, opaque page with the map dimmed, holding a hint, the field and one row. Search is the screen that goes
+large, where results need the room.
 
 The two rows are set like the Recents rows above them (`HomeRow`), so they read as rows to tap and not as a footnote: a
 glyph (`star`, `gearshape`) on a 32-pt `glassWell` circle where a place's badge sits, the title in `.body` label colour,
