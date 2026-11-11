@@ -120,10 +120,6 @@ extension View {
         buttonStyle(.glassProminent).buttonBorderShape(shape).tint(.primaryActionFill).controlSize(.large)
     }
 
-    /// The track of a switch when on. Sheets whose tint is `.primary`, which is white in dark mode, would draw a white track under a
-    /// white knob, with nothing to tell on from off. Dusk blue (`switchOn`, a deeper value than the map's in dark) is the one hue a control may take (Docs/DESIGN.md, principle 5).
-    func switchTint() -> some View { tint(Color(uiColor: .switchOn)) }
-
     /// A secondary action on a glass panel ("Why this route", "Calmer means"): the system's bordered capsule in the label colour,
     /// since glass doesn't go on glass and no control takes an accent (Docs/DESIGN.md, principles 3 and 5), in a full-size target.
     func wellButton() -> some View {

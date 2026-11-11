@@ -23,7 +23,7 @@ struct ReportComposerView: View {
                     Text(report.moment == nil ? "Mention the street if you can." : "This moment is already marked. Words are optional.")
                 }
                 Section {
-                    Toggle("Include exact locations", isOn: $report.includeExact).switchTint().accessibilityIdentifier("report-exact")
+                    Toggle("Include exact locations", isOn: $report.includeExact).accessibilityIdentifier("report-exact")
                     DisclosureGroup("What\u{2019}s included") {
                         Text(json).font(.caption.monospaced()).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                             .accessibilityIdentifier("report-json")
@@ -42,7 +42,6 @@ struct ReportComposerView: View {
             .navigationTitle("Report a problem").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button(role: .close) { dismiss() }.accessibilityIdentifier("close-report") } }
         }
-        .tint(.primary)
         .task { writeFile(); focused = report.moment == nil }
         .onChange(of: report) { writeFile() }
         .onDisappear { persist(); if let fileURL { try? FileManager.default.removeItem(at: fileURL) } }
