@@ -204,11 +204,10 @@ struct ExploreView: View {
     private var coverage: [Coordinate] { [Coordinate(lat: graph.bounds[0], lon: graph.bounds[1]), Coordinate(lat: graph.bounds[2], lon: graph.bounds[3])] }
     private let cardWidth: CGFloat = 330
 
-    /// Home at rest has no sheet: the system's partial-height sheet always draws a panel, and at rest the controls float on their own glass.
+    /// The sheet is up on every portrait screen but guidance. It is never dismissed, only moved between its stops: home is one
+    /// sheet that is always there, with the one search field in it, as in Apple's Maps (owner, 10 November 2026).
     private var sheetUp: Binding<Bool> {
-        Binding(get: { !landscape && screen != .navigating && !floatingHome }, set: { up in
-            if !up, screen == .home { model.lowerHome() }
-        })
+        Binding(get: { !landscape && screen != .navigating }, set: { _ in })
     }
 
     var body: some View {
@@ -242,7 +241,7 @@ struct ExploreView: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.height + $0.safeAreaInsets.top + $0.safeAreaInsets.bottom } action: { screenHeight = $0 }
         .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { safeBottom = $0 }
         .sheet(isPresented: sheetUp) {
-            PortraitSheet(model: model, homeHeight: homeHeight, cover: cover, screenHeight: screenHeight, safeBottom: safeBottom, floatingHome: floatingHome) {
+            PortraitSheet(model: model, homeHeight: homeHeight, cover: cover, screenHeight: screenHeight, safeBottom: safeBottom) {
                 presenting(panel)
             }
         }
@@ -326,13 +325,8 @@ struct ExploreView: View {
             if model.stop != .large {
                 CoverReader(cover) { cover in
                     HStack { attribution; Spacer() }.padding(.horizontal, 12)
-                        .padding(.bottom, floatingHome ? 8 : max(cover.sheet - geo.safeAreaInsets.bottom, 0) + 8)
+                        .padding(.bottom, max(cover.sheet - geo.safeAreaInsets.bottom, 0) + 8)
                 }
-            }
-            if floatingHome {
-                // The whole cluster is the drawer's handle, with some room above it: a short, loose drag up anywhere here raises it.
-                presenting(HomeControls(model: model, floating: true)).padding(.horizontal, 14).padding(.top, 24).contentShape(Rectangle())
-                    .simultaneousGesture(raiseDrag)
             }
         }
         .opacity(model.stop == .large ? 0 : 1)
@@ -366,7 +360,7 @@ struct ExploreView: View {
         ZStack(alignment: .top) {
             Group {
                 switch screen {
-                case .home: HomeSheet(model: model, height: homeHeight).simultaneousGesture(lowerDrag)
+                case .home: HomeSheet(model: model, height: homeHeight)
                 case .search: SearchSheet(model: model)
                 case let .place(place): PlaceCard(model: model, place: place)
                 case .preview: RoutePreview(model: model, onStart: startNavigation)
@@ -423,28 +417,6 @@ struct ExploreView: View {
 
     private var attribution: some View {
         AttributionLinks().padding(.horizontal, 8).padding(.vertical, 3).floatingSurface(in: Capsule(), veil: .light)
-    }
-
-    // MARK: Home
-
-    /// Home at rest: no panel, only the controls, each on its own glass over the map. Raised, they sit on the panel's glass instead.
-    private var floatingHome: Bool { screen == .home && model.stop == .fit && !landscape }
-
-    /// Raises home as soon as a drag on the floating controls has gone 24 pt up, without waiting for the finger to lift. It used to
-    /// take a drag that started on the search capsule and ended 30 pt up, which a quick or slightly sideways swipe missed.
-    private var raiseDrag: some Gesture {
-        DragGesture(minimumDistance: 8).onChanged { drag in
-            if floatingHome, drag.translation.height < -24, -drag.translation.height > abs(drag.translation.width) { model.raiseHome() }
-        }
-    }
-    /// Lowers home once a drag anywhere on it has gone 44 pt down. The system's own pull-to-dismiss wants the sheet dragged most of
-    /// the way off the screen. Measured on the screen, since the sheet moves under the finger. Not at accessibility sizes, where
-    /// the sheet's content scrolls.
-    private var lowerDrag: some Gesture {
-        DragGesture(minimumDistance: 8, coordinateSpace: .global).onChanged { drag in
-            guard screen == .home, !floatingHome, !landscape, !typeSize.isAccessibilitySize else { return }
-            if drag.translation.height > 44, drag.translation.height > abs(drag.translation.width) { model.lowerHome() }
-        }
     }
 }
 
