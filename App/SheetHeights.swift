@@ -16,7 +16,8 @@ enum SheetHeights {
     static func place(_ size: DynamicTypeSize, fromLine: Bool) -> CGFloat {
         value(place, size) + (fromLine ? lineHeight(.subheadline, size) : 0)
     }
-    static func preview(_ size: DynamicTypeSize) -> CGFloat { value(preview, size) }
+    /// With room for the reason under the calmer route to run to a second line, as it does for some routes (Ballard to Gas Works).
+    static func preview(_ size: DynamicTypeSize) -> CGFloat { value(preview, size) + lineHeight(.subheadline, size) }
 
     private static func lineHeight(_ style: UIFont.TextStyle, _ size: DynamicTypeSize) -> CGFloat {
         let traits = UITraitCollection(preferredContentSizeCategory: UIContentSizeCategory(size))
