@@ -90,9 +90,11 @@ class PeoplemapsUITestCase: XCTestCase {
         app.buttons["directions"].tap()
         XCTAssertTrue(app.buttons["route-fastest"].waitForExistence(timeout: 20))
     }
+    /// The system search field of the open start or destination picker.
+    @MainActor func placeSearch(_ app: XCUIApplication) -> XCUIElement { app.searchFields["Search places"] }
     /// Picks a place in the open start or destination picker by searching for it.
     @MainActor func pick(_ app: XCUIApplication, _ query: String, id: String) {
-        let field = app.textFields["place-search"]
+        let field = placeSearch(app)
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap(); field.typeText(query)
         let row = app.buttons["place-\(id)"]

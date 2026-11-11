@@ -7,9 +7,10 @@ final class RoutePickerUITests: PeoplemapsUITestCase {
         let before = app.buttons["choose-origin"].label
         XCTAssertTrue(before.contains("Current location"), before)
         app.buttons["choose-origin"].tap()
-        let field = app.textFields["place-search"]
+        let field = placeSearch(app)
         XCTAssertTrue(field.waitForExistence(timeout: 5)); field.tap(); field.typeText("unfindableXYZ")
         XCTAssertTrue(app.descendants(matching: .any)["search-empty"].waitForExistence(timeout: 5))
+        capture("14d-picker-no-matches", app: app)
         app.buttons["cancel-search"].tap()
         XCTAssertEqual(app.buttons["choose-origin"].label, before)
         app.buttons["choose-origin"].tap()
@@ -40,7 +41,7 @@ final class RoutePickerUITests: PeoplemapsUITestCase {
         XCTAssertFalse(app.buttons["retry-route"].exists, "not a generic failure")
         capture("10b-start-outside", app: app)
         app.buttons["Choose start"].tap()
-        XCTAssertTrue(app.textFields["place-search"].waitForExistence(timeout: 5))
+        XCTAssertTrue(placeSearch(app).waitForExistence(timeout: 5))
     }
     /// The bars explain the rating in words and scores; a route with nothing calmer has one bar and says what was found.
     @MainActor func testCalmBarInRouteDetails() {
@@ -90,5 +91,10 @@ final class RoutePickerUITests: PeoplemapsUITestCase {
         let recent = app.buttons["place-recent-relation/1047789"]
         XCTAssertTrue(recent.waitForExistence(timeout: 5))
         XCTAssertFalse(recent.label.contains("mile") || recent.label.contains("feet"), recent.label)
+        capture("14c-picker-destination", app: app)
+        let field = placeSearch(app)
+        field.tap(); field.typeText("Kerry")
+        XCTAssertTrue(app.buttons["place-node/693337509"].waitForExistence(timeout: 5))
+        capture("14e-picker-matches", app: app)
     }
 }
