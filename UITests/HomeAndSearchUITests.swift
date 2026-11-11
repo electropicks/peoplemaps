@@ -3,7 +3,7 @@ import CoreLocation
 
 final class HomeAndSearchUITests: PeoplemapsUITestCase {
     /// At rest home is only its floating controls; More raises the sheet, and pulling that down leaves the controls again.
-    @MainActor func testHomeRestsAsFloatingControlsAndRaisesToASheet() {
+    @MainActor func testHomeRestsAtTheSearchFieldAndRaisesToTheRest() {
         let app = launchHome()
         XCTAssertFalse(app.buttons["settings"].exists, "The rest of home waits for the sheet")
         app.buttons["home-more"].tap()
@@ -18,7 +18,7 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 500)))
         XCTAssertTrue(app.buttons["home-more"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["settings"].exists)
-        // Dragging the capsule raises it too.
+        // Dragging the field raises it too.
         raiseHome(app)
         XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
     }
@@ -230,7 +230,7 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         let app = launchHome()
         let hint = app.staticTexts["home-hint"], field = app.buttons["search-field"]
         XCTAssertTrue(hint.exists)
-        XCTAssertLessThanOrEqual(hint.frame.maxY, field.frame.minY, "Floating, the hint chip sits above the capsule")
+        XCTAssertGreaterThanOrEqual(hint.frame.minY, field.frame.maxY, "At the lowest stop the hint is already the caption under the one field")
         app.buttons["home-more"].tap()
         XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
         XCTAssertTrue(hint.exists, "The raised sheet still says what to do")
@@ -268,33 +268,36 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
 }
 
 extension HomeAndSearchUITests {
-    @MainActor private func drag(_ element: XCUIElement, by dy: CGFloat) {
+    @MainActor private func flick(_ element: XCUIElement, by dy: CGFloat) {
         let start = element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 8, dy: dy)))
+        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 8, dy: dy)), withVelocity: .fast, thenHoldForDuration: 0)
     }
     @MainActor private func raised(_ app: XCUIApplication) -> Bool { app.buttons["settings"].waitForExistence(timeout: 3) && app.buttons["settings"].isHittable }
 
-    /// The drawer comes up from a short, loose drag on any of the floating controls, not only a long one on the search capsule
-    /// (owner's phone, 10 November 2026: "finger has to be too precise").
-    @MainActor func testAShortDragOnAnyFloatingControlRaisesHome() {
+    /// Home is one sheet with the one search field in it. A quick flick up anywhere on it raises it, as on any system sheet
+    /// (owner's phone, 10 November 2026: a floating field over the sheet's own, and "finger has to be too precise").
+    @MainActor func testAFlickUpAnywhereOnHomeRaisesIt() {
         for id in ["search-field", "home-more", "home-hint"] {
             let app = launchHome()
             let element = id == "home-hint" ? app.staticTexts[id] : app.buttons[id]
             XCTAssertTrue(element.waitForExistence(timeout: 5), id)
-            drag(element, by: -70)
-            XCTAssertTrue(raised(app), "A 70 pt drag up on \(id) did not raise home")
+            XCTAssertEqual(app.buttons.matching(identifier: "search-field").count, 1, "One search field")
+            flick(element, by: -120)
+            XCTAssertTrue(raised(app), "A flick up on \(id) did not raise home")
+            XCTAssertEqual(app.buttons.matching(identifier: "search-field").count, 1, "Still one search field")
             app.terminate()
         }
     }
 
-    /// And goes back down from a short drag anywhere on it.
-    @MainActor func testAShortDragDownAnywhereLowersHome() {
+    /// And a flick down anywhere on it lowers it to the search field, which stays where it is in the sheet.
+    @MainActor func testAFlickDownAnywhereOnHomeLowersIt() {
         for id in ["settings", "search-field"] {
             let app = launchHome()
             app.buttons["home-more"].tap()
             XCTAssertTrue(raised(app))
-            drag(app.buttons[id], by: 110)
-            XCTAssertTrue(app.buttons["home-more"].waitForExistence(timeout: 3), "A 110 pt drag down on \(id) did not lower home")
+            flick(app.buttons[id], by: 160)
+            XCTAssertTrue(app.buttons["home-more"].waitForExistence(timeout: 3), "A flick down on \(id) did not lower home")
+            XCTAssertTrue(app.buttons["search-field"].isHittable)
             app.terminate()
         }
     }

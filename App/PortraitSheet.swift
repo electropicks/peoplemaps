@@ -9,8 +9,6 @@ struct PortraitSheet<Content: View>: View {
     let cover: SheetCover
     let screenHeight: CGFloat
     let safeBottom: CGFloat
-    /// Home at rest: the controls float on the map and the sheet is on its way out.
-    let floatingHome: Bool
     @ViewBuilder let content: Content
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -38,9 +36,9 @@ struct PortraitSheet<Content: View>: View {
             .animation(Motion.content(reduceMotion), value: stop == .large)
             .presentationDetents(detents, selection: stopBinding)
             .presentationBackgroundInteraction(.enabled(upThrough: screen == .preview ? raisedDetent : detent(.medium)))
-            .presentationDragIndicator(floatingHome ? .hidden : .visible)
-            // Home's raised sheet pulls down to the floating controls; every other screen stays until it's closed.
-            .interactiveDismissDisabled(screen != .home)
+            .presentationDragIndicator(.visible)
+            // No screen's sheet is dismissed by a pull: home's only moves between its two stops, the others stay until closed.
+            .interactiveDismissDisabled()
             // At its lower stops the system shrinks the sheet and floats it above the screen's edge, so its own height says nothing
             // about where its top is. The global frame includes that.
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY.rounded() } action: { top in
@@ -63,6 +61,8 @@ struct PortraitSheet<Content: View>: View {
     private var fitHeight: CGFloat {
         let content: CGFloat = switch screen {
         case let .place(place): SheetHeights.place(typeSize, fromLine: model.estimateRequest(for: place).map { !$0.origin.isCurrentLocation } ?? false)
+        // Home's lowest stop holds the search field, with favourites over it and the first-launch caption under it when they show.
+        case .home: homeHeight.controls > 0 ? homeHeight.controls : 44 + (model.saved.favourites.isEmpty ? 0 : 60) + (model.saved.favourites.isEmpty && model.saved.recents.isEmpty ? 26 : 0)
         default: SheetHeights.preview(typeSize)
         }
         return sheetHeight(content)
@@ -101,8 +101,9 @@ struct PortraitSheet<Content: View>: View {
     }
     private var detents: Set<PresentationDetent> {
         switch screen {
-        // Home has one stop, sized to its content: at large it was a flat opaque page holding a search field and one row. Search is the screen that goes large.
-        case .home: Set([detent(.medium)] + (leavingHome.map { [$0] } ?? []))
+        // Home has two stops: the search field, and everything, sized to its content. At large it was a flat opaque page holding a
+        // search field and one row. Search is the screen that goes large.
+        case .home: Set([detent(.fit), detent(.medium)] + (leavingHome.map { [$0] } ?? []))
         case .search: [.medium, .large]
         // The place card is all there is to show, so it rests at its own height: raised, it was the card over a blank panel.
         // At accessibility sizes the card can outgrow the fit stop, so large stays.
@@ -111,9 +112,9 @@ struct PortraitSheet<Content: View>: View {
         }
     }
     private var stopBinding: Binding<PresentationDetent> {
-        // Home's fit stop is the floating controls, with no sheet, so there the sheet is only ever on its way out.
-        Binding(get: { screen == .home ? detent(.medium) : detent(stop) }, set: { new in
-            model.stop = new == .large ? .large : new == .medium || screen == .home ? .medium : new == raisedDetent ? .raised : .fit
+        Binding(get: { detent(stop) }, set: { new in
+            if screen == .home { if new == detent(.fit) { model.lowerHome() } else { model.raiseHome() } }
+            else { model.stop = new == .large ? .large : new == .medium ? .medium : new == raisedDetent ? .raised : .fit }
         })
     }
 }
