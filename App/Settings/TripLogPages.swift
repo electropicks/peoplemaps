@@ -12,8 +12,8 @@ struct UsageLogPage: View {
     var body: some View {
         List {
             Section {
-                Toggle("Keep a usage log", isOn: $on).switchTint().accessibilityIdentifier("usage-log-toggle")
-                if on { Toggle("Exact places", isOn: $exact).switchTint().accessibilityIdentifier("usage-log-exact") }
+                Toggle("Keep a usage log", isOn: $on).accessibilityIdentifier("usage-log-toggle")
+                if on { Toggle("Exact places", isOn: $exact).accessibilityIdentifier("usage-log-exact") }
                 SettingsValueRow(title: "Kept on this phone", value: logs.usageKept)
                     .accessibilityElement(children: .combine).accessibilityIdentifier("usage-log-summary")
             } footer: {
@@ -54,7 +54,7 @@ struct DetailedLogPage: View {
     var body: some View {
         List {
             Section {
-                Toggle("Keep a detailed log", isOn: $on).switchTint().accessibilityIdentifier("drive-log-toggle")
+                Toggle("Keep a detailed log", isOn: $on).accessibilityIdentifier("drive-log-toggle")
                 SettingsValueRow(title: "Kept on this phone", value: logs.detailedKept)
                     .accessibilityElement(children: .combine).accessibilityIdentifier("drive-log-summary")
             } footer: {

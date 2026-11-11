@@ -73,7 +73,7 @@ struct RouteDetails: View {
                 .navigationTitle("Behind the routes").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { Button(role: .close) { dismiss() }.accessibilityIdentifier("close-details") } }
         // Long reading, with secondary text: solid, not glass.
-        }.tint(.primary).presentationDetents([.medium, .large]).presentationBackground(Color.panel)
+        }.presentationDetents([.medium, .large]).presentationBackground(Color.panel)
     }
     /// A section header or footer: the list's own grey measures about 3:1 on its background.
     private func note(_ text: String) -> some View { Text(text).foregroundStyle(GuidanceOverlay.onGlass) }
