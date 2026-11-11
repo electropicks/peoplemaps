@@ -25,9 +25,7 @@ struct SearchSheet: View {
                         }
                         SearchShortcuts(nearby: model.userInCoverage != nil) { model.query = $0 }
                     } else if model.results.isEmpty {
-                        // The way out sits where a result would: under the empty state it fell behind the keyboard. VoiceOver still hears what happened first.
-                        AppleMapsLookup(query: model.query)
-                        EmptySearch(count: model.search.count).accessibilitySortPriority(1)
+                        MissingPlace(model: model)
                     } else {
                         let results = model.results
                         resultGroup("Top match", Array(results.prefix(1)))

@@ -31,11 +31,16 @@ final class ReportCenter {
     // MARK: Opening
 
     /// A new report from what is on screen, or the saved one with `id`. `from` names the place the button was.
-    func open(from: String? = nil, editing id: String? = nil) {
+    func open(from: String? = nil, editing id: String? = nil, note: String? = nil) {
         guard let top = topController(), !isShowingComposer(top) else { return }
         DriveLogger.use("report_opened", ["from": .string(from ?? (id == nil ? "shake" : "saved list")), "guiding": .bool(context?.navigator?.isActive ?? false)])
         let report: ProblemReport
-        if let id, let saved = library[id] { report = saved } else { report = makeReport(from: from) }
+        if let id, let saved = library[id] { report = saved } else {
+            var new = makeReport(from: from)
+            // Words the app starts the note with ("Missing place: ..."); the user sees and can change them before sharing.
+            if let note { new.note = String(note.prefix(280)) }
+            report = new
+        }
         let host = ReportHost(rootView: ReportComposerView(report: report))
         host.modalPresentationStyle = .pageSheet
         top.present(host, animated: !Motion.off)
