@@ -326,6 +326,10 @@ struct ExploreView: View {
                 CoverReader(cover) { cover in
                     HStack { attribution; Spacer() }.padding(.horizontal, 12)
                         .padding(.bottom, max(cover.sheet - geo.safeAreaInsets.bottom, 0) + 8)
+                        // The sheet's measured top is not steady while the system moves it between stops: it reports the new stop for
+                        // one frame, then the old one, then the new one again. Followed directly, the credit skipped up and back on a
+                        // tap of More. A spring takes it to wherever the sheet settles and passes over a one-frame report.
+                        .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 1), value: cover.sheet)
                 }
             }
         }
