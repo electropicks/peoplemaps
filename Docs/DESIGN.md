@@ -76,15 +76,12 @@ which lets the map show through; SwiftUI has no modifier for it. An empty
    (Settings) and closed, and once the map behind it is touched; setting a new effect or calling
    `invalidateDetents()` does not bring it back. The material is not affected, so the legibility
    never depends on the glass drawing. Large is the solid `panel`.
-5. **No accent on controls, plus category colour.** Controls and text use the
-   label colour; the app's tint is `.primary`. The one exception is a switch's
-   track when on (`switchTint()`, `calmer`): under `.primary` it is a white track
-   under a white knob in dark mode, with nothing to tell on from off. Dusk blue (`.calmer`) is a
-   colour on the map (the route line, its leader and the selected pin) and the on-state of a switch. Green no longer
-   means calmer, and no fill anywhere is a saturated blue or green. Rating colour
-   appears only on the rating word and bar. Category colours appear only on place
-   badges (list rows, map markers, place card); they never tint glass, text or
-   buttons.
+5. **The system's accent, plus category colour.** The app's accent is `AccentColor` in the asset catalogue, dusk blue
+   (the `calmer` colour of the route line), and controls take it the way the system gives it: a button row in a list, a
+   toolbar's text button, a link. No screen sets a tint of its own, except the sheet over the map, which stays label
+   colour so nothing on glass takes a hue. Switches are the system's green. No fill anywhere is a saturated blue. Rating
+   colour appears only on the rating word and bar. Category colours appear only on place badges (list rows, map markers,
+   place card); they never tint glass, text or buttons.
 6. **Glass stays neutral.** The sheet and banner are never tinted. Start and the
    other primary actions (Directions, Start, Done) all sit on a glass panel, so by
    principle 3 they are solid `.borderedProminent` buttons filled with
@@ -108,7 +105,6 @@ rendered pixels (below).
 | Token | Light | Dark | Use | Contrast |
 |---|---|---|---|---|
 | `calmer` | `#4A6F97` | `#7FA3CC` | route line (white casing in light, black in dark), leader, selected pin, destination dot, a switch track when on | vs land 4.6 / 6.1, vs water 3.4 / 3.9 (≥3:1 graphic) |
-| `switchOn` | `#4A6F97` | `#4A6F97` | a switch's track when on. Not `calmer` in dark: `#7FA3CC` under the white thumb is 2.6:1 and reads as off | track vs a near-black card `#1C1C1E` 3.3, vs the white thumb 5.2 |
 | `fastest` | `#6B7872` | `#AEBAB3` | fastest line, dotted | vs land 4.1 / 7.9 |
 | `passedRoute` | `#A6B3C0` | `#53616F` | the part of the followed route already driven, drawn 3.5 pt (the route is 5.5) | vs land 1.9 / 2.5; vs the route ahead 2.5 / 2.4. Below 3:1 on purpose: it is a trail, not information, and the width, the puck at its end and the casing say "behind" without colour |
 | `primaryActionFill` | white 72% | white 26% | fill of the solid `.borderedProminent` primary actions: Directions, Start, Done | |
@@ -684,8 +680,8 @@ is about, a paragraph each (`SettingsFooter`). No page sets a heading over a par
 **Type and colour.** The system's, throughout: section headers and footers are the grouped list's own, a row's value is
 `LabeledContent`'s secondary grey, rows are the system's height, and the navigation bar keeps the system's scroll edge
 effect. A row that does something is a system `Label` with its symbol leading; a row that leads to a page has its chevron
-and a row that only states a value has neither. Nothing takes an accent: rows and buttons are label colour, the
-destructive rows the system's red, switches `switchTint()`. The download's bar is the system `ProgressView` with the bytes
+and a row that only states a value has neither. Rows that lead somewhere or state a value are label colour, a row that does something takes the app's accent, the
+destructive rows the system's red, and switches are the system's green. The download's bar is the system `ProgressView` with the bytes
 as its value. The last words of a footer are joined with no-break spaces where the line would otherwise end on one word.
 At accessibility sizes a row's value moves under its title, as `LabeledContent` does.
 

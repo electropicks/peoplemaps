@@ -117,10 +117,6 @@ extension View {
     /// The style of a primary action (Start, Directions, Done): a solid `primaryActionFill` button with dark text. Every one sits on a
     /// glass panel, where a glass button would be glass on glass (Docs/DESIGN.md, principle 3).
     func primaryAction(shape: ButtonBorderShape = .capsule) -> some View { modifier(PrimaryAction(shape: shape)) }
-
-    /// The track of a switch when on. The app's tint is `.primary`, which is white in dark mode: a white track under a white knob,
-    /// with nothing to tell on from off. Dusk blue (`switchOn`, a deeper value than the map's in dark) is the one hue a control may take (Docs/DESIGN.md, principle 5).
-    func switchTint() -> some View { tint(Color(uiColor: .switchOn)) }
 }
 
 private struct PrimaryAction: ViewModifier {

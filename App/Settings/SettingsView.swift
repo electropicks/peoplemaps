@@ -42,7 +42,7 @@ struct SettingsView: View {
         }
         .environment(\.closeSettings, dismiss)
         // Rows to read and switches to set: solid, not glass (Docs/DESIGN.md, principle 2).
-        .tint(.primary).presentationDetents([.large]).presentationBackground(Color.panel)
+        .presentationDetents([.large]).presentationBackground(Color.panel)
     }
 }
 
