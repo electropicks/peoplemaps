@@ -111,3 +111,16 @@ are retained here for provenance, not called by the app. Any future refresh
 should be deliberate and respect [Overpass resource guidance](https://dev.overpass-api.de/overpass-doc/en/preface/commons.html).
 Do not turn the public Overpass endpoint into an app backend. For production,
 use regional extracts and a self-hosted update pipeline.
+
+A fourth bounded extract, for the zoomed-out map's middle band around Puget Sound (query
+`Data/puget-sound.overpassql`: coastline, named water, motorway, trunk and primary roads), was fetched on 2026-11-10
+(Pacific; OSM base timestamp 2026-11-10T23:14:12Z). Only the shapes drawn from it are archived, in
+`Data/puget-sound.json.gz` (the response's SHA-256 is recorded in it), and `Core/Resources/puget-sound-map.pmtiles` is
+built from them. Both are OpenStreetMap data under ODbL 1.0, with the attribution above.
+
+# Natural Earth
+
+`Data/natural-earth.json.gz` and the context map built from it, `Core/Resources/context-map.pmtiles`, come from
+[Natural Earth](https://www.naturalearthdata.com) v5.1.2 (GeoJSON from github.com/nvkelso/natural-earth-vector,
+tag v5.1.2; each file's SHA-256 is in the snapshot). Natural Earth is in the public domain
+(https://www.naturalearthdata.com/about/terms-of-use/); no permission or attribution is needed, but it is credited here.
