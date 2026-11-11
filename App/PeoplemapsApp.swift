@@ -88,7 +88,6 @@ struct PeoplemapsApp: App {
             }
             .environment(regions)
             .task { await regions.start() }
-            .tint(.primary)
         }
     }
 }
@@ -105,9 +104,6 @@ extension UIColor {
     }
     /// The calmer route's line, the selected place and the route's end: dusk blue, muted so it sits in the map. Never a control colour.
     static let calmer = dynamic(light: 0x4A6F97, dark: 0x7FA3CC)
-    /// A switch's track when on. Not `calmer`: that dark value is a pale blue made for the map, and under a white thumb it reads as off
-    /// (2.6:1). Dusk blue is 3.3:1 against the near-black card and 5.2:1 against the thumb.
-    static let switchOn = hex(0x4A6F97)
     /// The fastest route's dotted line.
     static let fastest = dynamic(light: 0x6B7872, dark: 0xAEBAB3)
     /// The part of the followed route already driven: a muted blue-grey, drawn thinner.
