@@ -519,24 +519,23 @@ unmarked crossings instead, shown as one "Unsignalled crossings" row in place
 of those two. Confirm the per-mode set against the route-preferences PR before
 building; the table is a starting point.
 
-Each row: symbol (`light.beacon.max`, `octagon`, `arrow.turn.up.left`,
-`car.2.fill`, `mountain.2`, `arrow.triangle.turn.up.right.diamond`), label,
-and a three-way segmented control **Avoid / Normal / Don't mind**. At
-accessibility sizes the control drops below the label. Changes recompute the
-comparison live behind the sheet.
+Each row is a standard `Picker` in the default menu style with a system `Label`:
+symbol (`light.beacon.max`, `octagon`, `arrow.turn.up.left`, `car.2.fill`,
+`mountain.2`, `arrow.triangle.turn.up.right.diamond`) and title on the left, the
+current value on the right, and a menu of **Avoid / Normal / Don't mind**. Layout
+at accessibility sizes is the system's. Changes recompute the comparison live
+behind the sheet.
 
 Footer: **Reset to defaults** (plain button, disabled when already default),
-then the note **"Times stay estimates."** `.footnote` secondary. Done in the
+then the note **"Times stay estimates."** as the section's plain footer. Done in the
 toolbar (`.confirmationAction`). No "safe", no scores.
 
 ```
 ╭────────────────────────────╮
 │ Calmer means         Done  │
 │ Driving                    │
-│ 🚦 Traffic lights           │
-│   [Avoid|Normal|Don't mind]│
-│ 🛑 Stop signs               │
-│   [Avoid|Normal|Don't mind]│
+│ 🚦 Traffic lights   Normal ⌃│
+│ 🛑 Stop signs        Avoid ⌃│
 │ …                          │
 │ Reset to defaults          │
 │ Times stay estimates.      │
