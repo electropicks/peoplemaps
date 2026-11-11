@@ -463,8 +463,9 @@ Top to bottom:
    `checkmark.circle.fill` when chosen, in the label colour), so the pair reads as a
    choice before it is made. One route alone has no mark.
 5. **Why this route** and **Calmer means** (`route-preferences`), each a semibold
-   `.subheadline` in a 34-pt `glassWell` well (`WellButtonStyle`): not glass and not an
-   accent (principles 3 and 5), and it dims while pressed. As bare bold text they read as labels.
+   `.subheadline` in the system's `.bordered` capsule tinted `.primary` (`wellButton()`), inside a
+   full-size target: not glass and not an accent (principles 3 and 5). As bare bold text they read
+   as labels. `WellButtonStyle` is a hand-drawn copy of the same look for call sites not yet moved.
 6. **Pinned:** icon-only travel modes (Drive, Cycle, Walk, named for VoiceOver and
    in the large content viewer) beside **Start** (`.primaryAction()`).
 
@@ -553,12 +554,15 @@ The turn banner, rerouting card, trip bar and landscape card are `.regular` unde
   (no glass on glass, no opaque strip).
 - **Calm chip** below the banner, leading: glass capsule, `octagon` /
   `light.beacon.max` + text in `.primary` semibold (see 2, "On glass").
-- **Mute + report flag**: one horizontal glass capsule (vertical in
-  landscape), trailing, same row as the chip: two 44×44 plain buttons with a
-  divider. Banner, chip and buttons share one `GlassEffectContainer` so they
+- **Mute + report flag**: two round system glass buttons side by side (stacked
+  in landscape), trailing, same row as the chip: `.buttonStyle(.glass(.clear))`,
+  `.buttonBorderShape(.circle)`, `.controlSize(.large)`, 50 pt across, in one
+  `GlassEffectContainer`. After a tap the flag widens to a "Marked" capsule.
+  With Reduce Transparency or Increase Contrast they use `.regular` glass (6a).
+  Banner, chip and buttons share the outer `GlassEffectContainer` so they
   merge/morph as the chip appears.
-- **Camera button** (`guidance-camera`): one 52 pt round button on its own
-  glass, alone in the bottom trailing corner, beside the attribution and above
+- **Camera button** (`guidance-camera`): the same round system glass button,
+  alone in the bottom trailing corner, beside the attribution and above
   the trip bar (above the attribution in landscape). That keeps it clear of the
   banner, the recording pill (top leading) and the mute/flag cluster. One tap
   moves to the next state, and the glyph shows the current one with the symbol
@@ -766,7 +770,8 @@ after the owner phone-tested `.regular` twice and couldn't see glass.
 | Credit, turn banner, calm chip, trip bar, landscape card, arrival card | `.clear` + `glassVeil` | |
 | Re-centre pill | `.glass` button | Over the map, not on the sheet. |
 | Directions, Start, Done | `.primaryAction()` | The one allowed glass-in-glass: the primary action (principle 6). |
-| Why this route, Calmer means | `WellButtonStyle` on `glassWell` | A well, not glass (principle 3). |
+| Guidance mute, flag and camera | `.glass(.clear)` buttons | Over the map. With Reduce Transparency or Increase Contrast the system turns `.clear` dark under a dark symbol in light mode, so they take `.glass(.regular)` there, which stays light in light mode. |
+| Why this route, Calmer means | `wellButton()`: `.bordered`, tinted `.primary` | A well, not glass (principle 3). |
 | Behind the routes, Settings, pickers | solid or system modal | Reading, not glance. |
 | Reduce Transparency | `floatingSurface`, `sheetBackdrop` | Solid `panel`, with an outline. |
 
