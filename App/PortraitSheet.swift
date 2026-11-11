@@ -24,8 +24,9 @@ struct PortraitSheet<Content: View>: View {
 
     var body: some View {
         content
-            .background { SheetGlass(detents: detents, screen: "\(screen)") }
-            .presentationBackground { SheetBackdrop(large: stop == .large) }
+            // The sheet's background is the system's: Liquid Glass at the partial stops, opaque at large, frosted or solid under
+            // Reduce Transparency and Increase Contrast. Nothing of ours is painted over it (owner's decision, 10 November 2026).
+            .modifier(DebugOpaqueSheet())
             .presentationCornerRadius(Layout.sheetRadius)
             .safeAreaBar(edge: .bottom, spacing: 0) {
                 if stop == .large {
@@ -114,19 +115,6 @@ struct PortraitSheet<Content: View>: View {
         Binding(get: { screen == .home ? detent(.medium) : detent(stop) }, set: { new in
             model.stop = new == .large ? .large : new == .medium || screen == .home ? .medium : new == raisedDetent ? .raised : .fit
         })
-    }
-}
-
-/// What the sheet shows over its glass (`SheetGlass`): a frosted veil that keeps the map's labels from printing across the rows,
-/// or a solid panel when raised to read or when asked for. The system's glass alone doesn't blur what is behind it here.
-private struct SheetBackdrop: View {
-    let large: Bool
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.colorSchemeContrast) private var contrast
-    var body: some View {
-        if reduceTransparency || GlassFlags.reduceTransparency || large { Color.panel }
-        else if contrast == .increased { Color(uiColor: .glassVeilDense) }
-        else { Rectangle().fill(.regularMaterial).overlay(Color(uiColor: .glassVeil)) }
     }
 }
 
