@@ -10,8 +10,8 @@ import { limitDownloads } from "./ratelimit";
 export const RELEASE = /^data-[a-z-]+-\d{4}-\d{2}[a-z]?$/;
 export const OBJECT = /^[a-z]+(-[a-z]+)*--expected__[A-Za-z0-9.-]+$/;
 
-/** The key ID behind `Authorization: Bearer pmd_…`; 401 when the token is missing, bad or expired. */
-async function authorize(request: Request, deps: Deps): Promise<string> {
+/** The key ID behind `Authorization: Bearer pmd_…`; 401 when the token is missing, bad or expired. The log route (4.8) uses it too. */
+export async function authorize(request: Request, deps: Deps): Promise<string> {
   const m = /^Bearer (\S+)$/.exec(request.headers.get("authorization") ?? "");
   const secret = deps.attest.tokenSecret;
   const keyId = m && secret.length >= 32 ? await verifyDownloadToken(secret, m[1], deps.clock.now()) : null;

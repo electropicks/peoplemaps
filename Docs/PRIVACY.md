@@ -13,7 +13,8 @@ one is wrong and gets fixed.
 
 - The app works offline. Maps, search and routes are on your phone.
 - Nothing leaves your phone unless you tap **Send** on a report you have
-  read, or **Download King County** in Settings (see Downloading a bigger map).
+  read, **Download King County** in Settings (see Downloading a bigger map), or
+  **Send to PeopleMaps** on a trip log you chose to keep (see Sending a trip log).
 - There are no accounts, no sign-in, no analytics, no ads, no tracking.
 - A report you send is stored on our server and read by a maintainer. Nothing
   is published automatically. A maintainer may file a useful report as a public
@@ -22,16 +23,17 @@ one is wrong and gets fixed.
   you flagged, which can place you to within metres.
 - You can see, export and delete everything on the phone, and delete what you
   sent from our server (see Deleting for the limits). The app contacts the
-  server only when you tap Send, Check status or Delete my reports, or when it
-  downloads map data for a region. A region download sends only Apple's check
+  server only when you tap Send, Check status or Delete my reports, when it
+  downloads map data for a region, or when you tap Send to PeopleMaps on a trip
+  log. A region download sends only Apple's check
   that this is a genuine copy of the app and the name of the file it wants.
   For 90 days the server keeps that check's key ID and public key, whether the
   build was a development one, and the hour; they identify this install of the
   app, not you.
 
 > **Alpha builds.** No server is deployed yet, so nothing below about sending to our server happens: a report is a
-> `.json` file you share yourself from the share sheet (for example to iCloud Drive), after seeing what is in it. The app
-> contacts no server. See `Docs/REPORTS.md` section 11.
+> `.json` file you share yourself from the share sheet (for example to iCloud Drive), after seeing what is in it. For reports the app
+> contacts no server; a map download and Send to PeopleMaps on a trip log do (both below). See `Docs/REPORTS.md` section 11.
 
 ## What the app keeps on your phone
 
@@ -40,7 +42,7 @@ one is wrong and gets fixed.
   the date and time, mode, extra-time limit, which route you started, both time estimates, whether a calmer route was
   offered, how many reroutes, where you left the route (rounded to about 100 m unless you turn on **Exact places**) and
   whether you arrived or ended early. The last 500 trips are kept. It stays on the phone unless you share the file from
-  that page, and **Clear usage log** deletes it.
+  that page or tap **Send to PeopleMaps** there (see Sending a trip log), and **Clear usage log** deletes it from the phone.
 
 - A detailed log, only if you turn on "Keep a detailed log" in Settings, under Trip logs, Detailed log (off by default, and
   separate from the usage log). It
@@ -50,8 +52,8 @@ one is wrong and gets fixed.
   the app did (which turn you reached, leaving the route, rerouting, the lines the voice was given, muting, going to the
   background, the phone's temperature state and Low Power Mode). It also keeps, one file a day, what you searched for and
   which result you chose, the places you opened, the routes you previewed and the settings you changed. A trip shorter than
-  3 minutes is deleted when it ends. It is not sent anywhere: it stays on the phone, left out of backups, unless you share
-  the files from that page, and **Clear detailed log** deletes them. It keeps at most 500 MB and then removes the oldest
+  3 minutes is deleted when it ends. It is not sent anywhere by itself: it stays on the phone, left out of backups, unless you share
+  the files from that page or tap **Send to PeopleMaps** there (see Sending a trip log), and **Clear detailed log** deletes them from the phone. It keeps at most 500 MB and then removes the oldest
   trips and recordings. It does not
   record altitude.
 - A manual recording, only if "Keep a detailed log" is on and you tap **Start recording** (the record button on the map,
@@ -61,7 +63,7 @@ one is wrong and gets fixed.
   location permission as the rest of the app, never "Always", and cannot be started from the background. If the app is
   closed by the system, the recording ends and does not restart on its own. A recording shorter than 3 minutes is deleted
   when you stop it. Like the rest of the detailed log it stays on the phone, left out of backups, unless you share the
-  files from the Detailed log page in Settings, and **Clear detailed log** deletes them.
+  files from the Detailed log page in Settings or tap **Send to PeopleMaps** there, and **Clear detailed log** deletes them from the phone.
 - Recent app events, in memory only. The last 200 things the app did, or the last 10 minutes, whichever is fewer:
   that a route comparison started and how long it took, that guidance started or rerouted, that the map finished
   loading or moved the camera, how long a search took and how many results it found, and errors by type. Never a
@@ -84,7 +86,7 @@ estimates from where you are, and, while guiding, to show where you are on
 the map and say the next turn. It stops when the app leaves the screen, except
 for a manual recording you started yourself (described above), which runs in the
 background until you stop it and shows iOS's blue location indicator. We get
-location information only inside a report you send. Every report shows the
+location information only inside a report you send, or a trip log you send. Every report shows the
 corners near your start and destination and where along the route you flagged;
 **Exact locations** adds the exact points and your GPS position.
 
@@ -152,6 +154,36 @@ checksum it already has before using it. Downloads go over Wi-Fi unless you tap 
 > server that key's ID and Apple's attestation of it. The server keeps the key ID, its public key and the hour for 90
 > days, which identifies one install of the app and not you. The download pass it returns is kept in your iPhone's
 > Keychain for 24 hours.
+
+## Sending a trip log
+
+The usage log and the detailed log are off unless you turn them on, and they stay on the phone unless you share them or
+tap **Send to PeopleMaps** on the log's page in Settings. That button is the only thing that sends a log; nothing is sent
+on a timer or in the background.
+
+- **What goes.** The log's files, with the same contents Share hands over, encrypted on your phone before they leave it. The usage log is one
+  line per trip, with places rounded to about 100 m unless **Exact places** is on. The detailed log has exact places: your
+  starts and destinations, every location fix of each trip and recording, what you searched for and the places you opened.
+  Before anything is sent the app says how many files and how large, and that they include exact places when they do. Files
+  already sent are not sent again.
+- **What goes with it.** A check that the app is a genuine copy of PeopleMaps (Apple's App Attest, as for a map download),
+  and nothing else: no name, no account, no report ID, no device name. The server does not record which install sent a
+  file. The files themselves can still identify you: a log of your trips shows where you start and end them.
+- **Where it is kept.** On our server at Cloudflare, in private storage separate from the map files. It is not published
+  and never filed as an issue. Each file is encrypted on your phone to a key that only the maintainer holds, on their own
+  computer and not on the server. So the server, Cloudflare, and anyone with access to the project's Cloudflare account can
+  see that a file was sent, its size, its name (a trip's start time and mode, or a day) and the hour, but not what is in it.
+- **How long.** Up to 30 days. The maintainer usually copies a log off the server sooner, which deletes it there, and
+  the daily cleanup deletes anything older than 30 days. A copy the maintainer took is kept on their computer, outside
+  the project's repository, for as long as it is useful for fixing the app.
+- **Deleting.** **Clear** on the log's page deletes the phone's copy only. **Delete sent logs**, on the same page while
+  something you sent may still be on the server, removes what this phone sent from the server. The phone keeps a random
+  delete key for each send for this; the server does not know which install sent a file. It cannot remove a copy the
+  maintainer already took: ask through the project's GitHub issues (without personal details). If you erase the app or
+  lose the phone, the delete keys go with it, and what you sent stays until its 30 days end.
+
+If your device cannot do App Attest (the Simulator, some devices), the button says the device can't send logs and
+nothing is sent.
 
 ## Your report ID
 

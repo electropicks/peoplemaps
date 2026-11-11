@@ -2,7 +2,7 @@ import type { Store } from "./store";
 
 /** A Workers rate-limiting binding, or a test fake with the same shape (4.6). */
 export interface RateLimiter { limit(options: { key: string }): Promise<{ success: boolean }> }
-export interface Limits { auth: RateLimiter; installs: RateLimiter; reports: RateLimiter; attest: RateLimiter; downloads: RateLimiter }
+export interface Limits { auth: RateLimiter; installs: RateLimiter; reports: RateLimiter; attest: RateLimiter; downloads: RateLimiter; logs: RateLimiter }
 export interface Clock { now(): Date }
 
 export interface Vars {
@@ -10,6 +10,10 @@ export interface Vars {
   reportsPerDay: number;
   installsPerHour: number;
   attestsPerHour: number;
+  /** Days a sent log is kept (4.8). */
+  logRetentionDays: number;
+  /** Bytes of logs accepted across all senders in a UTC day (4.8). */
+  logBytesPerDay: number;
 }
 
 /** What the download route needs from an R2 bucket (4.7); the R2 binding and the test stub both fit. */
@@ -19,6 +23,12 @@ export interface Bucket {
   head(key: string): Promise<BucketObject | null>;
   /** Without `body` when an `onlyIf` condition failed. */
   get(key: string, options: { range?: { offset: number; length: number }; onlyIf?: Headers }): Promise<BucketObjectBody | BucketObject | null>;
+}
+
+/** What the log route and its cleanup need from the logs bucket (4.8); the R2 binding and the test stub both fit. */
+export interface LogBucket {
+  put(key: string, value: ArrayBuffer | Uint8Array, options: { httpMetadata: { contentType: string }; sha256: string }): Promise<unknown>;
+  delete(keys: string[]): Promise<void>;
 }
 
 /** App Attest and the download token (4.5, 4.7). Empty strings mean not set up, and those routes answer 500. */
@@ -34,7 +44,7 @@ export interface AttestConfig {
 }
 
 /** Everything a handler needs. Handlers never see `env` or anything from Cloudflare (7.1). */
-export interface Deps { store: Store; limits: Limits; clock: Clock; vars: Vars; data: Bucket; attest: AttestConfig }
+export interface Deps { store: Store; limits: Limits; clock: Clock; vars: Vars; data: Bucket; logs: LogBucket; attest: AttestConfig }
 
 export function parseVars(env: Record<string, unknown>): Vars {
   const n = (k: string, fallback: number) => {
@@ -46,5 +56,7 @@ export function parseVars(env: Record<string, unknown>): Vars {
     reportsPerDay: n("REPORTS_PER_DAY", 5),
     installsPerHour: n("INSTALLS_PER_HOUR", 60),
     attestsPerHour: n("ATTESTS_PER_HOUR", 60),
+    logRetentionDays: n("LOG_RETENTION_DAYS", 30),
+    logBytesPerDay: n("LOG_BYTES_PER_DAY", 300_000_000),
   };
 }
