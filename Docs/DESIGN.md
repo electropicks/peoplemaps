@@ -658,7 +658,11 @@ would push mute, the flag and the camera button off it. Secondary text on glass 
 A bottom glass card inside `GuidanceView`, not the returning sheet, no grabber.
 Check badge on `glassWell`, "You've arrived at Gas Works Park", summary line, trip
 notes split by hairlines, **Done** as `.primaryAction()`, "Times are estimates. No
-live traffic." and the voice tip. `.sensoryFeedback(.success)` fires on arrival.
+live traffic." and, under them at the foot of the card, the voice tip: a TipKit
+`TipView` (`VoiceUpgradeTip`) in the system style, shown only when a better voice
+could be downloaded; its close button dismisses it for good. It stays outside the
+scrolling part, so at the largest text sizes it is pinned under Done.
+`.sensoryFeedback(.success)` fires on arrival.
 
 ### 4.9 Settings
 
