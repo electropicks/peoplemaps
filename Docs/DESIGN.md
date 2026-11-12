@@ -491,7 +491,7 @@ Top to bottom:
 5. **Why this route** and **Calmer means** (`route-preferences`), each a semibold
    `.subheadline` in the system's `.bordered` capsule tinted `.primary` (`wellButton()`), inside a
    full-size target: not glass and not an accent (principles 3 and 5). As bare bold text they read
-   as labels. `WellButtonStyle` is a hand-drawn copy of the same look for call sites not yet moved.
+   as labels.
 6. **Pinned:** icon-only travel modes (Drive, Cycle, Walk, named for VoiceOver and
    in the large content viewer) beside **Start** (`.primaryAction()`).
 

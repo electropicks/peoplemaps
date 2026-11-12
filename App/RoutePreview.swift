@@ -311,7 +311,7 @@ struct RoutePreview: View {
     @ViewBuilder private func whyButton(_ comparison: RouteComparison?) -> some View {
         if let comparison {
             Button { model.sheet = .details } label: { Text("Why this route").multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true) }
-            .buttonStyle(WellButtonStyle())
+            .wellButton()
             .accessibilityHint(comparison.spokenCalmSummary)
             .accessibilityIdentifier("route-details")
         }
