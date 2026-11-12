@@ -234,9 +234,10 @@ class PeoplemapsUITestCase: XCTestCase {
         return XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: gone, object: nil)], timeout: timeout) == .completed
     }
     /// Scrolls the preferences sheet until `element` can be tapped; the first swipe also lifts the sheet to its large detent.
-    @MainActor func scrollPreferences(to element: XCUIElement, in app: XCUIApplication) {
+    @MainActor func scrollPreferences(to element: XCUIElement, in app: XCUIApplication, up: Bool = true) {
         for i in 0..<4 where !(element.exists && element.isHittable) {
-            (i.isMultiple(of: 2) ? app.navigationBars["Calmer means"] : app.collectionViews.firstMatch).swipeUp()
+            if !up { app.collectionViews.firstMatch.swipeDown() }
+            else { (i.isMultiple(of: 2) ? app.navigationBars["Calmer means"] : app.collectionViews.firstMatch).swipeUp() }
         }
         XCTAssertTrue(element.exists && element.isHittable)
     }
