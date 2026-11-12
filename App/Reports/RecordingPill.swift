@@ -16,8 +16,8 @@ struct RecordingPill: View {
                     .accessibilityValue(Self.spoken(context.date.timeIntervalSince(startedAt)))
                     .accessibilityIdentifier("record-time")
             }
-            Button(action: stop) { Text("Stop").font(.footnote.weight(.semibold)).frame(minHeight: 44) }
-                .buttonStyle(.plain)
+            Button(action: stop) { Text("Stop").frame(minHeight: 44) }
+                .buttonStyle(.borderless).font(.footnote.weight(.semibold)).tint(.primary)
                 .accessibilityLabel("Stop recording")
                 .accessibilityIdentifier("record-stop")
         }
