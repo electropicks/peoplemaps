@@ -132,19 +132,6 @@ extension View {
     }
 }
 
-/// The hand-built twin of `wellButton()`, drawn to match the system's bordered capsule. A `ButtonStyle` can't wrap a system style,
-/// so this stays only for the call sites not yet moved: they should move to `wellButton()`, and then this goes.
-struct WellButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
-            .padding(.horizontal, 12).padding(.vertical, 6)
-            .background(Color.primary.opacity(0.17), in: Capsule())
-            .opacity(configuration.isPressed ? 0.5 : 1)
-            .frame(minHeight: Layout.target).contentShape(Rectangle())
-    }
-}
-
 /// Which of two routes is chosen: a radio mark in the label colour, there before it is tapped so the row reads as a choice.
 struct ChoiceMark: View {
     let chosen: Bool
