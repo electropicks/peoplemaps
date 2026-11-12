@@ -163,8 +163,9 @@ def dir_bytes(es):
         out += varint(0 if i > 0 and e[1] == es[i-1][1] + es[i-1][2] else e[1] + 1)
     return bytes(out)
 
-def pmtiles(tiles, bounds):
-    """tiles {(z,x,y): bytes}; bounds (W,S,E,N). Returns the archive and its counts."""
+def pmtiles(tiles, bounds, minz=MINZ, maxz=MAXZ, layers=None, attribution='\u00a9 OpenStreetMap contributors', name='peoplemaps', centerz=12):
+    """tiles {(z,x,y): bytes}; bounds (W,S,E,N); layers {source layer: first zoom}, LAYER_MINZOOM when None.
+    Returns the archive and its counts."""
     blob = bytearray(); seen = {}; entries = []
     for tid, k in sorted((zxy_to_id(*k), k) for k in tiles):
         c = tiles[k]
@@ -181,14 +182,14 @@ def pmtiles(tiles, bounds):
             rootentries.append([entries[i][0], len(leaves), len(d), 0]); leaves += d
         root = dir_bytes(rootentries); leaf = bytes(leaves); leafsize *= 2
     W, S, E, N = bounds
-    vl = [{'id': k, 'fields': {}, 'minzoom': m, 'maxzoom': MAXZ} for k, m in sorted(LAYER_MINZOOM.items())]
-    meta = json.dumps({'attribution': '\u00a9 OpenStreetMap contributors', 'format': 'pbf', 'name': 'peoplemaps', 'vector_layers': vl},
+    vl = [{'id': k, 'fields': {}, 'minzoom': m, 'maxzoom': maxz} for k, m in sorted((LAYER_MINZOOM if layers is None else layers).items())]
+    meta = json.dumps({'attribution': attribution, 'format': 'pbf', 'name': name, 'vector_layers': vl},
                       separators=(',', ':'), sort_keys=True, ensure_ascii=False).encode()
     rootoff = 127; metaoff = rootoff + len(root); leafoff = metaoff + len(meta); dataoff = leafoff + len(leaf)
     e7 = lambda v: int(round(v * 1e7))
     hdr = b'PMTiles\x03' + struct.pack('<QQQQQQQQ', rootoff, len(root), metaoff, len(meta), leafoff, len(leaf), dataoff, len(blob)) + \
-        struct.pack('<QQQ', len(tiles), len(entries), len(seen)) + bytes([1, 1, 1, 1, MINZ, MAXZ]) + \
-        struct.pack('<iiii', e7(W), e7(S), e7(E), e7(N)) + bytes([12]) + struct.pack('<ii', e7((W + E) / 2), e7((S + N) / 2))
+        struct.pack('<QQQ', len(tiles), len(entries), len(seen)) + bytes([1, 1, 1, 1, minz, maxz]) + \
+        struct.pack('<iiii', e7(W), e7(S), e7(E), e7(N)) + bytes([centerz]) + struct.pack('<ii', e7((W + E) / 2), e7((S + N) / 2))
     assert len(hdr) == 127
     data = hdr + root + meta + leaf + bytes(blob)
     return data, {'addressedTiles': len(tiles), 'tileEntries': len(entries), 'distinctTiles': len(seen), 'bytes': len(data)}

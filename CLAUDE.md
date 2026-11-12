@@ -5,6 +5,7 @@ An offline iOS maps app for Seattle that picks the calmer route a local would ch
 ## Layout
 
 - `Core/`: Swift package `PeoplemapsCore`. Graph, router (`RoutingEngine.swift`), stress model, navigation plan, search index, saved places, spoken text. Builds on macOS, iOS and Linux.
+- `Share/`: the Share Extension (`PeoplemapsShare`): hands a shared link to the app, nothing else (`Docs/SEARCH.md`, "Shared links").
 - `App/`: SwiftUI app. MapLibre map (`SeattleMap.swift`), `ExploreView.swift` (home, search, place card, preview), `Navigation/` (Ferrostar guidance, voice). macOS and Xcode only.
 - `Bench/`: `peoplemaps-bench`, the router benchmark (timings, peak RSS, `--scale N` graph copies, `--json`). Budgets and method: `Docs/PERFORMANCE.md`.
 - `Scripts/`: Python data importer and search builder, project generator, `verify.sh`.
@@ -34,7 +35,7 @@ Before reporting any task done, committing or opening a PR, follow the `verify` 
 ## Rules
 
 - **Never call a route "safe".** Say calmer, estimates, unknown when tags are missing. See the `product-rules` skill.
-- **No Apple Maps data** in our data or UI, only the "Look up in Apple Maps" hand-off (`Docs/SEARCH.md`). Data licences and regeneration: the `data-pipeline` skill.
+- **No Apple Maps data** in our data or UI, only the "Look up in Apple Maps" hand-off and, for a link the user pastes, the point of a pin when we lack the place (`Docs/SEARCH.md`, "Shared links"). Data licences and regeneration: the `data-pipeline` skill.
 - Generated files come only from their generators: `Core/Resources/*` and `Data/provenance.json` from the importer, `Peoplemaps.xcodeproj` from `generate_project.py`. A hook blocks hand edits.
 - Small, logical commits with plain messages and no attribution lines. Work on a branch, and land it through a PR into `main`. Never push to `main`: a hook blocks it, since this GitHub plan has no branch protection.
 - Use `trash`, never `rm`. Ask before deleting anything you didn't create.

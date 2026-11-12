@@ -58,6 +58,8 @@ extension View {
 struct FavouritesEditor: View {
     let saved: SavedPlacesStore
     @Environment(\.dismiss) private var dismiss
+    @State private var naming: Place?
+    @State private var name = ""
 
     var body: some View {
         NavigationStack {
@@ -72,6 +74,9 @@ struct FavouritesEditor: View {
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityIdentifier("edit-favourite-\(place.id)")
+                    .swipeActions(edge: .leading) {
+                        Button("Rename", systemImage: "pencil") { name = saved.hasOwnName(place) ? place.name : ""; naming = place }.tint(.accentColor)
+                    }
                 }
                 .onDelete { offsets in
                     let places = offsets.map { saved.favourites[$0] }
@@ -80,12 +85,13 @@ struct FavouritesEditor: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .modifier(NamePlaceAlert(place: naming, name: $name, dismiss: { naming = nil }) { _ = saved.name($0, $1) })
             .navigationTitle("Favourites").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { EditButton().accessibilityIdentifier("edit-favourites-list") }
                 ToolbarItem(placement: .topBarTrailing) { Button(role: .close) { dismiss() }.accessibilityIdentifier("close-favourites") }
             }
         }
-        .tint(.primary).presentationDetents([.medium, .large])
+        .presentationDetents([.medium, .large])
     }
 }

@@ -15,15 +15,17 @@ enum Screen: Equatable {
 /// the preview's rating and buttons. Raised is the preview with its start, swap and extra time as well.
 enum Stop { case fit, medium, raised, large }
 
-/// Why location can't do what was just asked of it.
+/// Why location, or a pasted maps link, can't do what was just asked of it.
 enum LocationNotice: String, Identifiable {
-    case startGuidance, locate, outside, noFix, record
+    case startGuidance, locate, outside, noFix, record, sharedOutside, sharedUnreadable
     var id: String { rawValue }
     var title: String {
         switch self {
         case .startGuidance, .locate, .record: "Location is off for PeopleMaps"
         case .outside: "You\u{2019}re outside the area we cover"
         case .noFix: "Can\u{2019}t find you right now"
+        case .sharedOutside: "This place is outside your map area"
+        case .sharedUnreadable: "PeopleMaps couldn\u{2019}t read this link"
         }
     }
     var message: String {
@@ -34,6 +36,8 @@ enum LocationNotice: String, Identifiable {
         case .outside: RegionSelection.usesCounty ? "\(RegionSelection.coverageSentence) It can\u{2019}t show where you are from here. You can still choose a start inside it."
             : "The map covers Seattle for now, so it can\u{2019}t show where you are. You can still choose a start inside it."
         case .noFix: "Your iPhone hasn\u{2019}t given a location yet. Try again in a moment, or choose a start yourself."
+        case .sharedOutside: RegionSelection.usesCounty ? RegionSelection.coverageSentence : "PeopleMaps can route only inside its offline Seattle area for now."
+        case .sharedUnreadable: "Short links need a connection to open, and some link formats aren\u{2019}t supported yet. You can search for the place by name or address instead."
         }
     }
     var offersSettings: Bool { self == .startGuidance || self == .locate || self == .record }
@@ -63,8 +67,18 @@ enum LocationNotice: String, Identifiable {
     /// Where home was resting, to go back to.
     var homeStop = Stop.fit
     var query = ""
+    /// A pasted maps link that needs a choice: the search it filled in, where its results rank from, and the pin at its point.
+    var shared: (query: String, near: Coordinate?, pin: Place?)?
+    var readingLink = false
+    /// The place a pasted link was matched to, so its card can say so.
+    var sharedMatchID: String?
     /// Search was opened by Add in the favourites row: the place picked becomes a favourite.
     var addingFavourite = false
+    /// The last name search had no answer for, offered as the name when the address or pin found next is kept.
+    private(set) var missed: String?
+    /// The place being named, and the name so far.
+    var naming: Place?
+    var nameDraft = ""
     /// The start the user chose last. Without location, a later Directions reuses it unless it is the new destination.
     var lastOrigin: Place?
     /// The device's last fix, kept only while location is allowed.
@@ -99,7 +113,15 @@ enum LocationNotice: String, Identifiable {
         guard let origin, let destination, graph.coverage.contains(origin.coordinate) else { return nil }
         return .init(origin: origin, destination: destination, mode: mode, extraMinutes: budget, preferences: preferences[mode])
     }
-    var results: [Place] { search.search(query, near: userLocation ?? origin?.coordinate ?? lastOrigin?.coordinate) }
+    private var searchCentre: Coordinate? { shared?.near ?? userLocation ?? origin?.coordinate ?? lastOrigin?.coordinate }
+    /// Places kept under the user's own name lead, then the index, each under the name it was kept with.
+    var results: [Place] {
+        let found = search.search(query, near: searchCentre).map { saved.favourite(at: $0) ?? $0 }
+        let keys = Set(found.map(SavedPlaces.key))
+        return saved.matching(query).filter { !keys.contains(SavedPlaces.key($0)) } + found
+    }
+    /// What to offer when `results` is empty: three, so the other ways to get there stay above the keyboard.
+    var closest: SearchIndex.Closest { search.closest(query, near: searchCentre, limit: 3) }
     var chosenRoute: Route? {
         guard request != nil, let comparison = session.comparison else { return nil }
         return selectedCalmer ? comparison.calmer ?? comparison.fastest : comparison.fastest
@@ -125,13 +147,15 @@ enum LocationNotice: String, Identifiable {
     func searchLowered() { homeStop = stop; query = ""; addingFavourite = false; screen = .home }
 
     func open(_ place: Place) {
-        let place = search.withAddress(place)
+        let place = saved.favourite(at: place) ?? search.withAddress(place)
         query = ""
+        if !place.canBeNamed { missed = nil }
         placeNear = place.address == nil && place.kind == .place && !place.isDroppedPin ? search.nearestAddress(to: place.coordinate)?.name : nil
         show(.place(place))
     }
     /// A search result: its place card, or a new favourite when Add opened the search.
     func picked(_ place: Place) {
+        sharedMatchID = nil
         DriveLogger.use("search_pick", ["query": .string(query), "id": .string(place.id), "name": .string(place.name),
                                         "rank": .num(results.firstIndex { $0.id == place.id } ?? -1), "results": .num(results.count), "addingFavourite": .bool(addingFavourite)])
         guard addingFavourite else { open(place); return }
@@ -140,6 +164,67 @@ enum LocationNotice: String, Identifiable {
         cancelSearch()
     }
     func cancelSearch() { query = ""; addingFavourite = false; show(.home) }
+    /// A maps link or coordinates pasted into search: our own matching place, a choice of near ones, or a pin
+    /// (Docs/SEARCH.md, "Shared links"). Only a paste counts, so coordinates typed digit by digit don't jump early.
+    func searchChanged(from old: String, to text: String) {
+        if shared?.query != text { shared = nil }
+        guard text.count > old.count + 1, let link = SharedLink.parse(text) else { return }
+        take(link)
+    }
+    /// The Share Extension's hand-off (`peoplemaps://share?text=…`): the same handling as a paste. A link opens its
+    /// place; plain words become the search. Guidance is never interrupted.
+    func opened(_ url: URL) {
+        guard let text = SharedLink.sharedText(opened: url), screen != .navigating else { return }
+        sheet = nil; addingFavourite = false
+        show(.search)
+        if let link = SharedLink.parse(text) { take(link) }
+        else { query = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.joined(separator: ", ") }
+    }
+    func take(_ link: SharedLink) {
+        switch link {
+        case let .short(url, text):
+            query = ""; readingLink = true
+            Task {
+                let found = await SharedLinkExpander().expand(url, text: text)
+                readingLink = false
+                if screen == .search { take(found) }
+            }
+        case let .unreadable(text): query = text ?? ""; notice = .sharedUnreadable
+        // One destination at a time for now: a shared route gives its last stop.
+        case let .route(_, stops, _): if let last = stops.last { take(.place(last)) }
+        case let .place(stop):
+            switch search.match(stop, covers: graph.coverage.contains, near: userLocation ?? origin?.coordinate ?? lastOrigin?.coordinate) {
+            case let .place(place): addingFavourite = false; open(place); sharedMatchID = place.id
+            case let .pin(place): addingFavourite = false; open(place)
+            case let .candidates(text, near, pin): shared = (text, near, pin); query = text
+            case .outside: query = ""; notice = .sharedOutside
+            }
+        }
+    }
+
+    // MARK: Places the map lacks
+
+    /// Text search found nothing for. An address is not a name, so it is not kept.
+    func remember(missed text: String) {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = text.first, !first.isNumber, text.count <= SavedPlaces.nameLimit else { return }
+        missed = text
+    }
+    /// Search gives way to the map at its lowest stop, to touch and hold the spot.
+    func chooseOnMap() { query = ""; addingFavourite = false; homeStop = .fit; show(.home) }
+
+    /// The star: an address or pin being kept is offered a name, since its own says only where it is.
+    func toggleFavourite(_ place: Place) {
+        let adding = !saved.isFavourite(place)
+        saved.toggleFavourite(place)
+        if adding, place.canBeNamed { nameDraft = missed ?? ""; naming = place }
+    }
+    func name(_ place: Place, _ name: String) {
+        let named = saved.name(place, name)
+        missed = nil
+        if selectedPlace.map(SavedPlaces.key) == SavedPlaces.key(named) { screen = .place(named) }
+        if let destination, SavedPlaces.key(destination) == SavedPlaces.key(named) { self.destination = named }
+    }
 
     /// A start that follows the user moves with each new fix; an empty start fills in once one arrives.
     func followUser() {

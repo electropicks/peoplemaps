@@ -35,9 +35,6 @@ enum GlassFlags {
         #endif
         return .clear
     }()
-    /// The sheet's glass, which is UIKit's: always `.regular`, under `glassVeil`. The sheet is read at a glance with the map moving
-    /// behind it, and `.clear` let the map's labels print across its rows (Docs/DESIGN.md, principle 4).
-    static let sheetStyle: UIGlassEffect.Style = .regular
 }
 
 /// How much veil a surface carries over its glass.
@@ -80,28 +77,11 @@ private struct FloatingSurface<S: Shape>: ViewModifier {
     }
 }
 
-/// Gives the UIKit sheet this view is in our glass at its partial stops, where the system floats it. SwiftUI has no modifier for a
-/// detent's effect, and the system's own glass draws under any `presentationBackground`. Large stays the system's: it's read at length.
-/// With Reduce Transparency the system's own effect stays too, since it frosts itself.
-/// `detents` and `screen` are inputs only so this runs again when SwiftUI swaps the sheet's detents, which come back with the system glass.
-struct SheetGlass: UIViewRepresentable {
-    let detents: Set<PresentationDetent>
-    let screen: String
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
-    func makeUIView(context: Context) -> UIView { let view = UIView(); view.isUserInteractionEnabled = false; return view }
-    func updateUIView(_ view: UIView, context: Context) {
-        let plain = reduceTransparency || GlassFlags.reduceTransparency
-        // After this update, since SwiftUI may have just replaced the detents.
-        DispatchQueue.main.async { [weak view] in
-            guard let view,
-                  let controller = sequence(first: view as UIResponder, next: \.next).lazy.compactMap({ $0 as? UIViewController }).first,
-                  let sheet = controller.sheetPresentationController else { return }
-            for detent in sheet.detents where detent.identifier != .large {
-                if plain { if detent.backgroundEffect is UIGlassEffect { detent.backgroundEffect = nil } }
-                else if !(detent.backgroundEffect is UIGlassEffect) { detent.backgroundEffect = UIGlassEffect(style: GlassFlags.sheetStyle) }
-            }
-        }
+/// `--reduce-transparency` in a debug build stands in for the system setting, which a UI test cannot turn on: the sheet gets the
+/// solid panel the system would give it. In every other case the sheet's background is left to the system.
+struct DebugOpaqueSheet: ViewModifier {
+    func body(content: Content) -> some View {
+        if GlassFlags.reduceTransparency { content.presentationBackground(Color.panel) } else { content }
     }
 }
 
@@ -120,19 +100,23 @@ extension View {
         buttonStyle(.glassProminent).buttonBorderShape(shape).tint(.primaryActionFill).controlSize(.large)
     }
 
-    /// The track of a switch when on. Sheets whose tint is `.primary`, which is white in dark mode, would draw a white track under a
-    /// white knob, with nothing to tell on from off. Dusk blue (`switchOn`, a deeper value than the map's in dark) is the one hue a control may take (Docs/DESIGN.md, principle 5).
-    func switchTint() -> some View { tint(Color(uiColor: .switchOn)) }
+    /// A secondary action on a glass panel ("Why this route", "Calmer means"): the system's bordered capsule in the label colour,
+    /// since glass doesn't go on glass and no control takes an accent (Docs/DESIGN.md, principles 3 and 5), in a full-size target.
+    func wellButton() -> some View {
+        buttonStyle(.bordered).buttonBorderShape(.capsule).font(.subheadline.weight(.semibold)).tint(.primary)
+            .frame(minHeight: Layout.target).contentShape(Rectangle())
+    }
+
 }
 
-/// A secondary action on a glass panel ("Why this route", "Calmer means"): its words in a quiet well, since glass doesn't go on
-/// glass and no control takes an accent (Docs/DESIGN.md, principles 3 and 5). The well is 34 pt in a full-size target, and dims while pressed.
+/// The hand-built twin of `wellButton()`, drawn to match the system's bordered capsule. A `ButtonStyle` can't wrap a system style,
+/// so this stays only for the call sites not yet moved: they should move to `wellButton()`, and then this goes.
 struct WellButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
-            .padding(.horizontal, 14).padding(.vertical, 6).frame(minHeight: 34)
-            .background(.glassWell, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+            .padding(.horizontal, 12).padding(.vertical, 6)
+            .background(Color.primary.opacity(0.17), in: Capsule())
             .opacity(configuration.isPressed ? 0.5 : 1)
             .frame(minHeight: Layout.target).contentShape(Rectangle())
     }

@@ -7,6 +7,18 @@
 	<key>PMBuildCommit</key>
 	<string>$(PM_BUILD_COMMIT)</string>
 	<!-- Manual recording (App/Reports/ManualRecorder.swift) keeps running after a start in the foreground. When-In-Use is enough; there is no Always. -->
+	<!-- The Share Extension hands a shared link to the app as peoplemaps://share?text=… (Core/SharedLink.swift). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>electrocorp.peoplemaps</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>peoplemaps</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

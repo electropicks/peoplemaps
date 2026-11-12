@@ -31,17 +31,17 @@ records anything renamed in the PR.
 | `@Environment(\.accessibilityReduceTransparency)`, `\.colorSchemeContrast`, `\.accessibilityReduceMotion` | fallbacks | stable; confirmed in Xcode 27.1 |
 | iOS 27 "clear to tinted" glass slider | users can make all glass more opaque | reported in press, unconfirmed |
 | Xcode 27 ignores `UIDesignRequiresCompatibility` | no opting out of glass | Apple forums thread 832543 |
-| `UISheetPresentationController.Detent.backgroundEffect`, `UIGlassEffect(style:)` | the sheet's glass (`SheetGlass`) | iOS 26.1; confirmed in Xcode 27.1 |
 
 `.containerConcentric` was not found in the Xcode 27.1 SDK; `ConcentricRectangle` exists, so use that for
 concentric corners (section 3).
 
-Partial-height system sheets draw their own glass, under any
-`presentationBackground`, and on a pale map it reads as plain off-white.
-`SheetGlass` sets each partial detent's `backgroundEffect` to `UIGlassEffect`,
-which lets the map show through; SwiftUI has no modifier for it. An empty
-`UIVisualEffect` doesn't remove the panel, so home at rest has no sheet at all
-(4.2).
+**The sheet's background is the system's** (owner's decision, 10 November 2026: use Apple's frameworks and styling
+wherever they exist, and keep custom components and styling to what is needed). Partial-height system sheets draw their
+own Liquid Glass; the app sets no `presentationBackground` and no per-detent effect. From 4 to 10 November the app painted
+its own (`SheetGlass`, a `.regularMaterial` and `glassVeil`), after a phone test of the system glass showed map labels
+printing across rows and the glass no longer drawing after Settings closed or the map was touched; both are to be
+re-checked on the phone with this build. An empty `UIVisualEffect` doesn't remove the panel, so home at rest has no sheet
+at all (4.2).
 
 ## 1. Principles
 
@@ -135,8 +135,10 @@ takes `minus.circle` in `onGlass`, never a tick: on the arrival card, and in "Be
 
 ### Rating
 
-The rating is a real progress bar: fill width is the 0 to 100 calm score, track
-`glassTrack`, fill and word coloured by level (`CalmMeter`). Blue through grey to
+The rating is a system `Gauge` in the linear capacity style: the fill is the 0 to
+100 calm score on the system's track, at the system's one thickness, tint and word
+coloured by level (`CalmMeter`).
+Blue through grey to
 orange and rose, not green to red, so it doesn't read as safe and unsafe. VoiceOver
 reads "Chill, 69 out of 100".
 
@@ -248,7 +250,7 @@ Worst case over the map under each surface, in contrast ratio:
 
 | Where | Background, light | Background, dark | Primary, L / D | `onGlass`, L / D |
 |---|---|---|---|---|
-| Sheet (`.regular`, `.regularMaterial` and `glassVeil`), 4 November 2026 | `#F7F7F7` | `#1F2322` | 17.3 / 12.1 | 9.3 / 7.6 |
+| Sheet as painted until 10 November 2026 (`.regular`, `.regularMaterial` and `glassVeil`); not re-measured on the system's glass | `#F7F7F7` | `#1F2322` | 17.3 / 12.1 | 9.3 / 7.6 |
 | Home capsule and chips (no veil) | white to `#CEECF7` | `#38423F` to `#3F626D` | 17.0 / 6.6 | none on them |
 | Guidance banner, route under the text (`.regular`) | `#E6F5FA` to `#FCFCF9` | `#202826` to `#203337` | 18.8 / 13.2 | 9.8 / 8.1 |
 | Trip bar | white to `#EBF8ED` | `#242B29` to `#293C35` | 19.2 / 11.7 | 9.9 / 7.4 |
@@ -429,6 +431,10 @@ list. Each row:
   keyboard and the credit on a smaller phone or at larger text (9 November 2026).
   VoiceOver still hears the empty state first. The start and destination pickers do the
   same. Nothing from Apple is shown in the app.
+- The start and destination pickers (`App/PlacePicker.swift`) are a system modal: an inset-grouped
+  `List` in a `NavigationStack`, the system search field (`.searchable`, in the navigation bar
+  drawer, always shown), system `Section` headers (Favourites, Recents, Matches) and one list row
+  per place with `PlaceRow`'s content. Current location is the first row of the origin's list.
 - `scrollEdgeEffectStyle(.soft, for: .top)` under the pinned field.
 - **Before anything is typed** the sheet is never a blank page (9 November 2026): Recents, or on a fresh install the line
   "Search a place, an address or a street", then six shortcuts in two columns (`SearchShortcuts`): Coffee, Food,
@@ -489,8 +495,9 @@ Top to bottom:
    `checkmark.circle.fill` when chosen, in the label colour), so the pair reads as a
    choice before it is made. One route alone has no mark.
 5. **Why this route** and **Calmer means** (`route-preferences`), each a semibold
-   `.subheadline` in a 34-pt `glassWell` well (`WellButtonStyle`): not glass and not an
-   accent (principles 3 and 5), and it dims while pressed. As bare bold text they read as labels.
+   `.subheadline` in the system's `.bordered` capsule tinted `.primary` (`wellButton()`), inside a
+   full-size target: not glass and not an accent (principles 3 and 5). As bare bold text they read
+   as labels. `WellButtonStyle` is a hand-drawn copy of the same look for call sites not yet moved.
 6. **Pinned:** icon-only travel modes (Drive, Cycle, Walk, named for VoiceOver and
    in the large content viewer) beside **Start** (`.primaryAction()`).
 
@@ -527,44 +534,46 @@ then the reasons and metrics.
 ### 4.6 Route preferences sheet ("Calmer means")
 
 A second sheet on top of the persistent one, `.medium` and `.large`,
-title "Calmer means" with the current mode in the subtitle ("Driving"). One
-`Form`, inset grouped. Mode-specific rows only (`Docs/STRESS_MODEL.md`: don't
-apply one mode's rule to another):
+title "Calmer means". One `Form`, inset grouped. The first row is a standard
+segmented `Picker`, **Drive / Cycle / Walk** (`preferences-mode`), on a clear row
+background; it opens on the mode being routed, and switching it shows that
+mode's own rows without leaving the sheet. Each mode keeps its own choices.
 
-| Factor | Drive | Cycle | Walk |
-|---|---|---|---|
-| Traffic lights | ✓ | ✓ | ✓ (crossings) |
-| Stop signs | ✓ | ✓ | Unsignalled crossings |
-| Unsignalled lefts | ✓ | ✓ | Unsignalled crossings |
-| Busy streets | ✓ | ✓ | ✓ |
-| Hills | ✓ | ✓ | ✓ |
-| Turns | ✓ | ✓ | ✓ |
+Rows are mode-specific (`Docs/STRESS_MODEL.md`, "Preferences", has the factors
+behind each; don't apply one mode's rule to another):
 
-Walk has no stop signs or lefts in the stress model; it has unsignalled and
-unmarked crossings instead, shown as one "Unsignalled crossings" row in place
-of those two. Confirm the per-mode set against the route-preferences PR before
-building; the table is a starting point.
+| Drive | Cycle | Walk |
+|---|---|---|
+| Stops (lights and stop signs) | Traffic lights | Traffic lights |
+| Left turns across traffic | Stop signs | Busy streets |
+| Busy crossings (without a signal) | Left turns across traffic | Busy crossings (without a signal) |
+| Hills | Busy streets | Hills |
+| Turns | Busy crossings (without a signal) | Steps |
+| Highway on-ramps | Hills | Streets without sidewalks |
+| Drawbridges | Turns | |
+| Complex intersections (five or more streets) | Drawbridges | |
+| Narrow streets (parked on both sides) | Rough surfaces | |
 
-Each row: symbol (`light.beacon.max`, `octagon`, `arrow.turn.up.left`,
-`car.2.fill`, `mountain.2`, `arrow.triangle.turn.up.right.diamond`), label,
-and a three-way segmented control **Avoid / Normal / Don't mind**. At
-accessibility sizes the control drops below the label. Changes recompute the
-comparison live behind the sheet.
+Each row is a standard `Picker` in the default menu style with a system `Label`:
+symbol and title on the left (a few add a second line, as Stops does: "Lights and stop signs"), the current value on the right, and a menu of
+**Avoid / Normal / Don't mind**. Layout at accessibility sizes is the system's.
+Changes recompute the comparison live behind the sheet.
 
-Footer: **Reset to defaults** (plain button, disabled when already default),
-then the note **"Times stay estimates."** `.footnote` secondary. Done in the
-toolbar (`.confirmationAction`). No "safe", no scores.
+Footer: **Reset driving to defaults** (or cycling, walking; plain button, disabled
+when that mode is already default), then the note **"Times stay estimates."** as
+the section's plain footer. Close in the toolbar. No "safe", no scores.
+
+The route preview's button says "Calmer means: Custom" only for the mode being routed.
 
 ```
 ╭────────────────────────────╮
-│ Calmer means         Done  │
-│ Driving                    │
-│ 🚦 Traffic lights           │
-│   [Avoid|Normal|Don't mind]│
-│ 🛑 Stop signs               │
-│   [Avoid|Normal|Don't mind]│
+│        Calmer means      ✕ │
+│ [ Drive | Cycle  |  Walk ] │
+│ ✋ Stops            Avoid ⌃│
+│    Lights and stop signs   │
+│ ↰ Left turns…      Normal ⌃│
 │ …                          │
-│ Reset to defaults          │
+│ Reset driving to defaults  │
 │ Times stay estimates.      │
 ```
 
@@ -579,12 +588,15 @@ The turn banner, rerouting card, trip bar and landscape card are `.regular` unde
   (no glass on glass, no opaque strip).
 - **Calm chip** below the banner, leading: glass capsule, `octagon` /
   `light.beacon.max` + text in `.primary` semibold (see 2, "On glass").
-- **Mute + report flag**: one horizontal glass capsule (vertical in
-  landscape), trailing, same row as the chip: two 44×44 plain buttons with a
-  divider. Banner, chip and buttons share one `GlassEffectContainer` so they
+- **Mute + report flag**: two round system glass buttons side by side (stacked
+  in landscape), trailing, same row as the chip: `.buttonStyle(.glass(.clear))`,
+  `.buttonBorderShape(.circle)`, `.controlSize(.large)`, 50 pt across, in one
+  `GlassEffectContainer`. After a tap the flag widens to a "Marked" capsule.
+  With Reduce Transparency or Increase Contrast they use `.regular` glass (6a).
+  Banner, chip and buttons share the outer `GlassEffectContainer` so they
   merge/morph as the chip appears.
-- **Camera button** (`guidance-camera`): one 52 pt round button on its own
-  glass, alone in the bottom trailing corner, beside the attribution and above
+- **Camera button** (`guidance-camera`): the same round system glass button,
+  alone in the bottom trailing corner, beside the attribution and above
   the trip bar (above the attribution in landscape). That keeps it clear of the
   banner, the recording pill (top leading) and the mute/flag cluster. One tap
   moves to the next state, and the glyph shows the current one with the symbol
@@ -651,7 +663,11 @@ would push mute, the flag and the camera button off it. Secondary text on glass 
 A bottom glass card inside `GuidanceView`, not the returning sheet, no grabber.
 Check badge on `glassWell`, "You've arrived at Gas Works Park", summary line, trip
 notes split by hairlines, **Done** as `.primaryAction()`, "Times are estimates. No
-live traffic." and the voice tip. `.sensoryFeedback(.success)` fires on arrival.
+live traffic." and, under them at the foot of the card, the voice tip: a TipKit
+`TipView` (`VoiceUpgradeTip`) in the system style, shown only when a better voice
+could be downloaded; its close button dismisses it for good. It stays outside the
+scrolling part, so at the largest text sizes it is pinned under Done.
+`.sensoryFeedback(.success)` fires on arrival.
 
 ### 4.9 Settings
 
@@ -755,7 +771,7 @@ All through `Motion` (`App/PeoplemapsApp.swift`); no new durations.
   custom `glassEffect` views, read `accessibilityReduceTransparency` and use
   `Glass.identity` plus an opaque `.panel` background with the same shape.
   One helper, `View.floatingSurface(in:)`, does both so no view branches by
-  hand. The sheet gets a solid `panel` (`sheetBackdrop`).
+  hand. The sheet is the system's, which frosts or fills itself.
 - **Increase Contrast** (`colorSchemeContrast == .increased`): glass takes
   `glassVeilDense` and a 1-pt `separator` border (system controls do this
   themselves); `calmer` route line widens by 1 pt.
@@ -785,16 +801,17 @@ after the owner phone-tested `.regular` twice and couldn't see glass.
 
 | Surface | Glass | Finding |
 |---|---|---|
-| Sheet at its partial stops | `UIGlassEffect(.regular)` per detent (`SheetGlass`) under a `.regularMaterial` and `glassVeil` | Fixed 4 November: `.clear` plus a dark tint let labels print through, and the system glass stops drawing after Settings closes or the map is touched. The material carries the frost. |
-| Sheet at large | solid `panel` | Long lists and the keyboard. |
+| Sheet at its partial stops | the system's own, nothing painted over it | 10 November: back to the system's glass by the owner's decision. To re-check on the phone: labels printing through, and the glass no longer drawing after Settings closes or the map is touched (both seen 4 November). |
+| Sheet at large | the system's own | Long lists and the keyboard. |
 | Home at rest | no sheet; `.clear` chips, capsule and More | Refracts the map; the dark map's streets show through. |
 | Map buttons | `.clear`, `.interactive()` | |
 | Credit, turn banner, calm chip, trip bar, landscape card, arrival card | `.clear` + `glassVeil` | |
 | Re-centre pill | `.glass` button | Over the map, not on the sheet. |
 | Directions, Start, Done | `.primaryAction()` | The one allowed glass-in-glass: the primary action (principle 6). |
-| Why this route, Calmer means | `WellButtonStyle` on `glassWell` | A well, not glass (principle 3). |
+| Guidance mute, flag and camera | `.glass(.clear)` buttons | Over the map. With Reduce Transparency or Increase Contrast the system turns `.clear` dark under a dark symbol in light mode, so they take `.glass(.regular)` there, which stays light in light mode. |
+| Why this route, Calmer means | `wellButton()`: `.bordered`, tinted `.primary` | A well, not glass (principle 3). |
 | Behind the routes, Settings, pickers | solid or system modal | Reading, not glance. |
-| Reduce Transparency | `floatingSurface`, `sheetBackdrop` | Solid `panel`, with an outline. |
+| Reduce Transparency | `floatingSurface`; the sheet is the system's | Solid `panel`, with an outline, on our surfaces. |
 
 ## 7. Implementation plan
 

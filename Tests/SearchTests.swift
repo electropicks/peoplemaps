@@ -155,6 +155,25 @@ final class SearchTests: XCTestCase {
         XCTAssertNil(SearchIndex.splitUnit("1900 Stewart").1, "a street that starts like \"ste\" is not a unit")
         XCTAssertEqual(SearchIndex.splitUnit("3400 Fremont Ave N unit2").1, "2")
     }
+    func testClosestMatchesForAPlaceTheDataLacks() throws {
+        // Not in OSM or Overture: the pharmacies nearest the neighbourhood it names.
+        let query = "Kelley-Ross Capitol Hill pharmacy"
+        XCTAssertTrue(index.search(query).isEmpty)
+        let closest = index.closest(query, near: Self.fremont)
+        XCTAssertEqual(closest.category, "pharmacy")
+        XCTAssertEqual(closest.area, "Capitol Hill")
+        XCTAssertFalse(closest.places.isEmpty)
+        XCTAssertTrue(closest.places.allSatisfy { ["pharmacy", "drugstore", "chemist"].contains($0.category) }, "\(closest.places.map(\.name))")
+        let hill = Coordinate(lat: 47.623, lon: -122.314)
+        XCTAssertLessThan(hill.distance(to: closest.places[0].coordinate), Self.fremont.distance(to: closest.places[0].coordinate))
+        // A name the index spells without its neighbourhood leads, found once the neighbourhood is set aside.
+        XCTAssertTrue(index.search("gas works fremont zzz").isEmpty)
+        XCTAssertEqual(index.closest("gas works park zzz wallingford").places.first?.name, "Gas Works Park")
+        // Nothing to go on, and addresses: no guesses.
+        XCTAssertEqual(index.closest("zzzyx qqqqx"), SearchIndex.Closest())
+        XCTAssertEqual(index.closest("9999 Zzyzx Rd pharmacy"), SearchIndex.Closest())
+        XCTAssertEqual(index.closest(""), SearchIndex.Closest())
+    }
     func testRankingTextThenCategoryThenDistance() throws {
         // Parks and landmarks outrank shops and cafés for an equal text match.
         let fremont = index.search("fremont", near: Self.fremont)

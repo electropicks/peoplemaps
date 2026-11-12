@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 import CoreLocation
 
 final class HomeAndSearchUITests: PeoplemapsUITestCase {
@@ -103,6 +104,52 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         app.buttons["close-place"].tap()
         XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
     }
+    /// Pastes `text` into search through the edit menu, as a person would.
+    @MainActor private func paste(_ text: String, into app: XCUIApplication) {
+        UIPasteboard.general.string = text
+        app.buttons["search-field"].tap()
+        let field = app.textFields["search-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        let paste = app.menuItems["Paste"]
+        if !paste.waitForExistence(timeout: 3) { field.press(forDuration: 1.2) }
+        XCTAssertTrue(paste.waitForExistence(timeout: 5), "the edit menu offers Paste")
+        paste.tap()
+    }
+    @MainActor func testPastedMapsLinkOpensOurOwnAddressAndSaysItWasMatched() {
+        let app = launchHome()
+        // The link's own name is one we lack; its address and point are ours, 30 m off.
+        paste("https://maps.apple.com/place?address=3400%20Fremont%20Ave%20N,%20Seattle,%20WA%2098103&coordinate=47.6499,-122.3496&name=Somewhere%20We%20Lack", into: app)
+        XCTAssertTrue(app.staticTexts["place-shared-match"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["place-shared-match"].label, "Matched from a shared link")
+        XCTAssertTrue(app.staticTexts["3400 Fremont Avenue North"].exists, "the card is our record, in our words")
+        XCTAssertFalse(app.staticTexts["Somewhere We Lack"].exists, "the link's name is a hint, never shown")
+        XCTAssertTrue(app.buttons["directions"].exists)
+        capture("06-pasted-link-match", app: app)
+    }
+    @MainActor func testPastedCoordinatesDropAPinAndOutsideTheMapSaysSo() {
+        let app = launchHome()
+        paste("47.6497, -122.3496", into: app)
+        XCTAssertTrue(app.buttons["close-place"].waitForExistence(timeout: 5), "a point inside the map opens as a pin")
+        XCTAssertFalse(app.staticTexts["place-shared-match"].exists)
+        app.buttons["close-place"].tap()
+        paste("45.5152, -122.6784", into: app)
+        XCTAssertTrue(app.alerts["This place is outside your map area"].waitForExistence(timeout: 5))
+    }
+    @MainActor func testShareHandOffOpensThePlaceOrFillsTheSearch() throws {
+        let app = launchHome()
+        // What the Share Extension sends for an Apple Maps place: the link, then the words that came with it.
+        var parts = URLComponents(string: "peoplemaps://share")!
+        parts.queryItems = [URLQueryItem(name: "text", value: "https://maps.apple.com/place?address=3400%20Fremont%20Ave%20N,%20Seattle&coordinate=47.6499,-122.3496&name=Somewhere%20We%20Lack\nSomewhere We Lack")]
+        app.open(try XCTUnwrap(parts.url))
+        XCTAssertTrue(app.staticTexts["place-shared-match"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["3400 Fremont Avenue North"].exists)
+        app.buttons["close-place"].tap()
+        // Plain words, as from Notes or Messages, become the search.
+        parts.queryItems = [URLQueryItem(name: "text", value: "Gas Works Park")]
+        app.open(try XCTUnwrap(parts.url))
+        XCTAssertTrue(app.buttons["result-relation/1047789"].waitForExistence(timeout: 10))
+    }
     @MainActor func testSearchAddressAndRouteToIt() {
         let app = launchHome(location: Self.atKerryPark)
         app.buttons["search-field"].tap()
@@ -164,7 +211,8 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         openSettings(app)
         openSettingsPage(app, "acknowledgements")
         XCTAssertTrue(app.navigationBars["Acknowledgements"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["USGS 3D Elevation Program"].exists)
+        XCTAssertTrue(app.links["USGS 3D Elevation Program"].exists)
+        capture("settings-acknowledgements", app: app)
         app.buttons["licence-Ferrostar-LICENSE"].tap()
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Stadia Maps'")).firstMatch.waitForExistence(timeout: 5))
         capture("07-acknowledgements-ferrostar", app: app)
@@ -248,6 +296,52 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         capture("home-raised-hint", app: app)
     }
     /// With no match and the keyboard up, the Apple Maps hand-off is in full view: clear of the keyboard and of the credit above it.
+    /// A business neither OpenStreetMap nor Overture has: the closest places we do have, the ways to get there anyway, and its
+    /// address kept under the name that was searched for.
+    @MainActor func testMissingPlaceOffersClosestMatchesAndKeepsItsAddressByName() {
+        let app = launchHome()
+        app.buttons["search-field"].tap()
+        let field = app.textFields["search-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("Kelley-Ross Capitol Hill pharmacy")
+        let heading = app.staticTexts["closest-heading"]
+        XCTAssertTrue(heading.waitForExistence(timeout: 5))
+        XCTAssertEqual(heading.label, "Pharmacy near Capitol Hill")
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'closest-'")).firstMatch.exists)
+        for id in ["apple-maps-lookup", "drop-a-pin", "report-missing-place"] { XCTAssertTrue(app.buttons[id].exists, id) }
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "paste-address").firstMatch.exists)
+        XCTAssertTrue(app.descendants(matching: .any)["search-empty"].exists)
+        capture("search-missing-place", app: app)
+        // Its address, as another app copies it, finds the unit.
+        app.buttons["cancel-search-home"].tap()
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("400 E Pine St Ste 100, Seattle, WA 98122, United States")
+        // The centre mapped in that unit shares the address's OSM ID and follows it.
+        let address = app.buttons.matching(identifier: "result-node/4400510992").firstMatch
+        XCTAssertTrue(address.waitForExistence(timeout: 5))
+        XCTAssertTrue(address.label.hasPrefix("400 East Pine Street, Unit 100"), address.label)
+        address.tap()
+        XCTAssertTrue(app.buttons["favourite"].waitForExistence(timeout: 5))
+        app.buttons["favourite"].tap()
+        // Keeping an address offers a name, starting from what search could not find.
+        let alert = app.alerts["Name this place"], name = alert.textFields.firstMatch
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        XCTAssertEqual(name.value as? String, "Kelley-Ross Capitol Hill pharmacy")
+        capture("place-name-alert", app: app)
+        alert.buttons["Save"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Kelley-Ross Capitol Hill pharmacy"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["place-subtitle"].label, "Address · 400 East Pine Street, Unit 100")
+        app.buttons["close-place"].tap()
+        // From then on search finds it by that name.
+        app.buttons["search-field"].tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("kelley ross")
+        let kept = app.buttons["result-node/4400510992"]
+        XCTAssertTrue(kept.waitForExistence(timeout: 5))
+        XCTAssertTrue(kept.label.hasPrefix("Kelley-Ross Capitol Hill pharmacy"), kept.label)
+        capture("search-kept-name", app: app)
+    }
     /// At the largest standard text size, which on this phone is what a smaller phone shows at the default one.
     @MainActor func testAppleMapsLookupIsInReachWithTheKeyboardUp() {
         let app = launchHome(extra: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"])

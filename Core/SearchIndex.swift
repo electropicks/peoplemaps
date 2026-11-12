@@ -177,6 +177,10 @@ public final class SearchIndex: @unchecked Sendable {
         let singular = phrase.hasSuffix("s") ? String(phrase.dropLast()) : phrase
         let entries = Self.categoryWords.filter { $0.words.contains(phrase) || $0.words.contains(singular) }
         guard !entries.isEmpty else { return [] }
+        return places(in: entries, near: near, limit: limit)
+    }
+
+    private func places(in entries: [(words: [String], categories: [String], glob: [String])], near: Coordinate?, limit: Int) -> [Place] {
         let exact = entries.flatMap(\.categories), glob = entries.flatMap(\.glob), n = exact.count + glob.count
         let terms = (exact.isEmpty ? [] : ["category IN (\(exact.map { _ in "?" }.joined(separator: ",")))"]) + glob.map { _ in "category GLOB ?" }
         let k = near.map { pow(cos($0.lat * .pi / 180), 2) } ?? 0
@@ -187,6 +191,61 @@ public final class SearchIndex: @unchecked Sendable {
             ORDER BY weight DESC, (lat - ?\(n + 1)) * (lat - ?\(n + 1)) + (lon - ?\(n + 2)) * (lon - ?\(n + 2)) * ?\(n + 3), id
             LIMIT ?\(n + 4)
             """, values) { found.append(place($0)) }
+        return found
+    }
+
+    // MARK: Closest matches
+
+    /// What to offer when `search` finds nothing, so a place the data lacks is not a dead end.
+    public struct Closest: Equatable, Sendable {
+        public var places: [Place] = []
+        /// The category word found in the text ("pharmacy") when `places` lists that category, and the
+        /// neighbourhood named in it ("Capitol Hill") when they are ranked from its centre.
+        public var category: String?
+        public var area: String?
+    }
+
+    /// For text `search` has no answer to: the neighbourhood and category word in it are set aside ("Kelley-Ross
+    /// Capitol Hill pharmacy" names Capitol Hill and pharmacies), the words left are searched alone (a name the index
+    /// spells without its neighbourhood), or all but one of them when there are three or more, and then the places of
+    /// that category follow, nearest the neighbourhood, else `near`. Empty when the text names neither and no words
+    /// match, and for an address, which never gets a guess.
+    public func closest(_ query: String, near: Coordinate? = nil, limit: Int = 6) -> Closest {
+        lock.lock(); defer { lock.unlock() }
+        var words = Self.normalize(query).split(separator: " ").map(String.init)
+        guard !words.isEmpty, !Self.isHouseNumber(words[0]) else { return Closest() }
+        var found = Closest(), anchor = near
+        /// Removes the first run of `words` equal to `phrase`.
+        func take(_ phrase: [String]) -> Bool {
+            guard !phrase.isEmpty, words.count >= phrase.count,
+                  let at = (0...words.count - phrase.count).first(where: { Array(words[$0..<$0 + phrase.count]) == phrase }) else { return false }
+            words.removeSubrange(at..<at + phrase.count); return true
+        }
+        for area in Neighbourhoods.table where take(Self.normalize(area.name).split(separator: " ").map(String.init)) {
+            found.area = area.name; anchor = Coordinate(lat: area.lat, lon: area.lon); break
+        }
+        _ = take(["seattle"])
+        var entries: [(words: [String], categories: [String], glob: [String])] = []
+        // The longest phrase first, so "coffee shop" is not left as "shop".
+        let phrases = Self.categoryWords.flatMap { entry in entry.words.map { (word: $0, entry: entry) } }.sorted { $0.word.count > $1.word.count }
+        for (word, entry) in phrases {
+            let phrase = word.split(separator: " ").map(String.init)
+            if take(phrase) || take(Array(phrase.dropLast()) + [phrase[phrase.count - 1] + "s"]) { found.category = word; entries = [entry]; break }
+        }
+        let unchanged = found.area == nil && found.category == nil
+        var named: [Place] = []
+        if !words.isEmpty, !unchanged { named = run(words, unit: nil, near: anchor, limit: limit) }
+        if named.isEmpty, words.count >= 3 {
+            for skipped in words.indices.reversed() {
+                var rest = words; rest.remove(at: skipped)
+                for place in run(rest, unit: nil, near: anchor, limit: limit) where !named.contains(where: { $0.id == place.id }) { named.append(place) }
+            }
+        }
+        let ids = Set(named.map(\.id))
+        let inCategory = entries.isEmpty ? [] : places(in: entries, near: anchor, limit: limit).filter { !ids.contains($0.id) }
+        if inCategory.isEmpty { found.category = nil }
+        found.places = Array((named.prefix(inCategory.isEmpty ? limit : limit / 2) + inCategory).prefix(limit))
+        if found.places.isEmpty { return Closest() }
         return found
     }
 
