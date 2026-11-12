@@ -42,29 +42,6 @@ struct SettingsFooter: View {
     }
 }
 
-/// A short heading over a paragraph, one to a row. Only the log pages still use it, until their footers land (PR 73); new
-/// explanations are a `SettingsFooter`.
-struct SettingsNote: View {
-    let title: String
-    let text: String
-    var symbol: String?
-    @ScaledMetric(relativeTo: .body) private var symbolWidth: CGFloat = 28
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            if let symbol {
-                Image(systemName: symbol).font(.body.weight(.medium)).frame(width: symbolWidth).accessibilityHidden(true)
-            }
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(.body.weight(.semibold))
-                Text(text).font(.subheadline).foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 3)
-        .accessibilityElement(children: .combine)
-    }
-}
-
 /// A row with its value trailing: the system's `LabeledContent`, which stacks at accessibility sizes.
 struct SettingsValueRow: View {
     let title: String
