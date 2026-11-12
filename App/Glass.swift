@@ -120,20 +120,10 @@ extension View {
         buttonStyle(.glassProminent).buttonBorderShape(shape).tint(.primaryActionFill).controlSize(.large)
     }
 
-    /// The track of a switch when on. Sheets whose tint is `.primary`, which is white in dark mode, would draw a white track under a
-    /// white knob, with nothing to tell on from off. Dusk blue (`switchOn`, a deeper value than the map's in dark) is the one hue a control may take (Docs/DESIGN.md, principle 5).
-    func switchTint() -> some View { tint(Color(uiColor: .switchOn)) }
-}
-
-/// A secondary action on a glass panel ("Why this route", "Calmer means"): its words in a quiet well, since glass doesn't go on
-/// glass and no control takes an accent (Docs/DESIGN.md, principles 3 and 5). The well is 34 pt in a full-size target, and dims while pressed.
-struct WellButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
-            .padding(.horizontal, 14).padding(.vertical, 6).frame(minHeight: 34)
-            .background(.glassWell, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
-            .opacity(configuration.isPressed ? 0.5 : 1)
+    /// A secondary action on a glass panel ("Why this route", "Calmer means"): the system's bordered capsule in the label colour,
+    /// since glass doesn't go on glass and no control takes an accent (Docs/DESIGN.md, principles 3 and 5), in a full-size target.
+    func wellButton() -> some View {
+        buttonStyle(.bordered).buttonBorderShape(.capsule).font(.subheadline.weight(.semibold)).tint(.primary)
             .frame(minHeight: Layout.target).contentShape(Rectangle())
     }
 }

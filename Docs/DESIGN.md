@@ -76,20 +76,12 @@ which lets the map show through; SwiftUI has no modifier for it. An empty
    (Settings) and closed, and once the map behind it is touched; setting a new effect or calling
    `invalidateDetents()` does not bring it back. The material is not affected, so the legibility
    never depends on the glass drawing. Large is the solid `panel`.
-5. **No accent on controls, plus category colour.** Controls and text use the
-   label colour, set where they are drawn. The explore panel and the app take the
-   system's tint, the `AccentColor` asset (dusk blue), so a text button that acts
-   ("Choose start", "Try again", Cancel while comparing, an alert's buttons) reads as an
-   action; until 10 November 2026 the app's tint was `.primary`, white in dark mode
-   (the sheet research of 10 November 2026, step 3). Modal sheets (Settings, details,
-   favourites, preferences, picker) still set `.primary` themselves. A switch's
-   track when on is `switchTint()`: under `.primary` it is a white track
-   under a white knob in dark mode, with nothing to tell on from off. Dusk blue (`.calmer`) is a
-   colour on the map (the route line, its leader and the selected pin) and the on-state of a switch. Green no longer
-   means calmer, and no fill anywhere is a saturated blue or green. Rating colour
-   appears only on the rating word and bar. Category colours appear only on place
-   badges (list rows, map markers, place card); they never tint glass, text or
-   buttons.
+5. **The system's accent, plus category colour.** The app's accent is `AccentColor` in the asset catalogue, dusk blue
+   (the `calmer` colour of the route line), and controls take it the way the system gives it: a button row in a list, a
+   toolbar's text button, a link, a text button that acts ("Choose start", "Try again"). No screen sets a tint of its
+   own; until 10 November 2026 the app's tint was `.primary`, and until 12 November the modal sheets still set it.
+   Switches are the system's green. Rating colour appears only on the rating word and bar. Category colours appear only
+   on place badges (list rows, map markers, place card); they never tint glass, text or buttons.
 6. **Glass stays neutral.** The sheet and banner are never tinted. Start and the
    other primary actions (Directions, Start, Done, Share report) are the system's
    `.glassProminent` button tinted `primaryActionFill` and labelled in `primaryActionText`,
@@ -99,7 +91,7 @@ which lets the map show through; SwiftUI has no modifier for it. An empty
    words in light mode (9 November 2026: near-white on the pale sheet did not read as a
    button on the owner's phone), dusk blue with white words in dark mode (a lifted grey
    was no clearer there, and white at 86% was a slab brighter than anything else on a dark
-   card). Dusk blue is the hue the switches take, the one a control may (principle 5). They are tokens, so they
+   card). They are tokens, so they
    can move to dusk blue later.
 7. **Honest words survive the redesign.** Every "Estimate", "unknown" and
    source/date line in the current UI stays. No screen says "safe".
@@ -115,8 +107,7 @@ rendered pixels (below).
 
 | Token | Light | Dark | Use | Contrast |
 |---|---|---|---|---|
-| `calmer` | `#4A6F97` | `#7FA3CC` | route line (white casing in light, black in dark), leader, selected pin, destination dot, a switch track when on | vs land 4.6 / 6.1, vs water 3.4 / 3.9 (≥3:1 graphic) |
-| `switchOn` | `#4A6F97` | `#4A6F97` | a switch's track when on. Not `calmer` in dark: `#7FA3CC` under the white thumb is 2.6:1 and reads as off | track vs a near-black card `#1C1C1E` 3.3, vs the white thumb 5.2 |
+| `calmer` | `#4A6F97` | `#7FA3CC` | route line (white casing in light, black in dark), leader, selected pin, destination dot | vs land 4.6 / 6.1, vs water 3.4 / 3.9 (≥3:1 graphic) |
 | `fastest` | `#6B7872` | `#AEBAB3` | fastest line, dotted | vs land 4.1 / 7.9 |
 | `passedRoute` | `#A6B3C0` | `#53616F` | the part of the followed route already driven, drawn 3.5 pt (the route is 5.5) | vs land 1.9 / 2.5; vs the route ahead 2.5 / 2.4. Below 3:1 on purpose: it is a trail, not information, and the width, the puck at its end and the casing say "behind" without colour |
 | `primaryActionFill` | `#20384F` | `#4A6F97` | tint of the `.glassProminent` primary actions: Directions, Start, Done, Share report | |
@@ -429,6 +420,10 @@ list. Each row:
   keyboard and the credit on a smaller phone or at larger text (9 November 2026).
   VoiceOver still hears the empty state first. The start and destination pickers do the
   same. Nothing from Apple is shown in the app.
+- The start and destination pickers (`App/PlacePicker.swift`) are a system modal: an inset-grouped
+  `List` in a `NavigationStack`, the system search field (`.searchable`, in the navigation bar
+  drawer, always shown), system `Section` headers (Favourites, Recents, Matches) and one list row
+  per place with `PlaceRow`'s content. Current location is the first row of the origin's list.
 - `scrollEdgeEffectStyle(.soft, for: .top)` under the pinned field.
 - **Before anything is typed** the sheet is never a blank page (9 November 2026): Recents, or on a fresh install the line
   "Search a place, an address or a street", then six shortcuts in two columns (`SearchShortcuts`): Coffee, Food,
@@ -489,8 +484,9 @@ Top to bottom:
    `checkmark.circle.fill` when chosen, in the label colour), so the pair reads as a
    choice before it is made. One route alone has no mark.
 5. **Why this route** and **Calmer means** (`route-preferences`), each a semibold
-   `.subheadline` in a 34-pt `glassWell` well (`WellButtonStyle`): not glass and not an
-   accent (principles 3 and 5), and it dims while pressed. As bare bold text they read as labels.
+   `.subheadline` in the system's `.bordered` capsule tinted `.primary` (`wellButton()`), inside a
+   full-size target: not glass and not an accent (principles 3 and 5). As bare bold text they read
+   as labels.
 6. **Pinned:** icon-only travel modes (Drive, Cycle, Walk, named for VoiceOver and
    in the large content viewer) beside **Start** (`.primaryAction()`).
 
@@ -545,24 +541,23 @@ unmarked crossings instead, shown as one "Unsignalled crossings" row in place
 of those two. Confirm the per-mode set against the route-preferences PR before
 building; the table is a starting point.
 
-Each row: symbol (`light.beacon.max`, `octagon`, `arrow.turn.up.left`,
-`car.2.fill`, `mountain.2`, `arrow.triangle.turn.up.right.diamond`), label,
-and a three-way segmented control **Avoid / Normal / Don't mind**. At
-accessibility sizes the control drops below the label. Changes recompute the
-comparison live behind the sheet.
+Each row is a standard `Picker` in the default menu style with a system `Label`:
+symbol (`light.beacon.max`, `octagon`, `arrow.turn.up.left`, `car.2.fill`,
+`mountain.2`, `arrow.triangle.turn.up.right.diamond`) and title on the left, the
+current value on the right, and a menu of **Avoid / Normal / Don't mind**. Layout
+at accessibility sizes is the system's. Changes recompute the comparison live
+behind the sheet.
 
 Footer: **Reset to defaults** (plain button, disabled when already default),
-then the note **"Times stay estimates."** `.footnote` secondary. Done in the
+then the note **"Times stay estimates."** as the section's plain footer. Done in the
 toolbar (`.confirmationAction`). No "safe", no scores.
 
 ```
 ╭────────────────────────────╮
 │ Calmer means         Done  │
 │ Driving                    │
-│ 🚦 Traffic lights           │
-│   [Avoid|Normal|Don't mind]│
-│ 🛑 Stop signs               │
-│   [Avoid|Normal|Don't mind]│
+│ 🚦 Traffic lights   Normal ⌃│
+│ 🛑 Stop signs        Avoid ⌃│
 │ …                          │
 │ Reset to defaults          │
 │ Times stay estimates.      │
@@ -579,12 +574,15 @@ The turn banner, rerouting card, trip bar and landscape card are `.regular` unde
   (no glass on glass, no opaque strip).
 - **Calm chip** below the banner, leading: glass capsule, `octagon` /
   `light.beacon.max` + text in `.primary` semibold (see 2, "On glass").
-- **Mute + report flag**: one horizontal glass capsule (vertical in
-  landscape), trailing, same row as the chip: two 44×44 plain buttons with a
-  divider. Banner, chip and buttons share one `GlassEffectContainer` so they
+- **Mute + report flag**: two round system glass buttons side by side (stacked
+  in landscape), trailing, same row as the chip: `.buttonStyle(.glass(.clear))`,
+  `.buttonBorderShape(.circle)`, `.controlSize(.large)`, 50 pt across, in one
+  `GlassEffectContainer`. After a tap the flag widens to a "Marked" capsule.
+  With Reduce Transparency or Increase Contrast they use `.regular` glass (6a).
+  Banner, chip and buttons share the outer `GlassEffectContainer` so they
   merge/morph as the chip appears.
-- **Camera button** (`guidance-camera`): one 52 pt round button on its own
-  glass, alone in the bottom trailing corner, beside the attribution and above
+- **Camera button** (`guidance-camera`): the same round system glass button,
+  alone in the bottom trailing corner, beside the attribution and above
   the trip bar (above the attribution in landscape). That keeps it clear of the
   banner, the recording pill (top leading) and the mute/flag cluster. One tap
   moves to the next state, and the glyph shows the current one with the symbol
@@ -651,7 +649,11 @@ would push mute, the flag and the camera button off it. Secondary text on glass 
 A bottom glass card inside `GuidanceView`, not the returning sheet, no grabber.
 Check badge on `glassWell`, "You've arrived at Gas Works Park", summary line, trip
 notes split by hairlines, **Done** as `.primaryAction()`, "Times are estimates. No
-live traffic." and the voice tip. `.sensoryFeedback(.success)` fires on arrival.
+live traffic." and, under them at the foot of the card, the voice tip: a TipKit
+`TipView` (`VoiceUpgradeTip`) in the system style, shown only when a better voice
+could be downloaded; its close button dismisses it for good. It stays outside the
+scrolling part, so at the largest text sizes it is pinned under Done.
+`.sensoryFeedback(.success)` fires on arrival.
 
 ### 4.9 Settings
 
@@ -660,7 +662,7 @@ use three screens down. Reached from the home sheet's **Settings** row (4.2). A 
 (principle 2): `NavigationStack`, inline title, inset grouped `List`, and the close button on every page. Code:
 `App/Settings/`.
 
-**The root list is rows only** and fits one screen at the default text size. It holds no paragraph: a footer is one
+**The root list is rows only.** It holds no paragraph: a footer is one
 sentence, two at most, and every explanation is a page behind a row. Sections, in order:
 
 1. **Map.** "On this phone" with the map in use as its value (Seattle, King County), then the King County offer. At rest
@@ -675,7 +677,7 @@ sentence, two at most, and every explanation is a page behind a row. Sections, i
    ferry or a road outside the map, as Vashon, the Kitsap shore and Skykomish do."
 2. **Trip logs.** "Usage log" and "Detailed log", each with its state as its value ("Off", "On", "On · 3 trips",
    "On · 2 trips, 1.4 MB"; the size only from 1 MB up) and its own page. While the detailed log is on, "Start recording"
-   sits on the root, since it is the one log action people repeat: a trailing `play.circle` in the secondary grey, and "Stop recording" (`stop.circle`) with the time so far
+   sits on the root, since it is the one log action people repeat: a leading `play.circle`, and "Stop recording" (`stop.circle`) with the time so far
    while one runs. If location is off, a row under it says the recording did not start. Footer: "Off by default. Kept on
    this phone unless shared."
 3. **Feedback.** "Report a problem", and "Saved reports" with its count once there is one. Footer: "Or shake the phone on
@@ -684,8 +686,8 @@ sentence, two at most, and every explanation is a page behind a row. Sections, i
    0.1.0 · 793bdf6", the version and, when the build was given one, its commit (`PM_BUILD_COMMIT`, empty by default,
    through `PMBuildCommit` in `App/Info.plist`; `Scripts/run-simulator.sh` passes it).
 
-**Pages.** The same list. An explanation is a `SettingsNote`: a `.body` semibold heading over a `.subheadline` paragraph,
-one to a row.
+**Pages.** The same list. An explanation is a section footer, as in the system's Settings: grey text under the group it
+is about, a paragraph each (`SettingsFooter`). No page sets a heading over a paragraph in a row.
 
 - **Usage log:** "Keep a usage log", "Exact places" while it is on, and "Kept on this phone" with the count; "Share usage
   log", "Send to PeopleMaps" and "Clear usage log" once there is a trip.
@@ -701,22 +703,24 @@ one to a row.
 - **Clear asks first.** The dialog hangs off a view of its own behind the page. On a list or section that holds a
   `ShareLink` it stops the share sheet presenting (PR 68).
 - **Saved reports:** tap one to add words or share it again, swipe to remove it.
-- **What calmer means:** one sentence, then Driving, Cycling and Walking, each a row with its mode symbol. Footer, kept
-  word for word: "These are transparent preferences, not safety ratings. Times and stress are estimates, with no live
-  traffic."
-- **Map data and coverage:** what stays on the phone; Sources ("Map data from" the date of the extract in use, read from
-  the search index, the OpenStreetMap ODbL link, USGS elevation, and the count of street and path segments); Coverage
-  and what the map doesn't know, ending "These routes haven't been checked on the road, so go by the signs in front of you."
-- **Acknowledgements:** OpenStreetMap, Overture, USGS, MapLibre and Ferrostar with their licences. Links in label colour
-  with `arrow.up.forward`.
+- **What calmer means:** one sentence, then Driving, Cycling and Walking, each a group of one row (a system `Label` with
+  its mode symbol) over a footer that says what it avoids. The last footer ends, word for word: "These are transparent
+  preferences, not safety ratings. Times and stress are estimates, with no live traffic."
+- **Map data and coverage:** Sources ("Map data from" the date of the extract in use, read from the search index, the
+  OpenStreetMap ODbL link, USGS elevation, and the count of street and path segments), with what stays on the phone as
+  its footer; Coverage, an "Area" row over a footer that says where the map stops and what the map doesn't
+  know, ending "These routes haven't been checked on the road, so go by the signs in front of you."
+- **Acknowledgements:** OpenStreetMap, Overture and USGS, each a group of one link row (its name, in label colour with
+  `arrow.up.forward`) over the credit it asks for; then Software, MapLibre and Ferrostar with the licence as the row's
+  value, leading to the licence text.
 
-**Type and colour.** Section headers are `.footnote` semibold. Headers, footers, row values and note paragraphs use
-`GuidanceOverlay.onGlass`, since the list's own grey is about 3:1 on its background. The root has no row icons, so every
-row starts on one line. Nothing takes an accent: rows and buttons are label colour, the two destructive rows the system's
-red, switches `switchTint()`. The navigation bar is solid, in the list's background colour, so a row is cut off under the
-title; the system's scroll edge effect blurred section headers into a ghost there. The last words of a footer are joined
-with no-break spaces where the line would otherwise end on one word. At accessibility sizes a row's value moves under
-its title.
+**Type and colour.** The system's, throughout: section headers and footers are the grouped list's own, a row's value is
+`LabeledContent`'s secondary grey, rows are the system's height, and the navigation bar keeps the system's scroll edge
+effect. A row that does something is a system `Label` with its symbol leading; a row that leads to a page has its chevron
+and a row that only states a value has neither. Rows that lead somewhere or state a value are label colour, a row that does something takes the app's accent, the
+destructive rows the system's red, and switches are the system's green. The download's bar is the system `ProgressView` with the bytes
+as its value. The last words of a footer are joined with no-break spaces where the line would otherwise end on one word.
+At accessibility sizes a row's value moves under its title, as `LabeledContent` does.
 
 ### 4.10 Report a problem
 
@@ -792,7 +796,8 @@ after the owner phone-tested `.regular` twice and couldn't see glass.
 | Credit, turn banner, calm chip, trip bar, landscape card, arrival card | `.clear` + `glassVeil` | |
 | Re-centre pill | `.glass` button | Over the map, not on the sheet. |
 | Directions, Start, Done | `.primaryAction()` | The one allowed glass-in-glass: the primary action (principle 6). |
-| Why this route, Calmer means | `WellButtonStyle` on `glassWell` | A well, not glass (principle 3). |
+| Guidance mute, flag and camera | `.glass(.clear)` buttons | Over the map. With Reduce Transparency or Increase Contrast the system turns `.clear` dark under a dark symbol in light mode, so they take `.glass(.regular)` there, which stays light in light mode. |
+| Why this route, Calmer means | `wellButton()`: `.bordered`, tinted `.primary` | A well, not glass (principle 3). |
 | Behind the routes, Settings, pickers | solid or system modal | Reading, not glance. |
 | Reduce Transparency | `floatingSurface`, `sheetBackdrop` | Solid `panel`, with an outline. |
 

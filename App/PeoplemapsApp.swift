@@ -1,4 +1,5 @@
 import SwiftUI
+import TipKit
 import PeoplemapsCore
 
 /// The launch data, loaded off the selected region (`RegionSelection`) and rebuilt on Switch now.
@@ -63,6 +64,7 @@ struct PeoplemapsApp: App {
     init() {
         Self.isolateRegionsForUITests()
         AppEventHooks.start()
+        Self.configureTips()
         let data = AppData(), regions = RegionModel.make()
         regions.reload = { [weak data] in data?.reload() }
         _data = State(initialValue: data)
@@ -77,6 +79,13 @@ struct PeoplemapsApp: App {
         if !arguments.contains("--keep-regions") { try? FileManager.default.removeItem(at: folder) }
         RegionSelection.configure(root: folder)
         #endif
+    }
+    /// Tips show as soon as they apply. UI tests start with none dismissed, so each launch shows the same ones.
+    private static func configureTips() {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-testing") { try? Tips.resetDatastore() }
+        #endif
+        try? Tips.configure([.displayFrequency(.immediate)])
     }
     var body: some Scene {
         WindowGroup {
@@ -104,9 +113,6 @@ extension UIColor {
     }
     /// The calmer route's line, the selected place and the route's end: dusk blue, muted so it sits in the map. Never a control colour.
     static let calmer = dynamic(light: 0x4A6F97, dark: 0x7FA3CC)
-    /// A switch's track when on. Not `calmer`: that dark value is a pale blue made for the map, and under a white thumb it reads as off
-    /// (2.6:1). Dusk blue is 3.3:1 against the near-black card and 5.2:1 against the thumb.
-    static let switchOn = hex(0x4A6F97)
     /// The fastest route's dotted line.
     static let fastest = dynamic(light: 0x6B7872, dark: 0xAEBAB3)
     /// The part of the followed route already driven: a muted blue-grey, drawn thinner.

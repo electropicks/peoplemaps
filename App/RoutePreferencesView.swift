@@ -11,7 +11,7 @@ struct RoutePreferencesRow: View {
         Button(action: action) {
             Text(isCustom ? "Calmer means: Custom" : "Calmer means").multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
         }
-        .buttonStyle(WellButtonStyle())
+        .wellButton()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Calmer means, \(value)")
         .accessibilityHint("Choose what to avoid on calmer routes")
@@ -45,7 +45,7 @@ struct RoutePreferencesView: View {
                         .disabled(draft.isDefault(in: mode))
                         .accessibilityIdentifier("reset-preferences")
                 } footer: {
-                    Text("Times stay estimates.").font(.footnote).foregroundStyle(.secondary)
+                    Text("Times stay estimates.")
                 }
             }
             .listStyle(.insetGrouped)
@@ -54,23 +54,17 @@ struct RoutePreferencesView: View {
                 ToolbarItem(placement: .topBarTrailing) { Button(role: .close) { dismiss() }.accessibilityIdentifier("preferences-done") }
             }
         }
-        .tint(.primary).presentationDetents([.medium, .large])
+        .presentationDetents([.medium, .large])
         .onChange(of: draft) { store[mode] = draft }
     }
 
     private func row(_ option: RoutePreferences.Option) -> some View {
-        let label = HStack(spacing: 12) {
-            Image(systemName: symbol(option)).foregroundStyle(.secondary).frame(width: 24)
-            Text(option.title)
-        }.accessibilityHidden(true)
-        let level = Binding(get: { draft[option] }, set: { draft[option] = $0 })
-        let picker = Picker(option.title, selection: level) {
+        Picker(selection: Binding(get: { draft[option] }, set: { draft[option] = $0 })) {
             ForEach(RoutePreferences.Level.allCases, id: \.self) { Text($0.title).tag($0) }
+        } label: {
+            Label(option.title, systemImage: symbol(option))
         }
-        .pickerStyle(.segmented).labelsHidden()
-        .accessibilityLabel(option.title)
         .accessibilityIdentifier("preference-\(option.rawValue)")
-        return VStack(alignment: .leading, spacing: 8) { label; picker }.padding(.vertical, 4)
     }
 
     private func symbol(_ option: RoutePreferences.Option) -> String {

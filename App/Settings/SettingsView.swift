@@ -42,7 +42,7 @@ struct SettingsView: View {
         }
         .environment(\.closeSettings, dismiss)
         // Rows to read and switches to set: solid, not glass (Docs/DESIGN.md, principle 2).
-        .tint(.primary).presentationDetents([.large]).presentationBackground(Color.panel)
+        .presentationDetents([.large]).presentationBackground(Color.panel)
     }
 }
 
@@ -54,7 +54,7 @@ private struct AboutSection: View {
             NavigationLink("Map data and coverage", value: SettingsRoute.mapData).accessibilityIdentifier("map-data")
             NavigationLink("Acknowledgements", value: SettingsRoute.acknowledgements).accessibilityIdentifier("acknowledgements")
         } header: { SettingsHeader("About") } footer: {
-            Text(AppVersion.line).font(.footnote).foregroundStyle(GuidanceOverlay.onGlass)
+            Text(AppVersion.line).font(.footnote).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.top, 8).padding(.bottom, 16)
                 .accessibilityIdentifier("app-version")
         }

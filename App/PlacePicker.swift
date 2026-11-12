@@ -29,27 +29,30 @@ struct PlacePicker: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    SearchField(text: $query, identifier: "place-search")
-                    if query.isEmpty {
-                        if offersCurrentLocation {
-                            CurrentLocationRow(locating: locating, failed: locationFailed, selected: selected?.isCurrentLocation == true, action: useCurrentLocation)
-                        }
-                        if !saved.favourites.isEmpty { section("Favourites", saved.favourites, prefix: "place-favourite-") }
-                        if !saved.recents.isEmpty { section("Recents", saved.recents, prefix: "place-recent-") }
-                        if !offersCurrentLocation && saved.favourites.isEmpty && saved.recents.isEmpty {
-                            Text("Search a place or address.").font(.footnote).foregroundStyle(.secondary).padding(.horizontal, 4)
-                                .accessibilityIdentifier("place-hint")
-                        }
-                    } else if results.isEmpty {
-                        AppleMapsLookup(query: query)
-                        EmptySearch(count: search.count).accessibilitySortPriority(1)
-                    } else {
-                        section("Matches", results, prefix: "place-")
+            List {
+                if query.isEmpty {
+                    if offersCurrentLocation {
+                        CurrentLocationRow(locating: locating, failed: locationFailed, selected: selected?.isCurrentLocation == true, grouped: false, action: useCurrentLocation)
+                            .listRowInsets(EdgeInsets())
                     }
-                }.padding(.horizontal, 16)
+                    if !saved.favourites.isEmpty { section("Favourites", saved.favourites, prefix: "place-favourite-") }
+                    if !saved.recents.isEmpty { section("Recents", saved.recents, prefix: "place-recent-") }
+                    if !offersCurrentLocation && saved.favourites.isEmpty && saved.recents.isEmpty {
+                        Text("Search a place or address.").font(.footnote).foregroundStyle(.secondary)
+                            .accessibilityIdentifier("place-hint").bare()
+                    }
+                } else if results.isEmpty {
+                    // The list row is the group: no `panelFill` of its own.
+                    Section { AppleMapsLookup(query: query).environment(\.onGlassPanel, true).listRowInsets(EdgeInsets()) }
+                    Section { EmptySearch(count: search.count).fixedSize(horizontal: false, vertical: true).accessibilitySortPriority(1).bare().listRowInsets(EdgeInsets()) }
+                } else {
+                    section("Matches", results, prefix: "place-")
+                }
             }
+            .listStyle(.insetGrouped)
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search places")
+            .searchPresentationToolbarBehavior(.avoidHidingContent)
+            .autocorrectionDisabled()
             .scrollDismissesKeyboard(.interactively)
             .task {
                 guard let location, access == .granted, let c = await location.currentCoordinate() else { return }
@@ -57,15 +60,17 @@ struct PlacePicker: View {
             }
             .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() }.accessibilityIdentifier("cancel-search") } }
-        }.tint(.primary)
+        }
     }
 
+    /// One system row per place, with `PlaceRow`'s own content and padding so it reads as it does elsewhere.
     private func section(_ title: String, _ places: [Place], prefix: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.footnote.weight(.semibold)).foregroundStyle(.secondary).padding(.leading, 16)
-                .accessibilityAddTraits(.isHeader)
-            PlaceList(places: places, query: query, selectedID: selected?.id, near: here ?? near, identifier: { prefix + $0.id }) {
-                onSelect($0); dismiss()
+        Section(title) {
+            ForEach(places, id: \.id) { place in
+                PlaceRow(place: place, query: query, selected: place.id == selected?.id, near: here ?? near) { onSelect(place); dismiss() }
+                    .accessibilityIdentifier(prefix + place.id)
+                    .listRowInsets(EdgeInsets())
+                    .alignmentGuide(.listRowSeparatorLeading) { _ in 60 }
             }
         }
     }
@@ -91,6 +96,8 @@ struct CurrentLocationRow: View {
     let locating: Bool
     let failed: Bool
     let selected: Bool
+    /// False inside a `List` row, which is the group.
+    var grouped = true
     let action: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -114,9 +121,14 @@ struct CurrentLocationRow: View {
             .animation(Motion.content(reduceMotion), value: failed)
         }
         .buttonStyle(.plain)
-        .background(.panelFill, in: RoundedRectangle(cornerRadius: Layout.groupRadius))
+        .background(grouped ? Color.panelFill : .clear, in: RoundedRectangle(cornerRadius: Layout.groupRadius))
         .accessibilityIdentifier("place-current-location")
     }
+}
+
+private extension View {
+    /// A list row with no group behind it: the hint and the empty state.
+    func bare() -> some View { listRowBackground(Color.clear).listRowSeparator(.hidden) }
 }
 
 /// Native-style search field: tertiary-fill capsule (no glass on the glass sheet), magnifier, clear button.
