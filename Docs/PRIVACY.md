@@ -13,8 +13,10 @@ one is wrong and gets fixed.
 
 - The app works offline. Maps, search and routes are on your phone.
 - Nothing leaves your phone unless you tap **Send** on a report you have
-  read, **Download King County** in Settings (see Downloading a bigger map), or
-  **Send to PeopleMaps** on a trip log you chose to keep (see Sending a trip log).
+  read, **Download King County** in Settings (see Downloading a bigger map),
+  **Send to PeopleMaps** on a trip log you chose to keep (see Sending a trip log),
+  or share or paste a short link from Apple Maps or Google Maps into PeopleMaps
+  (see Links from other maps apps).
 - There are no accounts, no sign-in, no analytics, no ads, no tracking.
 - A report you send is stored on our server and read by a maintainer. Nothing
   is published automatically. A maintainer may file a useful report as a public
@@ -185,6 +187,22 @@ on a timer or in the background.
 If your device cannot do App Attest (the Simulator, some devices), the button says the device can't send logs and
 nothing is sent.
 
+## Links from other maps apps
+
+You can share a link from another maps app to PeopleMaps from the share sheet, or paste it into search, and PeopleMaps
+finds its own matching place. The share sheet entry only passes the link and any words with it to the app on your phone. Most links are read
+on the phone with no connection. A short link (`maps.apple/…` from Apple Maps, `maps.app.goo.gl/…` from Google Maps)
+hides the place until its issuer says where it points, so for those the app sends one request to Apple or Google and
+reads the address it redirects to. It does not load the page. The request carries no cookies, no account and no
+identifier from PeopleMaps, and it goes only to those two companies' link hosts, never to our server. Like any web
+server, theirs sees the link, which they issued, and the address your phone connects from.
+
+The name, address and point in a link are used to search PeopleMaps' own map data and are then dropped. The app shows
+and saves its own place, from OpenStreetMap or Overture. The one exception is a place PeopleMaps does not have: it then
+drops a pin at the point from the link, named from its own data, and that point is kept if you save the pin as a
+favourite or it stays in your recents. If iOS will not let the share sheet open PeopleMaps, the link is copied to the
+clipboard instead so you can paste it.
+
 ## Your report ID
 
 The first time you send a report, the app asks our server for a random ID
@@ -282,8 +300,10 @@ about a minute. We store nothing from them.
   SDKs that phone home.
 - No tracking across apps or sites, no advertising identifier, no
   fingerprinting of your device.
-- No Apple Maps data in the app. "Look up in Apple Maps" hands you to the
-  Apple Maps app and shows nothing from it inside PeopleMaps.
+- No Apple Maps or Google Maps data in the app, beyond the point of a link
+  you paste for a place PeopleMaps lacks (see Links from other maps apps).
+  "Look up in Apple Maps" hands you to the Apple Maps app and shows nothing
+  from it inside PeopleMaps.
 - No selling, sharing or renting of anything. There is nothing to sell.
 
 ## Honesty about routes
