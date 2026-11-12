@@ -107,9 +107,6 @@ extension View {
             .frame(minHeight: Layout.target).contentShape(Rectangle())
     }
 
-    /// The track of a switch when on. Sheets whose tint is `.primary`, which is white in dark mode, would draw a white track under a
-    /// white knob, with nothing to tell on from off. Dusk blue (`switchOn`, a deeper value than the map's in dark) is the one hue a control may take (Docs/DESIGN.md, principle 5).
-    func switchTint() -> some View { tint(Color(uiColor: .switchOn)) }
 }
 
 /// The hand-built twin of `wellButton()`, drawn to match the system's bordered capsule. A `ButtonStyle` can't wrap a system style,
