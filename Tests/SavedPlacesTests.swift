@@ -26,6 +26,46 @@ final class SavedPlacesTests: XCTestCase {
         XCTAssertFalse(saved.isFavourite(place(1, lat: 47.65)))
     }
 
+    func testNamingAnAddressKeepsItAsAFavouriteFoundByThatName() {
+        var saved = SavedPlaces()
+        let address = Place(id: "node/4400510992", name: "400 East Pine Street, Unit 100", lat: 47.61538, lon: -122.32660, category: "address", kind: .address)
+        saved.addRecent(address)
+        let named = saved.name(address, "  Kelley-Ross Pharmacy ")
+        XCTAssertEqual(named.name, "Kelley-Ross Pharmacy")
+        XCTAssertEqual(named.address, "400 East Pine Street, Unit 100")
+        XCTAssertEqual(named.kind, .address)
+        XCTAssertEqual(saved.favourites, [named])
+        XCTAssertEqual(saved.recents, [named])
+        XCTAssertEqual(saved.favourite(at: address), named)
+        XCTAssertTrue(saved.hasOwnName(address))
+        // The card may have filled in the building's address; the whole address is still what is kept.
+        var other = SavedPlaces(), unit = address
+        unit.address = "400 East Pine Street"
+        XCTAssertEqual(other.name(unit, "Pharmacy").address, "400 East Pine Street, Unit 100")
+        // A file saved before names existed still reads, and removing the favourite forgets the name was the user's.
+        let old = try! JSONDecoder().decode(SavedPlaces.self, from: Data(#"{"recents":[],"favourites":[]}"#.utf8))
+        XCTAssertFalse(old.hasOwnName(address))
+        other.setFavourite(unit, false)
+        XCTAssertFalse(other.hasOwnName(unit))
+        XCTAssertEqual(saved.matching("kelley ross"), [named], "once, though it is a favourite and a recent")
+        XCTAssertEqual(saved.matching("pharm kel"), [named])
+        XCTAssertTrue(saved.matching("ross dress").isEmpty)
+        XCTAssertTrue(saved.matching(" ").isEmpty)
+        // The place mapped at that address shares its OSM ID and point, and is not the address.
+        let centre = Place(id: address.id, name: "Seattle's LGBTQ+ Center", lat: address.lat, lon: address.lon, category: "social_facility", address: "400 East Pine Street")
+        XCTAssertNil(saved.favourite(at: centre))
+        XCTAssertFalse(saved.isFavourite(centre))
+        // Renaming keeps the address, and a blank name changes nothing.
+        let again = saved.name(named, "My pharmacy")
+        XCTAssertEqual(again.address, "400 East Pine Street, Unit 100")
+        XCTAssertEqual(saved.favourites.map(\.name), ["My pharmacy"])
+        XCTAssertEqual(saved.name(again, "  ").name, "My pharmacy")
+        // A pin named from what is near keeps that as where it is; a bare pin has nothing to keep.
+        let pin = Place(id: "pin/47.62000,-122.32000", name: "Near 12 Example Street", lat: 47.62, lon: -122.32, category: Place.pinCategory)
+        XCTAssertEqual(saved.name(pin, "Trailhead").address, "Near 12 Example Street")
+        XCTAssertNil(saved.name(Place.droppedPin(at: Coordinate(lat: 47.63, lon: -122.33)), "Bench").address)
+    }
+
     func testFavouritesToggleAndKeepTheirOrder() {
         var saved = SavedPlaces()
         saved.toggleFavourite(place(1)); saved.toggleFavourite(place(2)); saved.setFavourite(place(1), true)

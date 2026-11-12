@@ -65,6 +65,11 @@ enum LocationNotice: String, Identifiable {
     var query = ""
     /// Search was opened by Add in the favourites row: the place picked becomes a favourite.
     var addingFavourite = false
+    /// The last name search had no answer for, offered as the name when the address or pin found next is kept.
+    private(set) var missed: String?
+    /// The place being named, and the name so far.
+    var naming: Place?
+    var nameDraft = ""
     /// The start the user chose last. Without location, a later Directions reuses it unless it is the new destination.
     var lastOrigin: Place?
     /// The device's last fix, kept only while location is allowed.
@@ -99,7 +104,15 @@ enum LocationNotice: String, Identifiable {
         guard let origin, let destination, graph.coverage.contains(origin.coordinate) else { return nil }
         return .init(origin: origin, destination: destination, mode: mode, extraMinutes: budget, preferences: preferences[mode])
     }
-    var results: [Place] { search.search(query, near: userLocation ?? origin?.coordinate ?? lastOrigin?.coordinate) }
+    private var searchCentre: Coordinate? { userLocation ?? origin?.coordinate ?? lastOrigin?.coordinate }
+    /// Places kept under the user's own name lead, then the index, each under the name it was kept with.
+    var results: [Place] {
+        let found = search.search(query, near: searchCentre).map { saved.favourite(at: $0) ?? $0 }
+        let keys = Set(found.map(SavedPlaces.key))
+        return saved.matching(query).filter { !keys.contains(SavedPlaces.key($0)) } + found
+    }
+    /// What to offer when `results` is empty: three, so the other ways to get there stay above the keyboard.
+    var closest: SearchIndex.Closest { search.closest(query, near: searchCentre, limit: 3) }
     var chosenRoute: Route? {
         guard request != nil, let comparison = session.comparison else { return nil }
         return selectedCalmer ? comparison.calmer ?? comparison.fastest : comparison.fastest
@@ -125,8 +138,9 @@ enum LocationNotice: String, Identifiable {
     func searchLowered() { homeStop = stop; query = ""; addingFavourite = false; screen = .home }
 
     func open(_ place: Place) {
-        let place = search.withAddress(place)
+        let place = saved.favourite(at: place) ?? search.withAddress(place)
         query = ""
+        if !place.canBeNamed { missed = nil }
         placeNear = place.address == nil && place.kind == .place && !place.isDroppedPin ? search.nearestAddress(to: place.coordinate)?.name : nil
         show(.place(place))
     }
@@ -140,6 +154,30 @@ enum LocationNotice: String, Identifiable {
         cancelSearch()
     }
     func cancelSearch() { query = ""; addingFavourite = false; show(.home) }
+
+    // MARK: Places the map lacks
+
+    /// Text search found nothing for. An address is not a name, so it is not kept.
+    func remember(missed text: String) {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = text.first, !first.isNumber, text.count <= SavedPlaces.nameLimit else { return }
+        missed = text
+    }
+    /// Search gives way to the map at its lowest stop, to touch and hold the spot.
+    func chooseOnMap() { query = ""; addingFavourite = false; homeStop = .fit; show(.home) }
+
+    /// The star: an address or pin being kept is offered a name, since its own says only where it is.
+    func toggleFavourite(_ place: Place) {
+        let adding = !saved.isFavourite(place)
+        saved.toggleFavourite(place)
+        if adding, place.canBeNamed { nameDraft = missed ?? ""; naming = place }
+    }
+    func name(_ place: Place, _ name: String) {
+        let named = saved.name(place, name)
+        missed = nil
+        if selectedPlace.map(SavedPlaces.key) == SavedPlaces.key(named) { screen = .place(named) }
+        if let destination, SavedPlaces.key(destination) == SavedPlaces.key(named) { self.destination = named }
+    }
 
     /// A start that follows the user moves with each new fix; an empty start fills in once one arrives.
     func followUser() {
