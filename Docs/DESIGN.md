@@ -135,10 +135,8 @@ takes `minus.circle` in `onGlass`, never a tick: on the arrival card, and in "Be
 
 ### Rating
 
-The rating is a system `Gauge` in the linear capacity style: the fill is the 0 to
-100 calm score on the system's track, at the system's one thickness, tint and word
-coloured by level (`CalmMeter`).
-Blue through grey to
+The rating is a real progress bar: fill width is the 0 to 100 calm score, track
+`glassTrack`, fill and word coloured by level (`CalmMeter`). Blue through grey to
 orange and rose, not green to red, so it doesn't read as safe and unsafe. VoiceOver
 reads "Chill, 69 out of 100".
 
