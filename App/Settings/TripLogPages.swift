@@ -17,7 +17,7 @@ struct UsageLogPage: View {
                 SettingsValueRow(title: "Kept on this phone", value: logs.usageKept)
                     .accessibilityElement(children: .combine).accessibilityIdentifier("usage-log-summary")
             } footer: {
-                SettingsFooters([
+                SettingsFooter([
                     "Off by default. One line is kept for each guided trip: the time, your mode and extra-time limit, the route you started, both routes\u{2019} estimates, any reroutes, where you left the route, and whether you arrived.",
                     "Where you left a route is rounded to about 100\u{00A0}m unless Exact places is on. The last 500 trips are kept.",
                 ] + (logs.usageTrips > 0 ? [] : [Self.stays]))
@@ -31,7 +31,7 @@ struct UsageLogPage: View {
                     if sender.offersDelete { DeleteSentRow(sender: sender, identifier: "usage-log-delete-sent") }
                     Button(role: .destructive) { confirmClear = true } label: { SettingsAction("Clear usage log", symbol: "trash", destructive: true) }
                         .accessibilityIdentifier("usage-log-clear")
-                } footer: { SettingsFooters([Self.stays]) }
+                } footer: { SettingsFooter([Self.stays]) }
             }
         }
         .settingsPage("Usage log")
@@ -58,7 +58,7 @@ struct DetailedLogPage: View {
                 SettingsValueRow(title: "Kept on this phone", value: logs.detailedKept)
                     .accessibilityElement(children: .combine).accessibilityIdentifier("drive-log-summary")
             } footer: {
-                SettingsFooters([
+                SettingsFooter([
                     "For testing a build on your own phone. Off by default, and separate from the usage\u{00A0}log.",
                     "It keeps each guided walk, cycle or drive: your route and the places you chose, every location fix with its speed and accuracy, and what the app did. It also keeps what you search for and open.",
                     "A recording you start keeps your location until you stop it, also while the app is in the background. iOS shows its blue location indicator meanwhile.",
@@ -76,7 +76,7 @@ struct DetailedLogPage: View {
                     if sender.offersDelete { DeleteSentRow(sender: sender, identifier: "drive-log-delete-sent") }
                     Button(role: .destructive) { confirmClear = true } label: { SettingsAction("Clear detailed log", symbol: "trash", destructive: true) }
                         .accessibilityIdentifier("drive-log-clear")
-                } footer: { SettingsFooters([Self.stays]) }
+                } footer: { SettingsFooter([Self.stays]) }
             }
         }
         .settingsPage("Detailed log")
@@ -87,15 +87,6 @@ struct DetailedLogPage: View {
     }
 
     private static let stays = "The log stays on this phone, with exact places, unless you share the files or send them. It is left out of backups. Send to PeopleMaps encrypts the files so only the maintainer can read them, and the PeopleMaps server keeps them for up to 30\u{00A0}days."
-}
-
-/// A section's explanation as the system sets it: grey footer text under the group, a paragraph each.
-private struct SettingsFooters: View {
-    let paragraphs: [String]
-    init(_ paragraphs: [String]) { self.paragraphs = paragraphs }
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) { ForEach(paragraphs, id: \.self) { SettingsFooter($0) } }
-    }
 }
 
 /// Send to PeopleMaps: one tap checks what is new, then the confirmation says what goes. The row never dims or changes its
