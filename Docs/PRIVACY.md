@@ -13,8 +13,10 @@ one is wrong and gets fixed.
 
 - The app works offline. Maps, search and routes are on your phone.
 - Nothing leaves your phone unless you tap **Send** on a report you have
-  read, **Download King County** in Settings (see Downloading a bigger map), or
-  **Send to PeopleMaps** on a trip log you chose to keep (see Sending a trip log).
+  read, **Download King County** in Settings (see Downloading a bigger map),
+  **Send to PeopleMaps** on a trip log you chose to keep (see Sending a trip log), or
+  open a route in Google Maps or Apple Maps or share it as GPX (see Opening a route in
+  another app).
 - There are no accounts, no sign-in, no analytics, no ads, no tracking.
 - A report you send is stored on our server and read by a maintainer. Nothing
   is published automatically. A maintainer may file a useful report as a public
@@ -155,6 +157,15 @@ checksum it already has before using it. Downloads go over Wi-Fi unless you tap 
 > days, which identifies one install of the app and not you. The download pass it returns is kept in your iPhone's
 > Keychain for 24 hours.
 
+## Opening a route in another app
+
+The button beside Start on the route preview hands the route you chose to another app, only when you pick one of its
+items. **Google Maps** and **Apple Maps** open that app with your start (left out when it is your current location, so
+the other app uses its own), your destination, the travel mode and up to 9 points along the route, as exact coordinates
+in the link. From then on that app has them, and its own privacy policy applies; it picks its own roads between the
+points. **Share as GPX** makes a file with the whole route line and passes it to the app you choose in the share sheet.
+PeopleMaps sends nothing to us when you do any of this, and reads nothing back from the other app.
+
 ## Sending a trip log
 
 The usage log and the detailed log are off unless you turn them on, and they stay on the phone unless you share them or
@@ -282,8 +293,9 @@ about a minute. We store nothing from them.
   SDKs that phone home.
 - No tracking across apps or sites, no advertising identifier, no
   fingerprinting of your device.
-- No Apple Maps data in the app. "Look up in Apple Maps" hands you to the
-  Apple Maps app and shows nothing from it inside PeopleMaps.
+- No Apple Maps data in the app. "Look up in Apple Maps" and opening a route
+  in Apple Maps hand you to the Apple Maps app and show nothing from it inside
+  PeopleMaps.
 - No selling, sharing or renting of anything. There is nothing to sell.
 
 ## Honesty about routes

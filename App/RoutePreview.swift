@@ -293,6 +293,7 @@ struct RoutePreview: View {
             line {
                 modePicker(fullWidth: stacked)
                 if let comparison {
+                    HandoffMenu(comparison: comparison, calmerChosen: model.selectedCalmer && comparison.calmer != nil, side: landscape ? 44 : 52)
                     Button { onStart(comparison) } label: {
                         Text(model.selectedCalmer || comparison.calmer == nil ? "Start" : "Start fastest").font(.body.weight(.semibold)).foregroundStyle(.primaryActionText)
                             .frame(maxWidth: .infinity, minHeight: landscape ? 28 : 34)
@@ -338,5 +339,66 @@ struct RoutePreview: View {
         .sensoryFeedback(.selection, trigger: model.mode)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Travel mode")
+    }
+}
+
+/// Hands the chosen route to another app, which then guides with its own routing: Google Maps and Apple Maps get stops on the calmer
+/// streets, and the GPX file carries the whole line (`Docs/NAVIGATION.md`, "Handing a route to another app"). Nothing comes back.
+private struct HandoffMenu: View {
+    let comparison: RouteComparison
+    let calmerChosen: Bool
+    let side: CGFloat
+    @Environment(\.openURL) private var openURL
+    @State private var gpxFile: URL?
+
+    private var handoff: RouteHandoff { RouteHandoff(comparison: comparison, calmerChosen: calmerChosen) }
+    private var route: Route { calmerChosen ? comparison.calmer ?? comparison.fastest : comparison.fastest }
+    private var name: String {
+        let kind = comparison.calmer == nil ? "Route" : calmerChosen ? "Calmer route" : "Fastest route"
+        return "\(kind) to \(comparison.request.destination.shortName)"
+    }
+
+    var body: some View {
+        Menu {
+            Section("Guidance by another app") {
+                appButton("Google Maps", target: .googleMaps)
+                appButton("Apple Maps", target: .appleMaps)
+            }
+            if let gpxFile {
+                ShareLink(item: gpxFile, preview: SharePreview(name)) {
+                    Text("Share as GPX")
+                    Text("The whole route, for OsmAnd and bike apps")
+                }
+                .accessibilityIdentifier("handoff-gpx")
+            }
+        } label: {
+            Image(systemName: "arrow.up.forward.app").font(.body.weight(.semibold)).foregroundStyle(.primary)
+                .frame(width: side, height: side).background(.glassWell, in: Circle()).contentShape(Circle())
+        }
+        .accessibilityLabel("Open in another app")
+        .accessibilityIdentifier("handoff-menu")
+        .task(id: "\(route.id)-\(comparison.request.mode.rawValue)") { gpxFile = writeGPX() }
+    }
+
+    /// Says what the other app keeps: stops on this route with its own roads between them, or only the destination.
+    private func appButton(_ title: String, target: RouteHandoff.Target) -> some View {
+        let stops = handoff.keepsStops(in: target) ? handoff.stops.count : 0
+        let note = stops > 0 ? "Via \(stops) \(stops == 1 ? "stop" : "stops") on this route; it picks the roads between"
+            : calmerChosen ? "Destination only, it picks its own route" : "It picks its own route"
+        return Button { openURL(handoff.url(for: target)) } label: {
+            Text(title)
+            Text(note)
+        }
+        .accessibilityIdentifier(target == .googleMaps ? "handoff-google" : "handoff-apple")
+    }
+
+    private func writeGPX() -> URL? {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("gpx", isDirectory: true)
+        let file = folder.appendingPathComponent(name.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-") + ".gpx")
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try Data(route.gpx(name: name, mode: comparison.request.mode).utf8).write(to: file, options: .atomic)
+            return file
+        } catch { return nil }
     }
 }
