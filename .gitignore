@@ -6,11 +6,10 @@ DerivedData/
 xcuserdata/
 Data/raw/*.json
 *.xcresult/
-Evidence/*.log
-Evidence/*.mov
-Evidence/*.mp4
-Evidence/ui-attachments*/
-Evidence/ui-test-results.json
+# Screenshots and recordings are shared on the PR or in chat, not committed. Only the README's three and the route audit are tracked.
+Evidence/*
+!Evidence/route-audit.json
+!Evidence/liquid-glass-*-after-light.png
 __pycache__/
 Spikes/
 .claude/worktrees/
