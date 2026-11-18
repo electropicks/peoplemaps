@@ -67,7 +67,8 @@ else
   log "downloading ${url}"
   curl -fsSL --retry 4 -o "${work}/swift.tar.gz" "$url"
   curl -fsSL --retry 4 -o "${work}/swift.tar.gz.sig" "${url}.sig"
-  curl -fsSL --retry 4 -o "${work}/keys.asc" https://www.swift.org/keys/all-keys.asc
+  # swift.org sends this file compressed whether or not it was asked to; --compressed makes curl inflate it.
+  curl -fsSL --retry 4 --compressed -o "${work}/keys.asc" https://www.swift.org/keys/all-keys.asc
   export GNUPGHOME="${work}/gnupg"
   mkdir -m 700 "$GNUPGHOME"
   gpg --batch --quiet --import "${work}/keys.asc"
