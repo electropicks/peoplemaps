@@ -369,7 +369,6 @@ private struct HandoffMenu: View {
                     Text("Share as GPX")
                     Text("The whole route, for OsmAnd and bike apps")
                 }
-                .accessibilityIdentifier("handoff-gpx")
             }
         } label: {
             Image(systemName: "arrow.up.forward.app").font(.body.weight(.semibold)).foregroundStyle(.primary)
@@ -389,7 +388,6 @@ private struct HandoffMenu: View {
             Text(title)
             Text(note)
         }
-        .accessibilityIdentifier(target == .googleMaps ? "handoff-google" : "handoff-apple")
     }
 
     private func writeGPX() -> URL? {
