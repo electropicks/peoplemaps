@@ -179,9 +179,11 @@ final class RoutePreviewUITests: PeoplemapsUITestCase {
         XCTAssertTrue(menu.isHittable)
         XCTAssertEqual(menu.label, "Open in another app")
         menu.tap()
-        XCTAssertTrue(app.buttons["handoff-google"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["handoff-apple"].exists)
-        XCTAssertTrue(app.buttons["handoff-gpx"].waitForExistence(timeout: 5))
+        // Menu items are UIKit actions: they keep their titles but not SwiftUI's identifiers.
+        func item(_ title: String) -> XCUIElement { app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch }
+        XCTAssertTrue(item("Google Maps").waitForExistence(timeout: 5))
+        XCTAssertTrue(item("Apple Maps").exists)
+        XCTAssertTrue(item("Share as GPX").waitForExistence(timeout: 5))
     }
     /// Why this route and Calmer means each sit in a well, so they read as buttons and not as bold text.
     @MainActor func testPreviewTextButtonsSitInAWell() {
