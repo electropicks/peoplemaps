@@ -1,13 +1,19 @@
-# Why this slice
+# Architecture
 
 Peoplemaps is a working name. The product hypothesis is that a person can set a
 small time allowance and understand why a different route may ask less of them.
-The prototype tests that interaction using real Seattle network data.
+The app tests that interaction using real Seattle and King County network data.
 
 The native client is SwiftUI, with a small `UIViewRepresentable` bridge to
-MapLibre Native. A local Swift package owns routing, estimates, comfort costs,
-place search, and request lifecycle. Both display and routing use bundled OSM
-data, so the actual app needs no network, API key, account, or location prompt.
+MapLibre Native. A local Swift package (`Core/`) owns routing, estimates, comfort
+costs, place search, request lifecycle, region downloads, problem reports and trip
+logs. Both display and routing use OSM data on the phone, so browsing, search and
+routing need no network, API key or account, and location is asked for only when
+guidance starts. The app reaches a server (`Backend/`, a Cloudflare Worker) only for
+the optional King County download and for a trip log the person chooses to send
+(`Docs/REPORTS.md` 4.7 and 4.8).
+
+## Why our own router
 
 Valhalla and GraphHopper are stronger starting points for production routing.
 For this local, inspectable slice, installing a daemon/container, configuring
@@ -195,7 +201,7 @@ is relation 1153346 (King County) plus 4,828 m (3 miles), one ring.
   the polygon is outside coverage. `RouteComputing.canSnap(_:mode:)` says whether a covered place has a road node within 400 m
   to leave from and arrive at (false for Vashon, the Kitsap shore, a spot on the water), so the app can say "no road route"
   before a search. The messages that use it are a later step.
-- The `king-county` entry in `regions.json` has no pinned files yet, so fetching and reproduction skip it. The data is built and hosted in a later step.
+- The `king-county` entry in `regions.json` pins 12 files: 6 inputs, and 5 outputs under `expected/` plus that folder's `provenance.json`.
 
 ### seattle-all
 

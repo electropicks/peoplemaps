@@ -3,7 +3,7 @@
 Drafted 30 October 2026. Written spec only; nothing in `App/` is changed yet.
 A Mac session builds from it after `ux-round-1` merges, because the redesign
 touches every `App/` file. Read with `.claude/skills/product-rules/SKILL.md`,
-`Docs/RESEARCH_UX_2026.md` (gaps D1–D13), `Docs/NAVIGATION.md` and
+`Docs/archive/RESEARCH_UX_2026.md` (gaps D1–D13), `Docs/NAVIGATION.md` and
 `Docs/SEARCH.md`.
 
 Decided, not open: Apple standards, Liquid Glass first, category colours for

@@ -1,8 +1,12 @@
 # Problem reports
 
-Design for in-app problem reports. `Backend/` and `Core/Reports*.swift` build from it; the app screens in section 8 are
-not built yet. **For the alpha the backend is not deployed: the app uses section 11 instead (a share-sheet file and a local
-usage log) and never calls `ReportsClient`.** The user-facing version of the data rules is `Docs/PRIVACY.md`; keep the two in step. Read with
+Design for in-app problem reports, and for the two other things the app asks the server for: region downloads (4.7, 12)
+and sent trip logs (4.8). `Backend/` and `Core/Reports*.swift` build from it.
+
+**What is live, November 2026.** The Worker is deployed and the app uses it for region downloads and sent trip logs. Reports
+sent to the server are built in `Core` and in the Worker, but the app screens of section 8 are not, so the app never calls
+`ReportsClient`: for the alpha it uses section 11 instead (a share-sheet file and a local usage log). Sections 2 to 9 describe
+that server-report design. The user-facing version of the data rules is `Docs/PRIVACY.md`; keep the two in step. Read with
 `.claude/skills/product-rules/SKILL.md`.
 
 Decided, not open: a Cloudflare Worker and D1 database in `Backend/`, written so the handlers depend on neither (7.1),
@@ -449,7 +453,7 @@ Range, If-Range, If-None-Match, If-Match              // optional
   resumed ranges and retries.
 - **What is kept and logged.** Nothing beyond the attested key (4.5: key ID, public key, environment and hour, for
   `RETENTION_DAYS`): no download row and no log line. The request carries only the token and the file name.
-- **Tested** against an in-memory R2 stand-in (`test/helpers.ts`). Real R2 is not exercised, and nothing is deployed.
+- **Tested** against an in-memory R2 stand-in (`test/helpers.ts`). The tests do not exercise real R2.
 - **App side.** `WorkerSource` and `DownloadAuthorizer` (`Core/AppAttest.swift`, `Core/RegionStore.swift`) call this API in
   release builds; Debug builds use `DirectSource` through `--region-server`. A download needing a token takes the Keychain's
   if it has over a minute left, else runs the exchange of 4.5: a challenge, a **new** key (the server attests a key once, so
@@ -577,7 +581,7 @@ Anything else a maintainer wants is in `public_json`: `json_extract(public_json,
 
 ### 5.2 The cell grid
 
-`position.cell` is a grid square about 550 m on a side over the all-Seattle box of `Docs/COVERAGE_SPIKE.md`, so growing the
+`position.cell` is a grid square about 550 m on a side over the all-Seattle box of `Docs/archive/COVERAGE_SPIKE.md`, so growing the
 data does not change the grid: row `floor((lat - 47.49) / 0.005)`, col `floor((lon + 122.44) / 0.0075)` of the route point at
 flag time, clamped to rows 0 to 49 and columns 0 to 26. The Worker has no graph, so the app computes it; the Worker checks it is a cell of the grid and stores it in `public_json`.
 
@@ -613,7 +617,7 @@ with tests. The maintainer reads it first and edits or drops the note if it has 
 indented code block, which has no closing line for the text to match, so sender text does not mention a user or link an
 issue when the maintainer files it. `@` and `#` in a quoted instruction in the title are made inert.
 
-**Before first deploy** (the backend is not deployed for v0.1.0): refuse control characters in sender text (Worker and
+**Before the app sends reports** (the Worker is deployed, but no app build calls the report endpoints): refuse control characters in sender text (Worker and
 client together); a distinct code and a real `Retry-After` for the daily cap, and a test pinning it at 5; make the title
 inert before cutting it, defuse `GH-1` and issue URLs, and cap the issue body near 60,000 characters; correct the
 IP-limit wording here and in `Docs/PRIVACY.md` (only `POST /v1/reports` checks it before the token, and it limits rather
@@ -873,25 +877,9 @@ sender); a stateless Worker writing to R2 with a lifecycle rule (no idempotency 
 encryption of the exact fields to a maintainer key (worth revisiting if exact locations get common); an OHTTP relay so
 Cloudflare never sees client IPs (out of proportion at this volume).
 
-## 12. Region download
-
-A second thing the app asks our server for, next to reports: the files of a larger map region (King County), from Settings,
-under Map. It is one tap on **Download King County**, with no account and no install token (4.1). Each request is
-`GET /v1/regions/<release>/<region>--<file>` with `Authorization: Bearer <token>`, the token being the App Attest
-exchange; the Worker streams the file from the private bucket. The request carries the file name and that check, and
-nothing about the person: no position, no search, no report ID, no install ID. What the Worker and Cloudflare keep of a
-request (the connecting address and time, as for any request) is settled with 4.6 on the deployed server and is not
-claimed here.
-
-What is built: the app side only (`Core/RegionStore.swift`, `App/Settings/MapSettingsSection.swift`). `WorkerSource` is a stub that
-throws, so a release build contacts nothing; debug builds can aim a plain, unauthenticated `DirectSource` at a test
-server. The Worker, App Attest and the token exchange are separate work. `Docs/PRIVACY.md` says the same in plain words;
-change them together. The files are checked against `Data/regions.json` (size, then SHA-256) before anything is installed,
-so a damaged or swapped file is refused, not used.
-
 ## 11. Alpha: reports by share sheet, and the usage log
 
-The backend is not deployed, so the app calls nothing and mints no IDs. `Core/ProblemReport.swift` is a small report
+The app does not send reports to the server, so it mints no IDs. `Core/ProblemReport.swift` is a small report
 built on the 2.4 pieces that fit (`Report.Spoken`, `App`, `Device`, `Chosen`, `ReportCell`, five-decimal points): one
 free-form note, no category, and the screen, mode, extra-time limit, both routes' estimates and streets, the recent spoken
 lines, app and data version and device. Exact locations are off by default; with them off the file has the snapped corner
@@ -994,3 +982,19 @@ of the start and destination and a 550 m cell for a marked moment, as in 2.2. "W
     count; and a report file that cannot be read. Events come only from the app's own code, never from the system log,
     MapLibre or Ferrostar, whose logs may contain coordinates. Repeats of the same event within two seconds (camera
     moves while following, redraws) share one line with a `count`, so a long drive does not push out the rest.
+
+## 12. Region download
+
+A second thing the app asks our server for, next to reports: the files of a larger map region (King County), from Settings,
+under Map. It is one tap on **Download King County**, with no account and no install token (4.1). Each request is
+`GET /v1/regions/<release>/<region>--<file>` with `Authorization: Bearer <token>`, the token being the App Attest
+exchange; the Worker streams the file from the private bucket. The request carries the file name and that check, and
+nothing about the person: no position, no search, no report ID, no install ID. What the Worker and Cloudflare keep of a
+request (the connecting address and time, as for any request) is settled with 4.6 on the deployed server and is not
+claimed here.
+
+What is built: the app side (`Core/RegionStore.swift`, `Core/AppAttest.swift`, `App/Settings/MapSettingsSection.swift`) and
+the Worker side (4.5, 4.7). A release build uses `WorkerSource`; debug builds can aim a plain, unauthenticated
+`DirectSource` at a test server. `Docs/PRIVACY.md` says the same in plain words;
+change them together. The files are checked against `Data/regions.json` (size, then SHA-256) before anything is installed,
+so a damaged or swapped file is refused, not used.
