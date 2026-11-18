@@ -41,3 +41,4 @@ xcrun simctl io $UDID screenshot Evidence/<screen>-<light|dark>.png
 - Landscape: `XCUIDevice.shared.orientation` in a test.
 - Demo video: `UITests/DemoTour.swift` (skipped unless `TEST_RUNNER_PEOPLEMAPS_DEMO=1`), recorded with `xcrun simctl io $UDID recordVideo --codec h264`.
 - Name files `Evidence/<feature>-<variant>-<light|dark>.png`. Look at every screenshot before citing it.
+- `Evidence/` is git-ignored: screenshots and videos are never committed. Show them on the PR or in the chat that asked for them. The only tracked files there are the README's three screenshots and `route-audit.json`.
