@@ -91,6 +91,42 @@ that ends inside the box fails the import rather than flooding the map. Islands 
 `Data/provenance.json`. Use it on a machine whose SQLite differs from the one that built the shipped search index; a
 full import there would rewrite the index.
 
+## Context map
+
+The detailed map ends at the covered area, so below zoom 8, or anywhere outside it, the app draws a coarse map of the
+whole world instead: `Core/Resources/context-map.pmtiles`, zoom 0 to 6, overzoomed by MapLibre to any zoom. It is
+always the bundled file; downloading a region doesn't change it. `Scripts/build_context.py` writes it (stdlib only,
+deterministic, uncompressed, compared by `Scripts/verify.sh` like the detailed map) from
+`Data/natural-earth.json.gz`, a trimmed snapshot of [Natural Earth](https://www.naturalearthdata.com) v5.1.2 (public
+domain) that `Scripts/fetch_natural_earth.py` takes. The snapshot keeps geometry only, simplified to 0.002° and
+rounded to 3 decimals, and drops what Natural Earth itself shows only past zoom 6.
+
+| Source layer | Type | Contents and first zoom |
+|---|---|---|
+| `land` | polygon | z0–1: 1:110m land. z2–3: 1:50m. z4–6: 1:10m |
+| `lake` | polygon | 1:10m lakes, from Natural Earth's own `min_zoom`, not before z2 |
+| `urban` | polygon | 1:10m urban areas, from `min_zoom`, not before z4 |
+| `country` | line | z0: land borders between countries |
+| `state` | line | states and provinces, from `MIN_ZOOM`, not before z3 |
+| `road` | line | North American roads, from `min_zoom`, not before z4; no ferries |
+
+Natural Earth is crude past zoom 7, so a middle band around Puget Sound fills the zooms between the world and the
+detailed map: `Core/Resources/puget-sound-map.pmtiles`, zoom 7 to 10, 46.8–48.5 N, 123.4–121.6 W, written by the same
+script from `Data/puget-sound.json.gz`. That is OpenStreetMap (ODbL, the same attribution as the rest of the map) from
+the Overpass query `Data/puget-sound.overpassql`; the raw response is about 64 MB, so `Scripts/fetch_puget_sound.py`
+archives the shapes instead: the sea assembled from the coastline as the detailed map does (`coast_water`, the query
+reaching past the box), named lakes at least 0.003° across, and motorway and trunk (from z7) and primary (from z9)
+lines, simplified to 0.0002° and rounded to 5 decimals. Its two source layers are `water` (polygon) and `road` (line).
+
+The style's background is the sea, and `land` is drawn on it. Tiles are clipped from their parent tile down a
+quadtree, with the detailed map's buffer (64 of 4096) and simplification (10 units). In the app the levels stack from
+coarse to fine: the world, then from zoom 7 a land-coloured box over the band's bounds (read from its PMTiles header)
+with the band on it, then from zoom 8, where the detailed tiles start, a land-coloured box over the detailed map's
+extent (the covered box plus 0.1°, as far as its water reaches) with the detailed map on it. So a coarser coast or
+lake never shows through a finer one. The boxes' edges are drawn without antialiasing, which would leave a hairline
+over water. Outside a box the coarser level is all there is: the seam at its edge is expected. Neighbourhood names
+hide below zoom 10.
+
 ## Region data
 
 What is in git is a small test fixture: the Seattle box in `Data/` and `Core/Resources/`, reproduced byte for

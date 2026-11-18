@@ -31,17 +31,17 @@ records anything renamed in the PR.
 | `@Environment(\.accessibilityReduceTransparency)`, `\.colorSchemeContrast`, `\.accessibilityReduceMotion` | fallbacks | stable; confirmed in Xcode 27.1 |
 | iOS 27 "clear to tinted" glass slider | users can make all glass more opaque | reported in press, unconfirmed |
 | Xcode 27 ignores `UIDesignRequiresCompatibility` | no opting out of glass | Apple forums thread 832543 |
-| `UISheetPresentationController.Detent.backgroundEffect`, `UIGlassEffect(style:)` | the sheet's glass (`SheetGlass`) | iOS 26.1; confirmed in Xcode 27.1 |
 
 `.containerConcentric` was not found in the Xcode 27.1 SDK; `ConcentricRectangle` exists, so use that for
 concentric corners (section 3).
 
-Partial-height system sheets draw their own glass, under any
-`presentationBackground`, and on a pale map it reads as plain off-white.
-`SheetGlass` sets each partial detent's `backgroundEffect` to `UIGlassEffect`,
-which lets the map show through; SwiftUI has no modifier for it. An empty
-`UIVisualEffect` doesn't remove the panel, so home at rest has no sheet at all
-(4.2).
+**The sheet's background is the system's** (owner's decision, 10 November 2026: use Apple's frameworks and styling
+wherever they exist, and keep custom components and styling to what is needed). Partial-height system sheets draw their
+own Liquid Glass; the app sets no `presentationBackground` and no per-detent effect. From 4 to 10 November the app painted
+its own (`SheetGlass`, a `.regularMaterial` and `glassVeil`), after a phone test of the system glass showed map labels
+printing across rows and the glass no longer drawing after Settings closed or the map was touched; both are to be
+re-checked on the phone with this build. An empty `UIVisualEffect` doesn't remove the panel, so home at rest has no sheet
+at all (4.2).
 
 ## 1. Principles
 
@@ -248,7 +248,7 @@ Worst case over the map under each surface, in contrast ratio:
 
 | Where | Background, light | Background, dark | Primary, L / D | `onGlass`, L / D |
 |---|---|---|---|---|
-| Sheet (`.regular`, `.regularMaterial` and `glassVeil`), 4 November 2026 | `#F7F7F7` | `#1F2322` | 17.3 / 12.1 | 9.3 / 7.6 |
+| Sheet as painted until 10 November 2026 (`.regular`, `.regularMaterial` and `glassVeil`); not re-measured on the system's glass | `#F7F7F7` | `#1F2322` | 17.3 / 12.1 | 9.3 / 7.6 |
 | Home capsule and chips (no veil) | white to `#CEECF7` | `#38423F` to `#3F626D` | 17.0 / 6.6 | none on them |
 | Guidance banner, route under the text (`.regular`) | `#E6F5FA` to `#FCFCF9` | `#202826` to `#203337` | 18.8 / 13.2 | 9.8 / 8.1 |
 | Trip bar | white to `#EBF8ED` | `#242B29` to `#293C35` | 19.2 / 11.7 | 9.9 / 7.4 |
@@ -755,7 +755,7 @@ All through `Motion` (`App/PeoplemapsApp.swift`); no new durations.
   custom `glassEffect` views, read `accessibilityReduceTransparency` and use
   `Glass.identity` plus an opaque `.panel` background with the same shape.
   One helper, `View.floatingSurface(in:)`, does both so no view branches by
-  hand. The sheet gets a solid `panel` (`sheetBackdrop`).
+  hand. The sheet is the system's, which frosts or fills itself.
 - **Increase Contrast** (`colorSchemeContrast == .increased`): glass takes
   `glassVeilDense` and a 1-pt `separator` border (system controls do this
   themselves); `calmer` route line widens by 1 pt.
@@ -785,8 +785,8 @@ after the owner phone-tested `.regular` twice and couldn't see glass.
 
 | Surface | Glass | Finding |
 |---|---|---|
-| Sheet at its partial stops | `UIGlassEffect(.regular)` per detent (`SheetGlass`) under a `.regularMaterial` and `glassVeil` | Fixed 4 November: `.clear` plus a dark tint let labels print through, and the system glass stops drawing after Settings closes or the map is touched. The material carries the frost. |
-| Sheet at large | solid `panel` | Long lists and the keyboard. |
+| Sheet at its partial stops | the system's own, nothing painted over it | 10 November: back to the system's glass by the owner's decision. To re-check on the phone: labels printing through, and the glass no longer drawing after Settings closes or the map is touched (both seen 4 November). |
+| Sheet at large | the system's own | Long lists and the keyboard. |
 | Home at rest | no sheet; `.clear` chips, capsule and More | Refracts the map; the dark map's streets show through. |
 | Map buttons | `.clear`, `.interactive()` | |
 | Credit, turn banner, calm chip, trip bar, landscape card, arrival card | `.clear` + `glassVeil` | |
@@ -794,7 +794,7 @@ after the owner phone-tested `.regular` twice and couldn't see glass.
 | Directions, Start, Done | `.primaryAction()` | The one allowed glass-in-glass: the primary action (principle 6). |
 | Why this route, Calmer means | `WellButtonStyle` on `glassWell` | A well, not glass (principle 3). |
 | Behind the routes, Settings, pickers | solid or system modal | Reading, not glance. |
-| Reduce Transparency | `floatingSurface`, `sheetBackdrop` | Solid `panel`, with an outline. |
+| Reduce Transparency | `floatingSurface`; the sheet is the system's | Solid `panel`, with an outline, on our surfaces. |
 
 ## 7. Implementation plan
 

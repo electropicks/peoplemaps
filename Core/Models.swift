@@ -195,6 +195,13 @@ public struct StreetGraph: Sendable {
         return graph
     }
     public static var mapURL: URL? { Bundle.dataFile("seattle-map", "pmtiles") }
+    /// The whole world, coarse, drawn under the map (`Docs/ARCHITECTURE.md`, "Context map"). Always the bundled one: regions don't change it.
+    public static var contextMapURL: URL? { bundled("context-map") }
+    /// The context map's middle band around Puget Sound, finer than the world and coarser than the detailed map.
+    public static var bandMapURL: URL? { bundled("puget-sound-map") }
+    private static func bundled(_ name: String) -> URL? {
+        Bundle.main.url(forResource: name, withExtension: "pmtiles") ?? Bundle.module.url(forResource: name, withExtension: "pmtiles")
+    }
 
     public func validate() throws {
         guard bounds.count == 4, !nodes.isEmpty,
