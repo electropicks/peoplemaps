@@ -10,8 +10,12 @@ An offline iOS maps app for Seattle that picks the calmer route a local would ch
 - `Scripts/`: Python data importer and search builder, project generator, `verify.sh`.
 - `Data/`: OSM snapshots, elevation, provenance, licences.
 - `Core/Resources/`: generated data. Never hand-edit it.
-- `Docs/`: design docs and spikes. Read the relevant one before changing an area: `STRESS_MODEL`, `NAVIGATION`, `SEARCH`, `COVERAGE_SPIKE`, `PERFORMANCE`, `VOICE_SPIKE`.
-  - `REPORTS`: in-app problem reports: the snapshot and report schema, on-device storage, the Workers/D1 backend, hand-filed issues and the replay tool.
+- `Backend/`: the Cloudflare Worker and D1 database (TypeScript) behind region downloads and sent trip logs. Its own tests: `cd Backend && npm ci && npm test`. See `Backend/README.md`.
+- `Tools/`, `LogKey/`: `peoplemaps-audit` (writes `Evidence/route-audit.json`, which a test reads) and `peoplemaps-logkey` (the owner's key for sent logs).
+- `Tests/`, `UITests/`: the package's tests (run on Linux too) and the app's UI tests (Mac only).
+- `Evidence/`: git-ignored apart from the README's screenshots and the route audit. Screenshots go on the PR, never in git.
+- `Docs/`: design docs. Read the relevant one before changing an area: `ARCHITECTURE` (data, regions, router), `DESIGN` (screens and styling), `STRESS_MODEL`, `NAVIGATION`, `SEARCH`, `PERFORMANCE`. Finished spikes and research are in `Docs/archive/`.
+  - `REPORTS`: problem reports, trip logs and what the server does: the report schema, on-device storage, the Workers/D1 backend, region downloads, sent logs.
   - `PRIVACY`: the user-facing privacy policy. It must say exactly what `REPORTS` collects; change them together.
 
 ## Commands
