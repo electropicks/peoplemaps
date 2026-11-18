@@ -126,7 +126,7 @@ final class RoutePreviewUITests: PeoplemapsUITestCase {
         let app = launchHome(location: Self.atBallardLibrary)
         showGasWorksRoutes(app)
         XCTAssertTrue(app.buttons["route-calmer"].waitForExistence(timeout: 10))
-        let small = ["choose-destination", "choose-origin", "route-fastest", "route-details", "route-preferences"]
+        let small = ["choose-destination", "choose-origin", "route-fastest", "route-details", "route-preferences", "handoff-menu"]
         for id in small {
             let frame = app.buttons[id].frame
             XCTAssertGreaterThanOrEqual(frame.height, 44, "\(id) is \(frame.height) pt tall")
@@ -169,6 +169,19 @@ final class RoutePreviewUITests: PeoplemapsUITestCase {
         tapEdge("route-preferences", top: true)
         XCTAssertTrue(app.navigationBars["Calmer means"].waitForExistence(timeout: 5))
         app.buttons["preferences-done"].tap()
+    }
+    /// The button beside Start offers Google Maps, Apple Maps and a GPX file for the chosen route.
+    @MainActor func testOpenInAnotherAppOffersBothAppsAndGPX() {
+        let app = launchHome(location: Self.atBallardLibrary)
+        showGasWorksRoutes(app)
+        XCTAssertTrue(app.buttons["route-calmer"].waitForExistence(timeout: 10))
+        let menu = app.buttons["handoff-menu"]
+        XCTAssertTrue(menu.isHittable)
+        XCTAssertEqual(menu.label, "Open in another app")
+        menu.tap()
+        XCTAssertTrue(app.buttons["handoff-google"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["handoff-apple"].exists)
+        XCTAssertTrue(app.buttons["handoff-gpx"].waitForExistence(timeout: 5))
     }
     /// Why this route and Calmer means each sit in a well, so they read as buttons and not as bold text.
     @MainActor func testPreviewTextButtonsSitInAWell() {

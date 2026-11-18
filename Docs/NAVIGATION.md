@@ -85,6 +85,30 @@ sense of direction.
 - **Controls.** Mute and the report flag are one glass capsule; the camera button stands
   alone in a bottom corner (`DESIGN.md` 4.7).
 
+## Handing a route to another app
+
+Added 18 November 2026, after testing whether Google Maps, Apple Maps and the open-source apps can carry a calmer route
+(write-up: https://claude.ai/artifact/UqViVa4BHpqDpdGVEf7JBd). Our own guidance stays; this is a second way to start.
+
+- **The menu.** A button beside Start (`HandoffMenu` in `App/RoutePreview.swift`, `handoff-menu`) offers Google Maps,
+  Apple Maps and Share as GPX for the route the preview has chosen. Each app item says what the app keeps.
+- **Stops, not a line.** Google Maps and Apple Maps take stops and route between them themselves. `RouteHandoff`
+  (`Core/RouteHandoff.swift`) places them on our line, 4 for drives and 9 otherwise, each splitting the longest gap left
+  between the ends and the stops so far: at the middle of a street where the calmer route leaves our fastest route when one
+  lies in that gap, else at the gap's middle. Gaps of 500 m or less are left alone. Stops only on the streets that differ
+  were not enough: Apple Maps then swapped a stretch both of our routes share for its own. In tests on the web this kept our
+  calmer drives in both apps and about 80% of the calmer bike streets in Google Maps. The fastest route, or a trip with no
+  calmer route, goes with no stops. Every stop shows in the other app as an errand with a nearby address.
+- **Apple Maps, drive only.** Apple Maps gives no walking or cycling directions with any stop, so those get the
+  destination only, and the menu says it picks its own route.
+- **Links.** Google: the universal link `https://www.google.com/maps/dir/?api=1` (`comgooglemaps://` drops waypoints).
+  Apple: unified Maps URLs, `https://maps.apple.com/directions` with repeated `waypoint`. The start is left out when it is
+  the current location, so the other app starts from its own fix.
+- **GPX.** `Route.gpx(name:mode:)` writes the whole line as a GPX 1.1 track. OsmAnd follows it with Navigate by track;
+  bike apps build cues from it.
+- **Nothing comes back.** We never ask Apple or Google for their route, ETA or stop names (no `MKDirections`), so no Apple
+  Maps data reaches the app (`Docs/SEARCH.md`). Fidelity is checked by testing, not at runtime.
+
 ## Stages
 
 Each stage builds, passes `Scripts/verify.sh`, and is reviewed before the next.
