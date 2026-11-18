@@ -31,17 +31,16 @@ records anything renamed in the PR.
 | `@Environment(\.accessibilityReduceTransparency)`, `\.colorSchemeContrast`, `\.accessibilityReduceMotion` | fallbacks | stable; confirmed in Xcode 27.1 |
 | iOS 27 "clear to tinted" glass slider | users can make all glass more opaque | reported in press, unconfirmed |
 | Xcode 27 ignores `UIDesignRequiresCompatibility` | no opting out of glass | Apple forums thread 832543 |
-| `UISheetPresentationController.Detent.backgroundEffect`, `UIGlassEffect(style:)` | the sheet's glass (`SheetGlass`) | iOS 26.1; confirmed in Xcode 27.1 |
 
 `.containerConcentric` was not found in the Xcode 27.1 SDK; `ConcentricRectangle` exists, so use that for
 concentric corners (section 3).
 
-Partial-height system sheets draw their own glass, under any
-`presentationBackground`, and on a pale map it reads as plain off-white.
-`SheetGlass` sets each partial detent's `backgroundEffect` to `UIGlassEffect`,
-which lets the map show through; SwiftUI has no modifier for it. An empty
-`UIVisualEffect` doesn't remove the panel, so home at rest has no sheet at all
-(4.2).
+**The sheet's background is the system's** (owner's decision, 10 November 2026: use Apple's frameworks and styling
+wherever they exist, and keep custom components and styling to what is needed; kept after a week on the phone, 17 November,
+"an improvement", with more polish wanted later). Partial-height system sheets draw their own Liquid Glass; the app sets
+no `presentationBackground` and no per-detent effect. From 4 to 10 November the app painted its own (`SheetGlass`, a
+`.regularMaterial` and `glassVeil`), after a phone test of the system glass showed map labels printing across rows and the
+glass no longer drawing after Settings closed or the map was touched. An empty `UIVisualEffect` doesn't remove the panel.
 
 ## 1. Principles
 
@@ -755,7 +754,7 @@ All through `Motion` (`App/PeoplemapsApp.swift`); no new durations.
   custom `glassEffect` views, read `accessibilityReduceTransparency` and use
   `Glass.identity` plus an opaque `.panel` background with the same shape.
   One helper, `View.floatingSurface(in:)`, does both so no view branches by
-  hand. The sheet gets a solid `panel` (`sheetBackdrop`).
+  hand. The sheet is the system's, which frosts or fills itself.
 - **Increase Contrast** (`colorSchemeContrast == .increased`): glass takes
   `glassVeilDense` and a 1-pt `separator` border (system controls do this
   themselves); `calmer` route line widens by 1 pt.
@@ -785,7 +784,7 @@ after the owner phone-tested `.regular` twice and couldn't see glass.
 
 | Surface | Glass | Finding |
 |---|---|---|
-| Sheet at its partial stops | `UIGlassEffect(.regular)` per detent (`SheetGlass`) under a `.regularMaterial` and `glassVeil` | Fixed 4 November: `.clear` plus a dark tint let labels print through, and the system glass stops drawing after Settings closes or the map is touched. The material carries the frost. |
+| Sheet at its partial stops | the system's own, nothing painted over it | 10 November: back to the system's glass by the owner's decision, kept 17 November. It lets a little more of the map through than the painted one did (brightness spread about 6 against under 5; `HomeAndSearchUITests.testHomeSheetStaysFrostedAfterSettingsAndAPan`). |
 | Sheet at large | solid `panel` | Long lists and the keyboard. |
 | Home at rest | no sheet; `.clear` chips, capsule and More | Refracts the map; the dark map's streets show through. |
 | Map buttons | `.clear`, `.interactive()` | |
@@ -794,7 +793,7 @@ after the owner phone-tested `.regular` twice and couldn't see glass.
 | Directions, Start, Done | `.primaryAction()` | The one allowed glass-in-glass: the primary action (principle 6). |
 | Why this route, Calmer means | `WellButtonStyle` on `glassWell` | A well, not glass (principle 3). |
 | Behind the routes, Settings, pickers | solid or system modal | Reading, not glance. |
-| Reduce Transparency | `floatingSurface`, `sheetBackdrop` | Solid `panel`, with an outline. |
+| Reduce Transparency | `floatingSurface`; the sheet is the system's | Solid `panel`, with an outline, on our surfaces. |
 
 ## 7. Implementation plan
 

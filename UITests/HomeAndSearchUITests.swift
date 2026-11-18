@@ -22,8 +22,10 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         raiseHome(app)
         XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
     }
-    /// The raised home sheet is frosted, and stays so after Settings opens over it and closes, and after the map is panned: the system's
-    /// own glass stops drawing in both cases, so the frost comes from the sheet's background (Docs/DESIGN.md, principle 4).
+    /// The raised home sheet is frosted, and stays so after Settings opens over it and closes, and after the map is panned: on
+    /// 4 November the system's glass stopped drawing in both cases. The sheet is the system's glass again (Docs/DESIGN.md 6a), which
+    /// lets a little more of the map through than the background painted until 10 November: its spread reads about 6, where that
+    /// one read under 5 and a sheet with no frost 11 to 17. So the limit is 8.
     @MainActor func testHomeSheetStaysFrostedAfterSettingsAndAPan() {
         let app = launchHome(location: Self.atKerryPark)
         raiseHome(app)
@@ -33,19 +35,19 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         let body = CGRect(x: 0.1, y: (hint.maxY + 2) / window.height, width: 0.8, height: (row.minY - hint.maxY - 4) / window.height)
         XCTAssertGreaterThan(body.height * window.height, 8, "Room to sample between the hint and the row")
         Thread.sleep(forTimeInterval: 2)
-        XCTAssertLessThan(brightnessSpread(body), 5, "Raised home is frosted")
+        XCTAssertLessThan(brightnessSpread(body), 8, "Raised home is frosted")
         app.buttons["settings"].tap()
         XCTAssertTrue(app.buttons["close-settings"].waitForExistence(timeout: 5))
         app.buttons["close-settings"].tap()
         XCTAssertTrue(app.buttons["search-field"].waitForExistence(timeout: 5))
         Thread.sleep(forTimeInterval: 2)
         capture("home-after-settings", app: app)
-        XCTAssertLessThan(brightnessSpread(body), 5, "Still frosted after Settings closes")
+        XCTAssertLessThan(brightnessSpread(body), 8, "Still frosted after Settings closes")
         let map = app.windows.firstMatch
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
             .press(forDuration: 0.1, thenDragTo: map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.4)))
         Thread.sleep(forTimeInterval: 2)
-        XCTAssertLessThan(brightnessSpread(body), 5, "Still frosted after the map is panned")
+        XCTAssertLessThan(brightnessSpread(body), 8, "Still frosted after the map is panned")
     }
     @MainActor func testHomeSaysWhereToWithAHintAndNoRoutes() {
         let app = launchHome()
@@ -244,7 +246,13 @@ final class HomeAndSearchUITests: PeoplemapsUITestCase {
         // Just outside the words on the leading side, where a well would be, against the bare panel left of the field at the same height.
         let beside = screen.mean(around: CGPoint(x: hint.frame.minX - 5, y: hint.frame.midY))
         let panel = screen.mean(around: CGPoint(x: field.frame.minX - 5, y: hint.frame.midY))
-        XCTAssertLessThan(abs(beside - panel), 3, "The hint sits in a well like the field\u{2019}s: \(beside) against \(panel)")
+        // Against the field's own well, which is darker than the panel. The system's glass lets the map shade the panel by a few
+        // levels either way, so the check is one-sided: the hint's surround is not darker than the panel by half a well or more.
+        let well = screen.mean(around: CGPoint(x: field.frame.minX + 8, y: field.frame.midY))
+        let panelByField = screen.mean(around: CGPoint(x: field.frame.minX - 5, y: field.frame.midY))
+        XCTAssertGreaterThan(panelByField - well, 4, "The field\u{2019}s well can\u{2019}t be told from the panel: \(well) against \(panelByField)")
+        XCTAssertLessThan(panel - beside, (panelByField - well) / 2,
+                          "The hint sits in a well like the field\u{2019}s: \(beside) against \(panel), the field\u{2019}s well \(well) against \(panelByField)")
         capture("home-raised-hint", app: app)
     }
     /// With no match and the keyboard up, the Apple Maps hand-off is in full view: clear of the keyboard and of the credit above it.
