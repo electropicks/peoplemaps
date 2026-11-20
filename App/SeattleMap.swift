@@ -103,7 +103,7 @@ struct SeattleMap: UIViewRepresentable {
         map.showsUserLocation = false
         map.isRotateEnabled = false
         map.isPitchEnabled = false
-        map.minimumZoomLevel = 11
+        map.minimumZoomLevel = 0 // Past the detailed map, the coarse context map goes on to the whole world.
         map.maximumZoomLevel = 18
         map.setCenter(CLLocationCoordinate2D(latitude: 47.649, longitude: -122.349), zoomLevel: 12, animated: false)
         map.addGestureRecognizer(UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.longPressed(_:))))
@@ -135,6 +135,8 @@ struct SeattleMap: UIViewRepresentable {
         private var locateID = -1
         private var fittedPadding = UIEdgeInsets.zero
         private var styleReady = false
+        private var hasContext = false
+        private var maskKey = ""
         private var appliedScheme: ColorScheme?
         private var traits = UITraitCollection(userInterfaceStyle: .light)
         private var labels: [MapLabel] = []
@@ -216,12 +218,14 @@ struct SeattleMap: UIViewRepresentable {
                 let box = CGRect(x: point.x - 46, y: point.y - 16, width: 92, height: 32)
                 let hide = taken.contains { $0.intersects(box) }
                 if !hide { taken.append(box) }
-                view.alpha = hide ? 0 : 1
+                // Neighbourhood names mean nothing once the city is a dot.
+                view.alpha = hide || map.zoomLevel < 10 ? 0 : 1
             }
         }
 
         func mapView(_ map: MLNMapView, didFinishLoading style: MLNStyle) {
             AppEvents.shared.log(.map, "map style loaded")
+            addContext(style)
             guard let url = StreetGraph.mapURL, let tiles = URL(string: "pmtiles://" + url.absoluteString) else { return }
             let source = MLNVectorTileSource(identifier: "seattle", configurationURL: tiles)
             style.addSource(source)
@@ -278,8 +282,75 @@ struct SeattleMap: UIViewRepresentable {
             styleReady = true; routeKey = ""; appliedScheme = nil; update(map)
         }
 
+        /// The whole world, coarse, under the detailed map (`Docs/ARCHITECTURE.md`, "Context map"), and over it from zoom 7 a finer
+        /// band around Puget Sound. Each finer level starts with a land-coloured box over its own extent, so the coarser coast
+        /// and lakes under it don't show through: the band's from zoom 7, the detailed map's from zoom 8, where its tiles start.
+        private func addContext(_ style: MLNStyle) {
+            guard let url = StreetGraph.contextMapURL, let tiles = URL(string: "pmtiles://" + url.absoluteString) else { return }
+            let source = MLNVectorTileSource(identifier: "context", configurationURL: tiles)
+            style.addSource(source)
+            for kind in ["land", "urban", "lake"] {
+                let layer = MLNFillStyleLayer(identifier: "context-" + kind, source: source)
+                layer.sourceLayerIdentifier = kind
+                style.addLayer(layer)
+            }
+            for (kind, width, opacity) in [("road", 1.0, 1.0), ("state", 0.6, 0.3), ("country", 1.0, 0.45)] {
+                let layer = MLNLineStyleLayer(identifier: "context-" + kind, source: source)
+                layer.sourceLayerIdentifier = kind
+                layer.lineWidth = NSExpression(forConstantValue: width)
+                layer.lineOpacity = NSExpression(forConstantValue: opacity)
+                style.addLayer(layer)
+            }
+            if let url = StreetGraph.bandMapURL, let tiles = URL(string: "pmtiles://" + url.absoluteString), let box = Self.bounds(of: url) {
+                let band = MLNVectorTileSource(identifier: "band", configurationURL: tiles)
+                style.addSource(band)
+                var corners = [(box.s, box.w), (box.n, box.w), (box.n, box.e), (box.s, box.e), (box.s, box.w)].map { CLLocationCoordinate2D(latitude: $0.0, longitude: $0.1) }
+                let extent = MLNShapeSource(identifier: "band-mask", shape: MLNPolygon(coordinates: &corners, count: UInt(corners.count)), options: nil)
+                style.addSource(extent)
+                let mask = MLNFillStyleLayer(identifier: "band-mask", source: extent)
+                mask.minimumZoomLevel = 7
+                mask.fillAntialiased = NSExpression(forConstantValue: false) // A soft edge leaves a hairline over the water.
+                style.addLayer(mask)
+                let water = MLNFillStyleLayer(identifier: "band-water", source: band)
+                water.sourceLayerIdentifier = "water"
+                style.addLayer(water)
+                let road = MLNLineStyleLayer(identifier: "band-road", source: band)
+                road.sourceLayerIdentifier = "road"
+                road.lineWidth = NSExpression(forConstantValue: 1.2)
+                style.addLayer(road)
+            }
+            let mask = MLNShapeSource(identifier: "detail-mask", shape: nil, options: nil)
+            style.addSource(mask)
+            let layer = MLNFillStyleLayer(identifier: "detail-mask", source: mask)
+            layer.minimumZoomLevel = 8
+            layer.fillAntialiased = NSExpression(forConstantValue: false)
+            style.addLayer(layer)
+            hasContext = true
+        }
+
+        /// A PMTiles archive's bounds, from its header (PMTiles v3: four little-endian Int32 in 1e-7 degrees at byte 102).
+        private static func bounds(of url: URL) -> (s: Double, w: Double, n: Double, e: Double)? {
+            guard let file = try? FileHandle(forReadingFrom: url), let head = try? file.read(upToCount: 127), head.count == 127 else { return nil }
+            try? file.close()
+            let v = (0..<4).map { i in
+                Double(Int32(bitPattern: (0..<4).reduce(UInt32(0)) { $0 | UInt32(head[head.startIndex + 102 + 4 * i + $1]) << (8 * $1) })) / 1e7
+            }
+            return (v[1], v[0], v[3], v[2])
+        }
+
+        /// The detailed map's extent: its water reaches 0.1° past the covered box (`Docs/ARCHITECTURE.md`, "Coastline").
+        private func updateDetailMask(_ style: MLNStyle) {
+            guard let latest, "\(latest.coverage)" != maskKey else { return }
+            maskKey = "\(latest.coverage)"
+            guard latest.coverage.count == 2 else { (style.source(withIdentifier: "detail-mask") as? MLNShapeSource)?.shape = nil; return }
+            let s = latest.coverage[0].lat - 0.1, w = latest.coverage[0].lon - 0.1, n = latest.coverage[1].lat + 0.1, e = latest.coverage[1].lon + 0.1
+            var corners = [(s, w), (n, w), (n, e), (s, e), (s, w)].map { CLLocationCoordinate2D(latitude: $0.0, longitude: $0.1) }
+            (style.source(withIdentifier: "detail-mask") as? MLNShapeSource)?.shape = MLNPolygon(coordinates: &corners, count: UInt(corners.count))
+        }
+
         func update(_ map: MLNMapView) {
             guard styleReady, let latest, let style = map.style else { return }
+            updateDetailMask(style)
             let c = latest.comparison
             if appliedScheme != latest.colorScheme {
                 applyColors(latest.colorScheme, map: map, style: style)
@@ -777,7 +848,14 @@ struct SeattleMap: UIViewRepresentable {
         private func applyColors(_ scheme: ColorScheme, map: MLNMapView, style: MLNStyle) {
             appliedScheme = scheme
             traits = UITraitCollection(userInterfaceStyle: scheme == .dark ? .dark : .light)
-            (style.layer(withIdentifier: "background") as? MLNBackgroundStyleLayer)?.backgroundColor = constant(.mapLand)
+            // With the context map, the sea is the background and land is drawn; without it, the detailed map's land is.
+            (style.layer(withIdentifier: "background") as? MLNBackgroundStyleLayer)?.backgroundColor = constant(hasContext ? .mapWater : .mapLand)
+            for (id, color) in [("context-land", UIColor.mapLand), ("context-urban", .mapStreet), ("context-lake", .mapWater), ("band-mask", .mapLand), ("band-water", .mapWater), ("detail-mask", .mapLand)] {
+                (style.layer(withIdentifier: id) as? MLNFillStyleLayer)?.fillColor = constant(color)
+            }
+            for (id, color) in [("context-road", UIColor.mapArterial), ("band-road", .mapArterial), ("context-state", .mapLabel), ("context-country", .mapLabel)] {
+                (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineColor = constant(color)
+            }
             for (id, color) in Self.baseLayers {
                 if let fill = style.layer(withIdentifier: id) as? MLNFillStyleLayer { fill.fillColor = constant(color) }
                 if let line = style.layer(withIdentifier: id) as? MLNLineStyleLayer { line.lineColor = constant(color) }
